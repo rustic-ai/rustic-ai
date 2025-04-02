@@ -1,0 +1,22 @@
+{
+    "id": "test_guild_id_eaw2KxoexPj4Z2BEPi5sCS",
+    "name": "test_guild_name",
+    "description": "description for test_guild_name",
+    "properties": {
+        "client_type": "rustic_ai.core.messaging.client.MessageTrackingClient",
+        "messaging": {
+            "backend_module": "rustic_ai.core.messaging.backend",
+            "backend_class": "InMemoryMessagingBackend",
+            "backend_config": {}
+        }
+    },
+    "agents": [
+        {
+            "id": "VSbJYKSkDSKAsCszeSzAEW",
+            "name": "Simple Agent",
+            "description": "A simple agent",
+            "class_name": "guild.simple_agent.SimpleAgent",
+            "additional_topics": []
+        }
+    ]
+}

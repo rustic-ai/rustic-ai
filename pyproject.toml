@@ -1,0 +1,111 @@
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "rusticai-python-framework"
+description = "Monorepo for rustic-ai"
+authors = ["Dragonscale Industries Inc. <dev@dragonscale.ai>"]
+readme = "README.md"
+homepage = "https://www.rustic.ai/"
+repository = "https://github.com/rustic-ai/python-framework"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.12"
+rusticai-core = { path = "./core", develop = true }
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.4"
+black = { version = "^24.2.0", extras = ["jupyter"] }
+flake8 = "^7.1.2"
+tox = "^4.24.1"
+isort = "^6.0.0"
+mypy = "^1.15.0"
+coverage = "^7.6.12"
+cookiecutter = "^2.6.0"
+tomlkit = "^0.13.2"
+# api-server dev dependencies
+pytest-asyncio = "^0.25.3"
+httpx = "^0.28.1"
+# redis dev dependencies
+fakeredis = "^2.27.0"
+
+
+
+[tool.black]
+line-length = 120
+target-version = ['py312']
+include = '(\\.pyi?$|.*/src/|.*/tests/|it/)'
+exclude = '''
+/(
+    \.git
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+  |__pycache__
+  | resources/*
+)/
+'''
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
+check_untyped_defs = true
+plugins = "pydantic.mypy"
+explicit_package_bases = true
+exclude = ["^\\.venv/", "^cache/"]
+
+
+[tool.isort]
+profile = "black"
+known_third_party = ["pydantic"]
+known_first_party = ["rustic_ai.core"]
+
+[tool.flake8]
+max-line-length = 160
+max-complexity = 18
+ignore = [
+  "E203",
+  "E266",
+  "E701",
+  "E704",
+  "W503",
+  "D100",
+  "D101",
+  "D102",
+  "D104",
+  "D105",
+  "D106",
+  "D107",
+  "D200",
+  "D202",
+  "D205",
+  "D212",
+  "D415",
+]
+docstring-convention = "google"
+exclude = [
+  ".git",
+  "__pycache__",
+  "setup.py",
+  "build",
+  "dist",
+  "docs",
+  ".venv",
+  ".tox",
+  ".mypy_cache",
+  ".pytest_cache",
+  ".vscode",
+  ".github",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope="function"
+norecursedirs = ["cookiecutter-rustic"]
+

@@ -1,0 +1,10 @@
+id: test_guild_id_YTiFwFazfMU5uduxii9nVG
+name: test_guild_name
+description: description for test_guild_name
+properties: {}
+agents:
+- additional_topics: []
+  class_name: guild.simple_agent.SimpleAgent
+  description: A simple agent
+  id: Lz6GTKQBdBSUcSeSpLdH4g
+  name: Simple Agent
