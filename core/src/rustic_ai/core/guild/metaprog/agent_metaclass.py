@@ -28,7 +28,7 @@ from rustic_ai.core.utils.basic_class_utils import (
 class MessageHandler:
     def __init__(
         self,
-        message_format: type[BaseModel] | Literal[MessageConstants.RAW_JSON_FORMAT],
+        message_format: type[BaseModel] | Literal["generic_json"],
         handler: Callable,
         handle_essential: bool = False,
     ):

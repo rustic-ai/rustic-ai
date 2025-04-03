@@ -55,7 +55,7 @@ class AgentMode(Enum):
     REMOTE = "remote"
 
 
-class Agent(Generic[APT], metaclass=AgentMetaclass):
+class Agent(Generic[APT], metaclass=AgentMetaclass):  # type: ignore
     """
     Base class for all agents
     """
@@ -288,7 +288,7 @@ def _update_wrapper(wrapper, func):
     return wrapper
 
 
-class ProcessContext(Generic[MDT]):
+class ProcessContext[MDT]:
     """
     Represents the context of the message to be processed by the agent. This is used within the method to send new messages in the system.
     """

@@ -94,7 +94,6 @@ class AgentSpec(BaseModel, Generic[APT]):
         description (str): A description of the agent.
         class_name (str): The name of the class of the agent.
         additional_topics (List[str]): A list of additional topics to which the agent should subscribe.
-        properties_type (str): The type of the properties of the agent.
         properties (APT): The properties of the agent.
         listen_to_default_topic (bool): Whether the agent should listen to the default topic.
     """

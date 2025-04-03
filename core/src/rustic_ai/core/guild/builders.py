@@ -2,15 +2,23 @@ import json
 import logging
 import os
 from inspect import isclass
-from typing import Any, Callable, Dict, Generic, List, Optional, Type, TypeVar, Union
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Generic,
+    List,
+    Optional,
+    Self,
+    Type,
+    TypeVar,
+    Union,
+)
 
 import shortuuid
 import yaml
 from pydantic import BaseModel
 
-from rustic_ai.core.agents.system.guild_manager_agent_props import (
-    GuildManagerAgentProps,
-)
 from rustic_ai.core.agents.testutils.probe_agent import ProbeAgent
 from rustic_ai.core.guild import Agent, Guild
 from rustic_ai.core.guild.dsl import (
@@ -78,7 +86,7 @@ class EnvConstants:
 AT = TypeVar("AT", bound=Agent, covariant=True)
 
 
-class AgentBuilder(Generic[AT, APT]):
+class AgentBuilder(Generic[AT, APT]):  # type: ignore
     """
     Builder class for AgentSpec
     """
@@ -88,7 +96,9 @@ class AgentBuilder(Generic[AT, APT]):
         Initialize the AgentBuilder.
         """
         self.agent_type: Type[AT] = agent_type
-        self.agent_props_type: Type[APT] | dict = getattr(agent_type, MetaclassConstants.AGENT_PROPS_TYPE, BaseAgentProps)  # type: ignore
+        self.agent_props_type: Type[APT] | dict = getattr(
+            agent_type, MetaclassConstants.AGENT_PROPS_TYPE, BaseAgentProps
+        )
 
         self.agent_spec_dict: dict = {
             KeyConstants.ID: shortuuid.uuid(),
@@ -107,7 +117,7 @@ class AgentBuilder(Generic[AT, APT]):
             KeyConstants.DESCRIPTION: False,
         }
 
-    def set_id(self, agent_id: str) -> "AgentBuilder[AT, APT]":
+    def set_id(self, agent_id: str) -> Self:
         """
         Set the ID for the Agent.
         """
@@ -116,7 +126,7 @@ class AgentBuilder(Generic[AT, APT]):
         self.agent_spec_dict[KeyConstants.ID] = agent_id
         return self
 
-    def set_name(self, name: str) -> "AgentBuilder[AT, APT]":
+    def set_name(self, name: str) -> Self:
         """
         Set the name for the Agent.
         """
@@ -129,7 +139,7 @@ class AgentBuilder(Generic[AT, APT]):
         self.required_fields_set[KeyConstants.NAME] = True
         return self
 
-    def set_description(self, description: str) -> "AgentBuilder[AT, APT]":
+    def set_description(self, description: str) -> Self:
         """
         Set the description for the Agent.
         """
@@ -141,7 +151,7 @@ class AgentBuilder(Generic[AT, APT]):
         self.required_fields_set[KeyConstants.DESCRIPTION] = True
         return self
 
-    def add_additional_topic(self, topic: str) -> "AgentBuilder[AT, APT]":
+    def add_additional_topic(self, topic: str) -> Self:
         """
         Add an additional topic for the Agent.
         """
@@ -149,7 +159,7 @@ class AgentBuilder(Generic[AT, APT]):
         self.agent_spec_dict[KeyConstants.ADDITIONAL_TOPICS].add(topic)
         return self
 
-    def set_properties(self, props: dict | APT) -> "AgentBuilder[AT, APT]":
+    def set_properties(self, props: dict | APT) -> Self:
         """
         Set a property for the Agent.
         """
@@ -163,7 +173,7 @@ class AgentBuilder(Generic[AT, APT]):
             raise ValueError(f"Invalid properties type: {type(props)}")  # pragma: no cover
         return self
 
-    def listen_to_default_topic(self, listen: bool) -> "AgentBuilder[AT, APT]":
+    def listen_to_default_topic(self, listen: bool) -> Self:
         """
         Configure whether to listen on default topic for the Agent.
         """
@@ -179,35 +189,35 @@ class AgentBuilder(Generic[AT, APT]):
         if missing_fields:
             raise ValueError(f"Missing required fields: {missing_fields}")
 
-    def set_dependency_map(self, dependency_map: Dict[str, DependencySpec]) -> "AgentBuilder[AT, APT]":
+    def set_dependency_map(self, dependency_map: Dict[str, DependencySpec]) -> Self:
         """
         Set the dependency map for the Agent.
         """
         self.agent_spec_dict[KeyConstants.DEPENDENCY_MAP] = dependency_map
         return self
 
-    def add_dependency_resolver(self, dep_key: str, dep_spec: DependencySpec) -> "AgentBuilder[AT, APT]":
+    def add_dependency_resolver(self, dep_key: str, dep_spec: DependencySpec) -> Self:
         """
         Add a dependency to the Agent.
         """
         self.agent_spec_dict[KeyConstants.DEPENDENCY_MAP][dep_key] = dep_spec
         return self
 
-    def act_only_when_tagged(self, act_only_when_tagged: bool) -> "AgentBuilder[AT, APT]":
+    def act_only_when_tagged(self, act_only_when_tagged: bool) -> Self:
         """
         Configure whether the agent should act only when tagged.
         """
         self.agent_spec_dict[KeyConstants.ACT_ONLY_WHEN_TAGGED] = act_only_when_tagged
         return self
 
-    def add_predicate(self, method_name: str, predicate: RuntimePredicate) -> "AgentBuilder[AT, APT]":
+    def add_predicate(self, method_name: str, predicate: RuntimePredicate) -> Self:
         """
         Add a predicate for the Agent.
         """
         self.agent_spec_dict[KeyConstants.PREDICATES][method_name] = predicate
         return self
 
-    def build_spec(self: "AgentBuilder[AT, APT]") -> AgentSpec[APT]:
+    def build_spec(self) -> AgentSpec[APT]:
         """
         Build and return an AgentSpec instance with the set properties.
         """
@@ -217,7 +227,7 @@ class AgentBuilder(Generic[AT, APT]):
         dict_copy[KeyConstants.ADDITIONAL_TOPICS] = list(dict_copy[KeyConstants.ADDITIONAL_TOPICS])
         return AgentSpec[APT].model_validate(dict_copy)
 
-    def build(self: "AgentBuilder[AT, APT]") -> AT:
+    def build(self) -> AT:
         """
         Build and return an Agent instance with the set properties.
         """
@@ -604,7 +614,6 @@ class GuildBuilder:
             name=f"GuildManagerAgent4{guild.id}",
             description=f"Guild Manager Agent for {guild.id}",
             class_name="rustic_ai.core.agents.system.guild_manager_agent.GuildManagerAgent",
-            properties_type=get_qualified_class_name(GuildManagerAgentProps),
             properties={"guild_spec": guild_spec.model_dump(), "database_url": metastore_database_url},
         )
 
