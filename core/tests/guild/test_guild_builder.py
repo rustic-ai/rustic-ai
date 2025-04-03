@@ -919,7 +919,7 @@ class TestGuildBuilder:
 
         assert len(user_notifications) == 3
 
-        notifed_users = []
+        notified_users = []
         for message in user_notifications:
             assert message.payload["message"] == "Hello, world!"
             _, user_id = message.topics.split(":")
@@ -927,6 +927,6 @@ class TestGuildBuilder:
             if message.forward_header:
                 assert message.forward_header.origin_message_id == send_id.to_int()
                 assert message.forward_header.on_behalf_of.name == "ProbeAgent"
-                notifed_users.append(user_id)
+                notified_users.append(user_id)
 
-        assert user1 not in notifed_users
+        assert user1 not in notified_users
