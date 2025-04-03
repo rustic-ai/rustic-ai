@@ -83,7 +83,7 @@ class AgentBuilder(Generic[AT, APT]):
     Builder class for AgentSpec
     """
 
-    def __init__(self, agent_type: Type[AT], agent_props_type: Type[APT] = BaseAgentProps):  # type: ignore
+    def __init__(self, agent_type: Type[AT]):
         """
         Initialize the AgentBuilder.
         """

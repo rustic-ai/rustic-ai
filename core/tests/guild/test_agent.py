@@ -43,7 +43,7 @@ class TestAgent:
         demo_props = DemoAgentProps(prop1="value1", prop2=2)
 
         agent: Agent = (
-            AgentBuilder(DemoAgentGenericWithoutTypedSpec, DemoAgentProps)
+            AgentBuilder(DemoAgentGenericWithoutTypedSpec)
             .set_name("simple")
             .set_description("simple agent")
             .set_properties(demo_props)
@@ -54,7 +54,7 @@ class TestAgent:
 
     def test_agent_instantion_with_parameters_as_dict(self):
         agent: Agent = (
-            AgentBuilder(DemoAgentGenericWithoutTypedSpec, DemoAgentProps)
+            AgentBuilder(DemoAgentGenericWithoutTypedSpec)
             .set_name("simple")
             .set_description("simple agent")
             .set_properties({"prop1": "value1", "prop2": 2})

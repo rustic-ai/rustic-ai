@@ -310,7 +310,7 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
             user_id = uacr.user_id
 
             user_agent_spec = (
-                AgentBuilder(UserProxyAgent, UserProxyAgentProps)
+                AgentBuilder(UserProxyAgent)
                 .set_id(UserProxyAgent.get_user_agent_id(user_id))
                 .set_name(uacr.user_name)
                 .set_description(f"Agent for user {user_id}")
