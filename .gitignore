@@ -110,6 +110,7 @@ ENV/
 # IDE settings
 .vscode/
 .idea/
+*.iml
 
 # mkdocs build dir
 site/
@@ -121,5 +122,3 @@ site/
 speech.wav
 
 uvicorn_output.txt
-scripts/skywalking/data-tmp/traces.json
-scripts/zipkin/data-tmp/traces.json
