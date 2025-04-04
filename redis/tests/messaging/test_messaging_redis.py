@@ -1,8 +1,9 @@
 import fakeredis
 import pytest
-from core.tests.messaging.core.base_test_messaging import BaseTestMessagingABC
 
 from rustic_ai.core.messaging.core.messaging_config import MessagingConfig
+
+from core.tests.messaging.core.base_test_messaging import BaseTestMessagingABC
 
 
 class TestMessagingBusWithRedisStorage(BaseTestMessagingABC):

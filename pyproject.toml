@@ -27,12 +27,12 @@ mypy = "^1.15.0"
 coverage = "^7.6.12"
 cookiecutter = "^2.6.0"
 tomlkit = "^0.13.2"
-# api-server dev dependencies
-pytest-asyncio = "^0.25.3"
-httpx = "^0.28.1"
 # redis dev dependencies
 fakeredis = "^2.27.0"
 types-redis = "^4.6.0.20241004"
+# api-server dev dependencies
+pytest-asyncio = "^0.25.3"
+httpx = "^0.28.1"
 
 
 
@@ -68,6 +68,7 @@ exclude = ["^\\.venv/", "^cache/"]
 profile = "black"
 known_third_party = ["pydantic"]
 known_first_party = ["rustic_ai.core", "rustic_ai.redis"]
+known_local_folder = ["core"]
 
 
 [tool.pytest.ini_options]

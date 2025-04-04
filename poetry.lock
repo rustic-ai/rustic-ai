@@ -3053,7 +3053,7 @@ pyasn1 = ">=0.1.3"
 
 [[package]]
 name = "rusticai-core"
-version = "0.0.2"
+version = "0.0.3"
 description = "Rustic AI’s modular, agentic AI framework for building human-centered, multi-agent workflows"
 optional = false
 python-versions = "^3.12"
@@ -3067,6 +3067,7 @@ json-merge-patch = "^0.2"
 jsonata-python = "^0.5.2"
 jsonpatch = "^1.33"
 jsonpath-ng = "^1.7.0"
+opentelemetry-api = "^1.31.1"
 pydantic = "^2.10.6"
 python-dateutil = "^2.9.0.post0"
 pyyaml = "^6.0.1"
@@ -3082,7 +3083,7 @@ url = "core"
 
 [[package]]
 name = "rusticai-ray"
-version = "0.0.1"
+version = "0.0.2"
 description = "Rustic AI execution engine running on Ray Cluster"
 optional = false
 python-versions = "^3.12"
@@ -3102,7 +3103,7 @@ url = "ray"
 
 [[package]]
 name = "rusticai-redis"
-version = "0.0.1"
+version = "0.0.2"
 description = "Redis package for Rustic AI"
 optional = false
 python-versions = "^3.12"

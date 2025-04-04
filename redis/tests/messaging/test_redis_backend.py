@@ -1,8 +1,9 @@
 import fakeredis
 import pytest
-from core.tests.messaging.core.base_test_backend import BaseTestBackendABC
 
 from rustic_ai.redis.messaging.backend import RedisMessagingBackend
+
+from core.tests.messaging.core.base_test_backend import BaseTestBackendABC
 
 
 class TestRedisBackend(BaseTestBackendABC):
