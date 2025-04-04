@@ -51,7 +51,7 @@ class KeyNotFound(BaseModel):
 
 class KVStoreAgent(Agent):
     """
-    My cool agent does cool things
+    Agent for testing KVStore dependencies
     """
 
     def __init__(self, agent_spec: AgentSpec):
@@ -79,7 +79,7 @@ class KVStoreAgent(Agent):
         guild_kvstore: BaseKVStore,
     ):
         """
-        Handles messages of type KVPut, doing cool things with the data
+        Handles messages of type KVPut
         """
         data: KVPut = ctx.payload
         if data.in_guild_store:
@@ -114,7 +114,7 @@ class KVStoreAgent(Agent):
         guild_kvstore: BaseKVStore,
     ):
         """
-        Handles messages of type KVGet, doing cool things with the data
+        Handles messages of type KVGet
         """
         data: KVGet = ctx.payload
         if data.from_guild_store:
@@ -152,7 +152,7 @@ class KVStoreAgent(Agent):
         guild_kvstore: BaseKVStore,
     ):
         """
-        Handles messages of type KVDel, doing cool things with the data
+        Handles messages of type KVDel
         """
         data: KVDel = ctx.payload
         if data.from_guild_store:

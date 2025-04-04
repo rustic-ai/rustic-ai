@@ -3,18 +3,25 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
-name = "rusticai-python-framework"
-description = "Monorepo for Rustic AI Python Packages"
+name = "rusticai-redis"
+version = "0.0.1"
+description = "Redis package for Rustic AI"
 authors = ["Dragonscale Industries Inc. <dev@dragonscale.ai>"]
+license = "Apache-2.0"
 readme = "README.md"
 homepage = "https://www.rustic.ai/"
 repository = "https://github.com/rustic-ai/python-framework"
-package-mode = false
+packages = [{ include = "rustic_ai", from = "src" }]
+
+[tool.poetry.urls]
+"Rustic AI Core" = "https://pypi.org/project/rusticai-core/"
 
 [tool.poetry.dependencies]
 python = "^3.12"
-rusticai-core = { path = "./core", develop = true }
-rusticai-redis = { path = "./redis", develop = true }
+rusticai-core = { path = "../core", develop = true }
+redis = { extras = ["hiredis"], version = "^5.2.1" }
+
+[tool.poetry-monorepo.deps]
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.4"
@@ -23,22 +30,13 @@ flake8 = "^7.1.2"
 tox = "^4.24.1"
 isort = "^6.0.0"
 mypy = "^1.15.0"
-coverage = "^7.6.12"
-cookiecutter = "^2.6.0"
-tomlkit = "^0.13.2"
-# api-server dev dependencies
-pytest-asyncio = "^0.25.3"
-httpx = "^0.28.1"
-# redis dev dependencies
 fakeredis = "^2.27.0"
 types-redis = "^4.6.0.20241004"
-
-
 
 [tool.black]
 line-length = 120
 target-version = ['py312']
-include = '(\\.pyi?$|.*/src/|.*/tests/|it/)'
+include = '\.pyi?$'
 exclude = '''
 /(
     \.git
@@ -49,8 +47,6 @@ exclude = '''
   | buck-out
   | build
   | dist
-  |__pycache__
-  | resources/*
 )/
 '''
 
@@ -60,17 +56,10 @@ ignore_missing_imports = true
 check_untyped_defs = true
 plugins = "pydantic.mypy"
 explicit_package_bases = true
-exclude = ["^\\.venv/", "^cache/"]
 
 
 [tool.isort]
 profile = "black"
 known_third_party = ["pydantic"]
 known_first_party = ["rustic_ai.core", "rustic_ai.redis"]
-
-
-[tool.pytest.ini_options]
-asyncio_mode = "auto"
-asyncio_default_fixture_loop_scope="function"
-norecursedirs = ["cookiecutter-rustic"]
 
