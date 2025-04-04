@@ -15,6 +15,7 @@ package-mode = false
 python = "^3.12"
 rusticai-core = { path = "./core", develop = true }
 rusticai-redis = { path = "./redis", develop = true }
+rusticai-ray = { path = "./ray", develop = true }
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.4"

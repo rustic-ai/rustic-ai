@@ -3,9 +3,9 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
-name = "rusticai-{{ cookiecutter.module_name }}"
-version = "{{ cookiecutter.version }}"
-description = "{{ cookiecutter.description }}"
+name = "rusticai-ray"
+version = "0.0.1"
+description = "Rustic AI execution engine running on Ray Cluster"
 authors = ["Dragonscale Industries Inc. <dev@dragonscale.ai>"]
 license = "Apache-2.0"
 readme = "README.md"
@@ -19,6 +19,10 @@ packages = [{ include = "rustic_ai", from = "src" }]
 [tool.poetry.dependencies]
 python = "^3.12"
 rusticai-core = { path = "../core", develop = true }
+ray = { extras = ["default"], version = "^2.44.1" }
+opentelemetry-sdk = "^1.31.1"
+opentelemetry-exporter-otlp = "^1.31.1"
+opentelemetry-exporter-otlp-proto-grpc = "^1.31.1"
 
 [tool.poetry-monorepo.deps]
 
