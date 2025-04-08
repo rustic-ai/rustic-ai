@@ -1,0 +1,35 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: "0.0.0.0:4317"
+      http:
+        endpoint: "0.0.0.0:4318"
+
+exporters:
+  zipkin:
+    endpoint: http://zipkin:9411/api/v2/spans
+
+
+  file:
+    path: /tmp/traces.json
+  debug:
+    verbosity: detailed
+
+processors:
+  batch:
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [zipkin, file]
+  telemetry:
+    metrics:
+      address: 0.0.0.0:8888
+    logs:
+      level: DEBUG
+
+extensions:
+  health_check:

@@ -1,1 +1,1 @@
-MODULES=('core' 'redis' 'ray')
+MODULES=('core' 'redis' 'ray' 'api')

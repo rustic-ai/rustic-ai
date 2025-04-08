@@ -1,0 +1,32 @@
+services:
+  # The zipkin process services the UI, and also exposes a POST endpoint that
+  # instrumentation can send trace data to.
+  zipkin:
+    image: ghcr.io/openzipkin/zipkin-slim:3
+    container_name: zipkin
+    # Environment settings are defined here https://github.com/openzipkin/zipkin/blob/master/zipkin-server/README.md#environment-variables
+    environment:
+      - STORAGE_TYPE=mem
+      # Uncomment to enable self-tracing
+      # - SELF_TRACING_ENABLED=true
+      # Uncomment to increase heap size
+      - JAVA_OPTS=-Xms128m -Xmx128m -XX:+ExitOnOutOfMemoryError
+    ports:
+      # Port used for the Zipkin UI and HTTP Api
+      - 9411:9411
+      - 9412:9412
+    # Uncomment to enable debug logging
+    # command: --logging.level.zipkin2=DEBUG
+
+  otel-collector:
+    image: ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib:0.115.1
+    container_name: otelcol
+    command: [ "--config=/etc/otel-collector-config.yaml" ]
+    volumes:
+      - ./config/otel-collector-zipkin-config.yaml:/etc/otel-collector-config.yaml
+      - ./data-tmp:/tmp
+    ports:
+      - "4317:4317" # GRPC receiver port
+      - "4318:4318" # HTTP receiver port
+      - "8888:8888" # Health check and metrics exposure
+      - "13133:13133" # Default health check port

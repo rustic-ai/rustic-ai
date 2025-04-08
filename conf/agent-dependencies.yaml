@@ -1,0 +1,15 @@
+kvstore:
+  class_name: rustic_ai.core.guild.agent_ext.depends.kvstore.InMemoryKVStoreResolver
+  properties: {}
+filesystem:
+  class_name: rustic_ai.core.guild.agent_ext.depends.filesystem.FileSystemResolver
+  properties: {
+                "path_base": "/tmp",
+                "protocol": "file",
+                "storage_options": {
+                    "auto_mkdir": True,
+                }
+              }
+code_runner:
+  class_name: rustic_ai.core.guild.agent_ext.depends.code_execution.stateless.InProcessCodeInterpreterResolver
+  properties: {}
