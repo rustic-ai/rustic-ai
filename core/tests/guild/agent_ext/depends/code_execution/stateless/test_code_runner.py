@@ -1,6 +1,6 @@
 import pytest
 
-from rustic_ai.core.guild.agent_ext.depends.code_execution.code_runner import (
+from rustic_ai.core.guild.agent_ext.depends.code_execution.stateless import (
     CodeBlock,
     CodeRunner,
     InProcessCodeInterpreter,

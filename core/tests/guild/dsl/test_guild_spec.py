@@ -1,11 +1,12 @@
 import pytest
 from pydantic import ValidationError
 
-from core.tests.guild.simple_agent import SimpleAgent
 from rustic_ai.core import AgentMode, AgentType, SimpleClient
 from rustic_ai.core.guild import GSKC
 from rustic_ai.core.guild.dsl import AgentSpec, GuildSpec
 from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
+
+from core.tests.guild.simple_agent import SimpleAgent
 
 
 class TestGuildSpec:

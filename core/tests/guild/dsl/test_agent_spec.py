@@ -1,13 +1,14 @@
 import pytest
 from pydantic import ValidationError
 
+from rustic_ai.core.guild.dsl import AgentSpec, BaseAgentProps
+from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
+
 from core.tests.guild.sample_agents import (
     DemoAgentGenericWithoutTypedParams,
     DemoAgentProps,
 )
 from core.tests.guild.simple_agent import SimpleAgent
-from rustic_ai.core.guild.dsl import AgentSpec, BaseAgentProps
-from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 
 
 class DummyAgentProps(BaseAgentProps):

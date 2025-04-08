@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "rusticai-core"
-version = "0.0.3"
+version = "0.0.4"
 description = "Rustic AI’s modular, agentic AI framework for building human-centered, multi-agent workflows"
 authors = ["Dragonscale Industries Inc. <dev@dragonscale.ai>"]
 license = "Apache-2.0"
@@ -71,3 +71,4 @@ explicit_package_bases = true
 profile = "black"
 known_third_party = ["pydantic"]
 known_first_party = ["rustic_ai.core"]
+known_local_folder = ["core"]

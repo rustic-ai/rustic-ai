@@ -1,6 +1,6 @@
 from typing import Dict, Optional
 
-from pydantic import BaseModel, Field, JsonValue
+from pydantic import BaseModel, ConfigDict, Field, JsonValue
 
 from rustic_ai.core import AgentTag
 
@@ -44,8 +44,4 @@ class FormFormat(BaseModel):
 
 
 class FormResponse(BaseModel):
-    class Config:
-        # Allow arbitrary types for fields
-        arbitrary_types_allowed = True
-        # Allow extra fields
-        extra = "allow"
+    model_config = ConfigDict(extra="allow", arbitrary_types_allowed=True)

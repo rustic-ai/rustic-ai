@@ -67,31 +67,12 @@ class AgentDependency(BaseModel):
 
 
 class AgentEntry(BaseModel):
-
     agent_name: str = Field(..., description="The name of the agent.")
     qualified_class_name: str = Field(..., description="The qualified class name of the agent.")
     agent_doc: Optional[str] = Field(default="", description="The documentation for the agent.")
     agent_props_schema: Dict[str, JsonValue] = Field(..., description="The type of the agent properties.")
     message_handlers: Dict[str, HandlerEntry] = Field(..., description="The handlers for the agent.")
     agent_dependencies: List[AgentDependency] = Field(..., description="The dependencies for the agent.")
-
-    def __init__(
-        self,
-        agent_name: str,
-        qualified_class_name: str,
-        agent_doc: str,
-        message_handlers: Dict[str, HandlerEntry],
-        agent_props_type: type[BaseModel],
-        agent_dependencies: List[AgentDependency],
-    ):
-        super().__init__(
-            agent_name=agent_name,
-            qualified_class_name=qualified_class_name,
-            agent_doc=agent_doc,
-            agent_props_schema=agent_props_type.model_json_schema(),
-            message_handlers=message_handlers,
-            agent_dependencies=agent_dependencies,
-        )
 
 
 class AgentRegistry:
@@ -108,12 +89,12 @@ class AgentRegistry:
         agent_dependencies: List[AgentDependency],
     ):
         cls._agents[qualified_class_name] = AgentEntry(
-            agent_name,
-            qualified_class_name,
-            agent_doc,
-            handlers,
-            agent_props_type,
-            agent_dependencies,
+            agent_name=agent_name,
+            qualified_class_name=qualified_class_name,
+            agent_doc=agent_doc,
+            agent_props_schema=agent_props_type.model_json_schema(),
+            message_handlers=handlers,
+            agent_dependencies=agent_dependencies,
         )
 
     @classmethod
