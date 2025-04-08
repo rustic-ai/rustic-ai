@@ -17,6 +17,7 @@ rusticai-core = { path = "./core", develop = true }
 rusticai-redis = { path = "./redis", develop = true }
 rusticai-ray = { path = "./ray", develop = true }
 rusticai-api = { path = "./api", develop = true }
+rusticai-litellm = {path = "./litellm", develop = true}
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.4"
@@ -62,7 +63,7 @@ ignore_missing_imports = true
 check_untyped_defs = true
 plugins = "pydantic.mypy"
 explicit_package_bases = true
-exclude = ["^\\.venv/", "^cache/"]
+exclude = ["^\\.venv/", "^cache/", "cookiecutter-rustic/"]
 
 
 [tool.isort]
