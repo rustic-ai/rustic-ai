@@ -102,13 +102,23 @@ class VectorStore(ABC):
         self,
         query: str,
         k: int = DEFAULT_K,
-        filter: Optional[Dict[str, str]] = None,
+        metadata_filter: Optional[Dict[str, str]] = None,
         where_documents: Optional[Dict[str, str]] = None,
     ) -> VectorSearchResults:
         """
-        Search for documents similar to the query.
+        Performs a similarity search against a vector search system. This method identifies
+        the most relevant results based on the provided query, constraints, and the number
+        of results to return. The search is conducted in such a way that the function may
+        also incorporate document-based filters to refine results.
 
         Args:
-            query: Query string.
+            query: The string query to be used for matching in the similarity search.
+            k: The number of top results to return from the search. Defaults to 'DEFAULT_K'.
+            metadata_filter: An optional dictionary specifying constraints on metadata fields
+            where_documents: An optional dictionary representing additional document-specific
+                constraints or conditions for refining the search.
+
+        Returns:
+            VectorSearchResults: object with list of documents and the total number of documents found.
         """
         pass  # pragma: no cover

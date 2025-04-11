@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "rusticai-core"
-version = "0.0.4"
+version = "0.0.5"
 description = "Rustic AI’s modular, agentic AI framework for building human-centered, multi-agent workflows"
 authors = ["Dragonscale Industries Inc. <dev@dragonscale.ai>"]
 license = "Apache-2.0"
@@ -31,6 +31,10 @@ sympy = "^1.13.3"
 python-dateutil = "^2.9.0.post0"
 opentelemetry-api = "^1.31.1"
 
+
+[tool.poetry.group.dev]
+optional = true
+
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.4"
 black = { version = "^24.2.0", extras = ["jupyter"] }
@@ -39,8 +43,8 @@ tox = "^4.24.1"
 isort = "^6.0.0"
 mypy = "^1.15.0"
 
-
-[tool.poetry.group.pub.dependencies]
+[tool.poetry.extras]
+test = ["pytest"]
 
 [tool.black]
 line-length = 120

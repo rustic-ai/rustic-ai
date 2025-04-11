@@ -881,7 +881,7 @@ class AgentFixtures:
 
     @staticmethod
     def outgoing_message_modifier(
-        func: Callable[[Any, ProcessContext[MDT], Message], None]
+        func: Callable[[Any, ProcessContext[MDT], Message], None],
     ) -> Callable[[Any, ProcessContext[MDT], Message], None]:
         """
         Decorator for a method that should be called when a message is sent.
