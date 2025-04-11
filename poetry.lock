@@ -452,17 +452,17 @@ uvloop = ["uvloop (>=0.15.2)"]
 
 [[package]]
 name = "boto3"
-version = "1.37.32"
+version = "1.37.33"
 description = "The AWS SDK for Python"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "boto3-1.37.32-py3-none-any.whl", hash = "sha256:6f0d3863abfeed366b365fb3ad2fa508d7f2becd64ca712d4b70b593da7f9763"},
-    {file = "boto3-1.37.32.tar.gz", hash = "sha256:bc08c95a88ffeb51d78d25cb8bd72593b8cce1d8fdcc650030aff98c15437d04"},
+    {file = "boto3-1.37.33-py3-none-any.whl", hash = "sha256:7b1b1bc69762975824e5a5d570880abebf634f7594f88b3dc175e8800f35be1a"},
+    {file = "boto3-1.37.33.tar.gz", hash = "sha256:4390317a1578af73f1514651bd180ba25802dcbe0a23deafa13851d54d3c3203"},
 ]
 
 [package.dependencies]
-botocore = ">=1.37.32,<1.38.0"
+botocore = ">=1.37.33,<1.38.0"
 jmespath = ">=0.7.1,<2.0.0"
 s3transfer = ">=0.11.0,<0.12.0"
 
@@ -471,13 +471,13 @@ crt = ["botocore[crt] (>=1.21.0,<2.0a0)"]
 
 [[package]]
 name = "botocore"
-version = "1.37.32"
+version = "1.37.33"
 description = "Low-level, data-driven core of boto 3."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "botocore-1.37.32-py3-none-any.whl", hash = "sha256:c25989e09e29b382c1edcc994f795c4faadf2f30470269754024a55269a7a47d"},
-    {file = "botocore-1.37.32.tar.gz", hash = "sha256:3e5d097690b3423adeefdf257384e964d0ba7f9575d77bf3f8998273b92ef700"},
+    {file = "botocore-1.37.33-py3-none-any.whl", hash = "sha256:4a167dfecae51e9140de24067de1c339acde5ade3dad524a4600ac2c72055e23"},
+    {file = "botocore-1.37.33.tar.gz", hash = "sha256:09b213b0d0500040f85c7daee912ea767c724e43ed61909e624c803ff6925222"},
 ]
 
 [package.dependencies]
@@ -4839,7 +4839,7 @@ pyasn1 = ">=0.1.3"
 
 [[package]]
 name = "rusticai-api"
-version = "0.0.1"
+version = "0.0.2"
 description = "API Server for Rustic AI"
 optional = false
 python-versions = "^3.12"
@@ -4868,8 +4868,8 @@ url = "api"
 
 [[package]]
 name = "rusticai-chroma"
-version = "0.0.0"
-description = "module boilerplate"
+version = "0.0.1"
+description = "Rustic AI module for leveraging ChromaDB"
 optional = false
 python-versions = "^3.12"
 files = []
@@ -4888,7 +4888,7 @@ url = "chroma"
 
 [[package]]
 name = "rusticai-core"
-version = "0.0.4"
+version = "0.0.5"
 description = "Rustic AI’s modular, agentic AI framework for building human-centered, multi-agent workflows"
 optional = false
 python-versions = "^3.12"
@@ -4921,7 +4921,7 @@ url = "core"
 
 [[package]]
 name = "rusticai-litellm"
-version = "0.0.1"
+version = "0.0.2"
 description = "Rustic AI module leveraging LiteLLM for LLMs"
 optional = false
 python-versions = "^3.12"
@@ -4943,7 +4943,7 @@ url = "litellm"
 
 [[package]]
 name = "rusticai-marvin"
-version = "0.0.0"
+version = "0.0.1"
 description = "Rustic AI module using Marvin"
 optional = false
 python-versions = "^3.12"
@@ -4963,7 +4963,7 @@ url = "marvin"
 
 [[package]]
 name = "rusticai-ray"
-version = "0.0.3"
+version = "0.0.4"
 description = "Rustic AI execution engine running on Ray Cluster"
 optional = false
 python-versions = "^3.12"
@@ -4986,7 +4986,7 @@ url = "ray"
 
 [[package]]
 name = "rusticai-redis"
-version = "0.0.3"
+version = "0.0.4"
 description = "Redis package for Rustic AI"
 optional = false
 python-versions = "^3.12"
@@ -5005,8 +5005,28 @@ type = "directory"
 url = "redis"
 
 [[package]]
+name = "rusticai-serpapi"
+version = "0.0.1"
+description = "Rustic AI module supporting Search through SerpApi"
+optional = false
+python-versions = "^3.12"
+files = []
+develop = true
+
+[package.dependencies]
+rusticai-core = {path = "../core", develop = true}
+serpapi = "^0.1.5"
+
+[package.extras]
+test = []
+
+[package.source]
+type = "directory"
+url = "serpapi"
+
+[[package]]
 name = "rusticai-testing"
-version = "0.0.0"
+version = "0.0.1"
 description = "Test Utilities for Rustic AI Framework"
 optional = false
 python-versions = "^3.12"
@@ -5037,6 +5057,24 @@ botocore = ">=1.37.4,<2.0a.0"
 
 [package.extras]
 crt = ["botocore[crt] (>=1.37.4,<2.0a.0)"]
+
+[[package]]
+name = "serpapi"
+version = "0.1.5"
+description = "The official Python client for SerpApi.com."
+optional = false
+python-versions = ">=3.6.0"
+files = [
+    {file = "serpapi-0.1.5-py2.py3-none-any.whl", hash = "sha256:6467b6adec1231059f754ccaa952b229efeaa8b9cae6e71f879703ec9e5bb3d1"},
+    {file = "serpapi-0.1.5.tar.gz", hash = "sha256:b9707ed54750fdd2f62dc3a17c6a3fb7fa421dc37902fd65b2263c0ac765a1a5"},
+]
+
+[package.dependencies]
+requests = "*"
+
+[package.extras]
+color = ["pygments"]
+test = ["pytest"]
 
 [[package]]
 name = "setuptools"
@@ -6170,4 +6208,4 @@ test = []
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.12"
-content-hash = "d7c5d856a735aee889b202779041c9c7cf4419eeacbbc4ba097b825624c69bad"
+content-hash = "a75a200a7f2d633cb074f8a14a089a55b7e5814a9373c518bfbef5919f08d4f1"

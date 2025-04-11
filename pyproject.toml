@@ -20,6 +20,7 @@ rusticai-api = { path = "./api", develop = true }
 rusticai-litellm = {path = "./litellm", develop = true}
 rusticai-chroma = {path = "./chroma", develop = true}
 rusticai-marvin = {path = "./marvin", develop = true}
+rusticai-serpapi = {path = "./serpapi", develop = true}
 
 [tool.poetry.group.dev]
 optional = true
