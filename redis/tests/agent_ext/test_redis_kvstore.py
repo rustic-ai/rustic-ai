@@ -1,9 +1,9 @@
 import pytest
 
 from rustic_ai.core.guild.agent_ext.depends.dependency_resolver import DependencySpec
-from rustic_ai.redis.agent_ext.redis_kvstore import RedisKVStoreResolver
+from rustic_ai.redis.agent_ext.kvstore import RedisKVStoreResolver
 
-from core.tests.guild.agent_ext.depends.test_di_kvstore import BaseTestKVStore
+from rustic_ai.testing.agent_ext.base_test_kvstore import BaseTestKVStore
 
 
 class TestRedisKVStore(BaseTestKVStore):
