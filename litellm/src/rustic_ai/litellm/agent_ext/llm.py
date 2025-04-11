@@ -1,5 +1,7 @@
 from typing import List
 
+from rustic_ai.litellm.conf import LiteLLMConf
+
 import litellm
 from rustic_ai.core.guild.agent_ext.depends.dependency_resolver import (
     DependencyResolver,
@@ -10,8 +12,6 @@ from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     ChatCompletionResponse,
     ChatCompletionTool,
 )
-
-from .conf import LiteLLMConf
 
 
 class LiteLLM(LLM):
