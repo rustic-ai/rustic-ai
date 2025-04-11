@@ -4,7 +4,7 @@ import ray
 from rustic_ai.core.messaging.core.messaging_config import MessagingConfig
 from rustic_ai.redis.messaging.backend import RedisBackendConfig
 
-from core.tests.integration.execution.base_test_integration import IntegrationTestABC
+from rustic_ai.testing.execution.base_test_integration import IntegrationTestABC
 
 
 class TestRayRedisIntegration(IntegrationTestABC):

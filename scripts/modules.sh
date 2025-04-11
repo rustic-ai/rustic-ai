@@ -1,1 +1,1 @@
-MODULES=('core' 'redis' 'ray' 'api' 'litellm')
+MODULES=('core' 'testing' 'redis' 'ray' 'api' 'litellm' 'chroma' 'marvin' )
