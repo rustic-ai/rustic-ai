@@ -20,7 +20,7 @@ poetry shell
 2. Start the server:
 ```shell
 # If using an external SQL database, expose RUSTIC_METASTORE to the corresponding url 
-# For example, if postgres is run using docker, export RUSTIC_METASTORE=postgresql+psycopg://user:pwd@localhost:5432
+# For example, if using postgres, export RUSTIC_METASTORE=postgresql+psycopg://user:pwd@localhost:5432
 ./scripts/dev_server.sh
 ```
 

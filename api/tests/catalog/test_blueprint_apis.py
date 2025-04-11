@@ -1,8 +1,5 @@
-from typing import List
-
 import pytest
 from fastapi.testclient import TestClient
-from pydantic import BaseModel
 from sqlmodel import Session
 
 from rustic_ai.api_server.catalog.catalog_store import CatalogStore
@@ -16,12 +13,12 @@ from rustic_ai.api_server.catalog.models import (
     CatalogAgentEntry,
 )
 from rustic_ai.core.agents.testutils import EchoAgent
-from rustic_ai.core.guild import Agent, AgentMode, AgentType, agent
-from rustic_ai.core.guild.dsl import AgentSpec, GuildSpec
+from rustic_ai.core.guild.dsl import GuildSpec
 from rustic_ai.core.guild.metastore.database import Metastore
-from rustic_ai.core.messaging.core import JsonDict
-from rustic_ai.core.messaging.core.message import Message
 from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
+
+from rustic_ai.testing.agents.sample_agents import DemoAgentSimple, MessageDataType
+from rustic_ai.testing.agents.simple_agent import SimpleAgent
 
 
 @pytest.fixture(scope="module")
@@ -49,32 +46,6 @@ def catalog_store(catalog_engine):
 def session(catalog_engine):
     with Session(catalog_engine) as session:
         yield session
-
-
-class SimpleAgent(Agent):
-    def __init__(
-        self,
-        agent_spec: AgentSpec,
-    ):
-        super().__init__(agent_spec=agent_spec, agent_type=AgentType.BOT, agent_mode=AgentMode.LOCAL)
-        self.received_messages: List[Message] = []
-
-    @agent.processor(JsonDict)
-    def collect_message(self, ctx: agent.ProcessContext[JsonDict]) -> None:
-        self.received_messages.append(ctx.message.model_copy(deep=True))
-
-
-class MessageDataType(BaseModel):
-    data: str
-
-
-class DemoAgentSimple(Agent):
-    def __init__(self, agent_spec: AgentSpec):
-        super().__init__(agent_spec=agent_spec, agent_type=AgentType.BOT, agent_mode=AgentMode.LOCAL)
-
-    @agent.processor(MessageDataType)
-    def handle_message(self, ctx: agent.ProcessContext[MessageDataType]):
-        print(f"Received message: {ctx.payload.data}")
 
 
 echo_agent = {

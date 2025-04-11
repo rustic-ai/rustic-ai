@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "rusticai-api"
-version = "0.0.1"
+version = "0.0.2"
 description = "API Server for Rustic AI"
 authors = ["Dragonscale Industries Inc. <dev@dragonscale.ai>"]
 license = "Apache-2.0"
@@ -32,6 +32,10 @@ psycopg = "^3.2.6"
 
 [tool.poetry-monorepo.deps]
 
+
+[tool.poetry.group.dev]
+optional = true
+
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.4"
 black = { version = "^24.2.0", extras = ["jupyter"] }
@@ -41,6 +45,10 @@ isort = "^6.0.0"
 mypy = "^1.15.0"
 pytest-asyncio = "^0.25.3"
 httpx = "^0.28.1"
+rusticai-testing = { path = "../testing", develop = true }
+
+[tool.poetry.extras]
+test = ["pytest", "pytest-asyncio", "httpx", "rusticai-testing"]
 
 [tool.black]
 line-length = 120
@@ -70,7 +78,8 @@ explicit_package_bases = true
 [tool.isort]
 profile = "black"
 known_third_party = ["pydantic"]
-known_first_party = ["rustic_ai.core", "rustic_ai.ray", "rustic_ai.api_server"]
+known_first_party = ["rustic_ai.core", "rustic_ai.ray"]
+known_local_folder = ["rustic_ai.testing"]
 
 
 [tool.pytest.ini_options]
