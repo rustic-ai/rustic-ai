@@ -3,7 +3,6 @@ import asyncio
 import pytest
 from flaky import flaky
 from pydantic import BaseModel
-from rustic_ai.marvin import MarvinAgent
 
 from rustic_ai.core.agents.commons import (
     ClassifyAndExtractRequest,
@@ -18,6 +17,7 @@ from rustic_ai.core.guild.builders import AgentBuilder
 from rustic_ai.core.messaging.core.message import AgentTag, Message
 from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 from rustic_ai.core.utils.priority import Priority
+from rustic_ai.marvin import MarvinAgent
 
 from rustic_ai.testing.helpers import wrap_agent_for_testing
 

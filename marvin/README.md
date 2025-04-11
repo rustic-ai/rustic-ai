@@ -7,6 +7,7 @@
 ```shell
 pip install rusticai-marvin
 ```
+**Note:** It depends on [rusticai-core](https://pypi.org/project/rusticai-core/)
 
 ## Building from Source
 

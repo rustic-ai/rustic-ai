@@ -68,7 +68,7 @@ explicit_package_bases = true
 [tool.isort]
 profile = "black"
 known_third_party = ["pydantic"]
-known_first_party = ["rustic_ai.core"]
+known_first_party = ["rustic_ai.core", "rustic_ai.marvin"]
 known_local_folder = ["rustic_ai.testing"]
 
 

@@ -1,8 +1,6 @@
 import time
 
 import pytest
-from rustic_ai.litellm.agent import LiteLLMAgent
-from rustic_ai.litellm.conf import LiteLLMConf
 
 from rustic_ai.core.agents.testutils.probe_agent import ProbeAgent
 from rustic_ai.core.guild.agent_ext.depends.llm.models import (
@@ -13,6 +11,8 @@ from rustic_ai.core.guild.agent_ext.depends.llm.models import (
 )
 from rustic_ai.core.guild.builders import AgentBuilder
 from rustic_ai.core.guild.guild import Guild
+from rustic_ai.litellm.agent import LiteLLMAgent
+from rustic_ai.litellm.conf import LiteLLMConf
 
 
 class TestLiteLLMAgent:
