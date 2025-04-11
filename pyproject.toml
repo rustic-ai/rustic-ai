@@ -21,6 +21,7 @@ rusticai-litellm = {path = "./litellm", develop = true}
 rusticai-chroma = {path = "./chroma", develop = true}
 rusticai-marvin = {path = "./marvin", develop = true}
 rusticai-serpapi = {path = "./serpapi", develop = true}
+rusticai-playwright = {path = "./playwright", develop = true}
 
 [tool.poetry.group.dev]
 optional = true
@@ -79,7 +80,7 @@ exclude = ["^\\.venv/", "^cache/", "cookiecutter-rustic/"]
 [tool.isort]
 profile = "black"
 known_third_party = ["pydantic"]
-known_first_party = ["rustic_ai.core", "rustic_ai.redis", "rustic_ai.ray", "rustic_ai.api_server"]
+known_first_party = ["rustic_ai.core", "rustic_ai.redis", "rustic_ai.ray", "rustic_ai.api_server", "rustic_ai.litellm", "rustic_ai.chroma", "rustic_ai.marvin", "rustic_ai.serpapi", "rustic_ai.playwright"]
 known_local_folder = ["core", "rustic_ai.testing"]
 
 

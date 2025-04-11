@@ -1,0 +1,79 @@
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "rusticai-playwright"
+version = "0.0.1"
+description = "Rustic AI module for scraping using playwright"
+authors = ["Dragonscale Industries Inc. <dev@dragonscale.ai>"]
+license = "Apache-2.0"
+readme = "README.md"
+homepage = "https://www.rustic.ai/"
+repository = "https://github.com/rustic-ai/python-framework"
+packages = [{ include = "rustic_ai", from = "src" }]
+
+[tool.poetry.urls]
+"Rustic AI Core" = "https://pypi.org/project/rusticai-core/"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+rusticai-core = { path = "../core", develop = true }
+playwright = "^1.51.0"
+install-playwright = "^0.1.1"
+markdownify = "^1.1.0"
+
+[tool.poetry-monorepo.deps]
+
+
+[tool.poetry.group.dev]
+optional = true
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.4"
+pytest-asyncio = "^0.26.0"
+black = { version = "^24.2.0", extras = ["jupyter"] }
+flake8 = "^7.1.2"
+tox = "^4.24.1"
+isort = "^6.0.0"
+mypy = "^1.15.0"
+flaky = "^3.8.1"
+rusticai-testing = {path = "../testing", develop = true}
+
+[tool.poetry.extras]
+test = ["pytest", "pytest-asyncio", "flaky", "rusticai-testing"]
+
+[tool.black]
+line-length = 120
+target-version = ['py312']
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.git
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+)/
+'''
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
+check_untyped_defs = true
+plugins = "pydantic.mypy"
+explicit_package_bases = true
+
+
+[tool.isort]
+profile = "black"
+known_third_party = ["pydantic"]
+known_first_party = ["rustic_ai.core","rustic_ai.playwright"]
+known_local_folder = ["rustic_ai.testing"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope="function"
