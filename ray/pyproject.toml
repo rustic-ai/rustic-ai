@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "rusticai-ray"
-version = "0.0.3"
+version = "0.0.4"
 description = "Rustic AI execution engine running on Ray Cluster"
 authors = ["Dragonscale Industries Inc. <dev@dragonscale.ai>"]
 license = "Apache-2.0"
@@ -26,6 +26,10 @@ opentelemetry-exporter-otlp-proto-grpc = "^1.31.1"
 
 [tool.poetry-monorepo.deps]
 
+
+[tool.poetry.group.dev]
+optional = true
+
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.4"
 black = { version = "^24.2.0", extras = ["jupyter"] }
@@ -33,6 +37,9 @@ flake8 = "^7.1.2"
 tox = "^4.24.1"
 isort = "^6.0.0"
 mypy = "^1.15.0"
+
+[tool.poetry.extras]
+test = ["pytest"]
 
 [tool.black]
 line-length = 120
