@@ -269,9 +269,7 @@ class TestGuildBuilder:
         guild_name: str,
         guild_description: str,
     ):
-        yaml_path = "core/tests/resources/guild_specs/test_guild.yaml"
-        if os.getcwd().endswith("/core"):
-            yaml_path = yaml_path[5:]
+        yaml_path = importlib.resources.files("core.tests.resources.guild_specs").joinpath("test_guild.yaml")
         new_spec = GuildBuilder.from_yaml_file(yaml_path).build_spec()
 
         assert new_spec.name == guild_name
