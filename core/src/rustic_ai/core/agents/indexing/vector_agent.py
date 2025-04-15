@@ -4,7 +4,7 @@ from typing import List
 from pydantic import BaseModel, Field
 
 from rustic_ai.core.agents.commons.media import Document, MediaLink
-from rustic_ai.core.guild import BaseAgentProps, agent
+from rustic_ai.core.guild import agent
 from rustic_ai.core.guild.agent import Agent, ProcessContext
 from rustic_ai.core.guild.agent_ext.depends.filesystem import FileSystem
 from rustic_ai.core.guild.agent_ext.depends.text_splitter import TextSplitter
@@ -12,7 +12,6 @@ from rustic_ai.core.guild.agent_ext.depends.vectorstore import (
     VectorSearchResults,
     VectorStore,
 )
-from rustic_ai.core.guild.dsl import AgentSpec
 from rustic_ai.core.guild.metaprog.agent_registry import AgentDependency
 
 
@@ -26,20 +25,10 @@ class VectorSearchQuery(BaseModel):
     k: int = Field(1, title="Number of similar documents to return")
 
 
-class VectorAgentConf(BaseAgentProps):
-    chunk_size: int = Field(10000, title="Size of the chunks to split the document into")
-    chunk_overlap: int = Field(1000, title="Overlap between chunks")
-
-
-class VectorAgent(Agent[VectorAgentConf]):
+class VectorAgent(Agent):
     """
     Agent that handles document indexing and similarity search using a vector store.
     """
-
-    def __init__(self, agent_spec: AgentSpec[VectorAgentConf]):
-        super().__init__(agent_spec)
-        self.chunk_size = agent_spec.props.chunk_size
-        self.chunk_overlap = agent_spec.props.chunk_overlap
 
     @staticmethod
     def _split_doc(doc: Document, chunks: List[str]) -> List[Document]:
@@ -76,7 +65,7 @@ class VectorAgent(Agent[VectorAgentConf]):
         ctx: ProcessContext[IngestDocuments],
         vectorstore: VectorStore,
         filesystem: FileSystem,
-        splitter: TextSplitter,
+        textsplitter: TextSplitter,
     ):
         """
         Handles messages of type MessageDataModel, doing cool things with the data
@@ -85,13 +74,13 @@ class VectorAgent(Agent[VectorAgentConf]):
         docs: List[Document] = []
         for doc in ingest_request.documents:
             if isinstance(doc, Document):
-                chunks = splitter.split(doc.content)
+                chunks = textsplitter.split(doc.content)
                 cdocs = self._split_doc(doc, chunks)
                 docs.extend(cdocs)
             elif isinstance(doc, MediaLink) and doc.on_filesystem:
                 with filesystem.open(doc.url, "rb") as f:
                     data = f.read()
-                    chunks = splitter.split(data)
+                    chunks = textsplitter.split(data)
                     cdocs = self._split_doc(
                         Document(id=doc.id, name=doc.name, content=data, mimetype=doc.mimetype, encoding=doc.encoding),
                         chunks,
