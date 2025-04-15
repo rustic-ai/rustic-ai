@@ -2,6 +2,9 @@ import logging
 from typing import Dict, List, Optional
 
 import chromadb
+from chromadb import EmbeddingFunction as ChromaEF
+from chromadb import Embeddings as ChromaEmbeddings
+from chromadb.api.types import D as ChromaEmbeddable
 
 from rustic_ai.core.agents.commons.media import Document
 from rustic_ai.core.guild.agent_ext.depends import DependencyResolver
@@ -63,6 +66,14 @@ class Chroma(VectorStore):
         return VectorSearchResults(query=query, results=search_results)
 
 
+class ChromaEmbeddingFunction(ChromaEF):
+    def __init__(self, embeddings: Embeddings):
+        self.embedding = embeddings
+
+    def __call__(self, input: ChromaEmbeddable) -> ChromaEmbeddings:
+        return self.embedding.embed(input)
+
+
 class ChromaResolver(DependencyResolver[VectorStore]):
     def __init__(self, chroma_settings: JsonDict = {}):
         super().__init__()
@@ -81,8 +92,10 @@ class ChromaResolver(DependencyResolver[VectorStore]):
 
         client = chromadb.Client(settings)
 
+        ef = ChromaEmbeddingFunction(embeddings)
+
         collection = client.get_or_create_collection(
-            name=f"rusticai_{guild_id}_{agent_id}", embedding_function=embeddings.embed
+            name=f"rusticai_{guild_id}_{agent_id}", embedding_function=ef
         )
 
         return Chroma(collection)
