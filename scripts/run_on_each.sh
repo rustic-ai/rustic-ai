@@ -6,10 +6,20 @@ set -e
 DIR="$( cd "$( dirname "$0" )" && pwd )"
 cd "${DIR}/.." || exit
 
+# Capture the user's command
+user_command="$*"
+
 # all python packages, in topological order
 . ${DIR}/modules.sh
-for module in "${MODULES[@]}"; do
+
+# Use IFS and set to simulate an array in sh
+IFS=' '
+set -- $MODULES
+unset IFS
+
+# Iterate through the modules
+for module in "$@"; do
   cd "${DIR}/../$module" || exit
   echo "==running in ${module}=="
-  "$@" || true  # Ignore the exit code
+  sh -c "$user_command" || true  # Ignore the exit code
 done
