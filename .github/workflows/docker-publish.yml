@@ -1,11 +1,9 @@
 name: Publish Docker image
 
 on:
-  release:
-    types: [published]
-
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'  # This will match tags that start with 'v' (like v1.0.0, v2.3.1, etc.)
 
 jobs:
   push_to_registry:
@@ -39,7 +37,7 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: dragonscaleai/rustic-ai
-          tags: type=sha
+          tags: type=ref,event=tag
 
       - name: Build and push Docker image
         id: push
