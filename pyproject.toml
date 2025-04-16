@@ -46,20 +46,10 @@ pytest-asyncio = "^0.25.3"
 httpx = "^0.28.1"
 flaky = "^3.8.1"
 rusticai-testing = {path = "./testing", develop = true}
-# huggingface dev dependencies
-transformers = "^4.51.2"
-torch = "^2.4.0"
-datasets = "^3.5.0"
-soundfile = "^0.13.1"
-sentencepiece = "^0.2.0"
-diffusers = "^0.33.1"
-pillow = "^11.2.1"
 
 
 [tool.poetry.extras]
 test = ["pytest", "pytest-asyncio", "fakeredis", "httpx", "flaky", "rusticai-testing"]
-# all extras from rusticai-huggingface
-hf = ["torch", "soundfile", "sentencepiece", "datasets", "diffusers", "pillow", "transformers"]
 
 [tool.black]
 line-length = 120
@@ -112,3 +102,7 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope="function"
 norecursedirs = ["cookiecutter-rustic"]
 
+[[tool.poetry.source]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+priority = "explicit"

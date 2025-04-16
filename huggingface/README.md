@@ -8,21 +8,7 @@
 pip install rusticai-huggingface # depends on [rusticai-core](https://pypi.org/project/rusticai-core/).
 ```
 
-PyTorch and Hugging Face Transformers are optional dependencies. To install them, use the desired extras:
-
-```shell
-# for only audio models - text-to-speech
-pip install rusticai-huggingface[audio] 
-
-# for only image models - image generation
-pip install rusticai-huggingface[image] 
-
-# for only LLMs - text generation
-pip install rusticai-huggingface[llm]
-
-# for all of the above
-pip install rusticai-huggingface[all]
-```
+**Note:** It depends on [rusticai-core](https://pypi.org/project/rusticai-core/) and uses Pytorch CPU dependency by default.
 
 
 ## Building from Source

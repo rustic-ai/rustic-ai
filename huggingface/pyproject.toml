@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "rusticai-huggingface"
-version = "0.0.2"
+version = "0.0.3"
 description = "Rustic AI module with huggingface integrations"
 authors = ["Dragonscale Industries Inc. <dev@dragonscale.ai>"]
 license = "Apache-2.0"
@@ -19,15 +19,15 @@ packages = [{ include = "rustic_ai", from = "src" }]
 [tool.poetry.dependencies]
 python = "^3.12"
 rusticai-core = { path = "../core", develop = true }
-accelerate = "^1.6.0"
-transformers = { version = "^4.51.2", optional = true }
-torch = { version = "^2.4.0", optional = true }
-datasets = { version = "^3.5.0", optional = true }
-soundfile = { version = "^0.13.1", optional = true }
-sentencepiece = { version = "^0.2.0", optional = true }
-diffusers = { version = "^0.33.1", optional = true }
-protobuf = { version = "^5", optional = true }
-pillow = { version = "^11.2.1", optional = true }
+torch = { version = "^2.4.0", source = "pytorch-cpu" }
+transformers = { version = "^4.51.2" }
+datasets = { version = "^3.5.0" }
+soundfile = { version = "^0.13.1" }
+sentencepiece = { version = "^0.2.0" }
+diffusers = { version = "^0.33.1" }
+protobuf = { version = "^5" }
+pillow = { version = "^11.2.1" }
+sentence-transformers = "^4.1.0"
 
 [tool.poetry-monorepo.deps]
 
@@ -45,10 +45,6 @@ mypy = "^1.15.0"
 
 [tool.poetry.extras]
 test = ["pytest"]
-llm = ["torch", "transformers"]
-audio = ["torch", "soundfile", "sentencepiece", "datasets"]
-image = ["torch", "diffusers", "pillow", "protobuf"]
-all = ["torch", "soundfile", "sentencepiece", "datasets", "diffusers", "pillow", "protobuf", "transformers"]
 
 [tool.black]
 line-length = 120
@@ -80,3 +76,7 @@ profile = "black"
 known_third_party = ["pydantic"]
 known_first_party = ["rustic_ai.core", "rustic_ai.huggingface"]
 
+[[tool.poetry.source]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+priority = "explicit"
