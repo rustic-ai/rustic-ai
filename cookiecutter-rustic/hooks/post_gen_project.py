@@ -47,20 +47,20 @@ def update_modules_sh():
         with open(modules_sh_file, "r") as f:
             content = f.read()
 
-        # Find index of the closing parenthesis
-        closing_paren_index = content.find(")")
+        for i, line in enumerate(content):
+            if line.startswith(f"{modules_variable}="):
+                # Find the ending quote position
+                end_quote_pos = line.rfind('"')
+                # Insert the new module before the closing quotes
+                if end_quote_pos != -1:
+                    new_content = content[:end_quote_pos] + f" {module_path}" + content[end_quote_pos:]
 
-        # Insert the new module before the closing parenthesis
-        if closing_paren_index != -1:
-            new_content = content[:closing_paren_index] + f" '{module_path}'" + content[closing_paren_index:]
-
-            # Write the new content
-            with open(modules_sh_file, "w") as f:
-                f.write(new_content)
-                print(f"Updated {modules_sh_file} with module {module_path}")
-
-        else:
-            print(f"Could not find closing parenthesis in {modules_sh_file}")
+                    # Write the new content
+                    with open(modules_sh_file, "w") as f:
+                        f.write(new_content)
+                        print(f"Updated {modules_sh_file} with module {module_path}")
+                else:
+                    print(f"Could not find closing quotes in {modules_sh_file}")
 
     except FileNotFoundError:
         print(f"Error: {modules_sh_file} not found.")
