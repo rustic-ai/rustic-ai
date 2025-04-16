@@ -13,3 +13,14 @@ filesystem:
 code_runner:
   class_name: rustic_ai.core.guild.agent_ext.depends.code_execution.stateless.InProcessCodeInterpreterResolver
   properties: {}
+embeddings:
+  class_name: rustic_ai.langchain.agent_ext.embeddings.openai.OpenAIEmbeddingsResolver
+  properties: {}
+vectorstore:
+  class_name: rustic_ai.chroma.agent_ext.vectorstore.ChromaResolver
+  properties: {}
+llm:
+  class_name: rustic_ai.litellm.agent_ext.llm.LiteLLMResolver
+  properties: {
+    "model":"gpt-4o"
+  }
