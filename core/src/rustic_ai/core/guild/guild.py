@@ -1,3 +1,5 @@
+import logging
+from textwrap import dedent
 from typing import Any, Dict, List, Optional, Type, Union
 
 from rustic_ai.core.guild import GSKC, Agent, AgentSpec, GuildSpec
@@ -89,9 +91,7 @@ class Guild:
         self._internal_add_agent(agent, execution_engine)
 
     def _internal_add_agent(
-        self,
-        agent_spec: Union[AgentSpec, Agent],
-        execution_engine: Optional[ExecutionEngine] = None,
+            self, agent_spec: Union[AgentSpec, Agent], execution_engine: Optional[ExecutionEngine] = None
     ):
         agent_spec_obj = agent_spec if isinstance(agent_spec, AgentSpec) else agent_spec.get_spec()
         self.register_agent(agent_spec_obj)
@@ -103,17 +103,39 @@ class Guild:
         else:
             self.agent_exec_engines[agent_spec.id] = execution_engine
 
+        logging.info(f"Running agent {agent_spec_obj.name} in guild {self.name}")
+
+        logging.info(
+            dedent(
+                f"""-----------------------------------------
+                   Execution engine: {execution_engine}
+                   Messaging: {self.messaging}
+                   Client Type: {self.client_type}
+                   Client Properties: {self.client_properties}
+                   Default Topic: {self.DEFAULT_TOPIC}
+                   -----------------------------------------"""
+            )
+        )
+
         # Check if the agent is already running before running it
         if not execution_engine.is_agent_running(guild_id=self.id, agent_id=agent_spec.id):
-            execution_engine.run_agent(
-                agent_spec=agent_spec,
-                guild_spec=self.to_spec(),
-                messaging_config=self.messaging,
-                machine_id=self.last_machine_id,
-                client_type=self.client_type,
-                client_properties=self.client_properties,
-                default_topic=self.DEFAULT_TOPIC,
-            )
+            try:
+                execution_engine.run_agent(
+                    agent_spec=agent_spec,
+                    guild_spec=self.to_spec(),
+                    messaging_config=self.messaging,
+                    machine_id=self.last_machine_id,
+                    client_type=self.client_type,
+                    client_properties=self.client_properties,
+                    default_topic=self.DEFAULT_TOPIC,
+                )
+                logging.info(f"Agent {agent_spec_obj.name} started successfully")
+            except Exception as e:
+                logging.error(f"Error running agent {agent_spec_obj.name}: {e}")
+                raise e
+
+        else:
+            logging.warning(f"Agent {agent_spec_obj.name} is already running")
 
     def get_agent_count(self) -> int:
         """

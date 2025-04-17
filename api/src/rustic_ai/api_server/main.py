@@ -26,15 +26,22 @@ logging.basicConfig(
     handlers=[ch],
 )
 
-INITIALIZE_RAY_CLUSTER = os.environ.get("RUSTIC_INIT_RAY_CLUSTER", "False")
-if INITIALIZE_RAY_CLUSTER.lower() == "true":
-    ray.init(include_dashboard=True)
+INITIALIZE_RAY_CLUSTER = os.environ.get("RUSTIC_INIT_RAY_CLUSTER", "False").lower() == "true"
+LAUNCH_RAY_DASHBOARD = os.environ.get("RUSTIC_LAUNCH_RAY_DASHBOARD", "False").lower() == "true"
 
+if INITIALIZE_RAY_CLUSTER:
+
+    logging.info("Initializing Ray cluster")
+    ray.init(
+        include_dashboard=LAUNCH_RAY_DASHBOARD,
+        log_to_driver=False,
+    )
+    logging.info("Ray cluster initialized")
+    logging.info("Ray cluster details: {}".format(ray.get_runtime_context()))
 
 if not Metastore.is_initialized():
     rustic_metastore = os.environ.get("RUSTIC_METASTORE", "sqlite:///rustic_app.db")
     Metastore.initialize_engine(rustic_metastore)
-
 app = FastAPI(title="Rustic AI API", lifespan=lifespan)
 app.include_router(guilds.router, prefix="/api")
 app.include_router(guilds.socket, prefix="/ws")
@@ -61,7 +68,7 @@ def health_check():
 async def global_exception_handler(request: Request, exc: StarletteHTTPException):
     """
     Global exception handler function that handles any exception raised in the FastAPI application.
-    Recommended approach is to register exception handler for Starlette's HTTPException and
+    The recommended approach is to register an exception handler for Starlette's HTTPException and
     reuse the default exception handlers from fastapi.exception_handlers.
     References:
     https://fastapi.tiangolo.com/tutorial/handling-errors/#fastapis-httpexception-vs-starlettes-httpexception

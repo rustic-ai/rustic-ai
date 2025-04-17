@@ -34,6 +34,7 @@ class MessagingInterface:
         try:
             self.backend = messaging_config.get_storage()
         except Exception as e:  # pragma: no cover
+            logging.exception(f"Error initializing storage backend: {e}")
             raise ValueError(f"Error initializing storage backend: {e}")
         logging.info(f"Using Backend: {messaging_config}")
 
