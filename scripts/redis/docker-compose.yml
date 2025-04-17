@@ -1,0 +1,19 @@
+services:
+  redis:
+    image: "redis:alpine"
+    container_name: redis
+    ports:
+      - "6379:6379"
+
+  redis_insight:
+    image: "redislabs/redisinsight:latest"
+    container_name: redis_insight
+    ports:
+      - "5540:5540"
+    volumes:
+      - redisinsight:/db
+    depends_on:
+      - redis
+
+volumes:
+  redisinsight:
