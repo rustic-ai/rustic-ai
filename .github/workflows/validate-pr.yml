@@ -19,8 +19,7 @@ jobs:
     strategy:
       matrix:
         python-versions: [3.12.9]
-        # Here we are running on a large ubuntu instance and on MacOS xlarge(M1) and large(intel)
-        os: [ubuntu-latest-16core, macos-latest-large]
+        os: [ubuntu-latest, macos-latest]
         redis-versions: [7]
     runs-on: ${{ matrix.os }}
 
