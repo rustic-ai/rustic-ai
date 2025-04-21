@@ -1,0 +1,71 @@
+name: Validate PR
+
+# Controls when the action will run.
+on:
+  # Triggers the workflow on pull request events only for the main branch
+  pull_request:
+    branches: [ main ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "test"
+  test:
+    if: github.repository_owner == 'rustic-ai'
+
+    # The type of runner that the job will run on
+    strategy:
+      matrix:
+        python-versions: [3.12.9]
+        # Here we are running on a large ubuntu instance and on MacOS xlarge(M1) and large(intel)
+        os: [ubuntu-latest-16core, macos-latest-large]
+        redis-versions: [7]
+    runs-on: ${{ matrix.os }}
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-versions }}
+          cache: 'pip'
+
+      - name: Start Redis
+        uses: shogo82148/actions-setup-redis@v1
+        with:
+          redis-version: "latest"
+      - run: redis-cli ping
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install poetry==1.8.4 tox tox-gh-actions tox-uv isort black mypy flake8
+
+      - name: Restore Cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/huggingface
+          key: huggingface-rustic-ai-${{ hashFiles('poetry.lock') }}
+          restore-keys: |
+            huggingface-rustic-ai-
+
+      - name: test with tox
+        env:
+          SERP_API_KEY: ${{ secrets.SERP_API_KEY }}
+          HUGGINGFACE_API_KEY: ${{ secrets.HUGGINGFACE_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          PYTEST_ADDOPTS: "--color=yes"
+          SKIP_EXPENSIVE_TESTS: true
+        run:
+          tox
+
+      - name: Save Cache
+        if: matrix.os == 'ubuntu-latest-16core' && matrix.python-versions == '3.12.9'
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.cache/huggingface
+          key: huggingface-rustic-ai-${{ hashFiles('poetry.lock') }}
