@@ -60,8 +60,9 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           PYTEST_ADDOPTS: "--color=yes"
           SKIP_EXPENSIVE_TESTS: true
-        run:
-          tox
+        run: |
+          poetry self add poetry-plugin-mono-repo-deps
+          ./scripts/run_all_tests.sh
 
       - name: Save Cache
         if: matrix.os == 'ubuntu-latest-16core' && matrix.python-versions == '3.12.9'
