@@ -1,4 +1,5 @@
 import asyncio
+import os
 
 import pytest
 from flaky import flaky
@@ -34,6 +35,7 @@ class StatePopulation(BaseModel):
     year: int
 
 
+@pytest.mark.skipif(os.getenv("OPENAI_API_KEY") is None, reason="OPENAI_API_KEY environment variable not set")
 class TestMarvinAgent:
     @pytest.fixture
     def agent(self):

@@ -3,7 +3,7 @@ name: Validate PR
 # Controls when the action will run.
 on:
   # Triggers the workflow on pull request events only for the main branch
-  pull_request_target:
+  pull_request:
     branches: [ main ]
 
   # Allows you to run this workflow manually from the Actions tab
@@ -13,7 +13,7 @@ on:
 jobs:
   # This workflow contains a single job called "test"
   test:
-    if: github.repository_owner == 'rustic-ai' && github.event.review.state == 'approved' # Run only after PR approval
+    if: github.repository_owner == 'rustic-ai'
 
     # The type of runner that the job will run on
     strategy:
@@ -54,9 +54,6 @@ jobs:
 
       - name: test with tox
         env:
-          SERP_API_KEY: ${{ secrets.SERP_API_KEY }}
-          HUGGINGFACE_API_KEY: ${{ secrets.HUGGINGFACE_API_KEY }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           PYTEST_ADDOPTS: "--color=yes"
           SKIP_EXPENSIVE_TESTS: true
         run: |
