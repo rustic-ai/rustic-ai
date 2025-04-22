@@ -5535,7 +5535,7 @@ url = "langchain"
 
 [[package]]
 name = "rusticai-litellm"
-version = "0.0.2"
+version = "0.0.3"
 description = "Rustic AI module leveraging LiteLLM for LLMs"
 optional = false
 python-versions = "^3.12"
