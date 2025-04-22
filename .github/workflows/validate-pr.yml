@@ -3,7 +3,7 @@ name: Validate PR
 # Controls when the action will run.
 on:
   # Triggers the workflow on pull request events only for the main branch
-  pull_request:
+  pull_request_target:
     branches: [ main ]
 
   # Allows you to run this workflow manually from the Actions tab
@@ -13,7 +13,7 @@ on:
 jobs:
   # This workflow contains a single job called "test"
   test:
-    if: github.repository_owner == 'rustic-ai'
+    if: github.repository_owner == 'rustic-ai' && github.event.review.state == 'approved' # Run only after PR approval
 
     # The type of runner that the job will run on
     strategy:
