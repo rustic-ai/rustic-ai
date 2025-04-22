@@ -6,9 +6,10 @@ import pytest
 from rustic_ai.core.agents.testutils.probe_agent import ProbeAgent
 from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     ChatCompletionRequest,
+    ChatCompletionResponse,
     Models,
     SystemMessage,
-    UserMessage, ChatCompletionResponse,
+    UserMessage,
 )
 from rustic_ai.core.guild.builders import AgentBuilder
 from rustic_ai.core.guild.guild import Guild

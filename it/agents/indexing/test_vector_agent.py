@@ -1,9 +1,10 @@
 import os
 import time
 
-from fsspec import filesystem
 import pytest
+from fsspec import filesystem
 
+from rustic_ai.chroma.agent_ext.vectorstore import ChromaResolver
 from rustic_ai.core.agents.commons.media import Document
 from rustic_ai.core.agents.indexing.vector_agent import (
     IngestDocuments,
@@ -17,7 +18,6 @@ from rustic_ai.core.guild.agent_ext.depends.filesystem import (
 )
 from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder
 from rustic_ai.core.guild.dsl import AgentSpec, DependencySpec
-from rustic_ai.chroma.agent_ext.vectorstore import ChromaResolver
 from rustic_ai.langchain.agent_ext.embeddings.openai import OpenAIEmbeddingsResolver
 from rustic_ai.langchain.agent_ext.text_splitter.character_splitter import (
     CharacterSplitterResolver,
@@ -31,7 +31,7 @@ class TestVectorAgent:
         dep_map = {
             "vectorstore": DependencySpec(
                 class_name=ChromaResolver.get_qualified_class_name(),
-                properties={"chroma_settings": {"persist_directory": f"/tmp/chroma_test"}},
+                properties={"chroma_settings": {"persist_directory": "/tmp/chroma_test"}},
             ),
             "filesystem": DependencySpec(
                 class_name=FileSystemResolver.get_qualified_class_name(),
