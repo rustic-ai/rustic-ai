@@ -1,3 +1,4 @@
+import os
 import time
 
 import pytest
@@ -7,12 +8,19 @@ from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     ChatCompletionRequest,
     Models,
     SystemMessage,
-    UserMessage,
+    UserMessage, ChatCompletionResponse,
 )
 from rustic_ai.core.guild.builders import AgentBuilder
 from rustic_ai.core.guild.guild import Guild
+from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 from rustic_ai.litellm.agent import LiteLLMAgent
 from rustic_ai.litellm.conf import LiteLLMConf
+
+
+@pytest.fixture
+def setup_default_env(monkeypatch):
+    if "OPENAI_API_KEY" not in os.environ:
+        monkeypatch.setenv("OPENAI_API_KEY", "dummy_key")
 
 
 class TestLiteLLMAgent:
@@ -29,7 +37,7 @@ class TestLiteLLMAgent:
                 )
             ).build()
 
-    def test_response_is_generated(self, probe_agent: ProbeAgent, guild: Guild):
+    def test_response_is_generated(self, setup_default_env, probe_agent: ProbeAgent, guild: Guild):
         agent = (
             AgentBuilder(LiteLLMAgent)
             .set_name("Test Agent")
@@ -67,3 +75,7 @@ class TestLiteLLMAgent:
 
         assert len(messages) == 1
         assert messages[0].topics == guild.DEFAULT_TOPIC
+        assert messages[0].format == get_qualified_class_name(ChatCompletionResponse)
+        payload = messages[0].payload
+        result = ChatCompletionResponse.model_validate(payload)
+        assert "New Delhi" in result.choices[0].message.content

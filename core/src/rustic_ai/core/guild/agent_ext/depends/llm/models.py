@@ -532,7 +532,6 @@ class ChatCompletionRequest(LLMBaseModel):
     The number of retries to attempt (default is 0).
     """
 
-    # Litellm specific parameters
     mock_response: Optional[str] = None
     """
     If provided, return a mock completion response for testing or debugging purposes (default is None).

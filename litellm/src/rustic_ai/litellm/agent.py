@@ -27,6 +27,7 @@ from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     UserMessage,
 )
 from rustic_ai.core.guild.dsl import AgentSpec
+from rustic_ai.litellm.utils import ResponseUtils
 
 from .conf import LiteLLMConf
 
@@ -85,7 +86,7 @@ class LiteLLMAgent(Agent[LiteLLMConf]):
         try:
             completion = litellm.completion(**full_prompt)
 
-            response = ChatCompletionResponse.from_litellm_completion(completion)
+            response: ChatCompletionResponse = ResponseUtils.from_litellm(completion)
 
             self.message_queue.extend(prompt.messages)  # Append the prompt messages (from user) to the message queue
             if response.choices and response.choices[0].message:
