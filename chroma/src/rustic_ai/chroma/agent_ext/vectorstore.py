@@ -94,8 +94,6 @@ class ChromaResolver(DependencyResolver[VectorStore]):
 
         ef = ChromaEmbeddingFunction(embeddings)
 
-        collection = client.get_or_create_collection(
-            name=f"rusticai_{guild_id}_{agent_id}", embedding_function=ef
-        )
+        collection = client.get_or_create_collection(name=f"rusticai_{guild_id}_{agent_id}", embedding_function=ef)
 
         return Chroma(collection)

@@ -10,11 +10,16 @@ from rustic_ai.core.agents.indexing.vector_agent import (
     VectorSearchQuery,
 )
 from rustic_ai.core.agents.testutils import ProbeAgent
-from rustic_ai.core.guild.agent_ext.depends.filesystem import FileSystem, FileSystemResolver
+from rustic_ai.core.guild.agent_ext.depends.filesystem import (
+    FileSystem,
+    FileSystemResolver,
+)
 from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder
 from rustic_ai.core.guild.dsl import AgentSpec, DependencySpec
 from rustic_ai.langchain.agent_ext.embeddings.openai import OpenAIEmbeddingsResolver
-from rustic_ai.langchain.agent_ext.text_splitter.character_splitter import CharacterSplitterResolver
+from rustic_ai.langchain.agent_ext.text_splitter.character_splitter import (
+    CharacterSplitterResolver,
+)
 
 
 class TestVectorAgent:
@@ -23,9 +28,7 @@ class TestVectorAgent:
         dep_map = {
             "vectorstore": DependencySpec(
                 class_name=ChromaResolver.get_qualified_class_name(),
-                properties={
-                    "chroma_settings": {"persist_directory": f"/tmp/chroma_test"}
-                },
+                properties={"chroma_settings": {"persist_directory": f"/tmp/chroma_test"}},
             ),
             "filesystem": DependencySpec(
                 class_name=FileSystemResolver.get_qualified_class_name(),
@@ -39,19 +42,13 @@ class TestVectorAgent:
             ),
             "textsplitter": DependencySpec(
                 class_name=CharacterSplitterResolver.get_qualified_class_name(),
-                properties={"conf": {"chunk_size": 10000, "chunk_overlap": 1000}}
+                properties={"conf": {"chunk_size": 10000, "chunk_overlap": 1000}},
             ),
-            "embeddings": DependencySpec(
-                class_name=OpenAIEmbeddingsResolver.get_qualified_class_name(),
-                properties={}
-            )
+            "embeddings": DependencySpec(class_name=OpenAIEmbeddingsResolver.get_qualified_class_name(), properties={}),
         }
 
         agent_spec: AgentSpec = (
-            AgentBuilder(VectorAgent)
-            .set_description("Vector Agent")
-            .set_name("VectorAgent")
-            .build_spec()
+            AgentBuilder(VectorAgent).set_description("Vector Agent").set_name("VectorAgent").build_spec()
         )
 
         guild_builder = (

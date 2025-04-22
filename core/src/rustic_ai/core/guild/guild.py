@@ -91,7 +91,7 @@ class Guild:
         self._internal_add_agent(agent, execution_engine)
 
     def _internal_add_agent(
-            self, agent_spec: Union[AgentSpec, Agent], execution_engine: Optional[ExecutionEngine] = None
+        self, agent_spec: Union[AgentSpec, Agent], execution_engine: Optional[ExecutionEngine] = None
     ):
         agent_spec_obj = agent_spec if isinstance(agent_spec, AgentSpec) else agent_spec.get_spec()
         self.register_agent(agent_spec_obj)
