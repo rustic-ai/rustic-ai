@@ -1,8 +1,9 @@
+import os
 import time
 
 from fsspec import filesystem
+import pytest
 
-from rustic_ai.chroma.agent_ext.vectorstore import ChromaResolver
 from rustic_ai.core.agents.commons.media import Document
 from rustic_ai.core.agents.indexing.vector_agent import (
     IngestDocuments,
@@ -16,12 +17,14 @@ from rustic_ai.core.guild.agent_ext.depends.filesystem import (
 )
 from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder
 from rustic_ai.core.guild.dsl import AgentSpec, DependencySpec
+from rustic_ai.chroma.agent_ext.vectorstore import ChromaResolver
 from rustic_ai.langchain.agent_ext.embeddings.openai import OpenAIEmbeddingsResolver
 from rustic_ai.langchain.agent_ext.text_splitter.character_splitter import (
     CharacterSplitterResolver,
 )
 
 
+@pytest.mark.skipif(os.getenv("OPENAI_API_KEY") is None, reason="OPENAI_API_KEY environment variable not set")
 class TestVectorAgent:
     def test_vector_agent(self, probe_agent: ProbeAgent):
         guild_id = "test_vector_guild"
