@@ -4,12 +4,12 @@ kvstore:
 filesystem:
   class_name: rustic_ai.core.guild.agent_ext.depends.filesystem.FileSystemResolver
   properties: {
-                "path_base": "/tmp",
-                "protocol": "file",
-                "storage_options": {
-                    "auto_mkdir": True,
-                }
-              }
+    "path_base": "/tmp",
+    "protocol": "file",
+    "storage_options": {
+      "auto_mkdir": True,
+    }
+  }
 code_runner:
   class_name: rustic_ai.core.guild.agent_ext.depends.code_execution.stateless.InProcessCodeInterpreterResolver
   properties: {}
@@ -22,5 +22,11 @@ vectorstore:
 llm:
   class_name: rustic_ai.litellm.agent_ext.llm.LiteLLMResolver
   properties: {
-    "model":"gpt-4o"
+    "model": "gpt-4o"
+  }
+textsplitter:
+  class_name: rustic_ai.langchain.agent_ext.text_splitter.recursive_splitter.RecursiveSplitterResolver
+  properties: {
+    "chunk_size": 4000,
+    "chunk_overlap": 200
   }
