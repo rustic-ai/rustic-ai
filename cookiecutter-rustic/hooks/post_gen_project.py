@@ -45,22 +45,22 @@ def update_modules_sh():
     try:
         # Read the existing file
         with open(modules_sh_file, "r") as f:
-            content = f.read()
+            content = f.readlines()
 
+        new_content = ""
         for i, line in enumerate(content):
             if line.startswith(f"{modules_variable}="):
                 # Find the ending quote position
                 end_quote_pos = line.rfind('"')
                 # Insert the new module before the closing quotes
                 if end_quote_pos != -1:
-                    new_content = content[:end_quote_pos] + f" {module_path}" + content[end_quote_pos:]
-
-                    # Write the new content
-                    with open(modules_sh_file, "w") as f:
-                        f.write(new_content)
-                        print(f"Updated {modules_sh_file} with module {module_path}")
-                else:
-                    print(f"Could not find closing quotes in {modules_sh_file}")
+                    new_content += line[:end_quote_pos] + f" {module_path}" + line[end_quote_pos:]
+            else:
+                new_content += line
+        # Write the new content
+        with open(modules_sh_file, "w") as f:
+            f.write(new_content)
+            print(f"Updated {modules_sh_file} with module {module_path}")
 
     except FileNotFoundError:
         print(f"Error: {modules_sh_file} not found.")
