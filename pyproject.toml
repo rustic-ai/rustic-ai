@@ -17,13 +17,14 @@ rusticai-core = { path = "./core", develop = true }
 rusticai-redis = { path = "./redis", develop = true }
 rusticai-ray = { path = "./ray", develop = true }
 rusticai-api = { path = "./api", develop = true }
-rusticai-litellm = {path = "./litellm", develop = true}
-rusticai-chroma = {path = "./chroma", develop = true}
-rusticai-marvin = {path = "./marvin", develop = true}
-rusticai-serpapi = {path = "./serpapi", develop = true}
-rusticai-playwright = {path = "./playwright", develop = true}
-rusticai-huggingface = {path = "./huggingface", develop = true}
-rusticai-langchain = {path = "./langchain", develop = true}
+rusticai-litellm = { path = "./litellm", develop = true }
+rusticai-chroma = { path = "./chroma", develop = true }
+rusticai-marvin = { path = "./marvin", develop = true }
+rusticai-serpapi = { path = "./serpapi", develop = true }
+rusticai-playwright = { path = "./playwright", develop = true }
+rusticai-huggingface = { path = "./huggingface", develop = true }
+rusticai-langchain = { path = "./langchain", develop = true }
+rusticai-showcase = { path = "./showcase", develop = true }
 
 [tool.poetry.group.dev]
 optional = true
