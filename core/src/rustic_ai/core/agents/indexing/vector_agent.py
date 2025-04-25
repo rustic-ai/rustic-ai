@@ -80,7 +80,7 @@ class VectorAgent(Agent):
             elif isinstance(doc, MediaLink) and doc.on_filesystem:
                 with filesystem.open(doc.url, "rb") as f:
                     data = f.read()
-                    chunks = textsplitter.split(data)
+                    chunks = textsplitter.split(str(data))
                     cdocs = self._split_doc(
                         Document(id=doc.id, name=doc.name, content=data, mimetype=doc.mimetype, encoding=doc.encoding),
                         chunks,
