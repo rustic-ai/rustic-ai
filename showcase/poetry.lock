@@ -3725,7 +3725,7 @@ pyasn1 = ">=0.1.3"
 
 [[package]]
 name = "rusticai-chroma"
-version = "0.0.2"
+version = "0.0.3"
 description = "Rustic AI module for leveraging ChromaDB"
 optional = false
 python-versions = "^3.12"
@@ -3778,7 +3778,7 @@ url = "../core"
 
 [[package]]
 name = "rusticai-langchain"
-version = "0.0.1"
+version = "0.0.2"
 description = "Rustic AI module with LangChain integrations"
 optional = false
 python-versions = "^3.12"
@@ -3800,7 +3800,7 @@ url = "../langchain"
 
 [[package]]
 name = "rusticai-litellm"
-version = "0.0.3"
+version = "0.0.4"
 description = "Rustic AI module leveraging LiteLLM for LLMs"
 optional = false
 python-versions = "^3.12"
@@ -3822,7 +3822,7 @@ url = "../litellm"
 
 [[package]]
 name = "rusticai-playwright"
-version = "0.0.1"
+version = "0.0.2"
 description = "Rustic AI module for scraping using playwright"
 optional = false
 python-versions = "^3.12"
@@ -3844,7 +3844,7 @@ url = "../playwright"
 
 [[package]]
 name = "rusticai-serpapi"
-version = "0.0.1"
+version = "0.0.2"
 description = "Rustic AI module supporting Search through SerpApi"
 optional = false
 python-versions = "^3.12"
