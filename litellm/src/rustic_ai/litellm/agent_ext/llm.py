@@ -11,6 +11,7 @@ from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     ChatCompletionTool,
 )
 from rustic_ai.litellm.conf import LiteLLMConf
+from rustic_ai.litellm.utils import ResponseUtils
 
 
 class LiteLLM(LLM):
@@ -46,14 +47,14 @@ class LiteLLM(LLM):
         full_prompt = self._prep_prompt(prompt)
 
         completion = litellm.completion(**full_prompt)
-        response = ChatCompletionResponse.from_litellm_completion(completion)
+        response: ChatCompletionResponse = ResponseUtils.from_litellm(completion)
         return response
 
     async def async_completion(self, prompt: ChatCompletionRequest):
         full_prompt = self._prep_prompt(prompt)
 
         completion = await litellm.acompletion(**full_prompt)
-        response = ChatCompletionResponse.from_litellm_completion(completion)
+        response: ChatCompletionResponse = ResponseUtils.from_litellm(completion)
         return response
 
     @property

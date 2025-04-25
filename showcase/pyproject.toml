@@ -3,9 +3,9 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
-name = "rusticai-serpapi"
-version = "0.0.2"
-description = "Rustic AI module supporting Search through SerpApi"
+name = "rusticai-showcase"
+version = "0.0.1"
+description = "Module that showcases Rustic AI capabilities"
 authors = ["Dragonscale Industries Inc. <dev@dragonscale.ai>"]
 license = "Apache-2.0"
 readme = "README.md"
@@ -19,7 +19,11 @@ packages = [{ include = "rustic_ai", from = "src" }]
 [tool.poetry.dependencies]
 python = "^3.12"
 rusticai-core = { path = "../core", develop = true }
-serpapi = "^0.1.5"
+rusticai-chroma = { path = "../chroma", develop = true }
+rusticai-langchain = { path = "../langchain", develop = true }
+rusticai-litellm = { path = "../litellm", develop = true }
+rusticai-playwright = { path = "../playwright", develop = true }
+rusticai-serpapi = { path = "../serpapi", develop = true }
 
 [tool.poetry-monorepo.deps]
 
@@ -34,10 +38,10 @@ flake8 = "^7.1.2"
 tox = "^4.24.1"
 isort = "^6.0.0"
 mypy = "^1.15.0"
-rusticai-testing = { path = "../testing", develop = true }
+pytest-asyncio = "^0.26.0"
 
 [tool.poetry.extras]
-test = ["pytest", "rusticai-testing"]
+test = ["pytest"]
 
 [tool.black]
 line-length = 120
@@ -67,6 +71,4 @@ explicit_package_bases = true
 [tool.isort]
 profile = "black"
 known_third_party = ["pydantic"]
-known_first_party = ["rustic_ai.core", "rustic_ai.serpapi"]
-known_local_folder = ["rustic_ai.testing"]
-
+known_first_party = ["rustic_ai.core"]

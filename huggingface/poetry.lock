@@ -2429,7 +2429,7 @@ use-chardet-on-py3 = ["chardet (>=3.0.2,<6)"]
 
 [[package]]
 name = "rusticai-core"
-version = "0.0.5"
+version = "0.0.6"
 description = "Rustic AI’s modular, agentic AI framework for building human-centered, multi-agent workflows"
 optional = false
 python-versions = "^3.12"
