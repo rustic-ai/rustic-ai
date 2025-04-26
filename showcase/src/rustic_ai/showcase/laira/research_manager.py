@@ -12,6 +12,7 @@ from rustic_ai.core.guild import BaseAgentProps, agent
 from rustic_ai.core.guild.agent import ProcessContext
 from rustic_ai.core.guild.agent_ext.depends.llm import LLM
 from rustic_ai.core.guild.agent_ext.depends.llm.models import (
+    ArrayOfContentParts,
     ChatCompletionRequest,
     SystemMessage,
     TextContentPart,
@@ -80,8 +81,11 @@ class ResearchManager(Agent[ResearchManagerConf]):
         user_messages = [msg.content for msg in messages if isinstance(msg, UserMessage)]
         question = ""
         for u_msg in user_messages:
-            if isinstance(u_msg, TextContentPart):
-                question += u_msg.text
+            if isinstance(u_msg, ArrayOfContentParts):
+                for msg_part in u_msg:
+                    content = msg_part[1]
+                    text_msgs = [msg.text for msg in content if isinstance(msg, TextContentPart)]
+                    question += "".join(text_msgs)
             elif isinstance(u_msg, str):
                 question = u_msg
         if len(question) > 0:

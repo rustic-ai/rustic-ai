@@ -25,6 +25,7 @@ from rustic_ai.core.guild.agent_ext.depends.dependency_resolver import Dependenc
 from rustic_ai.core.guild.agent_ext.depends.filesystem import FileSystemResolver
 from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     ChatCompletionRequest,
+    TextContentPart,
     UserMessage,
 )
 from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder, RouteBuilder
@@ -218,7 +219,13 @@ class TestResearchGuild:
         wrapped_message = Message(
             id_obj=id_obj,
             topics="default_topic",
-            payload=ChatCompletionRequest(messages=[UserMessage(content="How do LSTM networks work?")]).model_dump(),
+            payload=ChatCompletionRequest(
+                messages=[
+                    UserMessage(
+                        content=[TextContentPart(text="What is LSTM?"), TextContentPart(text="How does it work?")]
+                    )
+                ]
+            ).model_dump(),
             format=get_qualified_class_name(ChatCompletionRequest),
             sender=AgentTag(id="test_agent", name="TestAgent"),
         )
