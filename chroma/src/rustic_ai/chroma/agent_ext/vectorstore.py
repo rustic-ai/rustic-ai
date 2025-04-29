@@ -68,10 +68,10 @@ class Chroma(VectorStore):
 
 class ChromaEmbeddingFunction(ChromaEF):
     def __init__(self, embeddings: Embeddings):
-        self.embedding = embeddings
+        self.embeddings = embeddings
 
     def __call__(self, input: ChromaEmbeddable) -> ChromaEmbeddings:
-        return self.embedding.embed(input)
+        return self.embeddings.embed(input)
 
 
 class ChromaResolver(DependencyResolver[VectorStore]):
@@ -90,7 +90,10 @@ class ChromaResolver(DependencyResolver[VectorStore]):
         settings.anonymized_telemetry = False
         settings.tenant_id = guild_id
 
-        client = chromadb.Client(settings)
+        if settings.persist_directory is None:
+            client = chromadb.Client(settings)
+        else:
+            client = chromadb.PersistentClient(path=settings.persist_directory, settings=settings)
 
         ef = ChromaEmbeddingFunction(embeddings)
 
