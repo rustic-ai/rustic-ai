@@ -63,7 +63,7 @@ Ready to contribute? Here's how to set up for local development.
     ```
 5. Install the dependencies:
     ```shell
-    poetry self add poetry-plugin-mono-repo-deps
+    poetry self add poetry-plugin-mono-repo-deps@0.3.2
     poetry install --with dev --all-extras --sync
     ```
 
@@ -72,6 +72,7 @@ Ready to contribute? Here's how to set up for local development.
 
     ```sh
     docker compose -f scripts/redis/docker-compose.yml up # Redis instance is required for integration tests
+    # before proceeding, ensure env variables OPENAI_API_KEY, HUGGINGFACE_API_KEY, SERP_API_KEY are set
     poetry run tox
     ```
 
@@ -155,4 +156,18 @@ individually or altogether from the root folder.
 ```shell
 ./scripts/poetry_install.sh
 ./scripts/poetry_build.sh
+```
+
+## Building Docker Image
+
+The Dockerfile is configured to include all the modules in this repo.
+
+On Linux systems,
+```shell
+docker build -t rusticai-api .
+```
+
+On Mac,
+```shell
+docker buildx build --platform linux/amd64 -t rusticai-api .
 ```
