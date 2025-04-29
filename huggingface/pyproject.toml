@@ -21,7 +21,7 @@ python = "^3.12"
 rusticai-core = { path = "../core", develop = true }
 torch = [
     { version = "^2.4.0", source = "pypi", platform = "darwin" },
-    { version = "^2.4.0+cpu", source = "pytorch-cpu", platform = "linux" },
+    { version = "^2.4.0", source = "pytorch-cpu", platform = "linux" },
 ]
 transformers = { version = "^4.51.2" }
 datasets = { version = "^3.5.0" }
