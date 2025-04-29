@@ -3,15 +3,8 @@ import os
 
 import pytest
 import shortuuid
-from rustic_ai.chroma.agent_ext.vectorstore import ChromaResolver
-from rustic_ai.langchain.agent_ext.embeddings.openai import OpenAIEmbeddingsResolver
-from rustic_ai.langchain.agent_ext.text_splitter.recursive_splitter import (
-    RecursiveSplitterResolver,
-)
-from rustic_ai.litellm.agent_ext import LiteLLMResolver
-from rustic_ai.playwright.agent import PlaywrightScraperAgent, WebScrapingRequest
-from rustic_ai.serpapi.agent import SERPAgent, SERPResults
 
+from rustic_ai.chroma.agent_ext.vectorstore import ChromaResolver
 from rustic_ai.core import AgentSpec, Guild, GuildTopics, Priority
 from rustic_ai.core.agents.commons.media import MediaLink
 from rustic_ai.core.agents.indexing.vector_agent import IngestDocuments, VectorAgent
@@ -42,6 +35,13 @@ from rustic_ai.core.ui_protocol.types import TextFormat
 from rustic_ai.core.utils import GemstoneGenerator
 from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 from rustic_ai.core.utils.jexpr import JExpr, JObj, JxScript
+from rustic_ai.langchain.agent_ext.embeddings.openai import OpenAIEmbeddingsResolver
+from rustic_ai.langchain.agent_ext.text_splitter.recursive_splitter import (
+    RecursiveSplitterResolver,
+)
+from rustic_ai.litellm.agent_ext import LiteLLMResolver
+from rustic_ai.playwright.agent import PlaywrightScraperAgent, WebScrapingRequest
+from rustic_ai.serpapi.agent import SERPAgent, SERPResults
 from rustic_ai.showcase.laira.research_manager import ResearchManager
 
 
@@ -179,6 +179,7 @@ class TestResearchGuild:
         research_guild.shutdown()
 
     @pytest.mark.skipif(os.getenv("SKIP_EXPENSIVE_TESTS") == "true", reason="Skipping expensive tests")
+    @pytest.mark.asyncio
     async def test_research_guild(self, research_guild: Guild, routing_slip: RoutingSlip, generator: GemstoneGenerator):
 
         probe_agent: ProbeAgent = (
@@ -259,3 +260,11 @@ class TestResearchGuild:
 
         # Check that the response text contains LSTM
         assert "LSTM" in content.text
+
+        # Give the system a final moment to complete any pending tasks
+        await asyncio.sleep(2)
+
+        # Cancel any remaining tasks explicitly to avoid the warning
+        for task in asyncio.all_tasks():
+            if task is not asyncio.current_task() and not task.done():
+                task.cancel()

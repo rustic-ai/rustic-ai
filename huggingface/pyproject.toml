@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "rusticai-huggingface"
-version = "0.0.4"
+version = "0.0.5"
 description = "Rustic AI module with huggingface integrations"
 authors = ["Dragonscale Industries Inc. <dev@dragonscale.ai>"]
 license = "Apache-2.0"
@@ -19,7 +19,10 @@ packages = [{ include = "rustic_ai", from = "src" }]
 [tool.poetry.dependencies]
 python = "^3.12"
 rusticai-core = { path = "../core", develop = true }
-torch = { version = "^2.4.0", source = "pytorch-cpu" }
+torch = [
+    { version = "^2.4.0", source = "pypi", platform = "darwin" },
+    { version = "^2.4.0+cpu", source = "pytorch-cpu", platform = "linux" },
+]
 transformers = { version = "^4.51.2" }
 datasets = { version = "^3.5.0" }
 soundfile = { version = "^0.13.1" }

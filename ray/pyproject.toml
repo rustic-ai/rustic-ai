@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "rusticai-ray"
-version = "0.0.5"
+version = "0.0.6"
 description = "Rustic AI execution engine running on Ray Cluster"
 authors = ["Dragonscale Industries Inc. <dev@dragonscale.ai>"]
 license = "Apache-2.0"

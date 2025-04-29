@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "rusticai-langchain"
-version = "0.0.2"
+version = "0.0.3"
 description = "Rustic AI module with LangChain integrations"
 authors = ["Dragonscale Industries Inc. <dev@dragonscale.ai>"]
 license = "Apache-2.0"

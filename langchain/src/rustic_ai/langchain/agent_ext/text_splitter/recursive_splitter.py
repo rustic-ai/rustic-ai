@@ -1,4 +1,4 @@
-from typing import Callable, Literal, Union, List
+from typing import Callable, List, Literal, Union
 
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from pydantic import BaseModel
