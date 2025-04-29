@@ -6,6 +6,6 @@ set -e
 DIR="$( cd "$( dirname "$0" )" && pwd )"
 cd "${DIR}/.." || exit
 
-poetry self add poetry-plugin-mono-repo-deps
+poetry self add poetry-plugin-mono-repo-deps@0.3.2
 poetry install --without dev --sync
 

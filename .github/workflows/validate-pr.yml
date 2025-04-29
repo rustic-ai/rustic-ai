@@ -57,7 +57,7 @@ jobs:
           PYTEST_ADDOPTS: "--color=yes"
           SKIP_EXPENSIVE_TESTS: true
         run: |
-          poetry self add poetry-plugin-mono-repo-deps
+          poetry self add poetry-plugin-mono-repo-deps@0.3.2
           tox
 
       - name: Save Cache
