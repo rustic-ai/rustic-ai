@@ -94,7 +94,9 @@ known_first_party = [
     "rustic_ai.serpapi",
     "rustic_ai.playwright",
     "rustic_ai.huggingface",
-    "rustic_ai.langchain"]
+    "rustic_ai.langchain",
+    "rustic_ai.showcase",
+]
 known_local_folder = ["core", "rustic_ai.testing"]
 
 

@@ -3,8 +3,6 @@ from typing import Dict
 
 import shortuuid
 from pydantic import BaseModel, Field
-from rustic_ai.playwright.agent import WebScrapingCompleted
-from rustic_ai.serpapi.agent import SERPQuery
 
 from rustic_ai.core import Agent, AgentSpec, AgentTag
 from rustic_ai.core.agents.indexing.vector_agent import VectorSearchQuery
@@ -21,6 +19,8 @@ from rustic_ai.core.guild.agent_ext.depends.llm.models import (
 from rustic_ai.core.guild.agent_ext.depends.vectorstore import VectorSearchResults
 from rustic_ai.core.guild.metaprog.agent_registry import AgentDependency
 from rustic_ai.core.ui_protocol.types import TextFormat
+from rustic_ai.playwright.agent import WebScrapingCompleted
+from rustic_ai.serpapi.agent import SERPQuery
 
 
 class UserQuery(BaseModel):

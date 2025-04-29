@@ -154,7 +154,7 @@ class TelemetryMixin:
         assert current_routing_rule is not None
 
         span.set_attribute("message_format", message.format)
-        span.set_attribute("message_topic", message.topic_published_to or "UNKNOWN")
+        span.set_attribute("message_topic", message.topics or "UNKNOWN")
 
         span.add_event(
             "sending_message",

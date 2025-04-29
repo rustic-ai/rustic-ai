@@ -46,7 +46,7 @@ class MarvinAgent(Agent):
         """
         request = ctx.payload
 
-        extracted_entities = await marvin.extract_async(
+        extracted_entities = await marvin.extract_async(  # type: ignore
             request.source_text,
             target=request.extraction_spec.extraction_class,
             instructions=request.extraction_spec.extraction_instructions,
@@ -70,7 +70,7 @@ class MarvinAgent(Agent):
             request.source_text, labels=request.categories, instructions=request.classification_instructions
         )
 
-        extracted_data = marvin.extract(
+        extracted_data = marvin.extract(  # type: ignore
             request.source_text,
             target=request.get_extraction_class_for_category(category),
             instructions=request.get_extraction_instructions_for_category(category),

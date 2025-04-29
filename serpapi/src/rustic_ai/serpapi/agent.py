@@ -68,7 +68,7 @@ class SERPAgent(Agent):
 
         self.serp_api_key = os.getenv("SERP_API_KEY", "")
         assert self.serp_api_key, "SERP_API_KEY environment variable not set"
-        self.client = serpapi.Client(api_key=self.serp_api_key)
+        self.client = serpapi.Client(api_key=self.serp_api_key)  # type: ignore
 
     @agent.processor(SERPQuery)
     def search(self, ctx: agent.ProcessContext[SERPQuery]) -> None:
