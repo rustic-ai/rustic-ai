@@ -27,6 +27,8 @@ llm:
 textsplitter:
   class_name: rustic_ai.langchain.agent_ext.text_splitter.recursive_splitter.RecursiveSplitterResolver
   properties: {
-    "chunk_size": 4000,
-    "chunk_overlap": 200
+    "conf": {
+      "chunk_size": 4000,
+      "chunk_overlap": 200
+    }
   }
