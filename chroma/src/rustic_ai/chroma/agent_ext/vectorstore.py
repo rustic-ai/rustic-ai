@@ -88,7 +88,6 @@ class ChromaResolver(DependencyResolver[VectorStore]):
 
         settings = chromadb.config.Settings.validate(self.chroma_settings)
         settings.anonymized_telemetry = False
-        settings.tenant_id = guild_id
 
         if settings.persist_directory is None:
             client = chromadb.Client(settings)
