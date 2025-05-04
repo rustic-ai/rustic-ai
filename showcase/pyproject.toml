@@ -17,7 +17,7 @@ packages = [{ include = "rustic_ai", from = "src" }]
 "Rustic AI Core" = "https://pypi.org/project/rusticai-core/"
 
 [tool.poetry.dependencies]
-python = "^3.12"
+python = ">=3.12,<3.13"
 rusticai-core = { path = "../core", develop = true }
 rusticai-chroma = { path = "../chroma", develop = true }
 rusticai-langchain = { path = "../langchain", develop = true }

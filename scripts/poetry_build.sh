@@ -21,7 +21,7 @@ unset IFS
 # Iterate through the modules
 for module in "$@"; do
   # Check if the module should be skipped
-  if [ "${SKIP_MODULE}" != "" ] && [ "$module" = "${SKIP_MODULE}" ]; then
+  if [ "${SKIP_MODULE:-}" != "" ] && [ "$module" = "${SKIP_MODULE:-}" ]; then
     echo "Skipping module: $module"
     continue
   fi
