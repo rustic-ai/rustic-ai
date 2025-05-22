@@ -108,6 +108,19 @@ class UserProxyAgent(Agent[UserProxyAgentProps], GuildRefreshMixin):
 
         tagged_users = self.find_tagged_users(msg_content)
 
+        # Publish the message to the notification topic so it is recorded
+        # This is useful for when user fetches historical messages
+        notification_rule = RoutingRule(
+            agent=ctx.agent.get_agent_tag(),
+            destination=RoutingDestination(
+                topics=self.user_notifications_topic,
+                priority=unwrapped_message.priority,
+                recipient_list=unwrapped_message.recipient_list + tagged_users,
+            ),
+        )
+
+        ctx.add_routing_step(notification_rule)
+
         routing_entry = RoutingRule(
             agent=ctx.agent.get_agent_tag(),
             destination=RoutingDestination(
@@ -132,19 +145,6 @@ class UserProxyAgent(Agent[UserProxyAgentProps], GuildRefreshMixin):
                 ),
                 mark_forwarded=True,
             )
-
-            # Publish the message to the notification topic so it is recorded
-            # This is useful for when user fetches historical messages
-            notification_rule = RoutingRule(
-                agent=ctx.agent.get_agent_tag(),
-                destination=RoutingDestination(
-                    topics=self.user_notifications_topic,
-                    priority=unwrapped_message.priority,
-                    recipient_list=unwrapped_message.recipient_list + tagged_users,
-                ),
-            )
-
-            ctx.add_routing_step(notification_rule)
             ctx.add_routing_step(broadcast_route)
 
         if unwrapped_message.routing_slip:

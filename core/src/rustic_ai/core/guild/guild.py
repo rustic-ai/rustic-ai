@@ -219,7 +219,7 @@ class Guild:
 
     def shutdown(self):
         """
-        Shuts down the guild and all of its agents.
+        Shuts down the execution engines associated with all the agents and the guild itself.
         """
         for execution_engine in self.agent_exec_engines.values():
             execution_engine.shutdown()

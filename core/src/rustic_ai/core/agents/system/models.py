@@ -126,3 +126,11 @@ class GuildUpdatedAnnouncement(BaseModel):
 
     guild_id: str
     guild_spec: GuildSpec
+
+
+class StopGuildRequest(BaseModel):
+    """
+    A class to represent a request to stop the guild.
+    """
+
+    guild_id: str
