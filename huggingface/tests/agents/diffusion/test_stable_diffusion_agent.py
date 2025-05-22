@@ -4,6 +4,7 @@ import time
 from fsspec import filesystem
 import pytest
 
+from rustic_ai.core.agents.commons.image_generation import ImageGenerationResponse
 from rustic_ai.core.agents.testutils.probe_agent import ProbeAgent
 from rustic_ai.core.guild.agent_ext.depends.filesystem import (
     FileSystem,
@@ -15,10 +16,7 @@ from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 from rustic_ai.huggingface.agents.diffusion.stable_diffusion_agent import (
     RunwaymlStableDiffusionAgent,
 )
-from rustic_ai.huggingface.agents.models import (
-    ImageGenerationRequest,
-    ImageGenerationResponse,
-)
+from rustic_ai.huggingface.agents.models import ImageGenerationRequest
 
 
 class TestRunwaymlStableDiffusionAgent:

@@ -31,6 +31,7 @@ rusticai-langchain = { path = "./langchain", develop = true }
 rusticai-showcase = { path = "./showcase", develop = true }
 # Optional dependencies for additional functionality during runtime
 gcsfs = { version = "^2024.12.0", optional = true }
+rusticai-vertexai = {path = "./vertexai", develop = true}
 
 [tool.poetry.group.dev]
 optional = true
@@ -87,7 +88,7 @@ ignore_missing_imports = true
 check_untyped_defs = true
 plugins = "pydantic.mypy"
 explicit_package_bases = true
-exclude = ["^\\.venv/", "^cache/", "cookiecutter-rustic/"]
+exclude = ["^\\.venv/", "^\\dist/", "^\\.tox/", "^cache/", "cookiecutter-rustic/"]
 
 
 [tool.isort]

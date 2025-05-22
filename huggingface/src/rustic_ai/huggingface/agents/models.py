@@ -1,9 +1,6 @@
-from typing import List
-
-from pydantic import BaseModel, Field
+from pydantic import Field
 
 from rustic_ai.core.agents.commons import GenerationPromptRequest
-from rustic_ai.core.agents.commons.media import MediaLink
 from rustic_ai.core.guild import BaseAgentProps
 
 
@@ -35,9 +32,3 @@ class ImageGenerationRequest(GenerationPromptRequest):
     num_inference_steps: int = Field(default=50)
     image_format: str = Field(default="png")
     guidance_scale: float = Field(default=7.5)
-
-
-class ImageGenerationResponse(BaseModel):
-    files: List[MediaLink] = Field(default_factory=list)
-    errors: List[str] = Field(default_factory=list)
-    request: str = Field(default_factory=str)
