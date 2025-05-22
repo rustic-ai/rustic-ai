@@ -18,6 +18,7 @@ from rustic_ai.core.agents.system.models import (
     ConflictResponse,
     GuildUpdatedAnnouncement,
     RunningAgentListRequest,
+    StopGuildRequest,
     UserAgentCreationRequest,
     UserAgentCreationResponse,
     UserAgentGetRequest,
@@ -187,7 +188,7 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
         )
         ctx.send(agent_addition_response)
 
-        # Announce Guild refesh to all agents
+        # Announce Guild refresh to all agents
         self._announce_guild_refresh(ctx)
 
     @processor(AgentListRequest)
@@ -398,3 +399,14 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
             )
         except Exception as e:
             ctx.send_error(StateUpdateError(state_update_request=sur, error=str(e)))
+
+    @processor(StopGuildRequest, handle_essential=True)
+    def stop_guild(self, ctx: ProcessContext[StopGuildRequest]) -> None:
+        """
+        Stops all the agents in the guild.
+        """
+        if ctx.payload.guild_id == self.guild_id:
+            for agent_spec in self.guild.list_agents():
+                if agent_spec.id != self.id:
+                    self.guild.remove_agent(agent_spec.id)
+            self.guild.remove_agent(self.id)
