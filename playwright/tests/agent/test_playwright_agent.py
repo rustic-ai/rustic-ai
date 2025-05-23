@@ -144,4 +144,3 @@ class TestPlaywrightAgent:
         for task in asyncio.all_tasks():
             if task is not asyncio.current_task() and not task.done():
                 task.cancel()
-

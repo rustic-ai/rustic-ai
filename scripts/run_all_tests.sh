@@ -1,40 +1,67 @@
-#!/bin/bash
+#!/bin/sh
+# POSIX-compliant test runner
 
-# Function to clean up the Uvicorn server process
+# ───────────────────── strict mode ─────────────────────
+set -eu         # -e aborts on error, -u on unset var
+IFS=$(printf ' \t\n')   # safe IFS
+
+# ───────────────── locate project root ─────────────────
+# directory that holds this script
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+# project root is the parent of scripts/
+PROJECT_ROOT=$(CDPATH= cd -- "${SCRIPT_DIR}/.." && pwd)
+
+printf '🏗  PROJECT_ROOT: %s\n' "${PROJECT_ROOT}"
+cd "${PROJECT_ROOT}"
+
+# make sure we are really at repo root
+if [ ! -d it ]; then
+    printf '❌  Cannot find it/ in %s – wrong PROJECT_ROOT\n' "${PROJECT_ROOT}" >&2
+    exit 1
+fi
+
+# ───────────────── cleanup on exit ─────────────────────
 cleanup() {
-    echo "Cleaning up..."
-    echo "Running in directory: $(pwd)"
-    kill $UVICORN_PID 2>/dev/null || true
-    wait $UVICORN_PID 2>/dev/null
-    echo "Uvicorn server terminated."
-    rm -f -- integration_testing_app.db
+    printf '🧹  Cleaning up…\n'
+    if [ -n "${UVICORN_PID:-}" ]; then
+        kill "${UVICORN_PID}" 2>/dev/null || :
+        wait "${UVICORN_PID}" 2>/dev/null || :
+    fi
+    rm -f integration_testing_app.db
 }
-
-# Set trap to call cleanup function on script exit, interrupt, or termination
 trap cleanup EXIT INT TERM
 
-# Ensure any existing server is killed
-pkill -f "uvicorn rustic_ai.api_server.main:app"
+# ───────────────── kill stray servers ──────────────────
+pkill -f "uvicorn rustic_ai.api_server.main:app" 2>/dev/null || :
 
-# Create a directory to store coverage data
-rm -rf coverage
-mkdir coverage
+# ───────────────── coverage workspace ──────────────────
+COVERAGE_DIR="${PROJECT_ROOT}/coverage"
+rm -rf "${COVERAGE_DIR}"
+mkdir -p "${COVERAGE_DIR}"
 
-echo "Starting Uvicorn server..."
-# Start Uvicorn in the background and redirect outputs
+# ───────────────── start Uvicorn ───────────────────────
 export OTEL_TRACES_EXPORTER=console
 export OTEL_SERVICE_NAME=GuildCommunicationService
-RUSTIC_METASTORE='sqlite:///integration_testing_app.db' opentelemetry-instrument coverage run --context=INTEGRATION --data-file=coverage/coverage-int -m rustic_ai.api_server.main > uvicorn_output.txt 2>&1 &
+RUSTIC_METASTORE="sqlite:///integration_testing_app.db"
+
+printf '🚀  Starting Uvicorn…\n'
+opentelemetry-instrument \
+  coverage run --source=. --context=INTEGRATION \
+  --data-file="${COVERAGE_DIR}/coverage-int" \
+  -m rustic_ai.api_server.main \
+  > uvicorn_output.txt 2>&1 &
 UVICORN_PID=$!
+printf '   • Uvicorn PID: %s\n' "${UVICORN_PID}"
 
-echo "Uvicorn server started with PID $UVICORN_PID."
+sleep 5   # give server time to start
 
-# Wait for the server to start
-sleep 5
+# ───────────────── run tests ───────────────────────────
+printf '🧪  Running pytest…\n'
+PYTHONFAULTHANDLER=true \
+coverage run --source=. --context=TESTS \
+  --data-file="${COVERAGE_DIR}/coverage-tests" \
+  -m pytest -vvvv --showlocals "$@"
 
-echo "Running tests..."
-
-# Run pytest directly with the desired parameters and pass all script arguments to pytest
-PYTHONFAULTHANDLER=true coverage run --context=TESTS --data-file=coverage/coverage-tests -m pytest -vvvv --showlocals
-
-# The trap set earlier ensures that the cleanup function is called when the script exits
+printf '✅  Tests completed successfully.\n'
+# cleanup() will be executed automatically by trap
+exit 0
