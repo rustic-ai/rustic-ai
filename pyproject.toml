@@ -8,7 +8,7 @@ description = "Monorepo for Rustic AI Python Packages"
 authors = ["Dragonscale Industries Inc. <dev@dragonscale.ai>"]
 readme = "README.md"
 homepage = "https://www.rustic.ai/"
-repository = "https://github.com/rustic-ai/python-framework"
+repository = "https://github.com/rustic-ai/rustic-ai"
 package-mode = false
 
 [tool.poetry.dependencies]
