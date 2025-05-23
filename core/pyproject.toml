@@ -10,7 +10,7 @@ authors = ["Dragonscale Industries Inc. <dev@dragonscale.ai>"]
 license = "Apache-2.0"
 readme = "README.md"
 homepage = "https://www.rustic.ai/"
-repository = "https://github.com/rustic-ai/python-framework"
+repository = "https://github.com/rustic-ai/rustic-ai"
 packages = [{ include = "rustic_ai", from = "src" }]
 
 [tool.poetry.dependencies]

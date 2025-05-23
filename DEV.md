@@ -2,7 +2,7 @@
 
 Ready to contribute? Here's how to set up for local development.
 
-1. Fork [the repo](https://github.com/rustic-ai/python-framework) on GitHub.
+1. Fork [the repo](https://github.com/rustic-ai/rustic-ai) on GitHub.
 2. Clone your fork locally
 
     ```sh
@@ -44,7 +44,7 @@ Ready to contribute? Here's how to set up for local development.
 
     Run this command to add the upstream repository:
     ```sh
-    git remote add upstream git@github.com:rustic-ai/python-framework.git
+    git remote add upstream git@github.com:rustic-ai/rustic-ai.git
     ```
 
     You can verify if you added the upstream repository successfully by running the following command:
