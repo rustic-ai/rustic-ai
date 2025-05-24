@@ -136,3 +136,12 @@ class TestPlaywrightAgent:
         assert result.payload["mimetype"] == "text/markdown"
         assert result.payload["encoding"] == "utf-8"
         assert result.payload["name"] is not None
+
+        # Give the system a final moment to complete any pending tasks
+        await asyncio.sleep(2)
+
+        # Cancel any remaining tasks explicitly to avoid the warning
+        for task in asyncio.all_tasks():
+            if task is not asyncio.current_task() and not task.done():
+                task.cancel()
+
