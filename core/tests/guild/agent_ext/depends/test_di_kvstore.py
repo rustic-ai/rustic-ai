@@ -1,8 +1,8 @@
-import time
 from abc import ABC, abstractmethod
+import time
 
-import pytest
 from pydantic import BaseModel, JsonValue
+import pytest
 
 from rustic_ai.core.agents.testutils.probe_agent import ProbeAgent
 from rustic_ai.core.guild import agent

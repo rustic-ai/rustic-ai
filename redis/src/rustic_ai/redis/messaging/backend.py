@@ -1,5 +1,5 @@
 import logging
-from typing import Callable, Dict, List, Optional, Set, Union
+from typing import Awaitable, Callable, Dict, List, Optional, Set, Union
 
 from pydantic import BaseModel, Field
 
@@ -86,6 +86,10 @@ class RedisMessagingBackend(MessagingBackend):
             List[Message]: A list of messages for the given topic.
         """
         raw_messages = self.r.zrange(topic, 0, -1)
+
+        if isinstance(raw_messages, Awaitable):  # runtime check
+            raise RuntimeError("Unexpected awaitable from synchronous Redis client")
+
         messages = [Message.from_json(raw_message) for raw_message in raw_messages]
         return sorted(messages, key=lambda msg: msg.id)
 
@@ -103,6 +107,10 @@ class RedisMessagingBackend(MessagingBackend):
         # Retrieve the timestamp corresponding to the given message ID.
         timestamp_since = self._get_timestamp_for_id(msg_id_since) + 1
         raw_messages = self.r.zrangebyscore(topic, timestamp_since, "+inf")
+
+        if isinstance(raw_messages, Awaitable):  # runtime check
+            raise RuntimeError("Unexpected awaitable from synchronous Redis client")
+
         messages = [Message.from_json(raw_message) for raw_message in raw_messages]
         return sorted(messages, key=lambda msg: msg.id)
 
@@ -119,6 +127,10 @@ class RedisMessagingBackend(MessagingBackend):
         """
         timestamp_since = self._get_timestamp_for_id(last_message_id) + 1
         raw_messages = self.r.zrangebyscore(topic, timestamp_since, "+inf", start=0, num=1)
+
+        if isinstance(raw_messages, Awaitable):  # runtime check
+            raise RuntimeError("Unexpected awaitable from synchronous Redis client")
+
         return Message.from_json(raw_messages[0]) if raw_messages else None
 
     def load_subscribers(self, namespace: str) -> Dict[str, Set[str]]:

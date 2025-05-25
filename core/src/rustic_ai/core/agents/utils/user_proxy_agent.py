@@ -2,8 +2,8 @@ import json
 import re
 from typing import Dict, List
 
-import pydantic_core
 from pydantic import BaseModel
+import pydantic_core
 
 from rustic_ai.core import AgentSpec, Message
 from rustic_ai.core.agents.system.models import GuildUpdatedAnnouncement

@@ -1,8 +1,8 @@
 import os
 import time
 
-import pytest
 from fsspec import filesystem
+import pytest
 
 from rustic_ai.chroma.agent_ext.vectorstore import ChromaResolver
 from rustic_ai.core.agents.commons.media import Document

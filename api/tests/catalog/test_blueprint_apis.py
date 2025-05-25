@@ -1,5 +1,5 @@
-import pytest
 from fastapi.testclient import TestClient
+import pytest
 from sqlmodel import Session
 
 from rustic_ai.api_server.catalog.catalog_store import CatalogStore

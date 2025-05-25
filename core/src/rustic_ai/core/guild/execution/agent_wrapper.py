@@ -1,5 +1,5 @@
-import logging
 from abc import ABC, abstractmethod
+import logging
 from typing import Any, Dict, Optional, Type, Union
 
 from rustic_ai.core.guild.agent import Agent, AgentSpec

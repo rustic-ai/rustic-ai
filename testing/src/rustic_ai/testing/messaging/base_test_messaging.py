@@ -1,5 +1,5 @@
-import time
 from abc import ABC, abstractmethod
+import time
 from typing import List, Tuple, Union
 
 import pytest

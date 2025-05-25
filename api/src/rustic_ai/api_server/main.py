@@ -1,12 +1,12 @@
 import logging
 import os
 
-import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.exception_handlers import http_exception_handler
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.requests import Request
+import uvicorn
 
 import ray
 from rustic_ai.api_server import catalog, guilds

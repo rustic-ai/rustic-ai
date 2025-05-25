@@ -1,5 +1,5 @@
-import logging
 from enum import StrEnum
+import logging
 from typing import Optional, cast
 
 from opentelemetry import trace

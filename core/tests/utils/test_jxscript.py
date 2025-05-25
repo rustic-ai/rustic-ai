@@ -1,7 +1,7 @@
 import pytest
 
-import rustic_ai.core.utils.jx as jx
 from rustic_ai.core.utils.jexpr import JExpr, JFn, JNull, JObj, JxScript
+import rustic_ai.core.utils.jx as jx
 
 
 # Helper function to serialize JxScript

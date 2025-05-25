@@ -13,8 +13,8 @@ from typing import (
 )
 
 import jsonata
-import shortuuid
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+import shortuuid
 
 from rustic_ai.core.guild.agent_ext.depends.dependency_resolver import DependencySpec
 from rustic_ai.core.guild.metaprog.constants import MetaclassConstants

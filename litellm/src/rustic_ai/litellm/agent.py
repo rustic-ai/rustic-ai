@@ -1,9 +1,9 @@
-import logging
 from collections import deque
+import logging
 from typing import Deque, List, Union
 
-import openai
 from dotenv import load_dotenv
+import openai
 
 import litellm
 from litellm import validate_environment

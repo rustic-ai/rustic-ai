@@ -4,10 +4,10 @@ import random
 import time
 from typing import Callable, Dict, Optional
 
-import shortuuid
 from fastapi import WebSocket, WebSocketDisconnect
 from opentelemetry import trace
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
+import shortuuid
 from sqlalchemy import Engine
 
 from rustic_ai.core import (

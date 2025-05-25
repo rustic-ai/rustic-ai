@@ -1,5 +1,5 @@
-import shortuuid
 from langchain_core.documents import Document as LCDocument
+import shortuuid
 
 from rustic_ai.core.agents.commons.media import Document
 

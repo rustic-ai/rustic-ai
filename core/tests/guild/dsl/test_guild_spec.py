@@ -1,5 +1,5 @@
-import pytest
 from pydantic import ValidationError
+import pytest
 
 from rustic_ai.core import AgentMode, AgentType, SimpleClient
 from rustic_ai.core.guild import GSKC

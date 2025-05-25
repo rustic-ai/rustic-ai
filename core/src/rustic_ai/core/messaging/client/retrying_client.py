@@ -1,5 +1,5 @@
-import logging
 from abc import ABC, abstractmethod
+import logging
 from random import uniform
 from time import sleep
 

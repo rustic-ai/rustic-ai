@@ -1,5 +1,5 @@
-import pytest
 from pydantic import ValidationError
+import pytest
 
 from rustic_ai.core.guild.dsl import AgentSpec, BaseAgentProps
 from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name

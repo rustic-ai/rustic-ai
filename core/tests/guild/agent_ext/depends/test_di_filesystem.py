@@ -1,8 +1,8 @@
 from typing import Dict, Optional
 
-import pytest
 from fsspec import filesystem
 from pydantic import BaseModel
+import pytest
 
 from rustic_ai.core.agents.testutils.probe_agent import ProbeAgent
 from rustic_ai.core.guild import agent

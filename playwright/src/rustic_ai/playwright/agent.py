@@ -1,15 +1,15 @@
+from enum import StrEnum
 import hashlib
 import logging
 import mimetypes
 import os
-from enum import StrEnum
 from typing import List
 from urllib.parse import urlsplit
 
-import shortuuid
 from install_playwright import install
 from markdownify import markdownify as md
 from pydantic import BaseModel, Field
+import shortuuid
 
 from playwright.async_api import async_playwright
 from rustic_ai.core.agents.commons.media import MediaLink

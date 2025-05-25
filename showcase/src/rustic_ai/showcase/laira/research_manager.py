@@ -1,8 +1,8 @@
 import textwrap
 from typing import Dict
 
-import shortuuid
 from pydantic import BaseModel, Field
+import shortuuid
 
 from rustic_ai.core import Agent, AgentSpec, AgentTag
 from rustic_ai.core.agents.indexing.vector_agent import VectorSearchQuery

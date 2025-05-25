@@ -1,5 +1,5 @@
-import time
 from datetime import datetime, timezone
+import time
 
 from rustic_ai.core.utils.priority import Priority
 

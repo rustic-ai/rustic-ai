@@ -1,5 +1,5 @@
-import sys
 from io import StringIO
+import sys
 
 from rustic_ai.core.guild.agent_ext.depends.dependency_resolver import (
     DependencyResolver,

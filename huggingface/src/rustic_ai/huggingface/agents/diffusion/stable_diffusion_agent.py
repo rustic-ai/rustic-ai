@@ -1,8 +1,8 @@
 import mimetypes
 import uuid
 
-import torch
 from diffusers import StableDiffusion3Pipeline
+import torch
 
 from rustic_ai.core.agents.commons.media import MediaLink
 from rustic_ai.core.agents.commons.message_formats import ErrorMessage

@@ -1,7 +1,7 @@
+from inspect import isclass
 import json
 import logging
 import os
-from inspect import isclass
 from typing import (
     Any,
     Callable,
@@ -15,9 +15,9 @@ from typing import (
     Union,
 )
 
+from pydantic import BaseModel
 import shortuuid
 import yaml
-from pydantic import BaseModel
 
 from rustic_ai.core.agents.testutils.probe_agent import ProbeAgent
 from rustic_ai.core.guild import Agent, Guild
@@ -28,10 +28,10 @@ from rustic_ai.core.guild.dsl import (
     DependencySpec,
     GuildSpec,
 )
-from rustic_ai.core.guild.dsl import KeyConstants as GSKC
 from rustic_ai.core.guild.dsl import (
     RuntimePredicate,
 )
+from rustic_ai.core.guild.dsl import KeyConstants as GSKC
 from rustic_ai.core.guild.execution import SyncExecutionEngine
 from rustic_ai.core.guild.metaprog.constants import MetaclassConstants
 from rustic_ai.core.messaging import Client, MessageTrackingClient, MessagingConfig

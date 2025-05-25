@@ -1,5 +1,5 @@
-import time
 from abc import ABC
+import time
 from typing import List
 
 import pytest

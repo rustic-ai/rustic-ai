@@ -34,7 +34,6 @@ tox = "^4.24.1"
 isort = "^6.0.0"
 mypy = "^1.15.0"
 fakeredis = "^2.27.0"
-types-redis = "^4.6.0.20241004"
 rusticai-testing = { path = "../testing", develop = true }
 
 [tool.poetry.extras]

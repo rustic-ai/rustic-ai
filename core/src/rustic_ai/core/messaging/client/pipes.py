@@ -1,6 +1,6 @@
+from abc import ABC, abstractmethod
 import logging
 import time
-from abc import ABC, abstractmethod
 from typing import Callable, List, Optional
 
 from rustic_ai.core.messaging.core.client import Client
