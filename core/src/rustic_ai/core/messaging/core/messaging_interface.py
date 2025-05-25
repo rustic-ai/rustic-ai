@@ -107,7 +107,7 @@ class MessagingInterface:
             logging.debug(f"[Messaging] Publishing message to topic {ntopic}")
             message_copy = message.model_copy(deep=True)
             message_copy.topic_published_to = otopic
-            self.backend.store_message(ntopic, message_copy)
+            self.backend.store_message(self.namespace, ntopic, message_copy)
             if not self.backend.supports_subscription():  # pragma: no cover
                 self._notify_new_message(message_copy.model_copy(deep=True))
 
@@ -119,6 +119,12 @@ class MessagingInterface:
             message (Message): The message instance that was published.
         """
         assert message.topic_published_to is not None
+        if message.enrich_with_history:
+            previous_msg_ids = [entry.origin for entry in message.message_history[-message.enrich_with_history :]]
+            previous_messages = self.backend.get_messages_by_id(self.namespace, previous_msg_ids)
+            if message.session_state is None:
+                message.session_state = {}
+            message.session_state["enriched_history"] = previous_messages
         recipients = self.subscribers.get(self._get_namespaced_topic(message.topic_published_to), set())
         for recipient_id in recipients:
             if recipient_id in self.clients and recipient_id != message.sender.id:  # pragma: no cover

@@ -24,13 +24,20 @@ class MemoryStore:
     def __init__(self):
         if not self._initialized:
             self.topics: Dict[str, List[Message]] = {}
+            self.messages: Dict[str, Message] = {}
             self.subscribers: Dict[str, Set[str]] = {}
             self.callback_handlers: Dict[str, Dict[str, Callable[[Message], None]]] = {}
             self.is_initialized = True
             self._my_id = random.randint(0, 10)  # Helpful in debugging
 
-    def store_message(self, topic: str, message: Message) -> None:
+    @staticmethod
+    def _get_message_key(namespace: str, message_id: int):
+        return f"{namespace}:{message_id}"
+
+    def store_message(self, namespace: str, topic: str, message: Message) -> None:
         message = message.model_copy(deep=True)
+        key = self._get_message_key(namespace, message.id)
+        self.messages[key] = message
         if topic not in self.topics:
             self.topics[topic] = []
         bisect.insort_left(self.topics[topic], message, key=lambda msg: msg.timestamp)
@@ -60,6 +67,9 @@ class MemoryStore:
 
     def get_all_topics(self) -> Dict[str, List[Message]]:
         return self.topics
+
+    def get_messages(self, namespace: str, msg_ids: List[int]):
+        return [self.messages.get(self._get_message_key(namespace, message_id)) for message_id in msg_ids]
 
     def subscribe(self, topic: str, subscriber: str, handler: Callable[[Message], None]) -> None:
         if topic not in self.subscribers:
@@ -107,7 +117,7 @@ class InMemoryMessagingBackend(MessagingBackend):
         self.callback_handlers: Dict[str, Dict[str, Callable[[Message], None]]] = {}
         self._message_store = MemoryStore.get_instance()
 
-    def store_message(self, topic: str, message: Message) -> None:
+    def store_message(self, namespace: str, topic: str, message: Message) -> None:
         """
         Add a message to a topic. Messages are stored in a sorted manner based on timestamp.
 
@@ -116,7 +126,7 @@ class InMemoryMessagingBackend(MessagingBackend):
             message (Message): The message to be added.
         """
 
-        self._message_store.store_message(topic, message)
+        self._message_store.store_message(namespace, topic, message)
 
         # We want to send the notification to all global subscribers that may have connected through all instances of the backend.
         if self._message_store.get_subscribers(topic):
@@ -194,9 +204,25 @@ class InMemoryMessagingBackend(MessagingBackend):
 
     def cleanup(self) -> None:
         """
-        Cleanup the in-memory backend by removing all messages and subscribers.
+        Clean up the in-memory backend by removing all messages and subscribers.
         """
         self._message_store.cleanup()
 
     def supports_subscription(self) -> bool:
         return True
+
+    def get_messages_by_id(self, namespace: str, msg_ids: List[int]) -> List[Message]:
+        """
+        Retrieve messages by their IDs from the in-memory backend.
+
+        Args:
+            namespace: The namespace of the messages.
+            msg_ids (List[int]): A list of message IDs to retrieve.
+
+        Returns:
+            List[Message]: A list of Message objects corresponding to the provided IDs.
+        """
+        if msg_ids:
+            return self._message_store.get_messages(namespace, msg_ids)
+        else:
+            return []
