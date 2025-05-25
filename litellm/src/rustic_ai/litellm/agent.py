@@ -3,10 +3,10 @@ import logging
 from typing import Deque, List, Union
 
 from dotenv import load_dotenv
-import openai
-
 import litellm
 from litellm import validate_environment
+import openai
+
 from rustic_ai.core.guild.agent import (
     Agent,
     AgentMode,

@@ -2,8 +2,8 @@ import logging
 from typing import Awaitable, Callable, Dict, List, Optional, Set, Union
 
 from pydantic import BaseModel, Field
-
 import redis
+
 from rustic_ai.core.messaging.core.message import Message
 from rustic_ai.core.messaging.core.messaging_backend import MessagingBackend
 from rustic_ai.core.utils import GemstoneID

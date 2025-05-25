@@ -1,6 +1,6 @@
 import pytest
-
 import ray
+
 from rustic_ai.core.messaging.core.messaging_config import MessagingConfig
 from rustic_ai.redis.messaging.backend import RedisBackendConfig
 

@@ -2,6 +2,7 @@ import json
 from typing import Awaitable
 
 import redis
+
 from rustic_ai.core.guild.agent_ext.depends.dependency_resolver import (
     DependencyResolver,
 )

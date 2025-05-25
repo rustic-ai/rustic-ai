@@ -8,10 +8,10 @@ from urllib.parse import urlsplit
 
 from install_playwright import install
 from markdownify import markdownify as md
+from playwright.async_api import async_playwright
 from pydantic import BaseModel, Field
 import shortuuid
 
-from playwright.async_api import async_playwright
 from rustic_ai.core.agents.commons.media import MediaLink
 from rustic_ai.core.agents.commons.message_formats import ErrorMessage
 from rustic_ai.core.guild import Agent, AgentSpec, agent
