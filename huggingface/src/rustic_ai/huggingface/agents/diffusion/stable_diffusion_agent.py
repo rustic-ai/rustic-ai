@@ -4,6 +4,7 @@ import uuid
 from diffusers import StableDiffusion3Pipeline
 import torch
 
+from rustic_ai.core.agents.commons.image_generation import ImageGenerationResponse
 from rustic_ai.core.agents.commons.media import MediaLink
 from rustic_ai.core.agents.commons.message_formats import ErrorMessage
 from rustic_ai.core.guild import (
@@ -16,7 +17,6 @@ from rustic_ai.core.guild import (
 from rustic_ai.core.guild.agent_ext.depends.filesystem import FileSystem
 from rustic_ai.huggingface.agents.models import (
     ImageGenerationRequest,
-    ImageGenerationResponse,
     PyTorchAgentProps,
 )
 

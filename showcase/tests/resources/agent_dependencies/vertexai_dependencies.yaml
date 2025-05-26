@@ -1,0 +1,27 @@
+filesystem:
+  class_name: rustic_ai.core.guild.agent_ext.depends.filesystem.FileSystemResolver
+  properties: {
+    "path_base": "/tmp",
+    "protocol": "file",
+    "storage_options": {
+      "auto_mkdir": True,
+    }
+  }
+embeddings:
+  class_name: rustic_ai.vertexai.agent_ext.embeddings.VertexAIEmbeddingsResolver
+  properties: { "conf": { "tokens_per_entry": 500 } }
+vectorstore:
+  class_name: rustic_ai.chroma.agent_ext.vectorstore.ChromaResolver
+  properties: {
+    "chroma_settings": {
+      "persist_directory": "/tmp/research_guild_test_vertexai"
+    }
+  }
+llm:
+  class_name: rustic_ai.litellm.agent_ext.llm.LiteLLMResolver
+  properties: {
+    "model": "vertex_ai/gemini-2.0-flash-lite-001"
+  }
+textsplitter:
+  class_name: rustic_ai.langchain.agent_ext.text_splitter.recursive_splitter.RecursiveSplitterResolver
+  properties: { "conf": { "chunk_size": 500, "chunk_overlap": 50 , "hf_tokenizer_model": "google/flan-t5-base"} }

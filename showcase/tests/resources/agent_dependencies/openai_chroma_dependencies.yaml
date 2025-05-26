@@ -1,0 +1,27 @@
+filesystem:
+  class_name: rustic_ai.core.guild.agent_ext.depends.filesystem.FileSystemResolver
+  properties: {
+    "path_base": "/tmp",
+    "protocol": "file",
+    "storage_options": {
+      "auto_mkdir": True,
+    }
+  }
+embeddings:
+  class_name: rustic_ai.langchain.agent_ext.embeddings.openai.OpenAIEmbeddingsResolver
+  properties: {}
+vectorstore:
+  class_name: rustic_ai.chroma.agent_ext.vectorstore.ChromaResolver
+  properties: {
+    "chroma_settings": {
+      "persist_directory": "/tmp/research_guild_test_openai"
+    }
+  }
+llm:
+  class_name: rustic_ai.litellm.agent_ext.llm.LiteLLMResolver
+  properties: {
+    "model": "gpt-4o"
+  }
+textsplitter:
+  class_name: rustic_ai.langchain.agent_ext.text_splitter.recursive_splitter.RecursiveSplitterResolver
+  properties: { "conf": { "chunk_size": 10000, "chunk_overlap": 500 } }
