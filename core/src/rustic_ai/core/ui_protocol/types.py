@@ -44,4 +44,5 @@ class FormFormat(BaseModel):
 
 
 class FormResponse(BaseModel):
+    data: Optional[dict]
     model_config = ConfigDict(extra="allow", arbitrary_types_allowed=True)

@@ -420,7 +420,7 @@ class ProcessContext[MDT]:
         """
 
         format = get_qualified_class_name(payload.__class__)
-        data_dict = payload.model_dump()
+        data_dict = payload.model_dump(by_alias=True)
 
         return self.send_dict(data_dict, format, new_thread, forwarding)
 
