@@ -607,6 +607,7 @@ class MessageRoutable(BaseModel):
 
     forward_header: Optional[ForwardHeader] = None
     context: Optional[JsonDict] = Field(default=None)
+    enrich_with_history: Optional[int] = 0
 
 
 class Message(BaseModel):

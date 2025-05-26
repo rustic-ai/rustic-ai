@@ -13,7 +13,13 @@ from rustic_ai.core.guild.agent_ext.depends.llm.models import (
 )
 from rustic_ai.core.guild.builders import AgentBuilder
 from rustic_ai.core.guild.guild import Guild
+from rustic_ai.core.messaging.core.message import (
+    FunctionalTransformer,
+    RoutingRule,
+    RoutingSlip,
+)
 from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
+from rustic_ai.core.utils.jexpr import JObj, JxScript
 from rustic_ai.litellm.agent import LiteLLMAgent
 from rustic_ai.litellm.conf import LiteLLMConf
 
@@ -80,3 +86,33 @@ class TestLiteLLMAgent:
         payload = messages[0].payload
         result = ChatCompletionResponse.model_validate(payload)
         assert "New Delhi" in result.choices[0].message.content
+
+        chat_completion_request2 = ChatCompletionRequest(
+            messages=[UserMessage(content="What is the capital of Telangana?")],
+        )
+
+        probe_agent.publish_dict(
+            guild.DEFAULT_TOPIC,
+            chat_completion_request2,
+            in_response_to=messages[0].id,
+            format=ChatCompletionRequest,
+            routing_slip=RoutingSlip(
+                steps=[
+                    RoutingRule(
+                        agent=agent.get_agent_tag(),
+                        method_name="llm_completion",
+                        transformer=FunctionalTransformer(
+                            handler=JxScript(JObj({"enrich_with_history": 3})).serialize()
+                        ),
+                    )
+                ]
+            ),
+        )
+
+        time.sleep(1)
+
+        messages = probe_agent.get_messages()
+
+        assert len(messages[1].message_history) == 1
+
+        assert len(messages[1].session_state["enriched_history"]) == 1
