@@ -31,7 +31,7 @@ for module in "$@"; do
   fi
 
   echo "Processing module: $module"
-  pushd "${PROJECT_ROOT}/$module" || exit
+  cd "${PROJECT_ROOT}/$module" || exit
 
   poetry install --without dev
   # Build package
@@ -39,5 +39,5 @@ for module in "$@"; do
 
   cp ./dist/*.whl ${DIST_DIR}/
   cp ./dist/*.tar.gz ${DIST_DIR}/
-  popd || exit
+  cd "${PROJECT_ROOT}" || exit
 done
