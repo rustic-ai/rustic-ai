@@ -9,7 +9,7 @@ Ready to contribute? Here's how to set up for local development.
     git clone git@github.com:<your_github_username_name_here>/rustic_ai.git
     ```
 
-3. Ensure Python 3.12 and [poetry](https://python-poetry.org/docs/1.8/) are installed.
+3. Ensure Python 3.12 and [poetry](https://python-poetry.org/docs/) are installed.
 4. Create a branch for local development:
 
     ```sh
