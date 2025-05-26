@@ -1,6 +1,6 @@
-# RusticAI Showcase
+# Rustic AI Showcase
 
-Welcome to the RusticAI Showcase section. This area features example applications, demos, and case studies that highlight the capabilities and potential use cases of the RusticAI framework.
+Welcome to the Rustic AI Showcase section. This area features example applications, demos, and case studies that highlight the capabilities and potential use cases of the Rustic AI framework.
 
 ## Featured Examples
 
@@ -26,10 +26,10 @@ Each example in the showcase includes:
 - Usage instructions
 - Customization guidelines
 
-To run the examples locally, clone the RusticAI repository and follow the setup instructions included with each example.
+To run the examples locally, clone the Rustic AI repository and follow the setup instructions included with each example.
 
 ## Contributing to the Showcase
 
-We welcome contributions to the RusticAI Showcase! If you've built an interesting application or system using RusticAI, consider sharing it with the community.
+We welcome contributions to the Rustic AI Showcase! If you've built an interesting application or system using Rustic AI, consider sharing it with the community.
 
 Refer to the [contribution guidelines](../contributing.md) for information on how to submit your example to the showcase. 

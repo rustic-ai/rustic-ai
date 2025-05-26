@@ -1,10 +1,10 @@
-# RusticAI Examples
+# Rustic AI Examples
 
-This directory contains example code demonstrating how to use the RusticAI framework for building agent-based systems. These examples range from simple "hello world" implementations to more complex demos showcasing specific features of the framework.
+This directory contains example code demonstrating how to use the Rustic AI framework for building agent-based systems. These examples range from simple "hello world" implementations to more complex demos showcasing specific features of the framework.
 
 ## Directory Structure
 
-- **`hello_world/`**: Basic introductory examples to get started with RusticAI
+- **`hello_world/`**: Basic introductory examples to get started with Rustic AI
   - `hello_world_agent.py`: A simple standalone agent example
   - `hello_world_guild.py`: A simple guild with multiple interacting agents
 
@@ -36,7 +36,7 @@ python examples/hello_world/hello_world_agent.py
 
 Before running these examples, make sure you have:
 
-1. Installed RusticAI and its dependencies
+1. Installed Rustic AI and its dependencies
 2. Activated your virtual environment
 3. Required environment variables set (for examples that use external services)
 
@@ -50,7 +50,7 @@ Some examples, like `simple_llm_agent.py`, may attempt to connect to external se
 
 ## Learning Path
 
-If you're new to RusticAI, we recommend exploring the examples in this order:
+If you're new to Rustic AI, we recommend exploring the examples in this order:
 
 1. `hello_world/hello_world_agent.py` - Understand the basics of agents
 2. `hello_world/hello_world_guild.py` - Learn how agents interact within a guild
@@ -80,4 +80,4 @@ Feel free to contribute your own examples by submitting a pull request. When add
 
 ## License
 
-These examples are provided under the same license as the RusticAI framework. 
+These examples are provided under the same license as the Rustic AI framework. 

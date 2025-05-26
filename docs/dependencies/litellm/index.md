@@ -1,6 +1,6 @@
 # LiteLLM Dependencies
 
-The LiteLLM package provides dependency resolvers that integrate AI language models into RusticAI agents through the LiteLLM library. This enables consistent access to various large language models (LLMs) across different providers.
+The LiteLLM package provides dependency resolvers that integrate AI language models into Rustic AI agents through the LiteLLM library. This enables consistent access to various large language models (LLMs) across different providers.
 
 ## Available Resolvers
 

@@ -1,6 +1,6 @@
 # SimpleLLMAgent
 
-The `SimpleLLMAgent` is a basic implementation of a Large Language Model agent within the RusticAI framework. It provides an easy-to-use interface for conversational interactions with language models.
+The `SimpleLLMAgent` is a basic implementation of a Large Language Model agent within the Rustic AI framework. It provides an easy-to-use interface for conversational interactions with language models.
 
 ## Purpose
 
@@ -103,7 +103,7 @@ simple_llm_agent_spec = (
         SimpleLLMAgentConf(
             chat_memory=15,  # Remember 15 messages
             system_messages=[
-                "You are a helpful assistant in the RusticAI framework.",
+                "You are a helpful assistant in the Rustic AI framework.",
                 "You provide concise and accurate information."
             ]
         )
@@ -136,7 +136,7 @@ The agent responds with a `SimpleChatResponse`:
 
 ```python
 SimpleChatResponse(
-    content="A multi-agent system (MAS) is a computerized system composed of multiple interacting intelligent agents within an environment. Multi-agent systems can solve problems that are difficult or impossible for an individual agent to solve. In RusticAI, these agents can communicate, coordinate, and collaborate to accomplish complex tasks."
+    content="A multi-agent system (MAS) is a computerized system composed of multiple interacting intelligent agents within an environment. Multi-agent systems can solve problems that are difficult or impossible for an individual agent to solve. In Rustic AI, these agents can communicate, coordinate, and collaborate to accomplish complex tasks."
 )
 ```
 

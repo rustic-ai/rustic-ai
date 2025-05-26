@@ -1,10 +1,10 @@
-# Writing Effective Tests for RusticAI Agents
+# Writing Effective Tests for Rustic AI Agents
 
-This guide provides practical advice and patterns for writing effective tests for RusticAI agents. It builds on the concepts in the [Testing Agents](testing_agents.md) guide, with a focus on real-world testing examples from the RusticAI codebase.
+This guide provides practical advice and patterns for writing effective tests for Rustic AI agents. It builds on the concepts in the [Testing Agents](testing_agents.md) guide, with a focus on real-world testing examples from the Rustic AI codebase.
 
-## Key Testing Patterns in RusticAI
+## Key Testing Patterns in Rustic AI
 
-When examining tests across the RusticAI ecosystem (including specialized agents like PlaywrightAgent, SERPAgent, and LiteLLMAgent), several effective patterns emerge:
+When examining tests across the Rustic AI ecosystem (including specialized agents like PlaywrightAgent, SERPAgent, and LiteLLMAgent), several effective patterns emerge:
 
 1. **Isolation testing** with `wrap_agent_for_testing`
 2. **Integration testing** with probe agents
@@ -15,7 +15,7 @@ When examining tests across the RusticAI ecosystem (including specialized agents
 
 ## Testing External Service Agents
 
-Many RusticAI agents integrate with external services like APIs, databases, or other tools. Here's a pattern for testing such agents:
+Many Rustic AI agents integrate with external services like APIs, databases, or other tools. Here's a pattern for testing such agents:
 
 ```python
 import pytest
@@ -382,7 +382,7 @@ def test_with_external_service():
 
 7. **Isolate Test State**: Ensure tests don't interfere with each other's state.
 
-## Real-World Examples from RusticAI
+## Real-World Examples from Rustic AI
 
 To see these patterns in action, examine the test suites for these agents:
 

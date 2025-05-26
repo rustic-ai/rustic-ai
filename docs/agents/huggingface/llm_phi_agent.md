@@ -1,6 +1,6 @@
 # LLMPhiAgent
 
-The `LLMPhiAgent` provides access to Microsoft's Phi-2 language model within a RusticAI guild, enabling text generation capabilities using a locally-run model.
+The `LLMPhiAgent` provides access to Microsoft's Phi-2 language model within a Rustic AI guild, enabling text generation capabilities using a locally-run model.
 
 ## Purpose
 

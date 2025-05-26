@@ -1,6 +1,6 @@
 # Marvin Agents
 
-This section contains documentation for RusticAI's Marvin integration, which provides classification and structured data extraction capabilities through the Prefect Marvin library.
+This section contains documentation for Rustic AI's Marvin integration, which provides classification and structured data extraction capabilities through the Prefect Marvin library.
 
 ## Available Agents
 
@@ -8,7 +8,7 @@ This section contains documentation for RusticAI's Marvin integration, which pro
 
 ## Overview
 
-Marvin agents enable advanced text classification and structured data extraction within your RusticAI applications. Using Prefect's Marvin library, these agents can categorize text into predefined classes and extract structured information from unstructured text based on specified schemas.
+Marvin agents enable advanced text classification and structured data extraction within your Rustic AI applications. Using Prefect's Marvin library, these agents can categorize text into predefined classes and extract structured information from unstructured text based on specified schemas.
 
 ## Use Cases
 

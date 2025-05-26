@@ -1,6 +1,6 @@
 # VectorAgent
 
-The `VectorAgent` provides document indexing and vector search capabilities within a RusticAI guild, enabling semantic retrieval of information from text documents.
+The `VectorAgent` provides document indexing and vector search capabilities within a Rustic AI guild, enabling semantic retrieval of information from text documents.
 
 ## Purpose
 

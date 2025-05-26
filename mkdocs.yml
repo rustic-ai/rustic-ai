@@ -1,4 +1,4 @@
-site_name: RusticAI Documentation
+site_name: Rustic AI Documentation
 nav:
   - Home: index.md
   - Light Paper: paper.md

@@ -1,6 +1,6 @@
 # Guilds
 
-A Guild is a logical grouping of agents in RusticAI. It acts as a collaborative environment, managing the lifecycle, execution, and coordination of its member agents. Guilds provide a shared context, including common dependencies, message routing infrastructure, and state management facilities.
+A Guild is a logical grouping of agents in Rustic AI. It acts as a collaborative environment, managing the lifecycle, execution, and coordination of its member agents. Guilds provide a shared context, including common dependencies, message routing infrastructure, and state management facilities.
 
 ## Purpose
 - **Organize Agents**: Group agents into functional units for specific tasks or workflows.
@@ -177,7 +177,7 @@ Routing slips enable powerful patterns:
 
 ## Guild Lifecycle & Management
 
-Managing the lifecycle of a Guild involves defining its structure, instantiating it, launching its agents, facilitating their interactions, and eventually shutting it down. RusticAI provides different mechanisms for bringing a Guild to life, suited for development versus production environments.
+Managing the lifecycle of a Guild involves defining its structure, instantiating it, launching its agents, facilitating their interactions, and eventually shutting it down. Rustic AI provides different mechanisms for bringing a Guild to life, suited for development versus production environments.
 
 1. **Definition (`GuildSpec`)**: The blueprint for a Guild is its `GuildSpec`. This can be defined in a YAML/JSON file or constructed programmatically using `GuildBuilder` and `AgentBuilder`.
 

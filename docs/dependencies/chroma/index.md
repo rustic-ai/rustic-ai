@@ -1,6 +1,6 @@
 # Chroma Dependencies
 
-The Chroma package provides dependency resolvers that integrate the Chroma vector database into RusticAI agents. Chroma is a lightweight, open-source vector database for storing and searching embeddings.
+The Chroma package provides dependency resolvers that integrate the Chroma vector database into Rustic AI agents. Chroma is a lightweight, open-source vector database for storing and searching embeddings.
 
 ## Available Resolvers
 

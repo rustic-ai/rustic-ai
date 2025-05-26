@@ -1,13 +1,13 @@
 # Creating Your First Agent
 
-This guide will walk you through creating your first agent using the RusticAI framework. Agents are the fundamental building blocks in RusticAI that encapsulate logic, maintain state, and communicate with other agents.
+This guide will walk you through creating your first agent using the Rustic AI framework. Agents are the fundamental building blocks in Rustic AI that encapsulate logic, maintain state, and communicate with other agents.
 
 ## Prerequisites
 
 Before you begin, make sure you have:
-- Installed RusticAI and its dependencies
+- Installed Rustic AI and its dependencies
 - Basic understanding of Python
-- Familiarity with RusticAI [core concepts](../core/index.md)
+- Familiarity with Rustic AI [core concepts](../core/index.md)
 
 ## Step 1: Define Message Models
 

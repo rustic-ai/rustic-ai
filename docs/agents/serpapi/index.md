@@ -1,6 +1,6 @@
 # SerpAPI Agents
 
-This section contains documentation for RusticAI's SerpAPI integration, which provides search engine capabilities to your agent system.
+This section contains documentation for Rustic AI's SerpAPI integration, which provides search engine capabilities to your agent system.
 
 ## Available Agents
 
@@ -8,7 +8,7 @@ This section contains documentation for RusticAI's SerpAPI integration, which pr
 
 ## Overview
 
-SerpAPI agents allow you to incorporate search engine functionality into your RusticAI applications, enabling agents to retrieve real-time information from the web. These agents act as bridges to the SerpAPI service, which provides structured search results from various search engines.
+SerpAPI agents allow you to incorporate search engine functionality into your Rustic AI applications, enabling agents to retrieve real-time information from the web. These agents act as bridges to the SerpAPI service, which provides structured search results from various search engines.
 
 ## Use Cases
 

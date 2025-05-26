@@ -1,10 +1,10 @@
-# RusticAI Agents Documentation
+# Rustic AI Agents Documentation
 
-Welcome to the RusticAI Agents documentation. This section provides detailed information about the agents available in the RusticAI framework.
+Welcome to the Rustic AI Agents documentation. This section provides detailed information about the agents available in the Rustic AI framework.
 
 ## What is an Agent?
 
-In RusticAI, an agent is a specialized component that performs specific tasks within a guild (multi-agent system). Each agent:
+In Rustic AI, an agent is a specialized component that performs specific tasks within a guild (multi-agent system). Each agent:
 
 - Processes specific types of messages
 - Maintains its own state
@@ -13,7 +13,7 @@ In RusticAI, an agent is a specialized component that performs specific tasks wi
 
 ## Available Agents
 
-RusticAI includes several specialized agents for various tasks:
+Rustic AI includes several specialized agents for various tasks:
 
 ### Web and API Agents
 - [PlaywrightScraperAgent](playwright/playwright_scraper_agent.md) - Web scraping using Playwright

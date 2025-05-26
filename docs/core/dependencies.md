@@ -1,6 +1,6 @@
 # Dependencies
 
-RusticAI Core provides a flexible dependency management system for agents and guilds. This enables modular, testable, and extensible agent design.
+Rustic AI Core provides a flexible dependency management system for agents and guilds. This enables modular, testable, and extensible agent design.
 
 ## Purpose
 - Allow agents and guilds to declare required dependencies

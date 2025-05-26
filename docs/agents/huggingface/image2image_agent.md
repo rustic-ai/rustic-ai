@@ -1,6 +1,6 @@
 # Image2ImageAgent
 
-The `Image2ImageAgent` provides image-to-image transformation capabilities within a RusticAI guild using the Pix2Pix model, enabling conditional image generation and editing.
+The `Image2ImageAgent` provides image-to-image transformation capabilities within a Rustic AI guild using the Pix2Pix model, enabling conditional image generation and editing.
 
 ## Purpose
 

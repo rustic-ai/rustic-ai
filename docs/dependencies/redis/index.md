@@ -1,6 +1,6 @@
 # Redis Dependencies
 
-The Redis package provides dependency resolvers that integrate Redis services with RusticAI agents. Redis is a popular in-memory data structure store that can be used as a database, cache, and message broker.
+The Redis package provides dependency resolvers that integrate Redis services with Rustic AI agents. Redis is a popular in-memory data structure store that can be used as a database, cache, and message broker.
 
 ## Available Resolvers
 

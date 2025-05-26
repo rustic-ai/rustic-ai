@@ -1,6 +1,6 @@
 # UserProxyAgent
 
-The `UserProxyAgent` serves as an interface between human users and a RusticAI guild, handling the translation of user inputs into agent messages and formatting agent responses for user consumption.
+The `UserProxyAgent` serves as an interface between human users and a Rustic AI guild, handling the translation of user inputs into agent messages and formatting agent responses for user consumption.
 
 ## Purpose
 
@@ -10,7 +10,7 @@ This agent acts as a bridge between external users and the guild's internal mess
 
 Use the `UserProxyAgent` when you need to:
 
-- Create a user-facing interface to a RusticAI guild
+- Create a user-facing interface to a Rustic AI guild
 - Manage user sessions and conversations
 - Format content for display to users
 - Route user requests to appropriate specialized agents

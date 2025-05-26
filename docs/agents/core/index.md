@@ -1,6 +1,6 @@
 # Core Agents
 
-RusticAI provides several built-in agents as part of the core package. These agents serve as foundational components for building more complex agent systems or can be used directly in your applications.
+Rustic AI provides several built-in agents as part of the core package. These agents serve as foundational components for building more complex agent systems or can be used directly in your applications.
 
 ## Available Core Agents
 

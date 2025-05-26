@@ -1,17 +1,17 @@
 # Managing State in Agents
 
-This guide explains how to manage state in RusticAI agents, allowing them to maintain data between message processing and share state across the guild.
+This guide explains how to manage state in Rustic AI agents, allowing them to maintain data between message processing and share state across the guild.
 
 ## Prerequisites
 
 Before you begin, make sure you have:
-- Installed RusticAI and its dependencies
+- Installed Rustic AI and its dependencies
 - Basic understanding of agents (see [Creating Your First Agent](creating_your_first_agent.md))
-- Familiarity with RusticAI [core concepts](../core/index.md)
+- Familiarity with Rustic AI [core concepts](../core/index.md)
 
-## Understanding State in RusticAI
+## Understanding State in Rustic AI
 
-RusticAI provides a robust state management system that allows agents to:
+Rustic AI provides a robust state management system that allows agents to:
 - Maintain their own state across message processing
 - Access the shared guild state
 - Persist state using state backends
@@ -19,7 +19,7 @@ RusticAI provides a robust state management system that allows agents to:
 
 ## Types of State
 
-There are two primary types of state in a RusticAI guild:
+There are two primary types of state in a Rustic AI guild:
 
 1. **Agent State**: Private to each agent instance
 2. **Guild State**: Shared across all agents in the guild
@@ -76,7 +76,7 @@ class MyStatefulAgent(Agent[BaseAgentProps]):
 
 ## State Update Formats
 
-RusticAI supports several formats for updating state:
+Rustic AI supports several formats for updating state:
 
 1. **`MERGE_DICT`**: Merges the update dictionary with the existing state
 2. **`REPLACE_DICT`**: Completely replaces the state with the new dictionary
@@ -112,7 +112,7 @@ def handle_state_request(self, ctx: agent.ProcessContext[StateRequest]):
 
 ## State Lifecycle and Persistence
 
-States in RusticAI are managed by a `StateManager` which handles:
+States in Rustic AI are managed by a `StateManager` which handles:
 
 1. **Persistence**: Storing state in a chosen backend
 2. **Versioning**: Maintaining version history of state changes
@@ -267,7 +267,7 @@ if __name__ == "__main__":
 
 ### Custom State Backends
 
-RusticAI supports various state backends such as:
+Rustic AI supports various state backends such as:
 - In-memory (default)
 - Redis
 - SQLite
