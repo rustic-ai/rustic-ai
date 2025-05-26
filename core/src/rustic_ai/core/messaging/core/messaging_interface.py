@@ -120,7 +120,12 @@ class MessagingInterface:
         """
         assert message.topic_published_to is not None
         if message.enrich_with_history:
-            previous_msg_ids = [entry.origin for entry in message.message_history[-message.enrich_with_history :]]
+            fetch_length = (
+                message.enrich_with_history
+                if message.enrich_with_history < len(message.message_history)
+                else len(message.message_history)
+            )
+            previous_msg_ids = [entry.origin for entry in message.message_history[-fetch_length:]]
             previous_messages = self.backend.get_messages_by_id(self.namespace, previous_msg_ids)
             if message.session_state is None:
                 message.session_state = {}

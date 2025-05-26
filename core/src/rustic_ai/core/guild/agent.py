@@ -595,6 +595,7 @@ class ProcessContext[MDT]:
             is_error_message=error_message,
             traceparent=self._origin_message.traceparent,
             session_state=self.get_context() | routed_context,
+            enrich_with_history=routed.enrich_with_history,
         )
 
         for modifier in self._outgoing_message_modifiers:
@@ -633,6 +634,7 @@ class ProcessContext[MDT]:
         is_error_message: bool = False,
         traceparent: Optional[str] = None,
         session_state: Optional[JsonDict] = None,
+        enrich_with_history: Optional[int] = 0,
     ) -> None:
         msg_id = self._get_id(priority)
         thread = self._origin_message.thread.copy()
@@ -654,6 +656,7 @@ class ProcessContext[MDT]:
                 is_error_message=is_error_message,
                 traceparent=traceparent,
                 session_state=session_state,
+                enrich_with_history=enrich_with_history,
             )
         )
 
