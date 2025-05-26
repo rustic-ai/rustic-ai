@@ -14,12 +14,6 @@ PROJECT_ROOT=$(CDPATH= cd -- "${SCRIPT_DIR}/.." && pwd)
 printf '🏗  PROJECT_ROOT: %s\n' "${PROJECT_ROOT}"
 cd "${PROJECT_ROOT}"
 
-# make sure we are really at repo root
-if [ ! -d it ]; then
-    printf '❌  Cannot find it/ in %s – wrong PROJECT_ROOT\n' "${PROJECT_ROOT}" >&2
-    exit 1
-fi
-
 # ───────────────── cleanup on exit ─────────────────────
 cleanup() {
     printf '🧹  Cleaning up…\n'
