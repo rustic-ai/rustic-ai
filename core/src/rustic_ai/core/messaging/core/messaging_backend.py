@@ -11,11 +11,12 @@ class MessagingBackend(ABC):
     """
 
     @abstractmethod
-    def store_message(self, topic: str, message: Message) -> None:
+    def store_message(self, namespace: str, topic: str, message: Message) -> None:
         """
         Add a message to a topic.
 
         Args:
+            namespace: The namespace of the message.
             topic (str): The topic to which the message belongs.
             message (Message): The message to be added.
         """
@@ -124,3 +125,16 @@ class MessagingBackend(ABC):
             bool: True if the storage implementation supports subscription, False otherwise.
         """
         return False  # pragma: no cover
+
+    @abstractmethod
+    def get_messages_by_id(self, namespace: str, msg_ids: List[int]) -> List[Message]:
+        """
+        Retrieve messages for given message IDs.
+
+        Args:
+            namespace: The namespace of the messages.
+            msg_ids (List[int]): A list of message IDs that are to be retrieved.
+        Returns:
+            List[Message]: A list of Message objects corresponding to the provided message IDs.
+        """
+        pass

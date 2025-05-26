@@ -6,7 +6,11 @@ import pytest
 
 from rustic_ai.core.messaging.client import SimpleClient
 from rustic_ai.core.messaging.core import Client, Message, MessagingInterface
-from rustic_ai.core.messaging.core.message import AgentTag, MessageConstants
+from rustic_ai.core.messaging.core.message import (
+    AgentTag,
+    MessageConstants,
+    ProcessEntry,
+)
 from rustic_ai.core.messaging.core.messaging_config import MessagingConfig
 from rustic_ai.core.utils.gemstone_id import GemstoneGenerator
 from rustic_ai.core.utils.priority import Priority
@@ -93,6 +97,8 @@ class BaseTestMessagingABC(ABC):
                 format: str,
                 payload: dict,
                 message_id,
+                message_history: List[ProcessEntry] = [],
+                enrich_with_history: int = 0,
             ):
                 message = Message(
                     topics=topic,
@@ -100,6 +106,8 @@ class BaseTestMessagingABC(ABC):
                     format=format,
                     payload=payload,
                     id_obj=message_id,
+                    message_history=message_history,
+                    enrich_with_history=enrich_with_history,
                 )
                 self.publish(message)
                 return message
@@ -415,3 +423,40 @@ class BaseTestMessagingABC(ABC):
 
         assert len(messages_received) == 1
         assert len(alt_messages_received) == 0
+
+    def test_enrich_message(
+        self, messaging, alt_messaging, message_publisher, simple_client, simple_client_2, generator
+    ):
+
+        topic = "enrich_topic"
+        client, messages_received = simple_client
+        messaging.register_client(client)
+        messaging.subscribe(topic, client)
+
+        sender, _ = message_publisher
+        messaging.register_client(sender)
+        messaging.subscribe(topic, sender)
+
+        message_id1 = generator.get_id(Priority.NORMAL)
+        sender.send_message(topic, MessageConstants.RAW_JSON_FORMAT, {"data": "value"}, message_id1)
+
+        message_id2 = generator.get_id(Priority.NORMAL)
+        history = [
+            ProcessEntry(agent=AgentTag(name="test-sender"), origin=message_id1.to_int(), result=message_id2.to_int())
+        ]
+        sender.send_message(topic, MessageConstants.RAW_JSON_FORMAT, {"data": "value2"}, message_id2, history)
+
+        message_id3 = generator.get_id(Priority.NORMAL)
+        history.append(
+            ProcessEntry(agent=AgentTag(name="test-sender"), origin=message_id2.to_int(), result=message_id3.to_int())
+        )
+        sender.send_message(topic, MessageConstants.RAW_JSON_FORMAT, {"data": "value2"}, message_id3, history, 2)
+
+        time.sleep(1)  # Give the message time to be processed
+
+        assert len(messages_received) == 3
+
+        prev_msgs = messages_received[2].session_state["enriched_history"]
+        assert len(prev_msgs) == 2
+        assert prev_msgs[0].id == message_id1.to_int()
+        assert prev_msgs[1].id == message_id2.to_int()

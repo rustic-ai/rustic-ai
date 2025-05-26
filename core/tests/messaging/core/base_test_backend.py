@@ -34,7 +34,7 @@ class BaseTestBackendABC(ABC):
     def topic(self) -> str:
         return "test_topic"
 
-    def test_store_message(self, backend: MessagingBackend, generator: GemstoneGenerator, topic: str):
+    def test_store_message(self, backend: MessagingBackend, generator: GemstoneGenerator, topic: str, request):
         """
         Test adding a message to a topic.
         """
@@ -45,12 +45,15 @@ class BaseTestBackendABC(ABC):
             payload={"key": "value"},
             id_obj=generator.get_id(Priority.NORMAL),
         )
-        backend.store_message(topic, message)
+        namespace = request.node.name
+        backend.store_message(namespace, topic, message)
         messages = backend.get_messages_for_topic(topic)
         assert len(messages) == 1
         assert messages[0].payload == {"key": "value"}
 
-    def test_message_ordering_by_priority(self, backend: MessagingBackend, generator: GemstoneGenerator, topic: str):
+    def test_message_ordering_by_priority(
+        self, backend: MessagingBackend, generator: GemstoneGenerator, topic: str, request
+    ):
         """
         Test that messages are ordered first by priority and then by ID.
         """
@@ -107,13 +110,14 @@ class BaseTestBackendABC(ABC):
             id_obj=id6,
         )
 
+        namespace = request.node.name
         # Add messages to the topic
-        backend.store_message(topic, m1)
-        backend.store_message(topic, m2)
-        backend.store_message(topic, m3)
-        backend.store_message(topic, m4)
-        backend.store_message(topic, m5)
-        backend.store_message(topic, m6)
+        backend.store_message(namespace, topic, m1)
+        backend.store_message(namespace, topic, m2)
+        backend.store_message(namespace, topic, m3)
+        backend.store_message(namespace, topic, m4)
+        backend.store_message(namespace, topic, m5)
+        backend.store_message(namespace, topic, m6)
 
         # Retrieve messages for the topic
         retrieved_messages = backend.get_messages_for_topic(topic)
@@ -130,7 +134,9 @@ class BaseTestBackendABC(ABC):
         # Further assertions can be added based on the expected subscribers in the backend.
 
     # Test method to get messages since a given message ID
-    def test_get_messages_for_topic_since(self, backend: MessagingBackend, generator: GemstoneGenerator, topic: str):
+    def test_get_messages_for_topic_since(
+        self, backend: MessagingBackend, generator: GemstoneGenerator, topic: str, request
+    ):
         """
         Test retrieving messages for a topic since a given message ID.
         """
@@ -188,13 +194,14 @@ class BaseTestBackendABC(ABC):
             id_obj=id6,
         )
 
+        namespace = request.node.name
         # Add messages to the topic
-        backend.store_message(topic, m1)
-        backend.store_message(topic, m2)
-        backend.store_message(topic, m3)
-        backend.store_message(topic, m4)
-        backend.store_message(topic, m5)
-        backend.store_message(topic, m6)
+        backend.store_message(namespace, topic, m1)
+        backend.store_message(namespace, topic, m2)
+        backend.store_message(namespace, topic, m3)
+        backend.store_message(namespace, topic, m4)
+        backend.store_message(namespace, topic, m5)
+        backend.store_message(namespace, topic, m6)
 
         # Retrieve messages for the topic since a given message ID
         retrieved_messages = backend.get_messages_for_topic_since(topic, id3.to_int())
@@ -204,7 +211,7 @@ class BaseTestBackendABC(ABC):
 
     # Test method to get the next message since a given message ID
     def test_get_next_message_for_topic_since(
-        self, backend: MessagingBackend, generator: GemstoneGenerator, topic: str
+        self, backend: MessagingBackend, generator: GemstoneGenerator, topic: str, request
     ):
         """
         Test retrieving the next message for a topic since a given message ID.
@@ -264,13 +271,14 @@ class BaseTestBackendABC(ABC):
             id_obj=id6,
         )
 
+        namespace = request.node.name
         # Add messages to the topic
-        backend.store_message(topic, m1)
-        backend.store_message(topic, m2)
-        backend.store_message(topic, m3)
-        backend.store_message(topic, m4)
-        backend.store_message(topic, m5)
-        backend.store_message(topic, m6)
+        backend.store_message(namespace, topic, m1)
+        backend.store_message(namespace, topic, m2)
+        backend.store_message(namespace, topic, m3)
+        backend.store_message(namespace, topic, m4)
+        backend.store_message(namespace, topic, m5)
+        backend.store_message(namespace, topic, m6)
 
         # Retrieve messages for the topic since a given message ID
         retrieved_message = backend.get_next_message_for_topic_since(topic, id3.to_int())
@@ -280,7 +288,7 @@ class BaseTestBackendABC(ABC):
 
     # Test method to get messages since a given message ID ensuring newer messages with higher priority are not lost
     def test_get_messages_for_topic_since_with_higher_priority(
-        self, backend: MessagingBackend, generator: GemstoneGenerator, topic: str
+        self, backend: MessagingBackend, generator: GemstoneGenerator, topic: str, request
     ):
         """
         Test retrieving messages for a topic since a given message ID ensuring newer messages with higher priority are not lost.
@@ -356,15 +364,16 @@ class BaseTestBackendABC(ABC):
             id_obj=id8,
         )
 
+        namespace = request.node.name
         # Add messages to the topic
-        backend.store_message(topic, m1)
-        backend.store_message(topic, m2)
-        backend.store_message(topic, m3)
-        backend.store_message(topic, m4)
-        backend.store_message(topic, m5)
-        backend.store_message(topic, m6)
-        backend.store_message(topic, m7)
-        backend.store_message(topic, m8)
+        backend.store_message(namespace, topic, m1)
+        backend.store_message(namespace, topic, m2)
+        backend.store_message(namespace, topic, m3)
+        backend.store_message(namespace, topic, m4)
+        backend.store_message(namespace, topic, m5)
+        backend.store_message(namespace, topic, m6)
+        backend.store_message(namespace, topic, m7)
+        backend.store_message(namespace, topic, m8)
 
         # Retrieve messages for the topic since a given message ID
         retrieved_messages = backend.get_messages_for_topic_since(topic, id3.to_int())
@@ -373,7 +382,7 @@ class BaseTestBackendABC(ABC):
         assert retrieved_messages == [m8, m7, m4, m5, m6]
 
     # Test subscription on a topic
-    def test_subscribe(self, backend: MessagingBackend, generator: GemstoneGenerator, topic: str):
+    def test_subscribe(self, backend: MessagingBackend, generator: GemstoneGenerator, topic: str, request):
         """
         Test subscribing to a topic.
         """
@@ -385,6 +394,7 @@ class BaseTestBackendABC(ABC):
             messages.append(message)
 
         backend.subscribe(topic, callback)
+        namespace = request.node.name
 
         m1 = Message(
             topics=topic,
@@ -394,7 +404,7 @@ class BaseTestBackendABC(ABC):
             id_obj=id1,
         )
 
-        backend.store_message(topic, m1)
+        backend.store_message(namespace, topic, m1)
 
         time.sleep(0.001)
 
@@ -410,8 +420,56 @@ class BaseTestBackendABC(ABC):
             id_obj=generator.get_id(Priority.NORMAL),
         )
 
-        backend.store_message(topic, m2)
+        backend.store_message(namespace, topic, m2)
 
         time.sleep(0.001)
 
         assert len(messages) == 1
+
+    def test_get_messages_by_id(self, backend: MessagingBackend, generator: GemstoneGenerator, topic: str, request):
+        """
+        Test retrieving messages by their IDs.
+        """
+        id1 = generator.get_id(Priority.NORMAL)
+        id2 = generator.get_id(Priority.HIGH)
+        id3 = generator.get_id(Priority.LOW)
+
+        sender = AgentTag(id="senderId", name="sender")
+
+        m1 = Message(
+            topics=topic,
+            sender=sender,
+            format=MessageConstants.RAW_JSON_FORMAT,
+            payload={"key": "m1"},
+            id_obj=id1,
+        )
+        m2 = Message(
+            topics=topic,
+            sender=sender,
+            format=MessageConstants.RAW_JSON_FORMAT,
+            payload={"key": "m2"},
+            id_obj=id2,
+        )
+        m3 = Message(
+            topics=topic,
+            sender=sender,
+            format=MessageConstants.RAW_JSON_FORMAT,
+            payload={"key": "m3"},
+            id_obj=id3,
+        )
+
+        namespace = request.node.name
+
+        # Add messages to the topic
+        backend.store_message(namespace, topic, m1)
+        backend.store_message(namespace, topic, m2)
+        backend.store_message(namespace, topic, m3)
+
+        # Retrieve messages by their IDs
+        msg_ids = [id1.to_int(), id3.to_int()]
+        retrieved_messages = backend.get_messages_by_id(namespace, msg_ids)
+
+        # Check that only requested messages are retrieved
+        assert len(retrieved_messages) == 2
+        assert retrieved_messages[0] == m1
+        assert retrieved_messages[1] == m3

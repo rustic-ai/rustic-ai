@@ -1,4 +1,5 @@
 import logging
+import os
 from typing import Awaitable, Callable, Dict, List, Optional, Set, Union
 
 from pydantic import BaseModel, Field
@@ -64,15 +65,33 @@ class RedisMessagingBackend(MessagingBackend):
         self.p = self.r.pubsub(ignore_subscribe_messages=True)
         self.redis_thread = self.p.run_in_thread(sleep_time=0.001, daemon=True)
 
-    def store_message(self, topic: str, message: Message) -> None:
+    @staticmethod
+    def _get_msg_key(namespace: str, message_id: int):
+        return f"msg:{namespace}:{message_id}"
+
+    def store_message(self, namespace: str, topic: str, message: Message) -> None:
         """
         Store a message in Redis, sorted by timestamp.
+        It also creates a secondary index for direct ID lookups with .
 
         Args:
+            namespace: The namespace of the message.
+            topic (str): The topic to which the message belongs.
             message (Message): The message object to be stored.
         """
+        message_json = message.to_json()
         # Using the timestamp as the score for sorting in Redis sorted set.
-        self.r.zadd(topic, {message.to_json(): message.timestamp})
+        self.r.zadd(topic, {message_json: message.timestamp})
+
+        # Create a secondary index for direct ID lookup
+        # Use a key pattern like "msg:ID" to store the message
+        msg_key = self._get_msg_key(namespace, message.id)
+        self.r.set(msg_key, message_json)
+
+        # Set an expiration time for the secondary index entry
+        message_ttl = int(os.environ.get("RUSTIC_AI_REDIS_MSG_TTL", 3600))
+        self.r.expire(msg_key, message_ttl)
+
         self.r.publish(topic, message.to_json())
 
     def get_messages_for_topic(self, topic: str) -> List[Message]:
@@ -196,3 +215,34 @@ class RedisMessagingBackend(MessagingBackend):
 
     def supports_subscription(self) -> bool:
         return True
+
+    def get_messages_by_id(self, namespace: str, msg_ids: List[int]) -> List[Message]:
+        """
+        Retrieve messages by their IDs using Redis pipelines for efficiency.
+
+        Args:
+            namespace: The namespace of the messages.
+            msg_ids (List[int]): A list of message IDs to retrieve.
+
+        Returns:
+            List[Message]: A list of Message objects corresponding to the provided IDs.
+        """
+        if not msg_ids or len(msg_ids) == 0:
+            return []
+
+        result = []
+
+        # Use Redis pipeline to batch operations for efficiency
+        with self.r.pipeline() as pipe:
+            # For each message ID, get the message from the secondary index
+            for msg_id in msg_ids:
+                pipe.get(self._get_msg_key(namespace, msg_id))
+
+            # Execute pipeline and process results
+            raw_messages = pipe.execute()
+
+        # Convert raw messages to Message objects
+        for raw_message in raw_messages:
+            if raw_message:
+                result.append(Message.from_json(raw_message))
+        return result

@@ -665,6 +665,8 @@ class Message(BaseModel):
 
     topic_published_to: Optional[str] = None
 
+    enrich_with_history: Optional[int] = 0
+
     def __init__(self, id_obj: GemstoneID, **data: Any):
         """
         Initializes a new message.

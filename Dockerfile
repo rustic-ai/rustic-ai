@@ -34,7 +34,7 @@ ENV PYTHONUNBUFFERED=1
 
 RUN apt-get update && apt-get install -y --no-install-recommends libpq-dev
 
-RUN pip install poetry==1.8.4
+RUN pip install poetry==2.1.3
 
 ENV POETRY_NO_INTERACTION=1 \
     POETRY_VIRTUALENVS_IN_PROJECT=1 \

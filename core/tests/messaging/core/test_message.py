@@ -226,7 +226,7 @@ class TestMessage:
             + str(message.id)
             + ',"priority":4,"is_error_message": false, "timestamp":'
             + str(msg_id.timestamp)
-            + ', "session_state": null, "topic_published_to": null}'
+            + ', "session_state": null, "topic_published_to": null, "enrich_with_history": 0 }'
         )
         assert json.loads(json_message) == expected_json_message
 
