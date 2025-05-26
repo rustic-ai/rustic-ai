@@ -1,9 +1,9 @@
 import os
-import time
 from textwrap import dedent
+import time
 
-import pytest
 from pydantic import BaseModel
+import pytest
 
 from rustic_ai.core.agents.testutils import ProbeAgent
 from rustic_ai.core.guild.agent import (

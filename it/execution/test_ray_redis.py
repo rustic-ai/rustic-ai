@@ -1,10 +1,15 @@
-import pytest
+import pathlib
 
+import pytest
 import ray
+
 from rustic_ai.core.messaging.core.messaging_config import MessagingConfig
 from rustic_ai.redis.messaging.backend import RedisBackendConfig
 
 from rustic_ai.testing.execution.base_test_integration import IntegrationTestABC
+
+# Get the directory of the current test file
+WORKING_DIR_ROOT = pathlib.Path(__file__).parent.parent.resolve()
 
 
 class TestRayRedisIntegration(IntegrationTestABC):
@@ -20,6 +25,6 @@ class TestRayRedisIntegration(IntegrationTestABC):
 
     @pytest.fixture
     def execution_engine(self):
-        ray.init(include_dashboard=True, runtime_env={"working_dir": "./it/"})
+        ray.init(include_dashboard=True, runtime_env={"working_dir": str(WORKING_DIR_ROOT)})
         yield "rustic_ai.ray.execution.RayExecutionEngine"
         ray.shutdown()

@@ -1,7 +1,7 @@
 from typing import Optional
 
-import shortuuid
 from pydantic import BaseModel, Field
+import shortuuid
 
 from rustic_ai.core.messaging import JsonDict
 

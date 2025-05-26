@@ -1,12 +1,12 @@
-import logging
 from collections import deque
+import logging
 from typing import Deque, List, Union
 
-import openai
 from dotenv import load_dotenv
-
 import litellm
 from litellm import validate_environment
+import openai
+
 from rustic_ai.core.guild.agent import (
     Agent,
     AgentMode,

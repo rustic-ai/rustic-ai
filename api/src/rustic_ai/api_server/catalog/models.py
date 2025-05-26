@@ -2,8 +2,8 @@ from datetime import datetime, timezone
 from enum import StrEnum
 from typing import Dict, List, Optional
 
-import shortuuid
 from pydantic import BaseModel, JsonValue, computed_field
+import shortuuid
 from sqlalchemy.ext.mutable import MutableDict
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 

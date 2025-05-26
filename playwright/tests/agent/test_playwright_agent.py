@@ -1,7 +1,7 @@
 import asyncio
 
-import shortuuid
 from flaky import flaky
+import shortuuid
 
 from rustic_ai.core.agents.commons.media import MediaLink
 from rustic_ai.core.guild.agent_ext.depends.dependency_resolver import DependencySpec
@@ -144,4 +144,3 @@ class TestPlaywrightAgent:
         for task in asyncio.all_tasks():
             if task is not asyncio.current_task() and not task.done():
                 task.cancel()
-

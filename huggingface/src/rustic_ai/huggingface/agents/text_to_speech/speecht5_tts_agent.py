@@ -1,9 +1,9 @@
 import mimetypes
 import uuid
 
+from datasets import load_dataset
 import soundfile as sf
 import torch
-from datasets import load_dataset
 from transformers import pipeline
 
 from rustic_ai.core.agents.commons.media import MediaLink

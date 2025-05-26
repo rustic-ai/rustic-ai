@@ -1,4 +1,5 @@
 import marvin
+
 from rustic_ai.core.agents.commons import (
     ClassifyAndExtractRequest,
     ClassifyAndExtractResponse,

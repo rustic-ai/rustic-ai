@@ -1,9 +1,9 @@
 import asyncio
 import os
 
-import pytest
 from flaky import flaky
 from pydantic import BaseModel
+import pytest
 
 from rustic_ai.core.agents.commons import (
     ClassifyAndExtractRequest,

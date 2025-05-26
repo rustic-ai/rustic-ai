@@ -4,6 +4,7 @@ from litellm import Usage as LitellmUsage
 from litellm.types.utils import Message as LitellmMessage
 from litellm.utils import Choices as LitellmChoice
 from litellm.utils import ModelResponse as LitellmModelResponse
+
 from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     AssistantMessage,
     ChatCompletionMessageToolCall,

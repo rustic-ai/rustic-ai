@@ -1,6 +1,8 @@
 import json
+from typing import Awaitable
 
 import redis
+
 from rustic_ai.core.guild.agent_ext.depends.dependency_resolver import (
     DependencyResolver,
 )
@@ -15,6 +17,9 @@ class RedisKVStore(BaseKVStore):
 
     def get(self, key: str):
         value = self.store.hget(f"{self.guild_id}_{self.agent_id}", key)
+        if isinstance(value, Awaitable):
+            raise RuntimeError("Unexpected awaitable from synchronous Redis client")
+
         return json.loads(value) if value else None
 
     def set(self, key: str, value):

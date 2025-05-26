@@ -1,7 +1,7 @@
 # Wrapper function to automatically convert lambdas to JFn
+from functools import wraps
 import inspect
 import json
-from functools import wraps
 
 from .jexpr import JAssignmernt, JExpr, JFn, _to_jexpr
 

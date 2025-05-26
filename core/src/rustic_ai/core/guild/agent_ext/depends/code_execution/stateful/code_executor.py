@@ -1,6 +1,6 @@
+from abc import ABC, abstractmethod
 import asyncio
 import time
-from abc import ABC, abstractmethod
 from typing import Dict, List, Optional, Set
 
 from .exceptions import ExecutorError, ShutdownError, ValidationError

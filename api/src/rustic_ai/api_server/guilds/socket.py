@@ -1,6 +1,6 @@
 import asyncio
-import logging
 from contextlib import asynccontextmanager
+import logging
 
 from fastapi import APIRouter, Depends, FastAPI, WebSocket
 from sqlalchemy import Engine
