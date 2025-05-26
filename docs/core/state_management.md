@@ -1,6 +1,6 @@
 # State Management
 
-State is the backbone that allows agents and guilds to remember the past, reason about the present, and influence the future. RusticAI offers a unified **State Management** layer that is both *simple for trivial use-cases* and *powerful enough for distributed deployments*.
+State is the backbone that allows agents and guilds to remember the past, reason about the present, and influence the future. Rustic AI offers a unified **State Management** layer that is both *simple for trivial use-cases* and *powerful enough for distributed deployments*.
 
 ## Why a Dedicated State Layer?
 1. **Consistency** – Shared state establishes a single source of truth across agents.

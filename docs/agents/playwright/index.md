@@ -1,6 +1,6 @@
 # Playwright Agents
 
-This section contains documentation for RusticAI's Playwright integration, which provides web automation and scraping capabilities to your agent system.
+This section contains documentation for Rustic AI's Playwright integration, which provides web automation and scraping capabilities to your agent system.
 
 ## Available Agents
 
@@ -8,7 +8,7 @@ This section contains documentation for RusticAI's Playwright integration, which
 
 ## Overview
 
-Playwright agents enable web automation within your RusticAI applications. These agents can navigate websites, extract content, interact with web elements, and capture screenshots or other data from web pages. They leverage the Microsoft Playwright library, which provides cross-browser automation capabilities.
+Playwright agents enable web automation within your Rustic AI applications. These agents can navigate websites, extract content, interact with web elements, and capture screenshots or other data from web pages. They leverage the Microsoft Playwright library, which provides cross-browser automation capabilities.
 
 ## Use Cases
 

@@ -1,17 +1,17 @@
 # Creating a Guild with Multiple Agents
 
-This guide will walk you through creating a guild with multiple agents that interact with each other using RusticAI. In RusticAI, a Guild serves as a container and coordination mechanism for a collection of agents.
+This guide will walk you through creating a guild with multiple agents that interact with each other using Rustic AI. In Rustic AI, a Guild serves as a container and coordination mechanism for a collection of agents.
 
 ## Prerequisites
 
 Before you begin, make sure you have:
-- Installed RusticAI and its dependencies
+- Installed Rustic AI and its dependencies
 - Basic understanding of agents (see [Creating Your First Agent](creating_your_first_agent.md))
-- Familiarity with RusticAI [core concepts](../core/index.md)
+- Familiarity with Rustic AI [core concepts](../core/index.md)
 
 ## Understanding Guilds
 
-A Guild in RusticAI:
+A Guild in Rustic AI:
 - Serves as a container for multiple agents
 - Manages communication between agents
 - Handles message routing

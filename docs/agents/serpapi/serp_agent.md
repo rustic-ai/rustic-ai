@@ -1,6 +1,6 @@
 # SERPAgent
 
-The `SERPAgent` provides search engine capabilities to a RusticAI guild by integrating with the [SerpAPI](https://serpapi.com/) service, which offers access to search results from various search engines.
+The `SERPAgent` provides search engine capabilities to a Rustic AI guild by integrating with the [SerpAPI](https://serpapi.com/) service, which offers access to search results from various search engines.
 
 ## Purpose
 
@@ -146,8 +146,8 @@ SERPResults(
             url="https://example.com/result1",
             name="result1.html",
             metadata={
-                "title": "RusticAI: A Framework for Multi-Agent Systems",
-                "snippet": "RusticAI is a powerful framework for building...",
+                "title": "Rustic AI: A Framework for Multi-Agent Systems",
+                "snippet": "Rustic AI is a powerful framework for building...",
                 "search_position": 1,
                 # Other metadata...
             },

@@ -4,7 +4,7 @@ The `SpeechT5TTSAgent` is a text-to-speech synthesis agent that converts text in
 
 ## Purpose
 
-This agent provides text-to-speech (TTS) capabilities within a RusticAI guild, enabling conversion of text content into natural-sounding speech. It uses the Microsoft SpeechT5 model, which produces high-quality speech synthesis.
+This agent provides text-to-speech (TTS) capabilities within a Rustic AI guild, enabling conversion of text content into natural-sounding speech. It uses the Microsoft SpeechT5 model, which produces high-quality speech synthesis.
 
 ## When to Use
 
@@ -109,7 +109,7 @@ from rustic_ai.core.agents.commons.message_formats import GenerationPromptReques
 
 # Create a text-to-speech request
 tts_request = GenerationPromptRequest(
-    generation_prompt="Welcome to RusticAI, a powerful multi-agent framework."
+    generation_prompt="Welcome to Rustic AI, a powerful multi-agent framework."
 )
 
 # Send to the agent

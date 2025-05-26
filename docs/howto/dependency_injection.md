@@ -1,26 +1,26 @@
 # Dependency Injection in Agents
 
-This guide explains how to use dependency injection in RusticAI agents, which allows you to provide external services and resources to your agents in a clean, modular way.
+This guide explains how to use dependency injection in Rustic AI agents, which allows you to provide external services and resources to your agents in a clean, modular way.
 
 ## Prerequisites
 
 Before you begin, make sure you have:
-- Installed RusticAI and its dependencies
+- Installed Rustic AI and its dependencies
 - Basic understanding of agents (see [Creating Your First Agent](creating_your_first_agent.md))
-- Familiarity with RusticAI [core concepts](../core/index.md)
+- Familiarity with Rustic AI [core concepts](../core/index.md)
 
 ## Understanding Dependency Injection
 
-Dependency injection in RusticAI allows you to:
+Dependency injection in Rustic AI allows you to:
 
 1. **Separate concerns**: Keep agent logic separate from external service implementations
 2. **Enhance testability**: Easily mock dependencies for testing
 3. **Centralize configuration**: Configure services once at the guild level
 4. **Share resources**: Reuse the same resources across multiple agents
 
-## How Dependency Injection Works in RusticAI
+## How Dependency Injection Works in Rustic AI
 
-The dependency injection system in RusticAI consists of these key components:
+The dependency injection system in Rustic AI consists of these key components:
 
 1. **Dependencies**: External services or resources (e.g., database connections, API clients)
 2. **Dependency Resolvers**: Classes that know how to create and configure dependencies
@@ -174,7 +174,7 @@ When an agent processes a message:
 
 ## Dependency Lifetime Management
 
-In RusticAI, dependencies are generally:
+In Rustic AI, dependencies are generally:
 
 1. **Resolved once** per agent or guild (depending on where they're defined)
 2. **Cached** by the resolver

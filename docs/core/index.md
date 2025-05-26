@@ -1,6 +1,6 @@
-# RusticAI Core
+# Rustic AI Core
 
-RusticAI Core provides the foundational interfaces and components necessary for building human-centered, multi-agent applications. It includes abstractions for agents, guilds, messaging, execution engines, and dependency management.
+Rustic AI Core provides the foundational interfaces and components necessary for building human-centered, multi-agent applications. It includes abstractions for agents, guilds, messaging, execution engines, and dependency management.
 
 ## Sections
 

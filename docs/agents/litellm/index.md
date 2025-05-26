@@ -1,6 +1,6 @@
 # LiteLLM Agents
 
-This section contains documentation for RusticAI's LiteLLM integration, which provides a unified interface to various large language models through the LiteLLM library.
+This section contains documentation for Rustic AI's LiteLLM integration, which provides a unified interface to various large language models through the LiteLLM library.
 
 ## Available Agents
 

@@ -1,6 +1,6 @@
 # HuggingFace Agents
 
-This section contains documentation for RusticAI's HuggingFace integration, which provides access to various AI models from the Hugging Face ecosystem.
+This section contains documentation for Rustic AI's HuggingFace integration, which provides access to various AI models from the Hugging Face ecosystem.
 
 ## Available Agents
 
@@ -12,7 +12,7 @@ This section contains documentation for RusticAI's HuggingFace integration, whic
 
 ## Overview
 
-HuggingFace agents enable seamless integration with the HuggingFace ecosystem, allowing you to incorporate state-of-the-art AI models into your RusticAI applications. These agents cover a wide range of capabilities, from text generation and question answering to image creation and speech synthesis.
+HuggingFace agents enable seamless integration with the HuggingFace ecosystem, allowing you to incorporate state-of-the-art AI models into your Rustic AI applications. These agents cover a wide range of capabilities, from text generation and question answering to image creation and speech synthesis.
 
 ## Use Cases
 

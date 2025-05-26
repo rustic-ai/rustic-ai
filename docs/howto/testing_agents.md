@@ -1,17 +1,17 @@
-# Testing Agents in RusticAI
+# Testing Agents in Rustic AI
 
-This guide explains how to effectively test agents in the RusticAI framework. Testing is a crucial aspect of developing robust multi-agent systems, and RusticAI provides several utilities to make testing straightforward.
+This guide explains how to effectively test agents in the Rustic AI framework. Testing is a crucial aspect of developing robust multi-agent systems, and Rustic AI provides several utilities to make testing straightforward.
 
 ## Prerequisites
 
 Before you begin, make sure you have:
-- Installed RusticAI and its dependencies
+- Installed Rustic AI and its dependencies
 - Basic understanding of agents (see [Creating Your First Agent](creating_your_first_agent.md))
 - Familiarity with Python testing frameworks like pytest
 
 ## Types of Testing
 
-When testing RusticAI agents, you'll typically perform several types of tests:
+When testing Rustic AI agents, you'll typically perform several types of tests:
 
 1. **Unit Tests**: Testing individual agents in isolation
 2. **Integration Tests**: Testing how multiple agents interact within a guild
@@ -22,7 +22,7 @@ This guide primarily focuses on unit testing agents in isolation, which is the m
 
 ## Using `wrap_agent_for_testing`
 
-RusticAI provides a powerful utility `wrap_agent_for_testing` (from `rustic_ai.testing.helpers`) that simplifies agent testing by:
+Rustic AI provides a powerful utility `wrap_agent_for_testing` (from `rustic_ai.testing.helpers`) that simplifies agent testing by:
 
 1. Setting up the agent in a testing environment
 2. Managing dependencies
@@ -503,4 +503,4 @@ Now that you understand how to test agents, you might want to:
 - Explore [dependency injection](dependency_injection.md)
 - Understand how to [create a guild](creating_a_guild.md) with multiple agents
 
-For complete examples, see the unit tests in the RusticAI framework codebase, which demonstrate best practices for testing various agent types. 
+For complete examples, see the unit tests in the Rustic AI framework codebase, which demonstrate best practices for testing various agent types. 

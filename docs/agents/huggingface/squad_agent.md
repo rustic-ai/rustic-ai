@@ -4,7 +4,7 @@ The `SquadAgent` is a question-answering agent that uses a model trained on the 
 
 ## Purpose
 
-This agent provides extractive question-answering capabilities within a RusticAI guild. Given a context passage and a question, it can locate and extract the relevant answer from the context, enabling precise information retrieval.
+This agent provides extractive question-answering capabilities within a Rustic AI guild. Given a context passage and a question, it can locate and extract the relevant answer from the context, enabling precise information retrieval.
 
 ## When to Use
 

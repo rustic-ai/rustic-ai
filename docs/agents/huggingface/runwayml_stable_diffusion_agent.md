@@ -4,7 +4,7 @@ The `RunwaymlStableDiffusionAgent` is an image generation agent that creates ima
 
 ## Purpose
 
-This agent provides text-to-image generation capabilities within a RusticAI guild, enabling the creation of images from natural language descriptions. It uses Stable Diffusion 3.5, a powerful diffusion model capable of generating high-quality images.
+This agent provides text-to-image generation capabilities within a Rustic AI guild, enabling the creation of images from natural language descriptions. It uses Stable Diffusion 3.5, a powerful diffusion model capable of generating high-quality images.
 
 ## When to Use
 

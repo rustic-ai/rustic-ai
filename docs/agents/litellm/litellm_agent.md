@@ -125,7 +125,7 @@ llm_agent_spec = (
         LiteLLMConf(
             model=Models.gpt_4o,  # Use GPT-4o model
             messages=[
-                SystemMessage(content="You are a helpful assistant in the RusticAI framework."),
+                SystemMessage(content="You are a helpful assistant in the Rustic AI framework."),
             ],
             message_memory=10,  # Remember 10 message exchanges
             temperature=0.7,
@@ -149,7 +149,7 @@ from rustic_ai.core.guild.agent_ext.depends.llm.models import (
 # Create a chat completion request
 request = ChatCompletionRequest(
     messages=[
-        UserMessage(content="What can RusticAI be used for?")
+        UserMessage(content="What can Rustic AI be used for?")
     ]
 )
 
@@ -171,7 +171,7 @@ ChatCompletionResponse(
         ChatCompletionResponseChoice(
             index=0,
             message=AssistantMessage(
-                content="RusticAI is a multi-agent framework that can be used to build..."
+                content="Rustic AI is a multi-agent framework that can be used to build..."
             ),
             finish_reason="stop"
         )

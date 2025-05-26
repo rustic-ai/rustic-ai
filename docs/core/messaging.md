@@ -1,6 +1,6 @@
 # Messaging
 
-The messaging system in RusticAI enables asynchronous, topic-based communication between agents and guilds. It is designed for scalability, flexibility, and extensibility.
+The messaging system in Rustic AI enables asynchronous, topic-based communication between agents and guilds. It is designed for scalability, flexibility, and extensibility.
 
 ## Purpose
 - Facilitate communication between agents, guilds, and external systems
@@ -65,7 +65,7 @@ Errors raised inside handlers are wrapped in a `MessageError` payload and sent t
 This allows centralised error dashboards or compensating actions.
 
 ## Broker Integrations
-RusticAI provides reference clients for:
+Rustic AI provides reference clients for:
 
 | Broker | Library | Guarantees |
 |--------|---------|-----------|

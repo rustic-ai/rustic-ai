@@ -1,6 +1,6 @@
 # Guild Specifications
 
-This guide explains how to create and work with Guild Specifications (GuildSpec) in RusticAI.
+This guide explains how to create and work with Guild Specifications (GuildSpec) in Rustic AI.
 
 ## What is a GuildSpec?
 

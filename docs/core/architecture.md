@@ -1,6 +1,6 @@
 # Architecture Overview
 
-RusticAI Core is engineered to be a **scalable, human-centred, multi-agent platform**. Its design follows a *hexagonal* (ports-and-adapters) philosophy that cleanly separates domain logic from infrastructure, making the system easy to extend, test, and deploy in a variety of environments – from a single-process Jupyter notebook to a distributed cluster.
+Rustic AI Core is engineered to be a **scalable, human-centred, multi-agent platform**. Its design follows a *hexagonal* (ports-and-adapters) philosophy that cleanly separates domain logic from infrastructure, making the system easy to extend, test, and deploy in a variety of environments – from a single-process Jupyter notebook to a distributed cluster.
 
 ## Core Layers
 1. **Domain Layer** – The pure business logic of agents, guilds, and messages.
@@ -63,7 +63,7 @@ sequenceDiagram
 ```
 
 ## Execution Models
-RusticAI ships with two built-in engines and allows you to plug in your own:
+Rustic AI ships with two built-in engines and allows you to plug in your own:
 
 1. **`SyncExecutionEngine`** – Runs everything in a single thread; perfect for tutorials and unit tests.
 2. **`MultithreadedExecutionEngine`** – Allocates a thread per agent or a thread-pool; good for IO-bound workloads.
@@ -88,7 +88,7 @@ RusticAI ships with two built-in engines and allows you to plug in your own:
 - **Authorization** – Guild-level policies can reject or transform messages based on ACLs.
 - **Encryption** – End-to-end optional encryption of payloads at transport or application layer.
 
-## Extending RusticAI Core
+## Extending Rustic AI Core
 1. **New Agent Types** – Subclass `Agent` and register via `AgentBuilder`.
 2. **Custom Message Broker** – Implement the `BrokerClient` interface (e.g., Kafka, MQTT, NATS).
 3. **Alternative Persistence** – Provide a `StateBackend` driver.

@@ -1,6 +1,6 @@
 # Execution
 
-Execution in RusticAI Core is managed by execution engines, which control how agents are run, scheduled, and coordinated. This enables flexible deployment, from simple synchronous runs to advanced multithreaded or distributed setups.
+Execution in Rustic AI Core is managed by execution engines, which control how agents are run, scheduled, and coordinated. This enables flexible deployment, from simple synchronous runs to advanced multithreaded or distributed setups.
 
 ## Purpose
 - Manage the lifecycle and scheduling of agents

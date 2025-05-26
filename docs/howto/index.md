@@ -1,6 +1,6 @@
-# RusticAI How-To Guides
+# Rustic AI How-To Guides
 
-Welcome to the RusticAI How-To Guides. These guides provide step-by-step instructions for common tasks when building systems with RusticAI. They are designed to complement the core documentation by focusing on practical implementation.
+Welcome to the Rustic AI How-To Guides. These guides provide step-by-step instructions for common tasks when building systems with Rustic AI. They are designed to complement the core documentation by focusing on practical implementation.
 
 ## Getting Started
 
@@ -16,7 +16,7 @@ Welcome to the RusticAI How-To Guides. These guides provide step-by-step instruc
 
 ## Reference
 
-- [Agent Documentation](../agents/index.md): Detailed documentation of available agents in RusticAI
+- [Agent Documentation](../agents/index.md): Detailed documentation of available agents in Rustic AI
 
 ## Advanced Topics
 

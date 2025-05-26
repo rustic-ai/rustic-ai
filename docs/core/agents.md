@@ -1,6 +1,6 @@
 # Agents
 
-Agents are the fundamental, autonomous, and message-driven entities in RusticAI. They encapsulate specific logic, maintain their own state, communicate with other agents via asynchronous messages, and collaborate within a [Guild](guilds.md) to achieve complex tasks. Agents can represent automated processes (bots) or act as proxies for human users.
+Agents are the fundamental, autonomous, and message-driven entities in Rustic AI. They encapsulate specific logic, maintain their own state, communicate with other agents via asynchronous messages, and collaborate within a [Guild](guilds.md) to achieve complex tasks. Agents can represent automated processes (bots) or act as proxies for human users.
 
 **Prerequisites**: Familiarity with [Guilds](guilds.md), [Messaging](messaging.md), [State Management](state_management.md), and [Dependencies](dependencies.md) is recommended.
 
@@ -27,7 +27,7 @@ Agents are the fundamental, autonomous, and message-driven entities in RusticAI.
 
 ## Agent Types and Modes
 
-RusticAI provides two enumerations that define fundamental characteristics of agents:
+Rustic AI provides two enumerations that define fundamental characteristics of agents:
 
 ### AgentType
 
@@ -444,7 +444,7 @@ Refer to the [Dependencies documentation](dependencies.md) for a full explanatio
 
 ## Agent State Management
 
-Agents are often stateful. RusticAI provides mechanisms for managing agent state persistently.
+Agents are often stateful. Rustic AI provides mechanisms for managing agent state persistently.
 
 -   **Internal State Access**: Within an agent, `self._state` holds a dictionary representing the agent's current state. `self._guild_state` holds the guild's state. **Direct modification of these is generally discouraged for persistence.**
 -   **`StateRefresherMixin`**: This default mixin, added by `AgentMetaclass`, handles messages like `StateFetchResponse` and `StateUpdateResponse` to keep `self._state` and `self._guild_state` synchronized with the authoritative `StateManager`.
@@ -539,7 +539,7 @@ class ErrorHandlerAgent(Agent[BaseAgentProps]):
 
 ## Testing Agents in Isolation
 
-RusticAI promotes robust unit and integration testing of agents. The framework provides utilities, most notably `wrap_agent_for_testing` from `rustic_ai.testing.helpers`, to simplify the setup and execution of agent tests.
+Rustic AI promotes robust unit and integration testing of agents. The framework provides utilities, most notably `wrap_agent_for_testing` from `rustic_ai.testing.helpers`, to simplify the setup and execution of agent tests.
 
 The `wrap_agent_for_testing` helper typically handles:
 -   **Agent Instantiation**: Taking an agent instance (usually created via `AgentBuilder(...).build()`).

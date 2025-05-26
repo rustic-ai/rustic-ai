@@ -1,10 +1,10 @@
 # Ray Integration
 
-This section contains documentation for RusticAI's Ray integration, which provides distributed execution capabilities for scalable agent systems.
+This section contains documentation for Rustic AI's Ray integration, which provides distributed execution capabilities for scalable agent systems.
 
 ## Overview
 
-Ray is a unified framework for scaling AI and Python applications. The RusticAI Ray integration allows you to:
+Ray is a unified framework for scaling AI and Python applications. The Rustic AI Ray integration allows you to:
 
 - Scale your agent systems across multiple machines
 - Distribute agent workloads efficiently
@@ -24,7 +24,7 @@ To use the Ray integration, you'll need:
 
 1. Ray installed in your environment
 2. A Ray cluster (can be local or distributed)
-3. RusticAI core framework configured properly
+3. Rustic AI core framework configured properly
 
 ### Basic Example
 

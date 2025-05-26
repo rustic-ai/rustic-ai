@@ -1,6 +1,6 @@
 # ProbeAgent
 
-The `ProbeAgent` is a specialized utility agent used for testing and debugging agent interactions within a RusticAI guild. It captures messages, allows sending test messages, and provides inspection capabilities.
+The `ProbeAgent` is a specialized utility agent used for testing and debugging agent interactions within a Rustic AI guild. It captures messages, allows sending test messages, and provides inspection capabilities.
 
 ## Purpose
 

@@ -1,10 +1,10 @@
 # Dependency Resolvers
 
-Dependency resolvers are a key component of RusticAI's dependency injection system. They provide agents with access to external services, resources, and capabilities in a modular, configurable way.
+Dependency resolvers are a key component of Rustic AI's dependency injection system. They provide agents with access to external services, resources, and capabilities in a modular, configurable way.
 
 ## Overview
 
-RusticAI's dependency resolver system allows agents to:
+Rustic AI's dependency resolver system allows agents to:
 
 - Access external services (databases, APIs, LLMs, etc.)
 - Share resources efficiently
@@ -14,7 +14,7 @@ RusticAI's dependency resolver system allows agents to:
 
 ## Available Resolvers by Package
 
-RusticAI provides dependency resolvers across multiple packages:
+Rustic AI provides dependency resolvers across multiple packages:
 
 ### [Core](core/index.md)
 Core dependencies for essential functionality:

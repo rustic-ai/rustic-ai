@@ -1,6 +1,6 @@
 # LangChain Dependencies
 
-The LangChain package provides dependency resolvers that integrate the LangChain framework into RusticAI agents. LangChain is a popular framework for developing applications powered by language models.
+The LangChain package provides dependency resolvers that integrate the LangChain framework into Rustic AI agents. LangChain is a popular framework for developing applications powered by language models.
 
 ## Available Resolvers
 

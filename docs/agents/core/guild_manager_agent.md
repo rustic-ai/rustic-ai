@@ -4,7 +4,7 @@ The `GuildManagerAgent` is a system agent responsible for managing guild-level o
 
 ## Purpose
 
-This agent acts as a central coordinator for a RusticAI guild, providing administrative functionality for managing agents, monitoring guild health, and handling system-level operations.
+This agent acts as a central coordinator for a Rustic AI guild, providing administrative functionality for managing agents, monitoring guild health, and handling system-level operations.
 
 ## When to Use
 

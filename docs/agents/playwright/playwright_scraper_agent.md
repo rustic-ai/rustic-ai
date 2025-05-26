@@ -4,7 +4,7 @@ The `PlaywrightScraperAgent` is a web scraping agent that uses the [Playwright](
 
 ## Purpose
 
-This agent provides automated web scraping capabilities within a RusticAI guild, enabling retrieval of web content for further processing. It's designed to handle requests for scraping multiple URLs and returns the scraped content in the requested format.
+This agent provides automated web scraping capabilities within a Rustic AI guild, enabling retrieval of web content for further processing. It's designed to handle requests for scraping multiple URLs and returns the scraped content in the requested format.
 
 ## When to Use
 

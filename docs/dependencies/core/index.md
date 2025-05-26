@@ -1,6 +1,6 @@
 # Core Dependencies
 
-The Core package provides several essential dependency resolvers that form the foundation of RusticAI's dependency injection system.
+The Core package provides several essential dependency resolvers that form the foundation of Rustic AI's dependency injection system.
 
 ## Available Resolvers
 
@@ -12,6 +12,6 @@ The Core package provides several essential dependency resolvers that form the f
 
 ## Usage
 
-Core dependencies can be used across any agent in the RusticAI ecosystem. They provide fundamental capabilities like storage, code execution, and security that are useful in many agent scenarios.
+Core dependencies can be used across any agent in the Rustic AI ecosystem. They provide fundamental capabilities like storage, code execution, and security that are useful in many agent scenarios.
 
 For details on how to configure and use each resolver, please refer to the specific documentation links above. 
