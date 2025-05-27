@@ -1,11 +1,11 @@
 from typing import List, Optional
 
 from pydantic.config import JsonDict
-from rustic_ai.vertexai.client import VertexAIBase, VertexAIConf
+from vertexai.language_models import TextEmbeddingInput, TextEmbeddingModel
 
 from rustic_ai.core.guild.agent_ext.depends import DependencyResolver
 from rustic_ai.core.guild.agent_ext.depends.embeddings import Embeddings
-from vertexai.language_models import TextEmbeddingInput, TextEmbeddingModel
+from rustic_ai.vertexai.client import VertexAIBase, VertexAIConf
 
 
 class VertexAIEmbeddingConf(VertexAIConf):
