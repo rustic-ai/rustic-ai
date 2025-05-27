@@ -41,6 +41,7 @@ class FormFormat(BaseModel):
     title: str
     description: Optional[str]
     schema_: FormSchema = Field(alias="schema")
+    model_config = ConfigDict(serialize_by_alias=True)
 
 
 class FormResponse(BaseModel):

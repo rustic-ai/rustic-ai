@@ -1,10 +1,10 @@
 # Rustic AI VertexAI
 
-Rustic AI module supporting Vertex AI integration
+Rustic AI module supporting integration with [Vertex AI](https://cloud.google.com/vertex-ai)
 
 ## Prerequisites
 1. Using this module requires a Google Cloud Account project with Vertex AI API enabled. The account must have the role `Vertex AI User`.
-2. `gcloud CLI` for local development
+2. `gcloud CLI` for local development.
 
 ## Installing
 
