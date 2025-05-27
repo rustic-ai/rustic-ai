@@ -127,9 +127,14 @@ class MessagingInterface:
             )
             previous_msg_ids = [entry.origin for entry in message.message_history[-fetch_length:]]
             previous_messages = self.backend.get_messages_by_id(self.namespace, previous_msg_ids)
+            # excluding session_state of previous messages from enriched_history to avoid serialization issues
+            prev_messages_json = [
+                msg.model_dump_json(exclude={"current_thread_id", "root_thread_id", "session_state"})
+                for msg in previous_messages
+            ]
             if message.session_state is None:
                 message.session_state = {}
-            message.session_state["enriched_history"] = previous_messages
+            message.session_state["enriched_history"] = prev_messages_json
         recipients = self.subscribers.get(self._get_namespaced_topic(message.topic_published_to), set())
         for recipient_id in recipients:
             if recipient_id in self.clients and recipient_id != message.sender.id:  # pragma: no cover
