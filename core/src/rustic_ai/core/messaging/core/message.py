@@ -2,7 +2,18 @@ from abc import ABC, abstractmethod
 from enum import StrEnum
 import json
 import logging
-from typing import Annotated, Any, Dict, List, Literal, Optional, TypeVar, Union
+from typing import (
+    Annotated,
+    Any,
+    Callable,
+    ClassVar,
+    Dict,
+    List,
+    Literal,
+    Optional,
+    TypeVar,
+    Union,
+)
 
 from jsonata import Jsonata
 from pydantic import (
@@ -148,6 +159,7 @@ class PayloadTransformer(Transformer):
 class FunctionalTransformer(Transformer):
 
     handler: str
+    lambdas: ClassVar[Dict[str, Callable]] = {}
 
     def transform(
         self, origin: "Message", agent_state: JsonDict, guild_state: JsonDict, routable: "MessageRoutable"
@@ -160,6 +172,10 @@ class FunctionalTransformer(Transformer):
         try:
             if self.handler:
                 expr = Jsonata(self.handler)
+
+                for k, v in self.lambdas.items():
+                    expr.register_lambda(k, v)
+
                 current_dict = routable.model_dump()
                 input = {
                     "origin": origin.model_dump(
@@ -173,7 +189,9 @@ class FunctionalTransformer(Transformer):
                 if transformed is None:
                     return None
 
-                routable = MessageRoutable.model_validate(current_dict | transformed)
+                routed = current_dict | transformed
+
+                routable = MessageRoutable.model_validate(routed)
             else:
                 return None
         except Exception as e:
@@ -181,6 +199,17 @@ class FunctionalTransformer(Transformer):
             return None
 
         return routable
+
+    @classmethod
+    def register_lambda(cls, name: str, func: Callable):
+        """
+        Register a lambda function to be used in the transformer.
+
+        Args:
+            name (str): The name of the lambda function.
+            func (Callable): The lambda function to register.
+        """
+        cls.lambdas[name] = func
 
 
 class StateUpdate(BaseModel):
@@ -595,6 +624,7 @@ class MessageRoutable(BaseModel):
         format (str): The type of the message.
         forward_header (Optional[ForwardHeader]): The header for a forwarded message.
         context (Optional[JsonDict]): The context of the message.
+        enrich_with_history (Optional[int]): The number of previous messages to include in the context.
     """
 
     topics: Union[str, List[str]]
@@ -616,7 +646,7 @@ class Message(BaseModel):
 
     Attributes:
         sender (AgentTag): The sender of the message.
-        topic (str): The topic to which the message belongs.
+        topics (str): The topics to which the message belongs.
         recipient_list (List[AgentTag]): List of agents tagged in the message.
         payload (JsonDict): The actual content or payload of the message.
         format (str): The type of the message.
@@ -665,7 +695,6 @@ class Message(BaseModel):
     _timestamp: float  # Internal backend for timestamp
 
     topic_published_to: Optional[str] = None
-
     enrich_with_history: Optional[int] = 0
 
     def __init__(self, id_obj: GemstoneID, **data: Any):

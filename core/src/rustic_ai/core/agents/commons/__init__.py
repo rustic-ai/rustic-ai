@@ -7,7 +7,7 @@ from .classify_extract import (
     ExtractRequest,
     ExtractResponse,
 )
-from .media import Audio, Image, Media, Video
+from .media import Audio, Document, Image, Media, MediaLink, MediaUtils, Video
 from .message_formats import (
     ErrorMessage,
     GenerationPromptRequest,
@@ -19,6 +19,9 @@ __all__ = [
     "Image",
     "Media",
     "Video",
+    "Document",
+    "MediaLink",
+    "MediaUtils",
     "GenerationPromptRequest",
     "GenerationPromptResponse",
     "ErrorMessage",

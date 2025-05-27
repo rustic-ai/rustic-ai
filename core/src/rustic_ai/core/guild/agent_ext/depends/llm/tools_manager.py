@@ -1,11 +1,9 @@
 from abc import ABC, abstractmethod
 from functools import cached_property
 import json
-from typing import Annotated, Any, List, Optional, Type, cast
+from typing import List, Optional
 
-from pydantic import BaseModel, BeforeValidator, PlainSerializer
-
-from rustic_ai.core.utils.basic_class_utils import get_class_from_name
+from pydantic import BaseModel
 
 from .....utils import ModelClass
 from ..llm.models import (
@@ -147,7 +145,10 @@ class ToolsManager:
                 for call in calls:
                     name = call.function.name
                     args = json.loads(call.function.arguments)
-                    self.parse_tool_args(name, args)
+                    tool = self.parse_tool_args(name, args)
+
+                    if tool:
+                        tool_calls.append(tool)
 
         return tool_calls
 
@@ -162,55 +163,3 @@ class Toolset(ABC):
         """
 
         pass
-
-
-def cls_to_path(cls: Type[Toolset]) -> str:
-    """
-    Converts a class to its string representation.
-    This is used for serialization and deserialization of the class.
-
-    :param cls: The class to convert.
-    :return: The string representation of the class.
-    """
-
-    return f"{cls.__module__}.{cls.__name__}"
-
-
-def path_to_cls(value: Any) -> Type[Toolset]:
-    """
-    Converts a string representation of a class back to the class itself.
-    """
-    if isinstance(value, type) and issubclass(value, Toolset):
-        return cast(Type[Toolset], value)
-
-    if not isinstance(value, str):
-        raise TypeError(
-            "parameter_class must be a fully-qualified string or a "
-            "subclass of Toolset; got "
-            f"{type(value).__name__}"
-        )
-
-    module_path, _, qualname = value.rpartition(".")
-    if not module_path:
-        raise ValueError(f"Not a fully-qualified path: {value!r}")
-
-    mod = get_class_from_name(module_path)
-    obj: Any = mod
-
-    for attr in qualname.split("."):
-        obj = getattr(obj, attr)
-
-    if not isinstance(obj, type):
-        raise TypeError(f"{value!r} does not resolve to a class")
-
-    if not issubclass(obj, Toolset):
-        raise TypeError(f"{value!r} is not a Toolset")
-
-    return cast(Type[Toolset], obj)
-
-
-ToolsetClass = Annotated[
-    Type[Toolset],
-    PlainSerializer(cls_to_path, return_type=str),
-    BeforeValidator(path_to_cls),
-]

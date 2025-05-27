@@ -31,9 +31,7 @@ from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     ToolMessage,
     UserMessage,
 )
-from rustic_ai.core.guild.agent_ext.depends.llm.tools_manager import (
-    ToolsManager,
-)
+from rustic_ai.core.guild.agent_ext.depends.llm.tools_manager import ToolsManager
 from rustic_ai.core.guild.dsl import AgentSpec
 from rustic_ai.litellm.utils import ResponseUtils
 
@@ -60,7 +58,17 @@ class LiteLLMAgent(Agent[LiteLLMConf]):
 
         self.model = agent_spec.props.model
         self.client_props = agent_spec.props.model_dump(
-            mode="json", exclude_unset=True, exclude_none=True, exclude={"message_memory"}
+            mode="json",
+            exclude_unset=True,
+            exclude_none=True,
+            exclude={
+                "message_memory",
+                "toolset",
+                "filter_attachments",
+                "extract_tool_calls",
+                "skip_chat_response_on_tool_call",
+                "retries_on_tool_parse_error",
+            },
         )
         self.message_memory_size = agent_spec.props.message_memory or 0
         self.message_queue: Deque[SystemMessage | UserMessage | AssistantMessage | ToolMessage | FunctionMessage] = (
@@ -108,9 +116,6 @@ class LiteLLMAgent(Agent[LiteLLMConf]):
             tools: List[ChatCompletionTool] = self.tools_manager.tools if self.tools_manager else []
             if prompt.tools:
                 tools.extend(prompt.tools)
-
-            if self.tools_manager:
-                tools.extend(self.tools_manager.tools)
 
             full_prompt = {
                 **self.client_props,

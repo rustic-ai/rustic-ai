@@ -3,7 +3,7 @@ from functools import wraps
 import inspect
 import json
 
-from .jexpr import JAssignmernt, JExpr, JFn, _to_jexpr
+from .jexpr import JAssignment, JExpr, JFn, _to_jexpr
 
 
 def _lambda_to_jfn(lambda_func):
@@ -416,4 +416,4 @@ def ternary(condition, true_expr, false_expr):
 @_wrap_with_conversion
 def assign(var_expr, value):
     value = _to_jexpr(value).serialize()
-    return JAssignmernt(var_expr, value)
+    return JAssignment(var_expr, value)

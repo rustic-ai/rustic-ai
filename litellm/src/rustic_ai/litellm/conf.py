@@ -1,6 +1,6 @@
-from typing import Annotated, List, Optional, Union
+from typing import Annotated, Any, List, Literal, Optional, Type, Union, cast
 
-from pydantic import ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     AssistantMessage,
@@ -11,11 +11,25 @@ from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     UserMessage,
 )
 from rustic_ai.core.guild.agent_ext.depends.llm.tools_manager import (
-    ToolsetClass,
+    Toolset,
     ToolsManager,
     ToolSpec,
 )
 from rustic_ai.core.guild.dsl import BaseAgentProps
+from rustic_ai.core.utils.basic_class_utils import get_class_from_name
+
+
+class ToolsetClassModel(BaseModel):
+    type: Literal["toolset_class"] = Field("toolset_class", frozen=True)
+    class_path: str  # will be resolved later
+
+
+class ToolspecListModel(BaseModel):
+    type: Literal["toolspec_list"] = Field("toolspec_list", frozen=True)
+    tools: List[ToolSpec]
+
+
+ToolsetUnion = Annotated[Union[ToolsetClassModel, ToolspecListModel], Field(discriminator="type")]
 
 
 class LiteLLMConf(BaseAgentProps):
@@ -73,8 +87,8 @@ class LiteLLMConf(BaseAgentProps):
     These messages will be prependended to the list of messages in the prompt.
     """
 
-    toolset: Optional[Union[ToolsetClass, List[ToolSpec]]] = Field(
-        default=None, description="A Toolset class (reference or string) or a list of ToolSpec definitions."
+    toolset: Optional[ToolsetUnion] = Field(
+        default=None, description="Either {'type':'toolset_class', ...} or {'type':'toolspec_list', ...}"
     )
     """
     Toolset is an predefined implementation of Toolset (fully qualified name) or a list of tool
@@ -117,9 +131,47 @@ class LiteLLMConf(BaseAgentProps):
         If the toolset is a list of ToolSpec, it will create a new ToolsManager instance.
         If the toolset is a Toolset class, it will return the ToolsManager instance from the Toolset class.
         """
-        if self.toolset:
-            if isinstance(self.toolset, ToolsetClass):
-                return self.toolset.toolsmanager
-            elif isinstance(self.toolset, list):
-                return ToolsManager(tools=self.toolset)
-        return None
+        if self.toolset is None:
+            return None
+
+        if isinstance(self.toolset, ToolsetClassModel):
+            cls = self.path_to_cls(self.toolset.class_path)  # resolve string → subclass
+            return cls.toolsmanager()  # class method supplied by Toolset
+
+        if isinstance(self.toolset, ToolspecListModel):
+            return ToolsManager(self.toolset.tools)
+
+        raise TypeError("Unsupported toolset variant")
+
+    @staticmethod
+    def path_to_cls(value: str) -> Type[Toolset]:
+        """
+        Converts a string representation of a class back to the class itself.
+        """
+        if isinstance(value, type) and issubclass(value, Toolset):
+            return cast(Type[Toolset], value)
+
+        if not isinstance(value, str):
+            raise TypeError(
+                "parameter_class must be a fully-qualified string or a "
+                "subclass of Toolset; got "
+                f"{type(value).__name__}"
+            )
+
+        module_path, _, qualname = value.rpartition(".")
+        if not module_path:
+            raise ValueError(f"Not a fully-qualified path: {value!r}")
+
+        mod = get_class_from_name(module_path)
+        obj: Any = mod
+
+        for attr in qualname.split("."):
+            obj = getattr(obj, attr)
+
+        if not isinstance(obj, type):
+            raise TypeError(f"{value!r} does not resolve to a class")
+
+        if not issubclass(obj, Toolset):
+            raise TypeError(f"{value!r} is not a Toolset")
+
+        return cast(Type[Toolset], obj)
