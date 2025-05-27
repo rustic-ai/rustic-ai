@@ -4,12 +4,16 @@ from pydantic import ConfigDict, Field
 
 from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     AssistantMessage,
-    ChatCompletionTool,
     FunctionMessage,
     Models,
     SystemMessage,
     ToolMessage,
     UserMessage,
+)
+from rustic_ai.core.guild.agent_ext.depends.llm.tools_manager import (
+    ToolsetClass,
+    ToolsManager,
+    ToolSpec,
 )
 from rustic_ai.core.guild.dsl import BaseAgentProps
 
@@ -69,13 +73,53 @@ class LiteLLMConf(BaseAgentProps):
     These messages will be prependended to the list of messages in the prompt.
     """
 
-    tools: Optional[List[ChatCompletionTool]] = None
+    toolset: Optional[Union[ToolsetClass, List[ToolSpec]]] = Field(
+        default=None, description="A Toolset class (reference or string) or a list of ToolSpec definitions."
+    )
     """
-    List of tools to enable for completion.
-    These tools will be appended to the list of tools in the prompt.
+    Toolset is an predefined implementation of Toolset (fully qualified name) or a list of tool
+    specifications. Toolset gives a ToolManager which is used to work with tools and parse tool
+    calls. The list of ToolSpec is used to create a ToolManager.
     """
 
     message_memory: Optional[int] = None
     """
     Number of messages to remember in the conversation history.
     """
+
+    filter_attachments: bool = False
+    """
+    If set to True, attachments will be filtered out from the messages before sending to the model.
+    """
+
+    extract_tool_calls: bool = False
+    """
+    If set to True, the agent will extract tool calls from the model's response and
+    publish them as well as chat completion responses.
+    """
+
+    skip_chat_response_on_tool_call: bool = False
+    """
+    If set to True, the agent will skip publishing the chat completion response when the response includes a tool call.
+    Only the tool call will be published. This only applies when `extract_tool_calls` is set to True.
+    """
+
+    retries_on_tool_parse_error: int = 0
+    """
+    LLM may return an invalid tool call or with wrong args. In those cases, parsing will fail.
+    Number of retries to LLM completion on tool parse error.
+    If set to 0, the agent will not retry on tool parse error.
+    """
+
+    def get_tools_manager(self) -> Optional[ToolsManager]:
+        """
+        Returns the tools manager for the agent.
+        If the toolset is a list of ToolSpec, it will create a new ToolsManager instance.
+        If the toolset is a Toolset class, it will return the ToolsManager instance from the Toolset class.
+        """
+        if self.toolset:
+            if isinstance(self.toolset, ToolsetClass):
+                return self.toolset.toolsmanager
+            elif isinstance(self.toolset, list):
+                return ToolsManager(tools=self.toolset)
+        return None

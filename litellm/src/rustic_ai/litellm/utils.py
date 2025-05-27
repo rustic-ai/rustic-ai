@@ -2,6 +2,9 @@ from typing import List, Optional
 
 from litellm import Usage as LitellmUsage
 from litellm.types.utils import Message as LitellmMessage
+from litellm.utils import (
+    ChatCompletionMessageToolCall as LitellmChatCompletionMessageToolCall,
+)
 from litellm.utils import Choices as LitellmChoice
 from litellm.utils import ModelResponse as LitellmModelResponse
 
@@ -24,7 +27,7 @@ class MessageUtils:
         if hasattr(litellm_message, "tool_calls") and litellm_message.tool_calls:
             for tool_call in litellm_message.tool_calls:
                 tool_calls = []
-                if isinstance(tool_call, ChatCompletionMessageToolCall):
+                if isinstance(tool_call, LitellmChatCompletionMessageToolCall):
                     tool_calls.append(
                         ChatCompletionMessageToolCall(
                             id=tool_call.id,

@@ -18,7 +18,7 @@ from rustic_ai.litellm.utils import ResponseUtils
 class LiteLLM(LLM):
     def __init__(self, props: LiteLLMConf):
         self.preset_messages = props.messages
-        self.preset_tools = props.tools
+        self.tool_manager = props.get_tools_manager()
         self._model = props.model
         self.client_props = props.model_dump(mode="json", exclude_unset=True, exclude_none=True)
 
@@ -29,7 +29,7 @@ class LiteLLM(LLM):
 
         messages_dict = [m.model_dump(exclude_none=True) for m in all_messages]
 
-        tools: List[ChatCompletionTool] = self.preset_tools if self.preset_tools else []
+        tools: List[ChatCompletionTool] = self.tool_manager.tools if self.tool_manager else []
         if prompt.tools:
             tools.extend(prompt.tools)
 
