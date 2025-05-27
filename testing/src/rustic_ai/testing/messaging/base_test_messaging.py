@@ -458,5 +458,5 @@ class BaseTestMessagingABC(ABC):
 
         prev_msgs = messages_received[2].session_state["enriched_history"]
         assert len(prev_msgs) == 2
-        assert prev_msgs[0].id == message_id1.to_int()
-        assert prev_msgs[1].id == message_id2.to_int()
+        assert Message.from_json(prev_msgs[0]).id == message_id1.to_int()
+        assert Message.from_json(prev_msgs[1]).id == message_id2.to_int()
