@@ -39,10 +39,20 @@ class Models(StrEnum):
     gpt_3_5_turbo_1106 = "gpt-3.5-turbo-1106"
     gpt_3_5_turbo_0125 = "gpt-3.5-turbo-0125"
     gpt_3_5_turbo_16k_0613 = "gpt-3.5-turbo-16k-0613"
+    gpt_4_1 = "gpt-4.1"
+    gpt_4_1_mini = "gpt-4.1-mini"
+    gpt_4_1_nano = "gpt-4.1-nano"
 
-    gemini_pro = "gemini/gemini-pro"
-    gemini_1_5_pro = "gemini/gemini-1.5-pro-latest"
+    o1 = "o1"
+    o1_pro = "o1-pro"
+    o3 = "o3"
+    o3_mini = "o3-mini"
+    o4_mini = "o4-mini"
+
     gemini_pro_vision = "gemini/gemini-pro-vision"
+    gemini_2_0_flash = "gemini/gemini-2.0-flash"
+    gemini_2_5_flash = "gemini/gemini-2.5-flash-preview-05-20"
+    gemini_2_5_pro = "gemini/gemini-2.5-pro-preview-05-06"
 
 
 class Role(StrEnum):
@@ -666,6 +676,21 @@ class ChatCompletionResponse(LLMBaseModel):
     usage: Optional[CompletionUsage] = None
     """
     Usage statistics for the completion request.
+    """
+
+
+class ChatCompletionResponseEmpty(LLMBaseModel):
+    """
+    Represents an empty chat completion response.
+    """
+
+    id: str
+    """
+    A unique identifier for the chat completion.
+    """
+    created: int
+    """
+    The Unix timestamp (in seconds) of when the chat completion was created.
     """
 
 

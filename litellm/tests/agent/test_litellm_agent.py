@@ -37,7 +37,7 @@ class TestLiteLLMAgent:
                 "lite_llm_agent"
             ).set_properties(
                 LiteLLMConf(
-                    model=Models.gemini_pro,
+                    model=Models.gemini_2_5_flash,
                     messages=[
                         SystemMessage(content="You are a helpful assistant."),
                     ],

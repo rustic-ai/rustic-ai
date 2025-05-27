@@ -1,5 +1,6 @@
 from .gemstone_id import GemstoneGenerator, GemstoneID
 from .json_utils import JsonDict, JsonUtils
+from .model_class import ModelClass
 from .priority import Priority
 
 __all__ = [
@@ -8,4 +9,5 @@ __all__ = [
     "GemstoneGenerator",
     "JsonDict",
     "JsonUtils",
+    "ModelClass",
 ]

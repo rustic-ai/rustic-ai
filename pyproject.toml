@@ -31,7 +31,7 @@ rusticai-langchain = { path = "./langchain", develop = true }
 rusticai-showcase = { path = "./showcase", develop = true }
 # Optional dependencies for additional functionality during runtime
 gcsfs = { version = "^2024.12.0", optional = true }
-rusticai-vertexai = {path = "./vertexai", develop = true}
+rusticai-vertexai = { path = "./vertexai", develop = true }
 
 [tool.poetry.group.dev]
 optional = true
@@ -53,7 +53,6 @@ pytest-asyncio = "^0.25.3"
 httpx = "^0.28.1"
 flaky = "^3.8.1"
 rusticai-testing = { path = "./testing", develop = true }
-
 
 
 [tool.poetry.group.docs.dependencies]
@@ -88,7 +87,13 @@ ignore_missing_imports = true
 check_untyped_defs = true
 plugins = "pydantic.mypy"
 explicit_package_bases = true
-exclude = ["^\\.venv/", "^\\dist/", "^\\.tox/", "^cache/", "cookiecutter-rustic/"]
+exclude = [
+    "^\\.venv/",
+    "^\\dist/",
+    "^\\.tox/",
+    "^cache/",
+    "cookiecutter-rustic/",
+]
 
 
 [tool.isort]
@@ -110,21 +115,9 @@ known_third_party = [
     "redis",
     "serpapi",
     "marvin",
+    "vertexai",
 ]
-known_first_party = [
-    "rustic_ai.core",
-    "rustic_ai.redis",
-    "rustic_ai.ray",
-    "rustic_ai.api_server",
-    "rustic_ai.litellm",
-    "rustic_ai.chroma",
-    "rustic_ai.marvin",
-    "rustic_ai.serpapi",
-    "rustic_ai.playwright",
-    "rustic_ai.huggingface",
-    "rustic_ai.langchain",
-    "rustic_ai.showcase",
-]
+known_first_party = ["rustic_ai"]
 known_local_folder = ["core", "rustic_ai.testing"]
 
 
