@@ -4,7 +4,7 @@
 coverage combine --keep coverage/coverage-*
 
 # Print coverage report
-coverage report -m --no-skip-covered
+coverage report -m --no-skip-covered -i
 
 # Generate XML report for CI/CD
-coverage xml -o coverage.xml 
+coverage xml -i -o coverage.xml 
