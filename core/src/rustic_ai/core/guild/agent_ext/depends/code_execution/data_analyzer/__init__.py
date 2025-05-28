@@ -11,6 +11,7 @@ from .exceptions import (
     UnsupportedFormatError,
 )
 from .models import (
+    BaseTransformation,
     CleanDatasetRequest,
     CorrelationMatrixRequest,
     CorrelationMatrixResponse,
@@ -50,6 +51,7 @@ from .models import (
 from .tools import DataAnalystToolset
 
 __all__ = [
+    "BaseTransformation",
     "DataAnalyzer",
     "PandasDataAnalyzer",
     "DatasetListResponse",
