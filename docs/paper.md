@@ -48,9 +48,9 @@ The **Guild** is the cornerstone of Rustic AI's architecture. A Guild is a logic
 
 - **Organizing Agents**: Grouping functionally related agents into cohesive units to tackle specific tasks or workflows.
 - **Lifecycle Management**: Controlling the registration, launching, execution, monitoring, and termination of its member agents.
-- **Coordinated Execution**: Defining how agents run, leveraging various [Execution Engines](#522-execution-engines) (e.g., synchronous, asynchronous, distributed).
-- **Message Orchestration**: Facilitating communication and defining sophisticated interaction patterns between agents through a powerful [Messaging System](#53-messaging-system) and routing rules.
-- **Shared Resources**: Providing common [Dependencies](#55-dependency-injection) (like API clients or database connections) and [State Management](#54-state-management) facilities to its member agents.
+- **Coordinated Execution**: Defining how agents run, leveraging various [Execution Engines](#322-execution-engines) (e.g., synchronous, asynchronous, distributed).
+- **Message Orchestration**: Facilitating communication and defining sophisticated interaction patterns between agents through a powerful [Messaging System](#33-messaging-system) and routing rules.
+- **Shared Resources**: Providing common [Dependencies](#35-dependency-injection) (like API clients or database connections) and [State Management](#34-state-management) facilities to its member agents.
 
 A Guild is defined by a **`GuildSpec`**, a declarative blueprint typically specified in YAML or JSON, or constructed programmatically using the `GuildBuilder`. This specification details the guild's properties, its member agents (`AgentSpec` list), shared dependencies, and message routing logic.
 
