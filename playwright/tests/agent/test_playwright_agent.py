@@ -111,6 +111,7 @@ class TestPlaywrightAgent:
                     MediaLink(url="https://example.com/index.html"),
                 ],
                 output_format=ScrapingOutputFormat.MARKDOWN,
+                force=True,
             ).model_dump(),
             format=get_qualified_class_name(WebScrapingRequest),
         )
