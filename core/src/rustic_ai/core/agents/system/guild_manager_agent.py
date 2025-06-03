@@ -16,6 +16,7 @@ from rustic_ai.core.agents.system.models import (
     AgentListResponse,
     BadInputResponse,
     ConflictResponse,
+    GuildReadyMessage,
     GuildUpdatedAnnouncement,
     RunningAgentListRequest,
     StopGuildRequest,
@@ -410,3 +411,13 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
                 if agent_spec.id != self.id:
                     self.guild.remove_agent(agent_spec.id)
             self.guild.remove_agent(self.id)
+
+    @processor(GuildReadyMessage)
+    def guild_ready_handler(self, ctx: ProcessContext[GuildReadyMessage]) -> None:
+        if ctx.payload.guild_id == self.guild_id:
+            ctx._raw_send(
+                priority=Priority.NORMAL,
+                format=get_qualified_class_name(GuildReadyMessage),
+                payload={"guild_id": ctx.payload.guild_id, "guild_name": ctx.payload.guild_name},
+                topics=[GuildTopics.GUILD_STATUS_TOPIC],
+            )

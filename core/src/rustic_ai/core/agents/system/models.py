@@ -134,3 +134,8 @@ class StopGuildRequest(BaseModel):
     """
 
     guild_id: str
+
+
+class GuildReadyMessage(BaseModel):
+    guild_id: str
+    guild_name: str
