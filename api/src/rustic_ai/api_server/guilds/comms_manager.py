@@ -20,7 +20,7 @@ from rustic_ai.core.messaging.client.message_tracking_client import (
     MessageTrackingClient,
 )
 from rustic_ai.core.messaging.core.client import Client
-from rustic_ai.core.messaging.core.message import AgentTag, Message
+from rustic_ai.core.messaging.core.message import AgentTag, Message, ProcessEntry
 from rustic_ai.core.messaging.core.messaging_interface import MessagingInterface
 from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 from rustic_ai.core.utils.gemstone_id import GemstoneGenerator
@@ -212,6 +212,8 @@ class GuildCommunicationManager:
 
                         data["thread"].append(data["id"])
                         data["traceparent"] = traceparent
+                        history = data.get("message_history", [])
+                        message_history = [ProcessEntry.model_validate(entry) for entry in history]
 
                         try:
                             logging.debug(f"Received message: {data}")
@@ -223,6 +225,7 @@ class GuildCommunicationManager:
                                 payload=data,
                                 thread=[data["id"]],
                                 traceparent=traceparent,
+                                message_history=message_history,
                             )
 
                             logging.debug(f"Publishing message: {message.model_dump_json()}")

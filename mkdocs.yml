@@ -1,4 +1,5 @@
 site_name: Rustic AI Documentation
+repo_url: https://github.com/rustic-ai/rustic-ai
 nav:
   - Home: index.md
   - Light Paper: paper.md
@@ -76,10 +77,14 @@ nav:
   - API: api/index.md
   - Contributing: contributing.md
 theme:
+  icon:
+    repo: fontawesome/brands/github
+  favicon: assets/images/favicon.jpg
+  logo: assets/images/logo.svg
   name: material
-  palette:
-    primary: indigo
-    accent: indigo
+  primary: custom
+extra_css:
+  - assets/stylesheets/theme.css
 markdown_extensions:
   - admonition
   - codehilite

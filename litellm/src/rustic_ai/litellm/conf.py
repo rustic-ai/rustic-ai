@@ -1,17 +1,35 @@
-from typing import Annotated, List, Optional, Union
+from typing import Annotated, Any, List, Literal, Optional, Type, Union, cast
 
-from pydantic import ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     AssistantMessage,
-    ChatCompletionTool,
     FunctionMessage,
     Models,
     SystemMessage,
     ToolMessage,
     UserMessage,
 )
+from rustic_ai.core.guild.agent_ext.depends.llm.tools_manager import (
+    Toolset,
+    ToolsManager,
+    ToolSpec,
+)
 from rustic_ai.core.guild.dsl import BaseAgentProps
+from rustic_ai.core.utils.basic_class_utils import get_class_from_name
+
+
+class ToolsetClassModel(BaseModel):
+    type: Literal["toolset_class"] = Field("toolset_class", frozen=True)
+    class_path: str  # will be resolved later
+
+
+class ToolspecListModel(BaseModel):
+    type: Literal["toolspec_list"] = Field("toolspec_list", frozen=True)
+    tools: List[ToolSpec]
+
+
+ToolsetUnion = Annotated[Union[ToolsetClassModel, ToolspecListModel], Field(discriminator="type")]
 
 
 class LiteLLMConf(BaseAgentProps):
@@ -69,13 +87,91 @@ class LiteLLMConf(BaseAgentProps):
     These messages will be prependended to the list of messages in the prompt.
     """
 
-    tools: Optional[List[ChatCompletionTool]] = None
+    toolset: Optional[ToolsetUnion] = Field(
+        default=None, description="Either {'type':'toolset_class', ...} or {'type':'toolspec_list', ...}"
+    )
     """
-    List of tools to enable for completion.
-    These tools will be appended to the list of tools in the prompt.
+    Toolset is an predefined implementation of Toolset (fully qualified name) or a list of tool
+    specifications. Toolset gives a ToolManager which is used to work with tools and parse tool
+    calls. The list of ToolSpec is used to create a ToolManager.
     """
 
     message_memory: Optional[int] = None
     """
     Number of messages to remember in the conversation history.
     """
+
+    filter_attachments: bool = False
+    """
+    If set to True, attachments will be filtered out from the messages before sending to the model.
+    """
+
+    extract_tool_calls: bool = False
+    """
+    If set to True, the agent will extract tool calls from the model's response and
+    publish them as well as chat completion responses.
+    """
+
+    skip_chat_response_on_tool_call: bool = False
+    """
+    If set to True, the agent will skip publishing the chat completion response when the response includes a tool call.
+    Only the tool call will be published. This only applies when `extract_tool_calls` is set to True.
+    """
+
+    retries_on_tool_parse_error: int = 0
+    """
+    LLM may return an invalid tool call or with wrong args. In those cases, parsing will fail.
+    Number of retries to LLM completion on tool parse error.
+    If set to 0, the agent will not retry on tool parse error.
+    """
+
+    def get_tools_manager(self) -> Optional[ToolsManager]:
+        """
+        Returns the tools manager for the agent.
+        If the toolset is a list of ToolSpec, it will create a new ToolsManager instance.
+        If the toolset is a Toolset class, it will return the ToolsManager instance from the Toolset class.
+        """
+        if self.toolset is None:
+            return None
+
+        if isinstance(self.toolset, ToolsetClassModel):
+            cls = self.path_to_cls(self.toolset.class_path)  # resolve string → subclass
+            return cls.toolsmanager()  # class method supplied by Toolset
+
+        if isinstance(self.toolset, ToolspecListModel):
+            return ToolsManager(self.toolset.tools)
+
+        raise TypeError("Unsupported toolset variant")
+
+    @staticmethod
+    def path_to_cls(value: str) -> Type[Toolset]:
+        """
+        Converts a string representation of a class back to the class itself.
+        """
+        if isinstance(value, type) and issubclass(value, Toolset):
+            return cast(Type[Toolset], value)
+
+        if not isinstance(value, str):
+            raise TypeError(
+                "parameter_class must be a fully-qualified string or a "
+                "subclass of Toolset; got "
+                f"{type(value).__name__}"
+            )
+
+        module_path, _, qualname = value.rpartition(".")
+        if not module_path:
+            raise ValueError(f"Not a fully-qualified path: {value!r}")
+
+        mod = get_class_from_name(module_path)
+        obj: Any = mod
+
+        for attr in qualname.split("."):
+            obj = getattr(obj, attr)
+
+        if not isinstance(obj, type):
+            raise TypeError(f"{value!r} does not resolve to a class")
+
+        if not issubclass(obj, Toolset):
+            raise TypeError(f"{value!r} is not a Toolset")
+
+        return cast(Type[Toolset], obj)

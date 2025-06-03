@@ -227,7 +227,7 @@ class JRegex(JExpr):
         return self.expression
 
 
-class JAssignmernt(JExpr):
+class JAssignment(JExpr):
     def __init__(self, var_expr: Union[JExpr, str], value: str):
         self.var: JExpr = var_expr if isinstance(var_expr, JExpr) else JExpr(var_expr)
         if not self.var.expression.startswith("$"):

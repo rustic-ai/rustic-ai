@@ -3,10 +3,6 @@ import time
 
 from fsspec import filesystem
 import pytest
-from rustic_ai.vertexai.agents.image_generation import (
-    VertexAiImageGenerationRequest,
-    VertexAiImagenAgent,
-)
 
 from rustic_ai.core.agents.commons.image_generation import ImageGenerationResponse
 from rustic_ai.core.agents.testutils.probe_agent import ProbeAgent
@@ -17,6 +13,10 @@ from rustic_ai.core.guild.agent_ext.depends.filesystem import (
 from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder
 from rustic_ai.core.guild.dsl import DependencySpec
 from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
+from rustic_ai.vertexai.agents.image_generation import (
+    VertexAiImageGenerationRequest,
+    VertexAiImagenAgent,
+)
 
 
 class TestImagenAgent:

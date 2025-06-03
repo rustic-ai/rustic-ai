@@ -3,7 +3,7 @@ from typing import Literal, Optional
 import uuid
 
 from pydantic import BaseModel
-from rustic_ai.vertexai.client import VertexAIBase, VertexAIConf
+from vertexai.vision_models import ImageGenerationModel
 
 from rustic_ai.core import Agent, AgentMode, AgentSpec, AgentType
 from rustic_ai.core.agents.commons.image_generation import ImageGenerationResponse
@@ -11,7 +11,7 @@ from rustic_ai.core.agents.commons.media import MediaLink
 from rustic_ai.core.guild import agent
 from rustic_ai.core.guild.agent_ext.depends.filesystem import FileSystem
 from rustic_ai.core.guild.dsl import BaseAgentProps
-from vertexai.vision_models import ImageGenerationModel
+from rustic_ai.vertexai.client import VertexAIBase, VertexAIConf
 
 
 class VertexAiImagenAgentProps(BaseAgentProps, VertexAIConf):

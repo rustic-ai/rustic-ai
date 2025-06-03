@@ -80,19 +80,17 @@ class RedisMessagingBackend(MessagingBackend):
             message (Message): The message object to be stored.
         """
         message_json = message.to_json()
-        # Using the timestamp as the score for sorting in Redis sorted set.
-        self.r.zadd(topic, {message_json: message.timestamp})
 
         # Create a secondary index for direct ID lookup
         # Use a key pattern like "msg:ID" to store the message
         msg_key = self._get_msg_key(namespace, message.id)
-        self.r.set(msg_key, message_json)
-
         # Set an expiration time for the secondary index entry
         message_ttl = int(os.environ.get("RUSTIC_AI_REDIS_MSG_TTL", 3600))
-        self.r.expire(msg_key, message_ttl)
+        self.r.set(msg_key, message_json, ex=message_ttl)
 
-        self.r.publish(topic, message.to_json())
+        # Using the timestamp as the score for sorting in Redis sorted set.
+        self.r.zadd(topic, {message_json: message.timestamp})
+        self.r.publish(topic, message_json)
 
     def get_messages_for_topic(self, topic: str) -> List[Message]:
         """

@@ -1350,3 +1350,25 @@ class TestJExprBuilder:
                 assert expected_error in str(e)
             else:
                 pytest.fail(f"Unexpected error occurred: {e}")
+
+    def test_xformer_func(self):
+        input = {"payload": {"key": {"role": "user", "content": "Hello"}}}
+        expr_str = JExpr("$xformer(payload)").serialize()
+        expr = Jsonata(expr=expr_str)
+        expr.register_lambda("xformer", xformer)
+
+        resp = expr.evaluate(input)
+
+        assert resp == {
+            "messages": [{"role": "user", "content": "Hello"}],
+            "format": "MESSAGE_FORMAT",
+        }
+
+
+def xformer(payload: dict) -> dict:
+    """Converts a ChatCompletionRequest to a ChatCompletionResponse."""
+
+    return {
+        "messages": [payload["key"]],
+        "format": "MESSAGE_FORMAT",
+    }
