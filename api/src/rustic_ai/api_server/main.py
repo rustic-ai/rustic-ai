@@ -32,10 +32,7 @@ LAUNCH_RAY_DASHBOARD = os.environ.get("RUSTIC_LAUNCH_RAY_DASHBOARD", "False").lo
 if INITIALIZE_RAY_CLUSTER:
 
     logging.info("Initializing Ray cluster")
-    ray.init(
-        include_dashboard=LAUNCH_RAY_DASHBOARD,
-        log_to_driver=False,
-    )
+    ray.init(include_dashboard=LAUNCH_RAY_DASHBOARD, log_to_driver=False, dashboard_host="0.0.0.0")
     logging.info("Ray cluster initialized")
     logging.info("Ray cluster details: {}".format(ray.get_runtime_context()))
 
