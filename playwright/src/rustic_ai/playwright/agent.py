@@ -4,7 +4,7 @@ import logging
 import mimetypes
 import os
 from typing import List, Set
-from urllib.parse import urljoin, urlsplit, urlparse
+from urllib.parse import urljoin, urlparse, urlsplit
 
 from install_playwright import install
 from markdownify import markdownify as md
@@ -44,11 +44,11 @@ class WebScrapingRequest(BaseModel):
         title="Number of links to scrape",
         description="The number of links to scrape from within the page, -1 to scrape all",
     )
-    
+
     scrape_external_links: bool = Field(
         default=False,
         title="Scrape external links",
-        description="If depth is greather than 0, and we are scrapping further down the link in the page should links going outside the page be scraped or not"
+        description="If depth is greather than 0, and we are scrapping further down the link in the page should links going outside the page be scraped or not",
     )
 
     force: bool = Field(
@@ -80,7 +80,7 @@ class PlaywrightScraperAgent(Agent):
             scraped_docs: List[MediaLink] = []
 
             for link in scraping_request.links:
-                
+
                 async def scrape_and_store(current_url: str):
                     response = await page.goto(current_url)
 
@@ -158,21 +158,22 @@ class PlaywrightScraperAgent(Agent):
                     unique_links = set()
                     for new_link in all_links:
                         parsed = urlparse(new_link)
-                        if parsed.scheme and parsed.netloc:
+                        if parsed.scheme == "mailto":
+                            continue
+                        elif parsed.scheme and parsed.netloc:
                             full_url = new_link
-                            if link.url not in full_url and not scraping_request.scrape_external_links:
+                            if (
+                                urlparse(link.url).netloc != parsed.netloc
+                                and not scraping_request.scrape_external_links
+                            ):
                                 continue
                         else:
                             full_url = urljoin(link.url, new_link)
-                        
+
                         if (full_url not in unique_links) and (full_url not in self.scraped_urls):
                             unique_links.add(full_url)
 
-                    count_links = (
-                        len(unique_links)
-                        if scraping_request.depth == -1
-                        else scraping_request.depth
-                    )
+                    count_links = len(unique_links) if scraping_request.depth == -1 else scraping_request.depth
                     for new_url in list(unique_links)[:count_links]:
                         try:
                             await scrape_and_store(new_url)

@@ -138,6 +138,51 @@ class TestPlaywrightAgent:
         assert result.payload["encoding"] == "utf-8"
         assert result.payload["name"] is not None
 
+        message = Message(
+            id_obj=generator.get_id(Priority.NORMAL),
+            topics="default_topic",
+            sender=AgentTag(id="testerId", name="tester"),
+            payload=WebScrapingRequest(
+                id=request_id,
+                links=[
+                    MediaLink(url="https://webscraper.io/test-sites/e-commerce/static"),
+                ],
+                output_format=ScrapingOutputFormat.MARKDOWN,
+                depth=2,
+                scrape_external_links=False,
+                force=True,
+            ).model_dump(),
+            format=get_qualified_class_name(WebScrapingRequest),
+        )
+
+        agent._on_message(message)
+
+        wsc = get_qualified_class_name(WebScrapingCompleted)
+        tries = 0
+
+        while True:
+            await asyncio.sleep(2)
+
+            tries += 1
+            if len(results) >= 10 or (results and results[-1].format == wsc) or tries > 10:
+                break
+
+        latest_results = results[-3:]
+        assert any(
+            result.payload["metadata"]["scraped_url"].startswith("https://webscraper.io")
+            for result in latest_results
+            if isinstance(result.payload, dict)
+        )
+        result = results[-2]
+        assert result.in_response_to == message.id
+        assert result.current_thread_id == message.id
+        assert result.recipient_list == []
+
+        assert result.payload["id"] is not None
+        assert result.payload["mimetype"] == "text/markdown"
+        assert result.payload["encoding"] == "utf-8"
+        assert result.payload["name"] is not None
+
         # Give the system a final moment to complete any pending tasks
         await asyncio.sleep(2)
 
