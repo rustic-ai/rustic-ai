@@ -4,7 +4,7 @@ import logging
 import mimetypes
 import os
 from typing import List, Set
-from urllib.parse import urljoin, urlsplit
+from urllib.parse import urljoin, urlsplit, urlparse
 
 from install_playwright import install
 from markdownify import markdownify as md
@@ -39,11 +39,18 @@ class WebScrapingRequest(BaseModel):
         description="Options for the transformer to be applied to the scraped content. Default is an empty dictionary.",
     )
 
-    scrape_nav_links: int = Field(
+    depth: int = Field(
         default=0,
-        title="Number of links to scrape from nav bar",
-        description="The number of links to scrape from navigation bar of website, -1 to scrape all",
+        title="Number of links to scrape",
+        description="The number of links to scrape from within the page, -1 to scrape all",
     )
+    
+    scrape_external_links: bool = Field(
+        default=False,
+        title="Scrape external links",
+        description="If depth is greather than 0, and we are scrapping further down the link in the page should links going outside the page be scraped or not"
+    )
+
     force: bool = Field(
         default=False,
         title="Force scrape the url",
@@ -69,13 +76,11 @@ class PlaywrightScraperAgent(Agent):
             install(p.chromium)
             browser = await p.chromium.launch()
             page = await browser.new_page()
-
             scraping_request = ctx.payload
-
             scraped_docs: List[MediaLink] = []
 
             for link in scraping_request.links:
-
+                
                 async def scrape_and_store(current_url: str):
                     response = await page.goto(current_url)
 
@@ -83,7 +88,7 @@ class PlaywrightScraperAgent(Agent):
                         ctx.send_error(
                             ErrorMessage(
                                 agent_type=self.get_qualified_class_name(),
-                                error_type="HTTP_ERROR_{response.status}",
+                                error_type=f"HTTP_ERROR_{response.status}",
                                 error_message=f"HTTP error: {response.status} for URL: {current_url}. Error message: {response.status_text}",
                             )
                         )
@@ -144,34 +149,39 @@ class PlaywrightScraperAgent(Agent):
                 if link.url not in self.scraped_urls or scraping_request.force:
                     await scrape_and_store(link.url)
 
-                if scraping_request.scrape_nav_links != 0:
-
-                    # Scrape from navigation bar links
-                    nav_links = await page.eval_on_selector_all(
-                        "nav a[href], header a[href]",  # This targets common nav structures
+                if scraping_request.depth != 0:
+                    all_links = await page.eval_on_selector_all(
+                        "a[href]",
                         "elements => elements.map(el => el.href)",
                     )
 
                     unique_links = set()
-                    for nav_link in nav_links:
-                        full_url = urljoin(link.url, nav_link)
+                    for new_link in all_links:
+                        parsed = urlparse(new_link)
+                        if parsed.scheme and parsed.netloc:
+                            full_url = new_link
+                            if link.url not in full_url and not scraping_request.scrape_external_links:
+                                continue
+                        else:
+                            full_url = urljoin(link.url, new_link)
+                        
                         if (full_url not in unique_links) and (full_url not in self.scraped_urls):
                             unique_links.add(full_url)
 
                     count_links = (
                         len(unique_links)
-                        if scraping_request.scrape_nav_links == -1
-                        else scraping_request.scrape_nav_links
+                        if scraping_request.depth == -1
+                        else scraping_request.depth
                     )
-                    for nav_url in list(unique_links)[:count_links]:
+                    for new_url in list(unique_links)[:count_links]:
                         try:
-                            await scrape_and_store(nav_url)
+                            await scrape_and_store(new_url)
                         except Exception as e:
                             ctx.send_error(
                                 ErrorMessage(
                                     agent_type=self.get_qualified_class_name(),
                                     error_type="SCRAPE_NAV_ERROR",
-                                    error_message=f"Error scraping nav URL {nav_url}: {str(e)}",
+                                    error_message=f"Error scraping nav URL {new_url}: {str(e)}",
                                 )
                             )
 
