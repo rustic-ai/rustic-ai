@@ -1,10 +1,18 @@
+import random
 from typing import Optional
 
 from sqlalchemy import Engine
 
+from rustic_ai.core.agents.system.models import GuildReadyMessage
 from rustic_ai.core.guild import GuildSpec
 from rustic_ai.core.guild.builders import GuildBuilder, GuildHelper
+from rustic_ai.core.guild.dsl import GuildTopics
 from rustic_ai.core.guild.metastore import GuildStore
+from rustic_ai.core.messaging.core.message import AgentTag, Message
+from rustic_ai.core.messaging.core.messaging_interface import MessagingInterface
+from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
+from rustic_ai.core.utils.gemstone_id import GemstoneGenerator
+from rustic_ai.core.utils.priority import Priority
 
 
 class GuildService:
@@ -23,6 +31,21 @@ class GuildService:
         guild_spec.dependency_map = GuildHelper.get_guild_dependency_map(guild_spec)
 
         guild = GuildBuilder.from_spec(guild_spec).bootstrap(metastore_url)
+
+        messaging_config = GuildHelper.get_messaging_config(guild_spec)
+        messaging = MessagingInterface(guild.id, messaging_config)
+        msg_id = GemstoneGenerator(random.randint(10, 100)).get_id(priority=Priority.HIGH)
+        system_agent = AgentTag(id="api_server", name="API Server")
+
+        message = Message(
+            id_obj=msg_id,
+            topics=[GuildTopics.SYSTEM_TOPIC],
+            sender=system_agent,
+            format=get_qualified_class_name(GuildReadyMessage),
+            payload={"guild_id": guild.id, "guild_name": guild_spec.name},
+        )
+
+        messaging.publish(sender=system_agent, message=message)
 
         return guild.id
 
