@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "rusticai-litellm"
-version = "0.0.5"
+version = "0.0.6"
 description = "Rustic AI module leveraging LiteLLM for LLMs"
 authors = ["Dragonscale Industries Inc. <dev@dragonscale.ai>"]
 license = "Apache-2.0"

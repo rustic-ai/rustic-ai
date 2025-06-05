@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "rusticai-testing"
-version = "0.0.3"
+version = "0.0.4"
 description = "Test Utilities for Rustic AI Framework"
 authors = ["Dragonscale Industries Inc. <dev@dragonscale.ai>"]
 license = "Apache-2.0"

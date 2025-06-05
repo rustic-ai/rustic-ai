@@ -13,23 +13,26 @@ pip install rusticai-vertexai
 ```
 **Note:** It depends on [rusticai-core](https://pypi.org/project/rusticai-core/)
 
-The library also supports using environment variables `VERTEXAI_PROJECT` and `VERTEXAI_LOCATION` in addition to the ones supported by Google Cloud AiPlatform SDK 
-```shell
-export VERTEXAI_PROJECT=<project-id>
-export VERTEXAI_LOCATION=<location>
-```
-
-For local development, 
-```shell
-gcloud auth application-default login
-```
-For more options/details, [refer Google Cloud docs](https://cloud.google.com/docs/authentication/set-up-adc-local-dev-environment).
-
-On Cloud, It's recommended to use Google Workload Identity.
-
 ## Building from Source
 
 ```shell
 poetry install --with dev
 poetry build
 ```
+
+## Usage
+The library also supports using environment variables `VERTEXAI_PROJECT` and `VERTEXAI_LOCATION` in addition to the ones supported by [Google Cloud AI Platform SDK](https://cloud.google.com/python/docs/reference/aiplatform/latest) 
+```shell
+export VERTEXAI_PROJECT=<project-id>
+export VERTEXAI_LOCATION=<location>
+```
+
+For local development/use, ensure the account you are using has the roles/permissions of `Vertex AI User` and `Service Usage Consumer` at the minimum.
+Login using `gcloud CLI` in a terminal
+```shell
+gcloud auth application-default set-quota-project <project-id>
+gcloud auth application-default login
+```
+For more options/details, [refer Google Cloud docs](https://cloud.google.com/docs/authentication/set-up-adc-local-dev-environment).
+
+On Cloud, It's recommended to use Google Workload Identity.
