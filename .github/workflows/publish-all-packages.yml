@@ -40,9 +40,7 @@ jobs:
           ./scripts/poetry_install.sh
           ./scripts/poetry_build.sh
 
-      - name: Publish all packages to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          packages-dir: dist/
-          skip-existing: true
-          verbose: true
+      - name: Publish to PyPI
+        env:
+          POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_TOKEN }}
+        run: poetry publish
