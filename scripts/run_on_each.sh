@@ -1,10 +1,14 @@
 #!/bin/sh
 # Runs the passed command in each specified module directory.
 
-# Exit on error, treat unset variables as errors, and print commands
-set -x
+# Exit on error, treat unset variables as errors
 set -u
 set -e
+
+# Print commands only if VERBOSE is set to 1 (default is not to print)
+if [ "${VERBOSE:-0}" = "1" ]; then
+  set -x
+fi
 
 # --- Define Core Paths ---
 # Absolute path to the directory where this script is located
@@ -21,6 +25,7 @@ if [ $# -eq 0 ]; then
   echo "Usage: $0 <command to run in each module>" >&2
   echo "Example: $0 pwd" >&2
   echo "Example: $0 'ls -la'" >&2
+  echo "Note: Set VERBOSE=1 to print commands as they execute" >&2
   exit 1
 fi
 user_command="$*" # Capture all arguments passed to the script as a single command string
