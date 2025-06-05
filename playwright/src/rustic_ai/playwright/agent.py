@@ -68,6 +68,22 @@ class PlaywrightScraperAgent(Agent):
         super().__init__(agent_spec=agent_spec)
         self.scraped_urls: Set[str] = set()
 
+    async def _extract_links(self, page, base_url: str, request: WebScrapingRequest) -> List[str]:
+        raw_links = await page.eval_on_selector_all("a[href]", "els => els.map(e => e.href)")
+        seen = set()
+        valid_links = []
+        for link in raw_links:
+            parsed = urlparse(link)
+            if parsed.scheme == "mailto":
+                continue
+            full_url = link if parsed.scheme and parsed.netloc else urljoin(base_url, link)
+            if not request.scrape_external_links and urlparse(base_url).netloc != urlparse(full_url).netloc:
+                continue
+            if full_url not in seen:
+                seen.add(full_url)
+                valid_links.append(full_url)
+        return valid_links
+
     @agent.processor(
         WebScrapingRequest, depends_on=[agent.AgentDependency(dependency_key="filesystem", guild_level=True)]
     )
@@ -150,31 +166,8 @@ class PlaywrightScraperAgent(Agent):
                     await scrape_and_store(link.url)
 
                 if scraping_request.depth != 0:
-                    all_links = await page.eval_on_selector_all(
-                        "a[href]",
-                        "elements => elements.map(el => el.href)",
-                    )
-
-                    unique_links = set()
-                    for new_link in all_links:
-                        parsed = urlparse(new_link)
-                        if parsed.scheme == "mailto":
-                            continue
-                        elif parsed.scheme and parsed.netloc:
-                            full_url = new_link
-                            if (
-                                urlparse(link.url).netloc != parsed.netloc
-                                and not scraping_request.scrape_external_links
-                            ):
-                                continue
-                        else:
-                            full_url = urljoin(link.url, new_link)
-
-                        if (full_url not in unique_links) and (full_url not in self.scraped_urls):
-                            unique_links.add(full_url)
-
-                    count_links = len(unique_links) if scraping_request.depth == -1 else scraping_request.depth
-                    for new_url in list(unique_links)[:count_links]:
+                    unique_links = await self._extract_links(page, link.url, scraping_request)
+                    for new_url in unique_links[: scraping_request.depth if scraping_request.depth > 0 else None]:
                         try:
                             await scrape_and_store(new_url)
                         except Exception as e:
