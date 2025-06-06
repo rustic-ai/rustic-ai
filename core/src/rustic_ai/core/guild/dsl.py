@@ -195,6 +195,7 @@ class GuildSpec(BaseModel):
         agents (list[AgentSpec]): A list of agents in the guild.
         dependency_map (Dict[str, DependencySpec]): A mapping for guild's dependency to resolver class.
         routes (RoutingSlip): The routes to be attached to every message coming in the guild.
+        status (str): The status of the guild, e.g., "running", "stopped", "archived".
     """
 
     model_config = ConfigDict(str_strip_whitespace=True)
@@ -204,6 +205,7 @@ class GuildSpec(BaseModel):
     description: Annotated[str, Field(min_length=1)]
     properties: Dict[str, Any] = {}
     agents: list[AgentSpec] = []
+    status: Optional[str] = None
 
     # A mapping for guild's dependency to resolver class
     dependency_map: Dict[str, DependencySpec] = {}

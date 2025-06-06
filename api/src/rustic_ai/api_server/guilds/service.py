@@ -5,6 +5,7 @@ from sqlalchemy import Engine
 from rustic_ai.core.guild import GuildSpec
 from rustic_ai.core.guild.builders import GuildBuilder, GuildHelper
 from rustic_ai.core.guild.metastore import GuildStore
+from rustic_ai.core.guild.metastore.models import GuildStatus
 
 
 class GuildService:
@@ -21,9 +22,7 @@ class GuildService:
             guild_spec.set_execution_engine(GuildHelper.get_default_execution_engine())
 
         guild_spec.dependency_map = GuildHelper.get_guild_dependency_map(guild_spec)
-
         guild = GuildBuilder.from_spec(guild_spec).bootstrap(metastore_url)
-
         return guild.id
 
     def get_guild(self, engine: Engine, guild_id: str) -> Optional[GuildSpec]:

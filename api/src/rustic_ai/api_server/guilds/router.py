@@ -6,7 +6,15 @@ import mimetypes
 from typing import Dict, List, Optional
 from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Response,
+    UploadFile,
+)
 from fastapi.responses import JSONResponse, StreamingResponse
 import griffe
 from griffe import Alias, Class, Module, Object
@@ -32,7 +40,7 @@ guild_service = GuildService()
 
 
 @router.post("/guilds", response_model=IdInfo, status_code=status.HTTP_201_CREATED, operation_id="createGuild")
-def create_guild(guild_spec: GuildSpec):
+def create_guild(guild_spec: GuildSpec, engine=Depends(Metastore.get_engine)):
     """
     Creates a new guild and adds it to the database.
 
