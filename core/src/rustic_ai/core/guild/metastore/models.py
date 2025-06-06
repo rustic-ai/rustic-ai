@@ -17,9 +17,8 @@ from rustic_ai.core.utils.priority import Priority
 class GuildStatus(str, Enum):
     """Status values for Guild models."""
 
-    ACTIVE = "active"
+    RUNNING = "running"
     STOPPED = "stopped"
-    ARCHIVED = "archived"
 
 
 class GuildRoutes(SQLModel, table=True):
@@ -184,7 +183,7 @@ class GuildModel(SQLModel, table=True):
     backend_config: dict = Field(sa_column=Column(MutableDict.as_mutable(JSON(none_as_null=True)), default={}))
 
     dependency_map: dict = Field(sa_column=Column(MutableDict.as_mutable(JSON(none_as_null=True)), default={}))
-    status: GuildStatus = Field(default=GuildStatus.ACTIVE)
+    status: Optional[GuildStatus] = Field(default=None)
     routes: list[GuildRoutes] = Relationship(
         back_populates="guild",
         sa_relationship_kwargs={"cascade": "all", "lazy": "joined"},

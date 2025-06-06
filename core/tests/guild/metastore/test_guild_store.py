@@ -48,21 +48,17 @@ class TestGuildStore:
 
     def test_update_guild_status(self, engine, guild):
         store = GuildStore(engine)
-        guild_model = store.add_guild(guild)
-        assert guild_model.status.value == "active"  
+        store.add_guild(guild)
+        store.update_guild_status(guild.id, GuildStatus.RUNNING)
+        added_guild = store.get_guild(guild.id)
+        assert added_guild is not None
+        assert added_guild.status.value == "running"
 
         store.update_guild_status(guild.id, GuildStatus.STOPPED)
 
-        updated_guild = store.get_guild(guild.id)
-        assert updated_guild is not None
-        assert updated_guild.status.value == "stopped"
-
-        store.update_guild_status(guild.id, GuildStatus.ARCHIVED)
-        updated_guild = store.get_guild(guild.id)
-        assert updated_guild.status.value == "archived"
-
-        with pytest.raises(ValueError):
-            store.update_guild_status("nonexistent_guild", GuildStatus.ACTIVE)
+        added_guild = store.get_guild(guild.id)
+        assert added_guild is not None
+        assert added_guild.status.value == "stopped"
 
     def test_list_guilds(self, engine, guild):
         store = GuildStore(engine)

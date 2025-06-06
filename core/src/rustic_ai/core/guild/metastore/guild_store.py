@@ -37,12 +37,12 @@ class GuildStore:
             session.refresh(guild_model)
         return guild_model
 
-    def update_guild_status(self, guild_id: str, status: GuildStatus) -> Optional[GuildModel]:
+    def update_guild_status(self, guild_id: str, status: GuildStatus) -> GuildModel:
         """
         Update a guild's status.
 
         Args:
-            guild_id (str): The ID of the guild to update
+            guild_id (str): The ID of the guild to stop
             status (GuildStatus): The new status value to set
 
         Returns:
@@ -53,8 +53,7 @@ class GuildStore:
         """
         with Session(self.engine) as session:
             guild_model = GuildModel.get_by_id(session, guild_id)
-
-            if not guild_model:
+            if guild_model is None:
                 raise ValueError(f"Guild with ID {guild_id} not found")
 
             guild_model.status = status

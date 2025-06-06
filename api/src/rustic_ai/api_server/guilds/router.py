@@ -6,10 +6,8 @@ import mimetypes
 from typing import Dict, List, Optional
 from urllib.parse import quote
 
-import griffe
 from fastapi import (
     APIRouter,
-    Body,
     Depends,
     File,
     Form,
@@ -42,7 +40,7 @@ guild_service = GuildService()
 
 
 @router.post("/guilds", response_model=IdInfo, status_code=status.HTTP_201_CREATED, operation_id="createGuild")
-def create_guild(guild_spec: GuildSpec):
+def create_guild(guild_spec: GuildSpec, engine=Depends(Metastore.get_engine)):
     """
     Creates a new guild and adds it to the database.
 
@@ -56,7 +54,7 @@ def create_guild(guild_spec: GuildSpec):
         raise HTTPException(status_code=400, detail="Invalid input")  # pragma: no cover
 
     try:
-        guild_id = guild_service.create_guild(Metastore.get_db_url(), guild_spec)
+        guild_id = guild_service.create_guild(engine, Metastore.get_db_url(), guild_spec)
         logging.debug(f"New guild created: {guild_id}")
         return IdInfo(id=guild_id)
     except ValidationError as e:
@@ -86,40 +84,6 @@ def get_guild(guild_id: str, engine=Depends(Metastore.get_engine)) -> GuildSpec:
         raise HTTPException(status_code=404, detail="Guild not found")
 
     return maybeGuild
-
-
-@router.patch("/guilds/{guild_id}/status", response_model=GuildSpec, operation_id="updateGuildStatus")
-def update_guild_status(
-    guild_id: str,
-    status: str = Body(..., embed=True, description="Guild status: 'active', 'stopped', or 'archived'"),
-    engine=Depends(Metastore.get_engine),
-) -> GuildSpec:
-    """
-    Updates the status of a guild.
-
-    Args:
-        guild_id (str): The ID of the guild to update.
-        status (str): The new status for the guild. Must be one of: 'active', 'stopped', 'archived'.
-                     These correspond to the GuildSpec.GuildStatus enum values.
-
-    Returns:
-        GuildSpec: The updated guild details.
-
-    Raises:
-        HTTPException: If the guild is not found (404) or if the status is invalid (400).
-    """
-    logging.debug(f"Updating status for guild: {guild_id} to {status}")
-
-    try:
-        updated_guild = guild_service.update_guild_status(engine, guild_id, status)
-        return updated_guild
-    except ValueError as e:
-        if "Invalid guild status" in str(e):
-            raise HTTPException(status_code=400, detail=str(e))
-        else:
-            raise HTTPException(status_code=404, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/guilds/{guild_id}/{user_id}/messages", operation_id="getHistoricalUserMessages")

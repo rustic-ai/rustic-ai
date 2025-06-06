@@ -10,7 +10,7 @@ from rustic_ai.core.guild.metastore.models import GuildStatus
 
 class GuildService:
 
-    def create_guild(self, metastore_url: str, guild_spec: GuildSpec) -> str:
+    def create_guild(self, engine: Engine, metastore_url: str, guild_spec: GuildSpec) -> str:
         """
         Creates a new guild and adds it to the database.
         """
@@ -22,9 +22,9 @@ class GuildService:
             guild_spec.set_execution_engine(GuildHelper.get_default_execution_engine())
 
         guild_spec.dependency_map = GuildHelper.get_guild_dependency_map(guild_spec)
-
         guild = GuildBuilder.from_spec(guild_spec).bootstrap(metastore_url)
-
+        guild_store = GuildStore(engine)
+        guild_store.update_guild_status(guild.id, GuildStatus.RUNNING)
         return guild.id
 
     def get_guild(self, engine: Engine, guild_id: str) -> Optional[GuildSpec]:
@@ -40,29 +40,3 @@ class GuildService:
         return guild_spec
 
     valid_guild_statuses = [status.value for status in GuildStatus]
-
-    def update_guild_status(self, engine: Engine, guild_id: str, status: str) -> GuildSpec:
-        """
-        Updates only the status field of a guild in the database.
-
-        Args:
-            engine (Engine): The database engine
-            guild_id (str): The ID of the guild to update
-            status (str): The new status value to set. Must be one of: 'active', 'stopped', 'archived'
-
-        Returns:
-            GuildSpec: The updated guild spec
-
-        Raises:
-            ValueError: If the guild is not found or if the status is invalid
-        """
-        if status not in self.valid_guild_statuses:
-            raise ValueError(f"Invalid guild status: {status}. Must be one of: {', '.join(self.valid_guild_statuses)}")
-
-        guild_store = GuildStore(engine)
-
-        enum_status = GuildStatus(status)
-
-        guild_model = guild_store.update_guild_status(guild_id, enum_status)
-
-        return guild_model.to_guild_spec()

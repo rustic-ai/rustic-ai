@@ -37,7 +37,8 @@ from rustic_ai.core.guild import (
 )
 from rustic_ai.core.guild.agent import ProcessContext, processor
 from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder, GuildHelper
-from rustic_ai.core.guild.metastore import AgentModel, GuildModel, Metastore
+from rustic_ai.core.guild.metastore import AgentModel, GuildModel, GuildStore, Metastore
+from rustic_ai.core.guild.metastore.models import GuildStatus
 from rustic_ai.core.state.models import (
     StateFetchRequest,
     StateFetchResponse,
@@ -410,3 +411,6 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
                 if agent_spec.id != self.id:
                     self.guild.remove_agent(agent_spec.id)
             self.guild.remove_agent(self.id)
+
+        guild_store = GuildStore(self.engine)
+        guild_store.update_guild_status(self.guild_id, GuildStatus.STOPPED)
