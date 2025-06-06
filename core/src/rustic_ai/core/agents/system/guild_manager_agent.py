@@ -37,7 +37,7 @@ from rustic_ai.core.guild import (
 )
 from rustic_ai.core.guild.agent import ProcessContext, processor
 from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder, GuildHelper
-from rustic_ai.core.guild.metastore import AgentModel, GuildModel, GuildStore, Metastore
+from rustic_ai.core.guild.metastore import AgentModel, GuildModel, Metastore
 from rustic_ai.core.guild.metastore.models import GuildStatus
 from rustic_ai.core.state.models import (
     StateFetchRequest,
@@ -99,6 +99,7 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
                 self.guild = GuildBuilder.from_spec(guild_spec).launch()
                 self.guild_spec = self.guild.to_spec()
                 self.guild_model = GuildModel.from_guild_spec(guild_spec)
+                self.guild_model.sqlmodel_update({"status": GuildStatus.STARTING})
                 session.add(self.guild_model)
 
                 # Add the agents to the Metastore
@@ -107,12 +108,18 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
                     session.add(agent_model)
 
                 session.commit()
+                session.refresh(self.guild_model)
 
             # Register self with the guild and add to the metastore
             self_spec = agent_spec
             self.guild.register_agent(self_spec)
             self_model = AgentModel.from_agent_spec(guild_id, self_spec)
             session.add(self_model)
+
+            if self.guild_model:
+                self.guild_model.sqlmodel_update({"status": GuildStatus.RUNNING})
+                session.add(self.guild_model)
+
             session.commit()
 
             session.close()
@@ -412,5 +419,9 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
                     self.guild.remove_agent(agent_spec.id)
             self.guild.remove_agent(self.id)
 
-        guild_store = GuildStore(self.engine)
-        guild_store.update_guild_status(self.guild_id, GuildStatus.STOPPED)
+        with Session(self.engine) as session:
+            self.guild_model = GuildModel.get_by_id(session, self.guild_id)
+            if self.guild_model:
+                self.guild_model.status = GuildStatus.STOPPED
+                session.add(self.guild_model)
+                session.commit()

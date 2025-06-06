@@ -17,6 +17,7 @@ from rustic_ai.core.utils.priority import Priority
 class GuildStatus(str, Enum):
     """Status values for Guild models."""
 
+    STARTING = "starting"
     RUNNING = "running"
     STOPPED = "stopped"
 

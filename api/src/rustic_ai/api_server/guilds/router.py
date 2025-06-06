@@ -54,7 +54,7 @@ def create_guild(guild_spec: GuildSpec, engine=Depends(Metastore.get_engine)):
         raise HTTPException(status_code=400, detail="Invalid input")  # pragma: no cover
 
     try:
-        guild_id = guild_service.create_guild(engine, Metastore.get_db_url(), guild_spec)
+        guild_id = guild_service.create_guild(Metastore.get_db_url(), guild_spec)
         logging.debug(f"New guild created: {guild_id}")
         return IdInfo(id=guild_id)
     except ValidationError as e:
