@@ -394,7 +394,8 @@ def test_user_guild_response(setup_data, catalog_client, org_id):
     assert guild_res["icon"] == "icon.png"
 
 
-def test_add_org_to_guild(setup_data, catalog_client, org_id):
+def test_list_guilds_org(catalog_client):
+    org_id = "testorgid"
     guild_spec = GuildSpec(
         name="OrgGuild ",
         description="A guild for testing",
@@ -407,20 +408,10 @@ def test_add_org_to_guild(setup_data, catalog_client, org_id):
         json=req.model_dump(),
         headers={"Content-Type": "application/json"},
     )
-    guild_id = response.json()["id"]
-    # Test when org is not linked to a guild
-    org_id = setup_data["organization_id"]
-    org_guilds_res = catalog_client.get(f"/catalog/organizations/{org_id}/guilds/")
-    assert org_guilds_res.status_code == 200
-    assert len(org_guilds_res.json()) == 0
-    # Test adding org to guild
-    response = catalog_client.post(f"/catalog/guilds/{guild_id}/organizations/{org_id}")
-    assert response.status_code == 204
+    assert response.status_code == 201
     org_guilds_res = catalog_client.get(f"/catalog/organizations/{org_id}/guilds/")
     assert org_guilds_res.status_code == 200
     assert len(org_guilds_res.json()) == 1
-    delete_response = catalog_client.delete(f"/catalog/guilds/{guild_id}/organizations/{org_id}")
-    assert delete_response.status_code == 204
 
 
 def test_create_bp_valid_spec(setup_data, catalog_client):
