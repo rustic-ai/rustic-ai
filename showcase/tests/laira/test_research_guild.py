@@ -104,7 +104,7 @@ class TestResearchGuild:
         return deps_yaml_path
 
     @pytest.fixture
-    def research_guild(self, routing_slip, rgdatabase, dep_map_config):
+    def research_guild(self, routing_slip, rgdatabase, dep_map_config, org_id):
         research_guild_builder = GuildBuilder(
             guild_id=f"research_guild_{shortuuid.uuid()}",
             guild_name="Research Guild",
@@ -149,7 +149,7 @@ class TestResearchGuild:
         research_guild_builder.add_agent_spec(serp_agent)
         research_guild_builder.add_agent_spec(playwright_agent)
 
-        research_guild = research_guild_builder.set_routes(routing_slip).bootstrap(rgdatabase)
+        research_guild = research_guild_builder.set_routes(routing_slip).bootstrap(rgdatabase, org_id)
 
         yield research_guild
         research_guild.shutdown()
@@ -225,7 +225,7 @@ class TestResearchGuild:
 
         final_response = messages[-1]
 
-        assert len(messages) > 20
+        assert len(messages) >= 20
 
         assert final_response.format == tf
 

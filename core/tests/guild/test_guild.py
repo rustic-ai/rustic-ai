@@ -30,7 +30,7 @@ class TestGuild:
         return AgentBuilder(SimpleAgent).set_id(agent_id).set_name(name).set_description(description).build_spec()
 
     @pytest.fixture
-    def guild(self, messaging):
+    def guild(self, messaging, org_id):
         guild_id = "e1"
         name = "Guild1"
         description = "Test Guild"
@@ -41,11 +41,12 @@ class TestGuild:
             description=description,
             execution_engine_clz=execution_engine,
             messaging_config=messaging,
+            organization_id=org_id,
         )
         yield guild
         guild.shutdown()
 
-    def test_guild_initialization(self, messaging):
+    def test_guild_initialization(self, messaging, org_id):
         guild_id = "e1"
         name = "Guild1"
         description = "Test Guild"
@@ -58,6 +59,7 @@ class TestGuild:
             description=description,
             execution_engine_clz=execution_engine,
             messaging_config=messaging,
+            organization_id=org_id,
         )
 
         assert guild.id == guild_id
@@ -65,7 +67,7 @@ class TestGuild:
         assert guild.description == description
         assert guild.messaging == messaging
 
-    def test_guild_initialization_with_messaging_config(self):
+    def test_guild_initialization_with_messaging_config(self, org_id):
         messaging_config = MessagingConfig(
             backend_module="rustic_ai.core.messaging.backend",
             backend_class="InMemoryMessagingBackend",
@@ -84,6 +86,7 @@ class TestGuild:
             description=description,
             execution_engine_clz=execution_engine,
             messaging_config=messaging_config,
+            organization_id=org_id,
         )
 
         assert guild.id == guild_id

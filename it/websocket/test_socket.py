@@ -6,6 +6,7 @@ import httpx
 import pytest
 import websockets
 
+from rustic_ai.api_server.guilds.schema import LaunchGuildReq
 from rustic_ai.core.agents.testutils.echo_agent import EchoAgent
 from rustic_ai.core.agents.utils.user_proxy_agent import UserProxyAgent
 from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder
@@ -83,7 +84,7 @@ class TestServer:
         return GemstoneGenerator(1)
 
     @pytest.mark.asyncio
-    async def test_websocket_interaction(self, guild: GuildSpec, generator: GemstoneGenerator):
+    async def test_websocket_interaction(self, guild: GuildSpec, generator: GemstoneGenerator, org_id):
         server = "127.0.0.1:8880"
         wait_time = 0.5
 
@@ -108,7 +109,9 @@ class TestServer:
         guild.routes = routing_slip
 
         async with httpx.AsyncClient(base_url=f"http://{server}") as client:
-            new_guild_resp = await asyncio.wait_for(client.post("/api/guilds", json=guild.model_dump()), wait_time)
+            req = LaunchGuildReq(spec=guild, org_id=org_id)
+            req_data = json.loads(req.model_dump_json())
+            new_guild_resp = await asyncio.wait_for(client.post("/api/guilds", json=req_data), wait_time)
 
             assert new_guild_resp.status_code == 201
             time.sleep(wait_time)

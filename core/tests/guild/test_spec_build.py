@@ -19,7 +19,7 @@ class TestBuildFromSpec:
     exec_engine_clz: str = "rustic_ai.core.guild.execution.sync.sync_exec_engine.SyncExecutionEngine"
 
     #  Builds a Guild instance from a valid GuildSpec.
-    def test_build_from_valid_guild_spec(self, client_properties):
+    def test_build_from_valid_guild_spec(self, client_properties, org_id):
         guild_spec = GuildSpec(
             name="MyGuild",
             description="A guild for testing",
@@ -48,7 +48,7 @@ class TestBuildFromSpec:
             ],
         )
 
-        guild = GuildBuilder.from_spec(guild_spec).launch()
+        guild = GuildBuilder.from_spec(guild_spec).launch(organization_id=org_id)
 
         assert isinstance(guild, Guild)
         assert guild.name == "MyGuild"
@@ -71,7 +71,7 @@ class TestBuildFromSpec:
         assert isinstance(guild.messaging, MessagingConfig)
 
     #  Builds a Guild instance with multiple agents.
-    def test_build_with_multiple_agents(self, client_properties):
+    def test_build_with_multiple_agents(self, client_properties, org_id):
         guild_spec = GuildSpec(
             name="MyGuild",
             description="A guild for testing",
@@ -99,7 +99,7 @@ class TestBuildFromSpec:
             ],
         )
 
-        guild = GuildBuilder.from_spec(guild_spec).launch()
+        guild = GuildBuilder.from_spec(guild_spec).launch(organization_id=org_id)
 
         assert guild.get_agent_count() == 2
 
@@ -121,7 +121,7 @@ class TestBuildFromSpec:
         assert agent2.props.prop2 == 1
 
     #  Builds a Guild instance with a storage backend specified in the GuildSpec.
-    def test_build_with_storage_backend(self, client_properties):
+    def test_build_with_storage_backend(self, client_properties, org_id):
         guild_spec = GuildSpec(
             name="MyGuild",
             description="A guild for testing",
@@ -141,12 +141,12 @@ class TestBuildFromSpec:
             ],
         )
 
-        guild = GuildBuilder.from_spec(guild_spec).launch()
+        guild = GuildBuilder.from_spec(guild_spec).launch(organization_id=org_id)
 
         assert isinstance(guild.messaging, MessagingConfig)
 
     #  Builds a Guild instance with an empty agents dictionary.
-    def test_build_with_empty_agents(self, client_properties):
+    def test_build_with_empty_agents(self, client_properties, org_id):
         guild_spec = GuildSpec(
             name="MyGuild",
             description="A guild for testing",
@@ -160,12 +160,12 @@ class TestBuildFromSpec:
             agents=[],
         )
 
-        guild = GuildBuilder.from_spec(guild_spec).launch()
+        guild = GuildBuilder.from_spec(guild_spec).launch(organization_id=org_id)
 
         assert guild.get_agent_count() == 0
 
     #  Builds a Guild instance with an empty properties dictionary.
-    def test_build_with_empty_properties(self, client_properties):
+    def test_build_with_empty_properties(self, client_properties, org_id):
         guild_spec = GuildSpec(
             name="MyGuild",
             description="A guild for testing",
@@ -182,7 +182,7 @@ class TestBuildFromSpec:
             ],
         )
 
-        guild = GuildBuilder.from_spec(guild_spec).launch()
+        guild = GuildBuilder.from_spec(guild_spec).launch(organization_id=org_id)
 
         assert isinstance(guild, Guild)
         assert guild.name == "MyGuild"
@@ -195,11 +195,11 @@ class TestBuildFromSpec:
         assert agent1.description == "First agent"
         assert agent1.class_name == get_qualified_class_name(SimpleAgent)
 
-    def test_null_case(self):
+    def test_null_case(self, org_id):
         guild_spec: GuildSpec = None  # type: ignore
 
         with pytest.raises(ValueError):
-            GuildBuilder.from_spec(guild_spec).launch()
+            GuildBuilder.from_spec(guild_spec).launch(organization_id=org_id)
 
     #  Builds a Guild instance from a valid GuildSpec.
     def test_build_with_invalid_agent_class_name(self, client_properties):

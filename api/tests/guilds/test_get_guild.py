@@ -1,11 +1,12 @@
 import json
 
+from rustic_ai.api_server.guilds.schema import LaunchGuildReq
 from rustic_ai.core.agents.testutils import EchoAgent
 from rustic_ai.core.guild.builders import AgentBuilder
 from rustic_ai.core.guild.dsl import AgentSpec, GuildSpec
 
 
-def test_valid_guild_id(client):
+def test_valid_guild_id(client, org_id):
     # Arrange
     agent1: AgentSpec = AgentBuilder(EchoAgent).set_name("Agent1").set_description("First agent").build_spec()
 
@@ -20,7 +21,8 @@ def test_valid_guild_id(client):
         },
         agents=[agent1],
     )
-    json_data = guild_spec.model_dump_json()
+    req = LaunchGuildReq(spec=guild_spec, org_id=org_id)
+    json_data = req.model_dump_json()
     data = json.loads(json_data)
     post_response = client.post("/api/guilds", json=data, headers={"Content-Type": "application/json"})
 

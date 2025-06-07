@@ -31,13 +31,14 @@ class IntegrationTestABC(ABC):
         return 0.01
 
     @pytest.fixture
-    def guild(self, wait_time, messaging, execution_engine, guild_id):
+    def guild(self, wait_time, messaging, execution_engine, guild_id, org_id):
         guild = Guild(
             id=guild_id,
             name="Test Guild",
             description="A guild for integration testing",
             messaging_config=messaging,
             execution_engine_clz=execution_engine,
+            organization_id=org_id,
         )
         yield guild
         time.sleep(wait_time * 5)  # Allow some time for cleanup
@@ -103,7 +104,7 @@ class IntegrationTestABC(ABC):
         rair = execution_engine.is_agent_running(guild.id, ra[0].id)
         assert rair is True
 
-        local_exec_engine = SyncExecutionEngine(guild_id=guild.id)
+        local_exec_engine = SyncExecutionEngine(guild_id=guild.id, organization_id=guild.organization_id)
         guild._add_local_agent(local_test_agent, local_exec_engine)
 
         time.sleep(wait_time)

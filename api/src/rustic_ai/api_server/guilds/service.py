@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Sequence
 
 from sqlalchemy import Engine
 
@@ -9,9 +9,17 @@ from rustic_ai.core.guild.metastore import GuildStore
 
 class GuildService:
 
-    def create_guild(self, metastore_url: str, guild_spec: GuildSpec) -> str:
+    def create_guild(self, metastore_url: str, guild_spec: GuildSpec, organization_id: str) -> str:
         """
         Creates a new guild and adds it to the database.
+
+        Args:
+            metastore_url (str): The URL of the metastore database.
+            guild_spec (GuildSpec): The specification of the guild to create.
+            organization_id (str): The ID of the organization that owns this guild.
+
+        Returns:
+            str: The ID of the created guild.
         """
         if guild_spec.get_messaging() is None:
             default_messaging = GuildHelper.get_default_messaging_config()
@@ -22,15 +30,21 @@ class GuildService:
 
         guild_spec.dependency_map = GuildHelper.get_guild_dependency_map(guild_spec)
 
-        guild = GuildBuilder.from_spec(guild_spec).bootstrap(metastore_url)
+        guild = GuildBuilder.from_spec(guild_spec).bootstrap(metastore_url, organization_id)
 
         return guild.id
 
     def get_guild(self, engine: Engine, guild_id: str) -> Optional[GuildSpec]:
         """
         Retrieves a guild and its agents from the database.
-        """
 
+        Args:
+            engine (Engine): The database engine.
+            guild_id (str): The ID of the guild to retrieve.
+
+        Returns:
+            Optional[GuildSpec]: The guild specification if found, None otherwise.
+        """
         guild_store = GuildStore(engine)
         guild_model = guild_store.get_guild(guild_id)
 

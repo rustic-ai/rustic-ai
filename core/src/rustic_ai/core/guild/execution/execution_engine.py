@@ -13,8 +13,9 @@ class ExecutionEngine(ABC):
     with flexible Messaging initialization.
     """
 
-    def __init__(self, guild_id: str) -> None:
+    def __init__(self, guild_id: str, organization_id: str) -> None:
         self.guild_id = guild_id
+        self.organization_id = organization_id
 
     @abstractmethod
     def run_agent(
@@ -31,8 +32,10 @@ class ExecutionEngine(ABC):
         Runs an agent by handling its initialization with the message bus.
 
         Parameters:
-            agent: The agent to run.
-            messaging: Either an instance of MessagingInterface or a configuration to initialize one
+            guild_spec: GuildSpec for which the agent must be run.
+            agent_spec: The agent specification or instance to wrap.
+                NOTE: Providing an Agent is only supported for testing and should not be used in production.
+            messaging_config: MessagingConfig to initialize MessagingInterface for communication between agents.
             machine_id: A unique identifier for the machine generating the ID
             client_type: The type of client to use for the agent.
             client_properties: Properties to initialize the client with.

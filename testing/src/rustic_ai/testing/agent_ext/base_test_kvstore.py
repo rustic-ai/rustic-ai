@@ -181,7 +181,7 @@ class BaseTestKVStore(ABC):
         """
         raise NotImplementedError("This fixture should be overridden in subclasses.")
 
-    def test_kvstore(self, probe_agent: ProbeAgent, dep_map: dict):
+    def test_kvstore(self, probe_agent: ProbeAgent, dep_map: dict, org_id):
         agent_spec: AgentSpec = (
             AgentBuilder(KVStoreAgent).set_description("KV Store Agent").set_name("KVStoreAgent").build_spec()
         )
@@ -191,7 +191,7 @@ class BaseTestKVStore(ABC):
             .add_agent_spec(agent_spec)
             .set_dependency_map(dep_map)
         )
-        guild = guild_builder.launch()
+        guild = guild_builder.launch(organization_id=org_id)
 
         if "kvstore" in dep_map:
             guild.dependency_map["kvstore"].class_name = dep_map["kvstore"].class_name

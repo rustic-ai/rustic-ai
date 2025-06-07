@@ -148,7 +148,7 @@ class TestFileSystem:
             ),
         ],
     )
-    def test_filesystem(self, probe_agent: ProbeAgent, dep_map: Dict[str, DependencySpec]):
+    def test_filesystem(self, probe_agent: ProbeAgent, dep_map: Dict[str, DependencySpec], org_id):
         agent_spec: AgentSpec = (
             AgentBuilder(FileManagerAgent)
             .set_id("file_manager")
@@ -169,7 +169,7 @@ class TestFileSystem:
         fs = filesystem(protocol, **protocol_props)
 
         dfs = FileSystem(path="/tmp/test_guild/file_manager", fs=fs)
-        guild = guild_builder.launch()
+        guild = guild_builder.launch(organization_id=org_id)
 
         guild._add_local_agent(probe_agent)
 

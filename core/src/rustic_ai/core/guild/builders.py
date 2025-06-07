@@ -546,7 +546,7 @@ class GuildBuilder:
 
         return builder
 
-    def launch(self, add_probe: bool = False) -> Guild:
+    def launch(self, organization_id: str, add_probe: bool = False) -> Guild:
         """
         Build and return a Guild instance with the set properties.
         This will launch all the agents in the guild.
@@ -560,7 +560,7 @@ class GuildBuilder:
         logging.info("Launching Guild with agents...")
         guild_spec = self.build_spec()
         logging.info(f"Guild Spec: {guild_spec.model_dump()}")
-        guild = GuildHelper.shallow_guild_from_spec(guild_spec)
+        guild = GuildHelper.shallow_guild_from_spec(guild_spec, organization_id)
         logging.info(f"Launching agents in guild {guild.id}")
 
         for agent in guild_spec.agents:
@@ -576,7 +576,7 @@ class GuildBuilder:
 
         return guild
 
-    def load(self) -> Guild:
+    def load(self, organization_id: str) -> Guild:
         """
         Build and return a Guild instance with the set properties.
         This will not launch the agents in the guild, but just register them in the guild instance.
@@ -588,14 +588,14 @@ class GuildBuilder:
             Guild: The built Guild instance.
         """
         guild_spec = self.build_spec()
-        guild = GuildHelper.shallow_guild_from_spec(guild_spec)
+        guild = GuildHelper.shallow_guild_from_spec(guild_spec, organization_id)
 
         for agent in guild_spec.agents:
             guild.register_agent(agent)
 
         return guild
 
-    def bootstrap(self, metastore_database_url: str) -> Guild:
+    def bootstrap(self, metastore_database_url: str, organization_id: str) -> Guild:
         """
         Build and return a Guild instance with the set properties.
         This method will not launch or register the agents in the guild.
@@ -606,7 +606,7 @@ class GuildBuilder:
         """
         # Build the GuildSpec and create a Guild instance from it.
         guild_spec = self.build_spec()
-        guild = GuildHelper.shallow_guild_from_spec(guild_spec)
+        guild = GuildHelper.shallow_guild_from_spec(guild_spec, organization_id)
 
         # Add GuildManagerAgent to the Guild.
         # Using class name instead of class to avoid circular import
@@ -614,7 +614,11 @@ class GuildBuilder:
             name=f"GuildManagerAgent4{guild.id}",
             description=f"Guild Manager Agent for {guild.id}",
             class_name="rustic_ai.core.agents.system.guild_manager_agent.GuildManagerAgent",
-            properties={"guild_spec": guild_spec.model_dump(), "database_url": metastore_database_url},
+            properties={
+                "guild_spec": guild_spec.model_dump(),
+                "database_url": metastore_database_url,
+                "organization_id": organization_id,
+            },
         )
 
         try:
@@ -787,12 +791,13 @@ class GuildHelper:
         return deps
 
     @staticmethod
-    def shallow_guild_from_spec(guild_spec: GuildSpec) -> Guild:
+    def shallow_guild_from_spec(guild_spec: GuildSpec, organization_id: str) -> Guild:
         """
         Builds a Shallow (without the agents) Guild from a GuildSpec.
 
         Args:
             guild_spec: The specification to build from.
+            organization_id: The organization running the guild
 
         Returns:
             The built Guild instance.
@@ -818,6 +823,7 @@ class GuildHelper:
             client_properties=client_properties,
             dependency_map=dependency_map,
             routes=guild_spec.routes,
+            organization_id=organization_id,
         )
 
         return guild

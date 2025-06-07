@@ -7,7 +7,7 @@ from rustic_ai.core.messaging.core.message import AgentTag
 
 class TestAgentTagging:
 
-    def test_only_when_tagged(self):
+    def test_only_when_tagged(self, org_id):
 
         # 2 Agents that only act when tagged
         echo1: AgentSpec = (
@@ -44,7 +44,7 @@ class TestAgentTagging:
             .add_agent_spec(echo1)
             .add_agent_spec(echo2)
             .add_agent_spec(echo3)
-            .launch()
+            .launch(organization_id=org_id)
         )
 
         probe_agent = AgentBuilder(ProbeAgent).set_name("probe").set_description("Probe agent").build()

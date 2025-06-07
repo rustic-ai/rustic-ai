@@ -58,6 +58,7 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
     ):
         guild_spec = agent_spec.props.guild_spec
         database_url = agent_spec.props.database_url
+        organization_id = agent_spec.properties.organization_id
 
         self.database_url = database_url
         self.engine = Metastore.get_engine(database_url)
@@ -91,13 +92,13 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
             if self.guild_model:
                 logging.info(f"Loading existing guild : [{self.guild_model}]")
                 self.guild_spec = self.guild_model.to_guild_spec()
-                self.guild = GuildBuilder.from_spec(self.guild_spec).load()
+                self.guild = GuildBuilder.from_spec(self.guild_spec).load(self.guild_model.organization_id)
             else:
                 logging.info(f"Creating new guild : [{guild_spec}]")
                 # Create the guild model if it does not exist.
-                self.guild = GuildBuilder.from_spec(guild_spec).launch()
+                self.guild = GuildBuilder.from_spec(guild_spec).launch(organization_id)
                 self.guild_spec = self.guild.to_spec()
-                self.guild_model = GuildModel.from_guild_spec(guild_spec)
+                self.guild_model = GuildModel.from_guild_spec(guild_spec, organization_id)
                 session.add(self.guild_model)
 
                 # Add the agents to the Metastore
