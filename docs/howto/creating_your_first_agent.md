@@ -46,7 +46,7 @@ class MyGreeterAgent(Agent[BaseAgentProps]):
         # Extract the name from the request
         name = ctx.payload.name
         print(f"Received greeting request for: {name}")
-        
+
         # Create and send a response
         response = GreetResponse(greeting=f"Hello, {name}!")
         ctx.send(response)
@@ -121,7 +121,7 @@ greeter_spec = AgentBuilder(MyGreeterAgent) \
 # Create and launch a guild
 guild = GuildBuilder("greeting_guild", "Greeting Guild", "A guild with a greeter agent") \
     .add_agent_spec(greeter_spec)
-    .launch()
+    .launch(organization_id="myawesomeorgid")
 
 ...
 

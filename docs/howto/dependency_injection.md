@@ -40,11 +40,11 @@ class DatabaseService:
         self.connection_string = connection_string
         self.connected = False
         print(f"DatabaseService created with connection: {connection_string}")
-    
+
     def connect(self):
         print(f"Connecting to {self.connection_string}")
         self.connected = True
-        
+
     def execute_query(self, query: str):
         if not self.connected:
             self.connect()
@@ -57,7 +57,7 @@ class DatabaseResolver(DependencyResolver):
         super().__init__()  # Important to call parent constructor
         self.connection_string = connection_string
         self._db_instance = None
-    
+
     def resolve(self, guild_id: str, agent_id: str = None) -> DatabaseService:
         """Create or return the database service."""
         if self._db_instance is None:
@@ -96,7 +96,7 @@ guild_builder.add_dependency_resolver(
 )
 
 # Launch the guild
-guild = guild_builder.launch()
+guild = guild_builder.launch(organization_id="myawesomeorgid")
 ```
 
 ### Agent-Level Dependencies
@@ -135,20 +135,20 @@ class QueryResponse(BaseModel):
 
 class DatabaseAgent(Agent[BaseAgentProps]):
     """An agent that uses a database dependency."""
-    
+
     def __init__(self, agent_spec: AgentSpec[BaseAgentProps]):
         super().__init__(agent_spec)
         print(f"DatabaseAgent initialized with ID: {self.id}")
-    
+
     @agent.processor(clz=QueryRequest, depends_on=["database"])
     def execute_query(self, ctx: agent.ProcessContext[QueryRequest], database: DatabaseService):
         """Execute a database query using the injected database service."""
         query = ctx.payload.query
         print(f"[{self.name}] Executing query: {query}")
-        
+
         # Use the injected database service
         results = database.execute_query(query)
-        
+
         # Send the response
         ctx.send(QueryResponse(results=results))
 ```
@@ -186,7 +186,7 @@ This behavior can be customized by implementing different caching strategies in 
 class NonCachingResolver(DependencyResolver):
     # Disable memoization to create a new instance each time
     memoize_resolution = False
-    
+
     def resolve(self, guild_id: str, agent_id: str = None) -> SomeService:
         # Create a new instance every time
         return SomeService()
@@ -215,7 +215,7 @@ def test_database_agent():
     agent = AgentBuilder(DatabaseAgent) \
         .set_name("TestDBAgent") \
         .build()
-    
+
     # Configure mock dependencies
     mock_dependencies = {
         "database": DependencySpec(
@@ -223,14 +223,14 @@ def test_database_agent():
             properties={}
         )
     }
-    
+
     # Wrap the agent for testing with mock dependencies
     test_agent, results = wrap_agent_for_testing(
         agent,
         GemstoneGenerator(machine_id=1),
         dependencies=mock_dependencies
     )
-    
+
     # Create a test message
     message = Message(
         id_obj=GemstoneGenerator(machine_id=1).get_id(Priority.NORMAL),
@@ -239,10 +239,10 @@ def test_database_agent():
         payload=QueryRequest(query="SELECT * FROM test").model_dump(),
         format=QueryRequest.model_json_schema()["$id"]
     )
-    
+
     # Process the message
     test_agent._on_message(message)
-    
+
     # Check results
     assert len(results) == 1
     assert "mocked data" in results[0].payload["results"]["result"]
@@ -281,7 +281,7 @@ class ApiClientResolver(DependencyResolver):
         self.api_key = api_key
         self.cache_service_key = cache_service_key
         self._api_client = None
-    
+
     def resolve(self, guild_id: str, agent_id: str = None) -> ApiClient:
         if self._api_client is None:
             # Inject another dependency using the inject method
@@ -332,7 +332,7 @@ class ApiService:
         self.api_key = api_key
         self.base_url = base_url
         print(f"ApiService initialized with key '{api_key}' and URL '{base_url}'")
-    
+
     def call_api(self, endpoint: str, data: Dict[str, Any]) -> Dict[str, Any]:
         """Call an API endpoint."""
         print(f"Calling API endpoint '{endpoint}' with data: {data}")
@@ -351,7 +351,7 @@ class ApiServiceResolver(DependencyResolver):
         self.api_key = api_key
         self.base_url = base_url
         self._api_service = None
-    
+
     def resolve(self, guild_id: str, agent_id: str = None) -> ApiService:
         """Create or return the API service."""
         if self._api_service is None:
@@ -361,21 +361,21 @@ class ApiServiceResolver(DependencyResolver):
 # Agent that uses the dependency
 class ApiAgent(Agent[BaseAgentProps]):
     """An agent that makes API calls using an injected API service."""
-    
+
     def __init__(self, agent_spec: AgentSpec[BaseAgentProps]):
         super().__init__(agent_spec)
         print(f"ApiAgent initialized with ID: {self.id}")
-    
+
     @agent.processor(clz=ApiRequest, depends_on=["api_service"])
     def call_api(self, ctx: agent.ProcessContext[ApiRequest], api_service: ApiService):
         """Call an API using the injected API service."""
         request = ctx.payload
-        
+
         print(f"[{self.name}] Calling API endpoint '{request.endpoint}'")
-        
+
         # Use the injected API service
         result = api_service.call_api(request.endpoint, request.data)
-        
+
         # Send the response
         ctx.send(ApiResponse(result=result))
 ```

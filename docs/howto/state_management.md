@@ -44,32 +44,32 @@ class MyStatefulAgent(Agent[BaseAgentProps]):
     def __init__(self, agent_spec: AgentSpec[BaseAgentProps]):
         super().__init__(agent_spec)
         self.counter = 0  # Local instance variable (not persisted)
-        
+
     @agent.processor(clz=IncrementRequest)
     def increment_counter(self, ctx: agent.ProcessContext[IncrementRequest]):
         # Read from state
         current_count = self._state.get("count", 0)
-        
+
         # Update local variable
         self.counter += 1
-        
+
         # Calculate new state
         new_count = current_count + ctx.payload.amount
-        
+
         # Update state using StateRefresherMixin methods
         self.update_state(
             ctx=ctx,
             update_format=StateUpdateFormat.MERGE_DICT,
             update={"count": new_count, "last_updated": time.time()}
         )
-        
+
         # Similarly, you can update guild state
         self.update_guild_state(
             ctx=ctx,
             update_format=StateUpdateFormat.MERGE_DICT,
             update={"last_action": f"Increment by {ctx.payload.amount}"}
         )
-        
+
         # Respond with the new state
         ctx.send(CountResponse(count=new_count))
 ```
@@ -102,10 +102,10 @@ You can request the latest state explicitly:
 def handle_state_request(self, ctx: agent.ProcessContext[StateRequest]):
     # Request my own state
     self.request_state(ctx)
-    
+
     # Request guild state
     self.request_guild_state(ctx)
-    
+
     # The StateRefresherMixin will automatically update self._state and self._guild_state
     # when the responses arrive
 ```
@@ -163,7 +163,7 @@ class CounterAgent(Agent[BaseAgentProps]):
         current_count = self._state.get("count", 0)
         action = ctx.payload.action
         amount = ctx.payload.amount
-        
+
         # Determine the new count based on the action
         if action == "increment":
             new_count = current_count + amount
@@ -180,21 +180,21 @@ class CounterAgent(Agent[BaseAgentProps]):
         else:
             ctx.send(CounterResponse(count=current_count, operation="Unknown operation"))
             return
-        
+
         # Update the state
         self.update_state(
             ctx=ctx,
             update_format=StateUpdateFormat.MERGE_DICT,
             update={"count": new_count}
         )
-        
+
         # Also update guild state to track the last operation
         self.update_guild_state(
             ctx=ctx,
             update_format=StateUpdateFormat.MERGE_DICT,
             update={"last_counter_operation": operation}
         )
-        
+
         # Send the response
         ctx.send(CounterResponse(count=new_count, operation=operation))
 ```
@@ -209,19 +209,19 @@ from rustic_ai.core.agents.testutils.probe_agent import ProbeAgent
 async def main():
     # Create and launch a guild
     guild = GuildBuilder("counter_guild", "Counter Guild", "A guild with a stateful counter agent") \
-        .launch(add_probe=True)
-    
+        .launch(organization_id="myawesomeorgid", add_probe=True)
+
     # Get the probe agent
     probe_agent = guild.get_agent_of_type(ProbeAgent)
-    
+
     # Create and launch the counter agent
     counter_agent_spec = AgentBuilder(CounterAgent) \
         .set_name("Counter") \
         .set_description("A stateful counter agent") \
         .build_spec()
-    
+
     guild.launch_agent(counter_agent_spec)
-    
+
     # Test the counter operations
     operations = [
         CounterRequest(action="increment", amount=5),
@@ -229,19 +229,19 @@ async def main():
         CounterRequest(action="decrement", amount=2),
         CounterRequest(action="get")
     ]
-    
+
     for op in operations:
         print(f"\nSending {op.action} request...")
         probe_agent.publish("default_topic", op)
         await asyncio.sleep(0.5)  # Allow time for processing
-        
+
         # Get and clear messages
         messages = probe_agent.get_messages()
         for msg in messages:
             if hasattr(msg.payload, "count"):
                 print(f"Count: {msg.payload.count}, Operation: {msg.payload.operation}")
         probe_agent.clear_messages()
-    
+
     # Shutdown the guild
     guild.shutdown()
 
@@ -282,7 +282,7 @@ from rustic_ai.core.state.manager import SQLiteStateManager
 # Create a guild with a custom state manager
 guild = GuildBuilder("my_guild", "My Guild", "A guild with custom state management") \
     .set_state_manager(SQLiteStateManager(db_path="my_guild_state.db")) \
-    .launch()
+    .launch(organization_id="myawesomeorgid")
 ```
 
 ### State Snapshots and Version Control

@@ -103,8 +103,8 @@ The lifecycle of a Guild in Rustic AI involves several stages:
  # guild_spec = GuildBuilder("MyGuild").add_agent_spec(agent_spec).build_spec()
  ```
 2. **Instantiation and Launching Agents**:
- - **`GuildBuilder.launch()`**: For development and testing, this method creates a `Guild` instance and launches all its agents directly in the current environment.
- - **`GuildBuilder.bootstrap(metastore_database_url: str)`**: For production, this method creates a `Guild` instance and launches a `GuildManagerAgent`. This system agent persists the `GuildSpec` and manages the lifecycle of other agents, enabling more robust and potentially distributed deployments.
+ - **`GuildBuilder.launch(org_id="myawesomeorgid")`**: For development and testing, this method creates a `Guild` instance and launches all its agents directly in the current environment.
+ - **`GuildBuilder.bootstrap(metastore_database_url: str,org_id="myawesomeorgid")`**: For production, this method creates a `Guild` instance and launches a `GuildManagerAgent`. This system agent persists the `GuildSpec` and manages the lifecycle of other agents, enabling more robust and potentially distributed deployments.
 3. **Interaction**: Launched agents communicate via messages, orchestrated by the Guild's defined routes and messaging system.
 4. **Shutdown**: `guild.shutdown()` is used for guilds launched via `launch()`. For bootstrapped guilds, shutdown is typically managed by the environment hosting the `GuildManagerAgent`.
 

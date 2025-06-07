@@ -113,10 +113,10 @@ Once you have a `GuildSpec`, you can instantiate and launch a guild:
 
 ```python
 # For development and testing
-guild = guild_builder.launch()
+guild = guild_builder.launch(organization_id="myawesomeorgid")
 
 # For production (with persistence)
-guild = guild_builder.bootstrap(metastore_database_url="sqlite:///guild_store.db")
+guild = guild_builder.bootstrap(metastore_database_url="sqlite:///guild_store.db", organization_id="myawesomeorgid")
 ```
 
 ## Persisting and Loading GuildSpecs

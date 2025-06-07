@@ -205,7 +205,7 @@ Managing the lifecycle of a Guild involves defining its structure, instantiating
         .set_destination_topics("echo_topic") \
         .set_route_times(1) \
         .build()
-    
+
     route2 = RouteBuilder(from_agent=AgentTag(name="echo_agent_1")) \
         .set_destination_topics("user_message_broadcast") \
         .set_route_times(1) \
@@ -223,7 +223,7 @@ Managing the lifecycle of a Guild involves defining its structure, instantiating
         ) \
         .add_agent_spec(echo_agent_spec) \
         .set_routes(routing_slip)
-    
+
     guild_spec = guild_builder.build_spec()
     ```
 
@@ -239,13 +239,13 @@ There are two main approaches to instantiate a `Guild` from a `GuildSpec` and la
         *   **Use Case:** Best suited for local development, running examples, and automated tests where immediate, self-contained execution is desired.
         ```python
         # Assuming guild_builder is configured as above
-        # development_guild = guild_builder.launch()
+        # development_guild = guild_builder.launch(org_id="myawesomeorgid")
         # print(f"Guild '{development_guild.name}' launched with {development_guild.get_agent_count()} agent(s).")
         # # ... interact with the guild ...
         # development_guild.shutdown()
         ```
 
-    *   **`guild_builder.bootstrap(metastore_database_url: str)` - For Production:**
+    *   **`guild_builder.bootstrap(metastore_database_url: str, org_id: str = "myawesomeorgid")` - For Production:**
         *   **How it works:** This method is designed for more robust, production-like deployments.
             1. It also starts by creating a "shallow" `Guild` instance from the `GuildSpec`.
             2. However, instead of directly launching the agents from the `GuildSpec`, it instantiates and launches a special system agent called `GuildManagerAgent`.
@@ -256,7 +256,7 @@ There are two main approaches to instantiate a `Guild` from a `GuildSpec` and la
         ```python
         # Assuming guild_builder is configured as above
         # METASTORE_URL = "sqlite:///./rusticai_metastore.db" # Example
-        # production_guild = guild_builder.bootstrap(metastore_database_url=METASTORE_URL)
+        # production_guild = guild_builder.bootstrap(metastore_database_url=METASTORE_URL, org_id="myawesomeorgid")
         # print(f"Guild '{production_guild.name}' bootstrapped. GuildManagerAgent is running.")
         # # Agents defined in guild_spec will be launched by GuildManagerAgent
         # # ... (Guild operates, likely in a separate process or managed environment) ...
@@ -281,7 +281,7 @@ There are two main approaches to instantiate a `Guild` from a `GuildSpec` and la
 
 ## Guild Object API
 
-Once a `Guild` object is instantiated (e.g., via `GuildBuilder().launch()` or `GuildBuilder().load()`), it provides several methods for interaction and introspection:
+Once a `Guild` object is instantiated (e.g., via `GuildBuilder().launch(org_id="myawesomeorgid")` or `GuildBuilder().load()`), it provides several methods for interaction and introspection:
 
 -   `guild.id`, `guild.name`, `guild.description`: Access basic properties.
 -   `guild.register_agent(agent_spec: AgentSpec)`: Registers an agent spec with the guild. Does not run the agent.

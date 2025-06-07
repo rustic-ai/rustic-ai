@@ -81,7 +81,7 @@ class GreeterAgent(Agent[BaseAgentProps]):
         """Process a greeting request and respond with a greeting."""
         name = ctx.payload.name
         print(f"[{self.name}] Received greeting request for: {name}")
-        
+
         # Create and send a response
         response = GreetResponse(greeting=f"Hello, {name}!")
         ctx.send(response)
@@ -103,21 +103,21 @@ class ProcessorAgent(Agent[BaseAgentProps]):
         """Process a data processing request."""
         data = ctx.payload.data
         operation = ctx.payload.operation
-        
+
         print(f"[{self.name}] Processing {operation} on data: {data}")
-        
+
         # Simulate processing
         start_time = time.time()
         result = self._perform_operation(data, operation)
         processing_time = time.time() - start_time
-        
+
         # Send the response
         ctx.send(ProcessResponse(
             result=result,
             processing_time=processing_time
         ))
         print(f"[{self.name}] Sent processing result. Time: {processing_time:.4f}s")
-    
+
     def _perform_operation(self, data: Dict[str, Any], operation: str) -> Dict[str, Any]:
         """Perform an operation on the data."""
         if operation == "count":
@@ -142,44 +142,44 @@ from rustic_ai.core.agents.testutils.probe_agent import ProbeAgent
 async def main():
     # Create and launch a guild
     guild = GuildBuilder("demo_guild", "Demo Guild", "A demonstration guild with multiple agents") \
-        .launch(add_probe=True)  # The add_probe=True adds a ProbeAgent for monitoring
-    
+        .launch(organization_id="myawesomeorgid", add_probe=True)  # The add_probe=True adds a ProbeAgent for monitoring
+
     # Get the probe agent for monitoring messages
     probe_agent = guild.get_agent_of_type(ProbeAgent)
     print(f"Created guild with ID: {guild.id}")
-    
+
     # Create agent specs
     greeter_agent_spec = AgentBuilder(GreeterAgent) \
         .set_name("Greeter") \
         .set_description("An agent that responds to greeting requests") \
         .build_spec()
-    
+
     processor_agent_spec = AgentBuilder(ProcessorAgent) \
         .set_name("Processor") \
         .set_description("An agent that processes data requests") \
         .build_spec()
-    
+
     # Launch the agents
     guild.launch_agent(greeter_agent_spec)
     guild.launch_agent(processor_agent_spec)
-    
+
     print("\nAgents in the guild:")
     for agent_spec in guild.list_agents():
         print(f"- {agent_spec.name} (ID: {agent_spec.id}, Type: {agent_spec.class_name})")
-    
+
     # Test the agents
     print("\nTesting the Greeter Agent...")
     probe_agent.publish("default_topic", GreetRequest(name="World"))
-    
+
     print("\nTesting the Processor Agent...")
     probe_agent.publish("default_topic", ProcessRequest(
         data={"a": 1, "b": 2, "c": 3},
         operation="sum"
     ))
-    
+
     # Wait for messages to be processed
     await asyncio.sleep(1)
-    
+
     # Print all messages captured by the probe
     messages = probe_agent.get_messages()
     print(f"\nCaptured {len(messages)} messages:")
@@ -187,7 +187,7 @@ async def main():
         print(f"\nMessage {i} from {msg.sender.name}:")
         print(f"Format: {msg.format}")
         print(f"Payload: {msg.payload}")
-    
+
     # Shutdown the guild
     guild.shutdown()
     print("\nGuild shutdown complete")
@@ -272,7 +272,7 @@ with open("demo_guild_spec.json", "r") as f:
     guild_spec_json = f.read()
 
 # Create and launch the guild
-guild = load_guild_from_spec(guild_spec_json).launch()
+guild = load_guild_from_spec(guild_spec_json).launch(organization_id="myawesomeorgid")
 ```
 
 ## Advanced Guild Features
@@ -297,7 +297,7 @@ guild.add_dependency(
 )
 
 # Launch the guild
-guild = guild.launch()
+guild = guild.launch(organization_id="myawesomeorgid")
 ```
 
 ### Custom Topics
