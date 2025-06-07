@@ -42,7 +42,7 @@ class SearchIndexDependencyResolver(DependencyResolver):
 
 class TestAgentDependencyInjection:
 
-    def test_agent_di(self, probe_agent: ProbeAgent):
+    def test_agent_di(self, probe_agent: ProbeAgent, org_id):
         agent_spec: AgentSpec = (
             AgentBuilder(DemoAgent1).set_description("Demo agent with dependencies").set_name("DemoAgent1").build_spec()
         )
@@ -77,7 +77,7 @@ class TestAgentDependencyInjection:
         assert gspec.dependency_map["filepath"].class_name == FilepathDependencyResolver.get_qualified_class_name()
         assert gspec.dependency_map["filepath"].properties["prefix"] == "rustic-files"
 
-        guild = guild_builder.launch()
+        guild = guild_builder.launch(organization_id=org_id)
 
         guild._add_local_agent(probe_agent)
 

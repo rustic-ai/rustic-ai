@@ -198,16 +198,16 @@ class TestGuildBuilder:
         assert spec.properties[GSKC.MESSAGING][GSKC.BACKEND_CLASS] == backend_class
         assert spec.properties[GSKC.MESSAGING][GSKC.BACKEND_CONFIG] == backend_config
 
-    def test_guild_launch(self, agent_spec, guild_id, guild_name, guild_description):
+    def test_guild_launch(self, agent_spec, guild_id, guild_name, guild_description, org_id):
         builder = GuildBuilder(guild_id, guild_name, guild_description).add_agent_spec(agent_spec)
-        guild = builder.launch()
+        guild = builder.launch(organization_id=org_id)
         assert guild.id == guild_id
         assert guild.name == guild_name
         assert guild.get_agent(agent_spec.id) == agent_spec
 
-    def test_guild_load(self, agent_spec, guild_id, guild_name, guild_description):
+    def test_guild_load(self, agent_spec, guild_id, guild_name, guild_description, org_id):
         builder = GuildBuilder(guild_id, guild_name, guild_description).add_agent_spec(agent_spec)
-        guild = builder.load()
+        guild = builder.load(organization_id=org_id)
         assert guild.id == guild_id
         assert guild.name == guild_name
         assert guild.get_agent(agent_spec.id) == agent_spec
@@ -282,7 +282,7 @@ class TestGuildBuilder:
 
         msgconf = GuildHelper.get_messaging_config(new_spec)
 
-        # This is not paramterized as we are testing initialization from a YAML file
+        # This is not parameterized as we are testing initialization from a YAML file
         assert msgconf.backend_module == "rustic_ai.core.messaging.backend"
         assert msgconf.backend_class == "InMemoryMessagingBackend"
         assert msgconf.backend_config == {}
@@ -296,6 +296,7 @@ class TestGuildBuilder:
         guild_description,
         messaging: MessagingConfig,
         database,
+        org_id,
     ):
 
         routing_slip = RoutingSlip(
@@ -323,7 +324,7 @@ class TestGuildBuilder:
 
         engine = Metastore.get_engine(database)
 
-        guild = builder.bootstrap(database)
+        guild = builder.bootstrap(database, org_id)
         assert guild.id == guild_id
         assert guild.name == guild_name
 
@@ -498,6 +499,7 @@ class TestGuildBuilder:
         guild_description,
         messaging: MessagingConfig,
         database,
+        org_id,
     ):
         builder = (
             GuildBuilder(guild_id, guild_name, guild_description)
@@ -519,7 +521,7 @@ class TestGuildBuilder:
 
         engine = Metastore.get_engine(database)
 
-        guild = builder.bootstrap(database)
+        guild = builder.bootstrap(database, org_id)
 
         time.sleep(0.5)
 
@@ -757,12 +759,7 @@ class TestGuildBuilder:
         probe_agent.clear_messages()
 
     def test_message_broadcast(
-        self,
-        guild_id,
-        guild_name,
-        guild_description,
-        messaging: MessagingConfig,
-        database,
+        self, guild_id, guild_name, guild_description, messaging: MessagingConfig, database, org_id
     ):
         builder = GuildBuilder(guild_id, guild_name, guild_description).set_messaging(
             messaging.backend_module,
@@ -770,7 +767,7 @@ class TestGuildBuilder:
             messaging.backend_config,
         )
 
-        guild = builder.bootstrap(database)
+        guild = builder.bootstrap(database, org_id)
 
         time.sleep(0.5)
 

@@ -10,8 +10,13 @@ from rustic_ai.core.utils.gemstone_id import GemstoneGenerator
 TEST_GUILD_COUNT: int = 0
 
 
+@pytest.fixture(scope="session")
+def org_id():
+    return "acmeorganizationid"
+
+
 @pytest.fixture
-def guild() -> Guild:
+def guild(org_id) -> Guild:
     global TEST_GUILD_COUNT
     TEST_GUILD_COUNT += 1
     guild_id = f"test_guild_{TEST_GUILD_COUNT}"
@@ -29,6 +34,7 @@ def guild() -> Guild:
         description="A test guild",
         execution_engine_clz=SyncExecutionEngine.get_qualified_class_name(),
         messaging_config=messaging_config,
+        organization_id=org_id
     )
 
 

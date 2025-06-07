@@ -40,12 +40,7 @@ class TestGuildStop:
         yield db
         Metastore.drop_db()
 
-    def test_guild_bootstrap(
-        self,
-        messaging: MessagingConfig,
-        probe_agent: ProbeAgent,
-        database,
-    ):
+    def test_guild_bootstrap(self, messaging: MessagingConfig, probe_agent: ProbeAgent, database, org_id):
 
         guild_id = "guild_stop_test"
         guild_name = "Guild1"
@@ -83,7 +78,7 @@ class TestGuildStop:
             )
         )
 
-        guild = builder.bootstrap(database)
+        guild = builder.bootstrap(database, org_id)
 
         time.sleep(2)
         running_agents = guild.execution_engine.get_agents_in_guild(guild_id)

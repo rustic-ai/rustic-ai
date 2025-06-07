@@ -8,3 +8,4 @@ class GuildManagerAgentProps(BaseAgentProps):
 
     guild_spec: GuildSpec
     database_url: str
+    organization_id: str
