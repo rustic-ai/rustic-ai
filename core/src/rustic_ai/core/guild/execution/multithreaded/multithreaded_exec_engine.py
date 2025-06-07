@@ -14,8 +14,8 @@ from rustic_ai.core.messaging.core import Client, MessagingConfig
 
 
 class MultiThreadedEngine(ExecutionEngine):
-    def __init__(self, guild_id) -> None:
-        super().__init__(guild_id=guild_id)
+    def __init__(self, guild_id, organization_id: str) -> None:
+        super().__init__(guild_id=guild_id, organization_id=organization_id)
         self.agent_wrappers: Dict[str, MultiThreadedAgentWrapper] = {}
 
         # We use the in-memory agent tracker as this is still running in the same process

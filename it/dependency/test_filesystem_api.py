@@ -57,11 +57,12 @@ class TestFilesystemAPI:
         return GemstoneGenerator(1)
 
     @pytest.mark.asyncio
-    async def test_upload_file(self, guild: GuildSpec):
+    async def test_upload_file(self, guild: GuildSpec, org_id):
         server = "127.0.0.1:8880"
 
         async with httpx.AsyncClient(base_url=f"http://{server}") as ac:
-            new_guild_resp = await ac.post("/api/guilds", json=guild.model_dump())
+            guild_data = {**guild.model_dump(), "organization_id": org_id}
+            new_guild_resp = await ac.post("/api/guilds", json=guild_data)
 
             assert new_guild_resp.status_code == 201
             guild_id = new_guild_resp.json()["id"]

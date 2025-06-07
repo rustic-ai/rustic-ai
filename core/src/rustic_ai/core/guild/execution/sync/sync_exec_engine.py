@@ -9,8 +9,8 @@ from rustic_ai.core.messaging import Client, MessageTrackingClient, MessagingCon
 
 
 class SyncExecutionEngine(ExecutionEngine):
-    def __init__(self, guild_id: str) -> None:
-        super().__init__(guild_id=guild_id)
+    def __init__(self, guild_id: str, organization_id: str) -> None:
+        super().__init__(guild_id=guild_id, organization_id=organization_id)
         self.agent_tracker = InMemorySyncAgentTracker()
         self.owned_agents: List[tuple[str, str]] = []
 
@@ -32,12 +32,14 @@ class SyncExecutionEngine(ExecutionEngine):
         Instantiates a SynchronousAgentWrapper to handle the agent's initialization with the message bus, then runs the agent synchronously.
 
         Parameters:
-            agent: The agent specification or instance to wrap.
+            guild_spec: GuildSpec for which the agent must be run.
+            agent_spec: The agent specification or instance to wrap.
                 NOTE: Providing an Agent is only supported for testing and should not be used in production.
-            messaging_config: Messaging configuration.
-            client_type: The type of client to be used by the agent for communicating with the message bus.
-            client_properties: Additional properties for initializing the client.
-            default_topic: The default topic the agent should subscribe to.
+            messaging_config: MessagingConfig to initialize MessagingInterface for communication between agents.
+            machine_id: A unique identifier for the machine generating the ID
+            client_type: The type of client to use for the agent.
+            client_properties: Properties to initialize the client with.
+            default_topic: The default topic to subscribe to.
         """
         # Instantiate the synchronous agent wrapper with the provided parameters
         guild_id = guild_spec.id

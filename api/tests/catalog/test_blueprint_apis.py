@@ -12,6 +12,7 @@ from rustic_ai.api_server.catalog.models import (
     BlueprintReviewCreate,
     CatalogAgentEntry,
 )
+from rustic_ai.api_server.guilds.schema import LaunchGuildReq
 from rustic_ai.core.agents.testutils import EchoAgent
 from rustic_ai.core.guild.dsl import GuildSpec
 from rustic_ai.core.guild.metastore.database import Metastore
@@ -289,15 +290,18 @@ def test_share_blueprint_with_organization(setup_data, catalog_client):
     assert response.status_code == 204
 
 
-def test_blueprint_guild_linking(setup_data, catalog_client):
+def test_blueprint_guild_linking(setup_data, catalog_client, org_id):
     guild_spec = GuildSpec(
         name="MyGuild",
         description="A guild for testing",
         properties={"storage": {"class": "rustic_ai.messaging.storage.InMemoryStorage", "properties": {}}},
         agents=[],
     )
+    req = LaunchGuildReq(spec=guild_spec, org_id=org_id)
     response = catalog_client.post(
-        "/api/guilds", json=guild_spec.model_dump(), headers={"Content-Type": "application/json"}
+        "/api/guilds",
+        json=req.model_dump(),
+        headers={"Content-Type": "application/json"},
     )
     assert response.status_code == 201
     assert "id" in response.json()
@@ -326,15 +330,18 @@ def test_blueprint_guild_linking(setup_data, catalog_client):
     assert response.json()["detail"] == "Blueprint na not found"
 
 
-def test_add_user_to_guild(setup_data, catalog_client):
+def test_add_user_to_guild(setup_data, catalog_client, org_id):
     guild_spec = GuildSpec(
         name="UserGuild ",
         description="A guild for testing",
         properties={"storage": {"class": "rustic_ai.messaging.storage.InMemoryStorage", "properties": {}}},
         agents=[],
     )
+    req = LaunchGuildReq(spec=guild_spec, org_id=org_id)
     response = catalog_client.post(
-        "/api/guilds", json=guild_spec.model_dump(), headers={"Content-Type": "application/json"}
+        "/api/guilds",
+        json=req.model_dump(),
+        headers={"Content-Type": "application/json"},
     )
     guild_id = response.json()["id"]
     # Test when user is not linked to a guild
@@ -356,15 +363,18 @@ def test_add_user_to_guild(setup_data, catalog_client):
     assert delete_response.status_code == 204
 
 
-def test_user_guild_response(setup_data, catalog_client):
+def test_user_guild_response(setup_data, catalog_client, org_id):
     guild_spec = GuildSpec(
         name="UserGuild ",
         description="A guild for testing",
         properties={"storage": {"class": "rustic_ai.messaging.storage.InMemoryStorage", "properties": {}}},
         agents=[],
     )
+    req = LaunchGuildReq(spec=guild_spec, org_id=org_id)
     response = catalog_client.post(
-        "/api/guilds", json=guild_spec.model_dump(), headers={"Content-Type": "application/json"}
+        "/api/guilds",
+        json=req.model_dump(),
+        headers={"Content-Type": "application/json"},
     )
     guild_id = response.json()["id"]
     blueprint_id = setup_data["blueprint"].id
@@ -384,15 +394,18 @@ def test_user_guild_response(setup_data, catalog_client):
     assert guild_res["icon"] == "icon.png"
 
 
-def test_add_org_to_guild(setup_data, catalog_client):
+def test_add_org_to_guild(setup_data, catalog_client, org_id):
     guild_spec = GuildSpec(
         name="OrgGuild ",
         description="A guild for testing",
         properties={"storage": {"class": "rustic_ai.messaging.storage.InMemoryStorage", "properties": {}}},
         agents=[],
     )
+    req = LaunchGuildReq(spec=guild_spec, org_id=org_id)
     response = catalog_client.post(
-        "/api/guilds", json=guild_spec.model_dump(), headers={"Content-Type": "application/json"}
+        "/api/guilds",
+        json=req.model_dump(),
+        headers={"Content-Type": "application/json"},
     )
     guild_id = response.json()["id"]
     # Test when org is not linked to a guild

@@ -12,13 +12,16 @@ from .ray_agent_wrapper import RayAgentWrapper
 
 
 class RayExecutionEngine(ExecutionEngine):
-    def __init__(self, guild_id: str) -> None:
-        super().__init__(guild_id=guild_id)
+    def __init__(self, guild_id: str, organization_id: str) -> None:
+        super().__init__(guild_id=guild_id, organization_id=organization_id)
         # Initialize Ray if not already done
         if not ray.is_initialized():
             raise Exception("Ray must be initialized before using RayExecutionEngine.")  # pragma: no cover
         self.agent_wrappers: Dict[str, Dict[str, RayAgentWrapper]] = {}
         self.agent_actors: Dict[str, Dict[str, ray.actor.ActorHandle]] = {}
+
+    def _get_namespace(self):
+        return f"{self.organization_id}_{self.guild_id}"
 
     def run_agent(
         self,
@@ -35,7 +38,9 @@ class RayExecutionEngine(ExecutionEngine):
         """
         # Instantiate the RayAgentWrapper with provided parameters. Note the use of Ray's remote function.
         guild_id = guild_spec.id
-        agent_wrapper = RayAgentWrapper.options(name=agent_spec.id, namespace=guild_id, lifetime="detached").remote(  # type: ignore
+        agent_wrapper = RayAgentWrapper.options(
+            name=agent_spec.id, namespace=self._get_namespace(), lifetime="detached"
+        ).remote(  # type: ignore
             guild_spec=guild_spec,
             agent_spec=agent_spec,
             messaging_config=messaging_config,
@@ -58,10 +63,11 @@ class RayExecutionEngine(ExecutionEngine):
 
     def get_agents_in_guild(self, guild_id: str) -> Dict[str, AgentSpec]:
         actor_refs = ray.util.list_named_actors(all_namespaces=True)
+        namespace = self._get_namespace()
         agent_specs = {}
         for actor_ref in actor_refs:
-            if actor_ref["namespace"] == guild_id:
-                actor = ray.get_actor(name=actor_ref["name"], namespace=guild_id)  # type: ignore
+            if actor_ref["namespace"] == namespace:
+                actor = ray.get_actor(name=actor_ref["name"], namespace=namespace)  # type: ignore
                 if self._is_rustic_agent(actor):
                     agent_spec: AgentSpec = ray.get(actor.get_agent_spec.remote())  # type: ignore
                     agent_specs[agent_spec.id] = agent_spec
@@ -69,7 +75,7 @@ class RayExecutionEngine(ExecutionEngine):
 
     def is_agent_running(self, guild_id: str, agent_id: str) -> bool:
         try:
-            actor = ray.get_actor(name=agent_id, namespace=guild_id)
+            actor = ray.get_actor(name=agent_id, namespace=self._get_namespace())
             if actor is not None:
                 if self._is_rustic_agent(actor):
                     return ray.get(actor.is_running.remote())
@@ -87,7 +93,7 @@ class RayExecutionEngine(ExecutionEngine):
         """
         Stops the agent with the given ID in the guild with the given ID.
         """
-        agent_wrapper = ray.get_actor(name=agent_id, namespace=guild_id)  # type: ignore
+        agent_wrapper = ray.get_actor(name=agent_id, namespace=self._get_namespace())  # type: ignore
         if agent_wrapper is not None:
             if self._is_rustic_agent(agent_wrapper):
                 ray.get(agent_wrapper.shutdown.remote())

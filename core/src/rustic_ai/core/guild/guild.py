@@ -12,15 +12,12 @@ from rustic_ai.core.utils.class_utils import create_execution_engine
 
 
 class Guild:
-    """
-    A class representing a guild of agents, updated to use a pluggable ExecutionEngine.
-    """
-
     def __init__(
         self,
         id: str,
         name: str,
         description: str,
+        organization_id: str,
         execution_engine_clz: str,
         messaging_config: MessagingConfig,
         client_type: Type[Client] = MessageTrackingClient,
@@ -35,16 +32,18 @@ class Guild:
             id: The ID of the guild.
             name: The name of the guild.
             description: A description of the guild.
-            execution_engine: The execution engine to run agents within the guild.
-            messaging: Either an instance of MessagingInterface or a configuration
-                to initialize one to use for communication between agents.
+            execution_engine_clz: The execution engine class to run agents within the guild.
+            messaging_config: MessagingConfig to initialize MessagingInterface for communication between agents.
             client_type: The default client type for agents within the guild.
             client_properties: Default properties for initializing clients for the agents.
         """
         self.id = id
         self.name = name
         self.description = description
-        self.execution_engine = create_execution_engine(execution_engine_clz, guild_id=id)
+        self.organization_id = organization_id
+        self.execution_engine = create_execution_engine(
+            execution_engine_clz, guild_id=id, organization_id=organization_id
+        )
         self.messaging = messaging_config
         self.client_type = client_type
         self.client_properties = client_properties
@@ -72,7 +71,7 @@ class Guild:
         Adds an agent to the guild and uses the execution engine to run it.
 
         Parameters:
-            agent: The agent to add and run.
+            agent_spec: The agent to add and run.
         """
         assert isinstance(agent_spec, AgentSpec), "agent_spec must be an instance of AgentSpec"
         self._internal_add_agent(agent_spec, execution_engine)

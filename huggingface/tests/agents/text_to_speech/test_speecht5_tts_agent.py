@@ -19,7 +19,7 @@ from rustic_ai.huggingface.agents.text_to_speech.speecht5_tts_agent import (
 
 class TestSpeechT5TtsAgent:
 
-    def test_response_is_generated(self, probe_agent: ProbeAgent):
+    def test_response_is_generated(self, probe_agent: ProbeAgent, org_id):
         """
         Test that the agent responds to a message with a message containing the filepath of the generated audio.
         """
@@ -58,7 +58,7 @@ class TestSpeechT5TtsAgent:
 
         dfs = FileSystem(path="/tmp/speecht5_tts_guild/GUILD_GLOBAL", fs=fs)
 
-        guild = guild_builder.launch()
+        guild = guild_builder.launch(organization_id=org_id)
         guild._add_local_agent(probe_agent)
 
         probe_agent.publish_dict(

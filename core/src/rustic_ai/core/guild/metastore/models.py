@@ -174,6 +174,8 @@ class GuildModel(SQLModel, table=True):
     backend_class: str = Field(default="InMemoryMessagingBackend")
     backend_config: dict = Field(sa_column=Column(MutableDict.as_mutable(JSON(none_as_null=True)), default={}))
 
+    organization_id: str = Field(index=True, nullable=False)
+
     dependency_map: dict = Field(sa_column=Column(MutableDict.as_mutable(JSON(none_as_null=True)), default={}))
 
     routes: list[GuildRoutes] = Relationship(
@@ -191,12 +193,13 @@ class GuildModel(SQLModel, table=True):
         return session.get(cls, guild_id)
 
     @classmethod
-    def from_guild_spec(cls, guild_spec: GuildSpec) -> "GuildModel":
+    def from_guild_spec(cls, guild_spec: GuildSpec, organization_id: str) -> "GuildModel":
         """
         Create a GuildModel instance from a GuildSpec instance.
 
         Args:
             guild_spec (GuildSpec): The GuildSpec instance.
+            organization_id (str, optional): The ID of the organization that owns this guild.
 
         Returns:
             GuildModel: The GuildModel instance. This instance DOES NOT have the agents populated.
@@ -222,6 +225,7 @@ class GuildModel(SQLModel, table=True):
             backend_module=backend.backend_module,
             backend_class=backend.backend_class,
             backend_config=backend.backend_config,
+            organization_id=organization_id,
             dependency_map=deps_map,
             routes=routes,
         )

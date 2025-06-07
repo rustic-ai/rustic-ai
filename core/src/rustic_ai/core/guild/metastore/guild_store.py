@@ -26,12 +26,19 @@ class GuildStore:
             session.close()
         return guild_model
 
-    def add_guild(self, guild_spec: GuildSpec) -> GuildModel:
+    def add_guild(self, guild_spec: GuildSpec, organization_id: str) -> GuildModel:
         """
         Add a guild to the metastore.
+
+        Args:
+            guild_spec (GuildSpec): The guild specification to add.
+            organization_id (str): The ID of the organization that owns this guild.
+
+        Returns:
+            GuildModel: The added guild model.
         """
         with Session(self.engine) as session:
-            guild_model = GuildModel.from_guild_spec(guild_spec)
+            guild_model = GuildModel.from_guild_spec(guild_spec, organization_id)
             session.add(guild_model)
             session.commit()
             session.refresh(guild_model)
@@ -39,10 +46,29 @@ class GuildStore:
 
     def list_guilds(self) -> Sequence[GuildModel]:
         """
-        List the guilds in the metastore.
+        List all guilds in the metastore.
+
+        Returns:
+            Sequence[GuildModel]: A list of all guild models.
         """
         with Session(self.engine) as session:
             get_guilds_stmt = select(GuildModel)
+            guilds = session.exec(get_guilds_stmt).unique().all()
+            session.close()
+        return guilds
+
+    def list_guilds_by_organization(self, organization_id: str) -> Sequence[GuildModel]:
+        """
+        List guilds belonging to a specific organization.
+
+        Args:
+            organization_id (str): The ID of the organization to filter by.
+
+        Returns:
+            Sequence[GuildModel]: A list of guild models belonging to the specified organization.
+        """
+        with Session(self.engine) as session:
+            get_guilds_stmt = select(GuildModel).where(GuildModel.organization_id == organization_id)
             guilds = session.exec(get_guilds_stmt).unique().all()
             session.close()
         return guilds

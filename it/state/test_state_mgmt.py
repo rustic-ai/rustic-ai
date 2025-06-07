@@ -102,7 +102,7 @@ class TestStateMgmt:
         yield db
         Metastore.drop_db()
 
-    def test_state_mgmt(self, state_aware_agent: AgentSpec, state_free_agent: AgentSpec, database):
+    def test_state_mgmt(self, state_aware_agent: AgentSpec, state_free_agent: AgentSpec, database, org_id):
         builder = (
             GuildBuilder("state_guild", "State Guild", "Guild to test state management")
             .add_agent_spec(state_aware_agent)
@@ -115,7 +115,7 @@ class TestStateMgmt:
         )
 
         engine = Metastore.get_engine(database)  # noqa: F841
-        guild = builder.bootstrap(database)
+        guild = builder.bootstrap(database, org_id)
 
         probe_agent: ProbeAgent = (
             AgentBuilder(ProbeAgent)
