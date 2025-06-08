@@ -16,7 +16,7 @@ from starlette import status
 
 from rustic_ai.api_server.api_dependency_manager import ApiDependencyManager
 from rustic_ai.api_server.guilds.comms_manager import GuildCommunicationManager
-from rustic_ai.api_server.guilds.schema import IdInfo
+from rustic_ai.api_server.guilds.schema import IdInfo, LaunchGuildReq
 from rustic_ai.api_server.guilds.service import GuildService
 from rustic_ai.core import Agent
 from rustic_ai.core.agents.commons.media import MediaLink
@@ -32,21 +32,20 @@ guild_service = GuildService()
 
 
 @router.post("/guilds", response_model=IdInfo, status_code=status.HTTP_201_CREATED, operation_id="createGuild")
-def create_guild(guild_spec: GuildSpec):
+def create_guild(launch_req: LaunchGuildReq):
     """
     Creates a new guild and adds it to the database.
 
     Args:
-        guild_spec (GuildSpec): The spec for the new guild
+        launch_req (LaunchGuildReq):  object with spec for the new guild and the org id
 
     Returns:
         IdInfo: The id of the newly created guild
     """
-    if not guild_spec:
+    if not launch_req.spec:
         raise HTTPException(status_code=400, detail="Invalid input")  # pragma: no cover
-
     try:
-        guild_id = guild_service.create_guild(Metastore.get_db_url(), guild_spec)
+        guild_id = guild_service.create_guild(Metastore.get_db_url(), launch_req.spec, launch_req.org_id)
         logging.debug(f"New guild created: {guild_id}")
         return IdInfo(id=guild_id)
     except ValidationError as e:

@@ -1,11 +1,12 @@
 import json
 
+from rustic_ai.api_server.guilds.schema import LaunchGuildReq
 from rustic_ai.core.agents.testutils import EchoAgent
 from rustic_ai.core.guild.builders import AgentBuilder
 from rustic_ai.core.guild.dsl import AgentSpec, GuildSpec
 
 
-def test_create_guild(client):
+def test_create_guild(client, org_id):
     agent1: AgentSpec = AgentBuilder(EchoAgent).set_name("Agent1").set_description("First agent").build_spec()
 
     guild_spec = GuildSpec(
@@ -19,7 +20,8 @@ def test_create_guild(client):
         },
         agents=[agent1],
     )
-    json_data = guild_spec.model_dump_json()
+    req = LaunchGuildReq(spec=guild_spec, org_id=org_id)
+    json_data = req.model_dump_json()
     data = json.loads(json_data)
 
     # Act
@@ -38,7 +40,7 @@ def test_create_guild_invalid_input(client):
     assert response.status_code == 422
 
 
-def test_create_guild_without_agents(client):
+def test_create_guild_without_agents(client, org_id):
     # Arrange
     guild_spec = GuildSpec(
         name="MyGuild",
@@ -51,7 +53,8 @@ def test_create_guild_without_agents(client):
         },
         agents=[],
     )
-    json_data = guild_spec.model_dump_json()
+    req = LaunchGuildReq(spec=guild_spec, org_id=org_id)
+    json_data = req.model_dump_json()
     data = json.loads(json_data)
 
     # Act

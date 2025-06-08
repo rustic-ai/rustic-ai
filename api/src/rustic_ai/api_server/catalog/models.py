@@ -278,12 +278,6 @@ class UserGuild(SQLModel, table=True):
     user_id: str = Field(primary_key=True, index=True)
 
 
-class OrganizationGuild(SQLModel, table=True):
-    __tablename__ = "organization_guild"
-    guild_id: str = Field(foreign_key="guilds.id", primary_key=True, index=True)
-    organization_id: str = Field(primary_key=True, index=True)
-
-
 class BasicGuildInfo(SQLModel):
     id: str
     name: str

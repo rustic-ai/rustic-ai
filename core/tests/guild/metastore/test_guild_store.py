@@ -39,33 +39,33 @@ class TestGuildStore:
     def _get_guild(self, name):
         return GuildBuilder(name).set_name(name).set_description(name).build_spec()
 
-    def test_add_guild(self, engine, guild):
+    def test_add_guild(self, engine, guild, org_id):
         store = GuildStore(engine)
-        gm1 = store.add_guild(guild)
+        gm1 = store.add_guild(guild, org_id)
         assert gm1.id == "guild1"
         guild = store.get_guild(gm1.id)
         assert guild.id == "guild1"
 
-    def test_list_guilds(self, engine, guild):
+    def test_list_guilds(self, engine, guild, org_id):
         store = GuildStore(engine)
-        store.add_guild(guild)
-        store.add_guild(self._get_guild("guild2"))
+        store.add_guild(guild, org_id)
+        store.add_guild(self._get_guild("guild2"), org_id)
         guilds = store.list_guilds()
         assert len(guilds) == 2
 
         assert guilds[0].id == "guild1"
         assert guilds[1].id == "guild2"
 
-    def test_remove_guild(self, engine, guild):
+    def test_remove_guild(self, engine, guild, org_id):
         store = GuildStore(engine)
-        store.add_guild(guild)
+        store.add_guild(guild, org_id)
         store.remove_guild(guild.id)
         guild = store.get_guild(guild.id)
         assert guild is None
 
-    def test_add_agent(self, engine, guild, agent):
+    def test_add_agent(self, engine, guild, agent, org_id):
         store = GuildStore(engine)
-        store.add_guild(guild)
+        store.add_guild(guild, org_id)
         store.add_agent(guild.id, agent)
 
         agent2 = self._get_agent("agent2")
@@ -92,9 +92,9 @@ class TestGuildStore:
         guilds = store.list_guilds()
         assert guilds == []
 
-    def test_remove_guild_none(self, engine, guild):
+    def test_remove_guild_none(self, engine, guild, org_id):
         store = GuildStore(engine)
-        store.add_guild(guild)
+        store.add_guild(guild, org_id)
         gm = store.get_guild(guild.id)
 
         assert gm is not None
@@ -106,10 +106,10 @@ class TestGuildStore:
 
         assert guild is None
 
-    def test_remove_agent(self, engine, guild, agent):
+    def test_remove_agent(self, engine, guild, agent, org_id):
         store = GuildStore(engine)
 
-        store.add_guild(guild)
+        store.add_guild(guild, org_id)
         store.add_agent(guild.id, agent)
 
         gm = store.get_guild(guild.id)
@@ -132,17 +132,17 @@ class TestGuildStore:
         with pytest.raises(ValueError):
             store.remove_agent("test_guild", "test_agent")
 
-    def test_remove_agent_guild_none(self, engine, guild):
+    def test_remove_agent_guild_none(self, engine, guild, org_id):
 
         store = GuildStore(engine)
-        store.add_guild(guild)
+        store.add_guild(guild, org_id)
 
         with pytest.raises(ValueError):
             store.remove_agent(guild.id, "test_agent")
 
-    def test_list_agents(self, engine, guild, agent):
+    def test_list_agents(self, engine, guild, agent, org_id):
         store = GuildStore(engine)
-        store.add_guild(guild)
+        store.add_guild(guild, org_id)
 
         agent2 = self._get_agent("agent2")
         store.add_agent(guild.id, agent)
@@ -155,9 +155,9 @@ class TestGuildStore:
 
         assert agents[1].name == "agent2"
 
-    def test_model_from_spec(self):
+    def test_model_from_spec(self, org_id):
         spec = GuildBuilder("guild1").set_name("guild1").set_description("guild1").build_spec()
-        gm = GuildModel.from_guild_spec(spec)
+        gm = GuildModel.from_guild_spec(spec, org_id)
 
         assert gm.id == "guild1"
         assert gm.name == "guild1"
@@ -168,7 +168,7 @@ class TestGuildStore:
         assert gm.backend_class == "InMemoryMessagingBackend"
         assert gm.backend_config == {}
 
-    def test_model_with_routing_rules(self, engine):
+    def test_model_with_routing_rules(self, engine, org_id):
         guild_id = "guild_with_routing"
 
         spec = (
@@ -219,7 +219,7 @@ class TestGuildStore:
         )
 
         store = GuildStore(engine)
-        store.add_guild(spec)
+        store.add_guild(spec, org_id)
 
         guild_model = store.get_guild(guild_id)
 
@@ -277,7 +277,7 @@ class TestGuildStore:
         assert isinstance(rule04.transformer, FunctionalTransformer)
         assert rule04.transformer.handler == "{'payload': {'new_key': payload.key, 'origin_id': $.origin.id}}"
 
-    def test_model_with_dependencies(self, engine):
+    def test_model_with_dependencies(self, engine, org_id):
         guild_id = "guild_with_deps"
 
         builder = (
@@ -320,7 +320,7 @@ class TestGuildStore:
         spec = builder.build_spec()
 
         store = GuildStore(engine)
-        store.add_guild(spec)
+        store.add_guild(spec, org_id)
         store.add_agent(guild_id, agent)
 
         guild_model = store.get_guild(guild_id)

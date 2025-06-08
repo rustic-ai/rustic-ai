@@ -3,6 +3,7 @@ import asyncio
 import httpx
 import pytest
 
+from rustic_ai.api_server.guilds.schema import LaunchGuildReq
 from rustic_ai.core.agents.testutils import EchoAgent
 from rustic_ai.core.guild.agent_ext.depends.filesystem.filesystem import (
     FileSystemResolver,
@@ -57,11 +58,12 @@ class TestFilesystemAPI:
         return GemstoneGenerator(1)
 
     @pytest.mark.asyncio
-    async def test_upload_file(self, guild: GuildSpec):
+    async def test_upload_file(self, guild: GuildSpec, org_id):
         server = "127.0.0.1:8880"
 
         async with httpx.AsyncClient(base_url=f"http://{server}") as ac:
-            new_guild_resp = await ac.post("/api/guilds", json=guild.model_dump())
+            req = LaunchGuildReq(spec=guild, org_id=org_id)
+            new_guild_resp = await ac.post("/api/guilds", json=req.model_dump())
 
             assert new_guild_resp.status_code == 201
             guild_id = new_guild_resp.json()["id"]

@@ -282,17 +282,6 @@ async def remove_user_from_guild(guild_id: str, user_id: str, engine: Engine = D
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@catalog_router.post(
-    "/guilds/{guild_id}/organizations/{organization_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
-    operation_id="addOrgToGuild",
-    tags=["organizations"],
-)
-async def add_org_to_guild(guild_id: str, organization_id: str, engine: Engine = Depends(Metastore.get_engine)):
-    CatalogStore(engine).add_org_to_guild(guild_id, organization_id)
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
-
-
 @catalog_router.get(
     "/organizations/{organization_id}/guilds/",
     response_model=List[BasicGuildInfo],
@@ -301,17 +290,6 @@ async def add_org_to_guild(guild_id: str, organization_id: str, engine: Engine =
 )
 async def get_guilds_for_organization(organization_id: str, engine: Engine = Depends(Metastore.get_engine)):
     return CatalogStore(engine).get_guilds_for_org(organization_id)
-
-
-@catalog_router.delete(
-    "/guilds/{guild_id}/organizations/{organization_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
-    operation_id="removeOrgFromGuild",
-    tags=["organizations"],
-)
-async def remove_org_from_guild(guild_id: str, organization_id: str, engine: Engine = Depends(Metastore.get_engine)):
-    CatalogStore(engine).remove_org_from_guild(guild_id, organization_id)
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @catalog_router.post(

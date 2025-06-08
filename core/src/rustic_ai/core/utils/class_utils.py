@@ -35,9 +35,9 @@ def get_execution_class(full_class_name: str) -> Type[ExecutionEngine]:
     return execution_class
 
 
-def create_execution_engine(full_class_name: str, guild_id: str) -> ExecutionEngine:
+def create_execution_engine(full_class_name: str, guild_id: str, organization_id: str) -> ExecutionEngine:
     execution_class = get_execution_class(full_class_name)
-    return execution_class(guild_id=guild_id)
+    return execution_class(guild_id=guild_id, organization_id=organization_id)
 
 
 def get_client_class(full_class_name: str) -> Type[Client]:

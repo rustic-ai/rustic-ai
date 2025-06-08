@@ -54,10 +54,10 @@ class TestHealthMixin:
         yield db
         Metastore.drop_db()
 
-    def test_health_mixin(self, guild_id, guild_name, guild_description, echo_agent, database):
+    def test_health_mixin(self, guild_id, guild_name, guild_description, echo_agent, database, org_id):
         builder = GuildBuilder(guild_id, guild_name, guild_description).add_agent_spec(echo_agent)
 
-        guild = builder.bootstrap(database)
+        guild = builder.bootstrap(database, org_id)
 
         probe_agent = (
             AgentBuilder(EssentialProbeAgent)

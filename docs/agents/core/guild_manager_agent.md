@@ -178,7 +178,7 @@ custom_manager_spec = (
 guild = (
     GuildBuilder("my_guild", "My Guild", "A guild with custom manager")
     .set_guild_manager_spec(custom_manager_spec)
-    .launch()
+    .launch(org_id="myawesomeorgid")
 )
 ```
 

@@ -71,9 +71,3 @@ lines_between_sections = 1 # For the newline issue
 known_third_party = ["pydantic"]
 known_first_party = ["rustic_ai.core", "rustic_ai.redis"]
 known_local_folder = ["rustic_ai.testing"]
-
-
-[tool.pytest.ini_options]
-asyncio_mode = "auto"
-asyncio_default_fixture_loop_scope="function"
-norecursedirs = ["cookiecutter-rustic"]

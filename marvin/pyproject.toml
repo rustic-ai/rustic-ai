@@ -74,7 +74,3 @@ known_first_party = ["rustic_ai.core", "rustic_ai.marvin"]
 known_local_folder = ["rustic_ai.testing"]
 
 
-[tool.pytest.ini_options]
-asyncio_mode = "auto"
-asyncio_default_fixture_loop_scope="function"
-

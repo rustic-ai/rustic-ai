@@ -32,7 +32,6 @@ from .models import (
     BlueprintStarterPrompt,
     BlueprintTag,
     CatalogAgentEntry,
-    OrganizationGuild,
     Tag,
     UserGuild,
 )
@@ -365,36 +364,6 @@ class CatalogStore:
 
         return session.get(UserGuild, {"guild_id": guild_id, "user_id": user_id})
 
-    @staticmethod
-    def get_org_guild(session, org_id: str, guild_id: str):
-        guild = session.get(GuildModel, guild_id)
-        if not guild:
-            raise HTTPException(status_code=404, detail=f"Guild {guild_id} not found")
-
-        return session.get(OrganizationGuild, {"guild_id": guild_id, "organization_id": org_id})
-
-    def add_org_to_guild(self, guild_id: str, org_id: str):
-        with Session(self.engine) as session:
-            existing_mapping = self.get_org_guild(session, org_id, guild_id)
-            if existing_mapping:
-                raise HTTPException(
-                    status_code=409, detail=f"Organization {org_id} already associated with guild {guild_id}"
-                )
-
-            session.add(OrganizationGuild(guild_id=guild_id, organization_id=org_id))
-            session.commit()
-
-    def remove_org_from_guild(self, guild_id: str, org_id: str):
-        with Session(self.engine) as session:
-            existing_mapping = self.get_org_guild(session, org_id, guild_id)
-            if not existing_mapping:
-                raise HTTPException(
-                    status_code=404, detail=f"Organization {org_id} is not associated with guild {guild_id}"
-                )
-
-            session.delete(existing_mapping)
-            session.commit()
-
     def get_guilds_for_org(self, org_id: str) -> List[BasicGuildInfo]:
         with Session(self.engine) as session:
             statement = (
@@ -404,12 +373,10 @@ class CatalogStore:
                     Blueprint.id.label("blueprint_id"),  # type:ignore
                     Blueprint.icon,
                 )
-                .select_from(
-                    join(GuildModel, OrganizationGuild, GuildModel.id == OrganizationGuild.guild_id)  # type:ignore
-                    .outerjoin(BlueprintGuild, GuildModel.id == BlueprintGuild.guild_id)  # type:ignore
-                    .outerjoin(Blueprint, Blueprint.id == BlueprintGuild.blueprint_id)  # type:ignore
-                )
-                .where(OrganizationGuild.organization_id == org_id)
+                .select_from(GuildModel)
+                .outerjoin(BlueprintGuild, GuildModel.id == BlueprintGuild.guild_id)  # type:ignore
+                .outerjoin(Blueprint, Blueprint.id == BlueprintGuild.blueprint_id)  # type:ignore
+                .where(GuildModel.organization_id == org_id)
             )
 
             guilds: Sequence[BasicGuildInfo] = session.exec(statement).all()  # type:ignore
