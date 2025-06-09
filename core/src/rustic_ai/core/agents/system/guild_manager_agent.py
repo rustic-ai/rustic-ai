@@ -118,7 +118,7 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
             session.add(self_model)
 
             if self.guild_model:
-                self.guild_model.sqlmodel_update({"status": GuildStatus.RUNNING})
+                self.guild_model.status = GuildStatus.RUNNING
                 session.add(self.guild_model)
 
             session.commit()
