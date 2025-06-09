@@ -16,12 +16,11 @@ from starlette import status
 
 from rustic_ai.api_server.api_dependency_manager import ApiDependencyManager
 from rustic_ai.api_server.guilds.comms_manager import GuildCommunicationManager
-from rustic_ai.api_server.guilds.schema import IdInfo, LaunchGuildReq
+from rustic_ai.api_server.guilds.schema import GuildSpecResponse, IdInfo, LaunchGuildReq
 from rustic_ai.api_server.guilds.service import GuildService
 from rustic_ai.core import Agent
 from rustic_ai.core.agents.commons.media import MediaLink
 from rustic_ai.core.guild.agent_ext.depends.filesystem import FileSystem
-from rustic_ai.core.guild.dsl import GuildSpec
 from rustic_ai.core.guild.metaprog.agent_registry import AgentRegistry
 from rustic_ai.core.guild.metastore import Metastore
 from rustic_ai.core.messaging.core.message import Message
@@ -54,8 +53,8 @@ def create_guild(launch_req: LaunchGuildReq):
         raise HTTPException(status_code=500, detail=str(e))  # pragma: no cover
 
 
-@router.get("/guilds/{guild_id}", response_model=GuildSpec, operation_id="getGuildDetailsById")
-def get_guild(guild_id: str, engine=Depends(Metastore.get_engine)) -> GuildSpec:
+@router.get("/guilds/{guild_id}", response_model=GuildSpecResponse, operation_id="getGuildDetailsById")
+def get_guild(guild_id: str, engine=Depends(Metastore.get_engine)) -> GuildSpecResponse:
     """
     Retrieves details for a guild based on the provided guild_id.
 
@@ -63,7 +62,7 @@ def get_guild(guild_id: str, engine=Depends(Metastore.get_engine)) -> GuildSpec:
         guild_id (str): The ID of the guild to retrieve details for.
 
     Returns:
-        GuildSpec: The retrieved guild details, or None if the guild was not found.
+        GuildSpecResponse: The retrieved guild details, or None if the guild was not found.
 
     Raises:
         HTTPException: If the guild is not found, raises an HTTPException with a status code of 404.

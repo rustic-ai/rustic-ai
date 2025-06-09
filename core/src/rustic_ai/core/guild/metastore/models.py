@@ -1,3 +1,4 @@
+from enum import Enum
 from typing import Dict, List, Optional
 
 import shortuuid
@@ -11,6 +12,14 @@ from rustic_ai.core.guild.dsl import KeyConstants as GSKC
 from rustic_ai.core.guild.execution import SyncExecutionEngine
 from rustic_ai.core.messaging.core.message import AgentTag, RoutingRule, RoutingSlip
 from rustic_ai.core.utils.priority import Priority
+
+
+class GuildStatus(str, Enum):
+    """Status values for Guild models."""
+
+    STARTING = "starting"
+    RUNNING = "running"
+    STOPPED = "stopped"
 
 
 class GuildRoutes(SQLModel, table=True):
@@ -177,7 +186,8 @@ class GuildModel(SQLModel, table=True):
     organization_id: str = Field(index=True, nullable=False)
 
     dependency_map: dict = Field(sa_column=Column(MutableDict.as_mutable(JSON(none_as_null=True)), default={}))
-
+    # Use GuildStatus enum to ensure valid status values
+    status: str = Field()
     routes: list[GuildRoutes] = Relationship(
         back_populates="guild",
         sa_relationship_kwargs={"cascade": "all", "lazy": "joined"},
@@ -250,6 +260,7 @@ class GuildModel(SQLModel, table=True):
             id=self.id,
             name=self.name,
             description=self.description,
+            status=self.status,
             agents=[agent.to_agent_spec() for agent in self.agents],
             properties={
                 GSKC.EXECUTION_ENGINE: self.execution_engine,
