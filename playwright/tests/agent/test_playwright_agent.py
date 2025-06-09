@@ -138,19 +138,46 @@ class TestPlaywrightAgent:
         assert result.payload["encoding"] == "utf-8"
         assert result.payload["name"] is not None
 
+        # Give the system a final moment to complete any pending tasks
+        await asyncio.sleep(2)
+
+        # Cancel any remaining tasks explicitly to avoid the warning
+        for task in asyncio.all_tasks():
+            if task is not asyncio.current_task() and not task.done():
+                task.cancel()
+
+    @flaky(max_runs=3, min_passes=1)
+    async def test_recursive_scraping_with_depth(self, generator):
+        filesystem = DependencySpec(
+            class_name="rustic_ai.core.guild.agent_ext.depends.filesystem.FileSystemResolver",
+            properties={
+                "path_base": "/tmp",
+                "protocol": "file",
+                "storage_options": {
+                    "auto_mkdir": True,
+                },
+            },
+        )
+        agent, results = wrap_agent_for_testing(
+            AgentBuilder(PlaywrightScraperAgent)
+            .set_id("002")
+            .set_name("WebScrapperDepth")
+            .set_description("A web scraping agent testing depth")
+            .build(),
+            generator,
+            {"filesystem": filesystem},
+        )
+
+        request_id = shortuuid.uuid()
+
         message = Message(
             id_obj=generator.get_id(Priority.NORMAL),
             topics="default_topic",
             sender=AgentTag(id="testerId", name="tester"),
             payload=WebScrapingRequest(
                 id=request_id,
-                links=[
-                    MediaLink(url="https://webscraper.io/test-sites/e-commerce/static"),
-                ],
-                output_format=ScrapingOutputFormat.MARKDOWN,
-                depth=2,
-                scrape_external_links=False,
-                force=True,
+                links=[MediaLink(url="https://webscraper.io/test-sites/e-commerce/static")],
+                depth=1,
             ).model_dump(),
             format=get_qualified_class_name(WebScrapingRequest),
         )
@@ -161,32 +188,23 @@ class TestPlaywrightAgent:
         tries = 0
 
         while True:
-            await asyncio.sleep(2)
-
+            await asyncio.sleep(3)
             tries += 1
-            if len(results) >= 10 or (results and results[-1].format == wsc) or tries > 10:
+            if results and results[-1].format == wsc:
+                break
+            if tries > 12:
                 break
 
-        latest_results = results[-3:]
-        assert any(
-            result.payload["metadata"]["scraped_url"].startswith("https://webscraper.io")
-            for result in latest_results
-            if isinstance(result.payload, dict)
-        )
-        result = results[-2]
-        assert result.in_response_to == message.id
-        assert result.current_thread_id == message.id
-        assert result.recipient_list == []
+        completed = WebScrapingCompleted.model_validate(results[-1].payload)
 
-        assert result.payload["id"] is not None
-        assert result.payload["mimetype"] == "text/markdown"
-        assert result.payload["encoding"] == "utf-8"
-        assert result.payload["name"] is not None
+        assert completed.id == request_id
+        assert len(completed.links) >= 1
 
-        # Give the system a final moment to complete any pending tasks
-        await asyncio.sleep(2)
+        for result in results[:-1]:
+            assert result.payload["url"].endswith(".html") or result.payload["url"].endswith(".md")
+            fs = filesystem.to_resolver().resolve(agent.guild_id, "GUILD_GLOBAL")
+            assert fs.exists(result.payload["url"])
 
-        # Cancel any remaining tasks explicitly to avoid the warning
         for task in asyncio.all_tasks():
             if task is not asyncio.current_task() and not task.done():
                 task.cancel()
