@@ -7,7 +7,7 @@ from rustic_ai.core import GuildTopics, MessageTrackingClient, MessagingConfig
 from rustic_ai.core.agents.system.models import StopGuildRequest
 from rustic_ai.core.agents.testutils import EchoAgent, ProbeAgent
 from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder
-from rustic_ai.core.guild.metastore import Metastore
+from rustic_ai.core.guild.metastore import GuildStore, Metastore
 from rustic_ai.core.messaging.core.message import (
     AgentTag,
     RoutingDestination,
@@ -83,7 +83,7 @@ class TestGuildStop:
         time.sleep(2)
         running_agents = guild.execution_engine.get_agents_in_guild(guild_id)
         assert len(running_agents) == 2
-
+         
         guild._add_local_agent(probe_agent)
 
         probe_agent.publish_dict(
@@ -96,3 +96,9 @@ class TestGuildStop:
 
         is_agent_running = guild.execution_engine.is_agent_running(guild_id, echo_agent.id)
         assert is_agent_running is False
+
+        engine = Metastore.get_engine(database)
+        guild_store = GuildStore(engine)
+        guild_model = guild_store.get_guild(guild_id)
+        assert guild_model is not None
+        assert guild_model.status == "stopped"

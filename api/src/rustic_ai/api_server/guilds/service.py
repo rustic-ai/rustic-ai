@@ -1,7 +1,8 @@
-from typing import Optional, Sequence
+from typing import Optional
 
 from sqlalchemy import Engine
 
+from rustic_ai.api_server.guilds.schema import GuildSpecResponse
 from rustic_ai.core.guild import GuildSpec
 from rustic_ai.core.guild.builders import GuildBuilder, GuildHelper
 from rustic_ai.core.guild.metastore import GuildStore
@@ -34,7 +35,7 @@ class GuildService:
 
         return guild.id
 
-    def get_guild(self, engine: Engine, guild_id: str) -> Optional[GuildSpec]:
+    def get_guild(self, engine: Engine, guild_id: str) -> Optional[GuildSpecResponse]:
         """
         Retrieves a guild and its agents from the database.
 
@@ -50,4 +51,7 @@ class GuildService:
 
         guild_spec = guild_model.to_guild_spec() if guild_model else None
 
-        return guild_spec
+        if guild_spec is None:
+            return None
+
+        return GuildSpecResponse(**guild_spec.model_dump(), status=guild_model.status)
