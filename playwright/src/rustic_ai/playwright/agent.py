@@ -1,4 +1,3 @@
-import asyncio
 from enum import StrEnum
 import hashlib
 import logging
@@ -208,7 +207,6 @@ class PlaywrightScraperAgent(Agent):
                     )
 
             await browser.close()
-            await asyncio.sleep(0.1)
 
             unique_scraped_docs = list({doc.name: doc for doc in scraped_docs}.values())
 
