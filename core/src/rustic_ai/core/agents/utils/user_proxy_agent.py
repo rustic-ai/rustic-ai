@@ -6,7 +6,7 @@ from pydantic import BaseModel
 import pydantic_core
 
 from rustic_ai.core import AgentSpec, Message
-from rustic_ai.core.agents.system.models import GuildUpdatedAnnouncement
+from rustic_ai.core.agents.system.models import GuildUpdatedAnnouncement, StopGuildRequest
 from rustic_ai.core.guild import BaseAgentProps
 from rustic_ai.core.guild.agent import (
     Agent,
@@ -16,7 +16,7 @@ from rustic_ai.core.guild.agent import (
     processor,
 )
 from rustic_ai.core.guild.agent_ext.mixins.guild_refresher import GuildRefreshMixin
-from rustic_ai.core.guild.dsl import GuildSpec
+from rustic_ai.core.guild.dsl import GuildSpec, GuildTopics
 from rustic_ai.core.messaging.core.message import (
     AgentTag,
     JsonDict,
@@ -58,7 +58,7 @@ def outgoing_message_filter(upa: "UserProxyAgent", message: Message) -> bool:
     return (is_from_outbox or is_tagged) and not is_sent_by_me
 
 
-def participant_req_filter(upa: "UserProxyAgent", message: Message) -> bool:
+def system_req_filter(upa: "UserProxyAgent", message: Message) -> bool:
     return message.topic_published_to == upa.guild_requests_topic
 
 
@@ -236,7 +236,7 @@ class UserProxyAgent(Agent[UserProxyAgentProps], GuildRefreshMixin):
 
         return [self.guilds_agents_ats[tag] for tag in tagged_users]
 
-    @processor(ParticipantListRequest, predicate=participant_req_filter)
+    @processor(ParticipantListRequest, predicate=system_req_filter)
     def handle_participants_request(self, ctx: ProcessContext[ParticipantListRequest]):
         participants = self._get_participant_list()
         routing_entry = RoutingRule(
@@ -247,3 +247,15 @@ class UserProxyAgent(Agent[UserProxyAgentProps], GuildRefreshMixin):
         )
         ctx.add_routing_step(routing_entry)
         ctx.send_dict(participants, format="Participants", forwarding=True)
+    
+    @processor(StopGuildRequest, predicate=system_req_filter)
+    def handle_stop_guild_request(self, ctx: ProcessContext[StopGuildRequest]):
+        routing_entry = RoutingRule(
+            agent=ctx.agent.get_agent_tag(),
+            destination=RoutingDestination(
+                topics=GuildTopics.SYSTEM_TOPIC,
+            ),
+        )
+        ctx.add_routing_step(routing_entry)
+        stopReq=StopGuildRequest(guild_id=ctx.payload.guild_id).model_dump()
+        ctx.send_dict(stopReq, format=get_qualified_class_name(StopGuildRequest), forwarding=True)
