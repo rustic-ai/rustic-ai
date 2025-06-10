@@ -176,7 +176,7 @@ class TestPlaywrightAgent:
             sender=AgentTag(id="testerId", name="tester"),
             payload=WebScrapingRequest(
                 id=request_id,
-                links=[MediaLink(url="https://gist.github.com/Nihal-Srivastava05/6dfbc56f6aebdf33788eb3d85a67e0f9")],
+                links=[MediaLink(url="https://webscraper.io/test-sites/e-commerce/static")],
                 depth=1,
             ).model_dump(),
             format=get_qualified_class_name(WebScrapingRequest),
