@@ -176,7 +176,7 @@ class TestPlaywrightAgent:
             sender=AgentTag(id="testerId", name="tester"),
             payload=WebScrapingRequest(
                 id=request_id,
-                links=[MediaLink(url="https://webscraper.io/test-sites/e-commerce/static")],
+                links=[MediaLink(url="https://gist.github.com/Nihal-Srivastava05/6dfbc56f6aebdf33788eb3d85a67e0f9")],
                 depth=1,
             ).model_dump(),
             format=get_qualified_class_name(WebScrapingRequest),
@@ -201,7 +201,7 @@ class TestPlaywrightAgent:
         assert len(completed.links) >= 1
 
         for result in results[:-1]:
-            assert result.payload["url"].endswith(".html") or result.payload["url"].endswith(".md")
+            assert result.payload["url"].endswith(".html") or result.payload["url"].endswith(".txt")
             fs = filesystem.to_resolver().resolve(agent.guild_id, "GUILD_GLOBAL")
             assert fs.exists(result.payload["url"])
 
