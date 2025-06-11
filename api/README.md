@@ -56,3 +56,5 @@ for details.
 Traces will be visible in Zipkin UI at http://localhost:9411/zipkin/
 
 Note: To stop the Zipkin server, use `./scripts/zipkin/zipkin_down.sh`
+
+**To run with all the available `rusticai` packages, use the poetry environment from the root directory, and prefix commands with `api/` — for example, use `./api/scripts/dev_server_with_otel.sh` instead of `./scripts/dev_server_with_otel.sh`.**
