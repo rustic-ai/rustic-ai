@@ -269,13 +269,18 @@ async def add_user_to_guild(guild_id: str, user_id: str, engine: Engine = Depend
     tags=["users"],
 )
 async def get_guilds_for_user(
-    user_id: str, status: Annotated[str | None, Query()] = None, engine: Engine = Depends(Metastore.get_engine)
+    user_id: str, statuses: Annotated[list[str] | None, Query()] = None, engine: Engine = Depends(Metastore.get_engine)
 ):
-    if status and status not in [s.value for s in GuildStatus]:
+    if statuses:
         valid_statuses = [s.value for s in GuildStatus]
-        raise HTTPException(status_code=400, detail=f"Invalid status: {status}. Valid statuses are: {valid_statuses}")
+        invalid_statuses = [s for s in statuses if s not in valid_statuses]
+        if invalid_statuses:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid status values: {invalid_statuses}. Valid statuses are: {valid_statuses}",
+            )
 
-    return CatalogStore(engine).get_guilds_for_user(user_id, status)
+    return CatalogStore(engine).get_guilds_for_user(user_id, statuses)
 
 
 @catalog_router.delete(
