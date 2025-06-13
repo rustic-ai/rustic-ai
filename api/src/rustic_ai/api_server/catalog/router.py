@@ -12,6 +12,7 @@ from rustic_ai.api_server.guilds.schema import IdInfo
 from rustic_ai.core.guild.dsl import GuildSpec
 from rustic_ai.core.guild.metaprog.agent_registry import AgentEntry
 from rustic_ai.core.guild.metastore.database import Metastore
+from rustic_ai.core.guild.metastore.models import GuildStatus
 
 from .catalog_store import CatalogStore
 from .models import (
@@ -267,8 +268,19 @@ async def add_user_to_guild(guild_id: str, user_id: str, engine: Engine = Depend
     operation_id="getGuildsForUser",
     tags=["users"],
 )
-async def get_guilds_for_user(user_id: str, engine: Engine = Depends(Metastore.get_engine)):
-    return CatalogStore(engine).get_guilds_for_user(user_id)
+async def get_guilds_for_user(
+    user_id: str, statuses: Annotated[list[str] | None, Query()] = None, engine: Engine = Depends(Metastore.get_engine)
+):
+    if statuses:
+        valid_statuses = [s.value for s in GuildStatus]
+        invalid_statuses = [s for s in statuses if s not in valid_statuses]
+        if invalid_statuses:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid status values: {invalid_statuses}. Valid statuses are: {valid_statuses}",
+            )
+
+    return CatalogStore(engine).get_guilds_for_user(user_id, statuses)
 
 
 @catalog_router.delete(

@@ -6,7 +6,10 @@ from pydantic import BaseModel
 import pydantic_core
 
 from rustic_ai.core import AgentSpec, Message
-from rustic_ai.core.agents.system.models import GuildUpdatedAnnouncement, StopGuildRequest
+from rustic_ai.core.agents.system.models import (
+    GuildUpdatedAnnouncement,
+    StopGuildRequest,
+)
 from rustic_ai.core.guild import BaseAgentProps
 from rustic_ai.core.guild.agent import (
     Agent,
@@ -247,7 +250,7 @@ class UserProxyAgent(Agent[UserProxyAgentProps], GuildRefreshMixin):
         )
         ctx.add_routing_step(routing_entry)
         ctx.send_dict(participants, format="Participants", forwarding=True)
-    
+
     @processor(StopGuildRequest, predicate=system_req_filter)
     def handle_stop_guild_request(self, ctx: ProcessContext[StopGuildRequest]):
         routing_entry = RoutingRule(
@@ -257,5 +260,5 @@ class UserProxyAgent(Agent[UserProxyAgentProps], GuildRefreshMixin):
             ),
         )
         ctx.add_routing_step(routing_entry)
-        stopReq=StopGuildRequest(guild_id=ctx.payload.guild_id).model_dump()
+        stopReq = StopGuildRequest(guild_id=ctx.payload.guild_id).model_dump()
         ctx.send_dict(stopReq, format=get_qualified_class_name(StopGuildRequest), forwarding=True)
