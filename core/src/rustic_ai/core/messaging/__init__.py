@@ -1,4 +1,4 @@
-from .backend import InMemoryMessagingBackend
+from .backend import InMemoryMessagingBackend, SharedMemoryMessagingBackend
 from .client import (
     FilteringClient,
     LoggingClient,
@@ -40,6 +40,7 @@ __all__ = [
     "MessagingInterface",
     "MessagingBackend",
     "InMemoryMessagingBackend",
+    "SharedMemoryMessagingBackend",
     "MessagingConfig",
     "AgentTag",
     "MDT",

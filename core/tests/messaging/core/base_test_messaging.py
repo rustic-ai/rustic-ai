@@ -424,9 +424,7 @@ class BaseTestMessagingABC(ABC):
         assert len(messages_received) == 1
         assert len(alt_messages_received) == 0
 
-    def test_enrich_message(
-        self, messaging, alt_messaging, message_publisher, simple_client, simple_client_2, generator
-    ):
+    def test_enrich_message(self, messaging, message_publisher, simple_client, generator):
 
         topic = "enrich_topic"
         client, messages_received = simple_client

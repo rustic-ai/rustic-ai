@@ -43,6 +43,7 @@ Agents interact with the messaging system via client interfaces:
 ### Backends
 Pluggable storage implementations:
 - **InMemoryMessagingBackend**: Fast, in-memory storage for development/testing
+- **SharedMemoryMessagingBackend**: Redis-like messaging for testing without external dependencies
 - **RedisMessagingBackend**: Persistent, distributed storage for production
 - **Custom Backends**: Implement `MessagingBackend` interface for specialized needs
 
@@ -200,15 +201,61 @@ MessagingConfig(
 ```
 
 **Features:**
+
 - **Performance**: Extremely fast in-memory operations
 - **Real-time**: Immediate callback-based notifications
 - **Singleton**: Shared state across multiple interface instances
 - **Development**: Perfect for testing and development
 
 **Limitations:**
+
 - **Not Persistent**: Data lost on restart
 - **Single Process**: Cannot share across processes
 - **Memory Bound**: Limited by available RAM
+
+#### SharedMemoryMessagingBackend
+```python
+# Configuration with auto-start server
+MessagingConfig(
+    backend_module="rustic_ai.core.messaging.backend.shared_memory_backend",
+    backend_class="SharedMemoryMessagingBackend",
+    backend_config={}
+)
+
+# Configuration with external server
+MessagingConfig(
+    backend_module="rustic_ai.core.messaging.backend.shared_memory_backend",
+    backend_class="SharedMemoryMessagingBackend",
+    backend_config={
+        "server_url": "http://localhost:8080",
+        "auto_start_server": False
+    }
+)
+```
+
+**Features:**
+
+- **Cross-Process**: Enables communication between separate processes
+- **Redis-like Operations**: Strings, hashes, sets, and pub/sub without Redis
+- **No External Dependencies**: Uses only Python standard library
+- **Real-time Subscriptions**: Long polling for real-time notifications
+- **Pattern Subscriptions**: Redis-style pattern matching (e.g., `sensor.*`)
+- **Message TTL**: Automatic message expiration
+- **Auto-cleanup**: Automatic resource management and cleanup
+- **Testing Focused**: Ideal for testing multiprocess scenarios
+
+**Use Cases:**
+
+- **Multiprocess Testing**: Test agents running in separate processes
+- **Development**: Redis-like features without external setup
+- **CI/CD**: Testing distributed scenarios without infrastructure
+- **Process Isolation**: When you need true process separation
+
+**Limitations:**
+
+- **Memory Only**: Data not persisted to disk
+- **Single Server**: No clustering or high availability
+- **Testing Scope**: Designed for testing rather than production
 
 #### RedisMessagingBackend
 ```python
@@ -227,6 +274,7 @@ MessagingConfig(
 ```
 
 **Features:**
+
 - **Persistent**: Data survives restarts
 - **Distributed**: Shared across processes and machines
 - **Scalable**: Redis clustering support
@@ -235,6 +283,7 @@ MessagingConfig(
 - **Efficient**: Pipeline operations for batch processing
 
 **Storage Strategy:**
+
 - **Sorted Sets**: Messages stored with timestamp scores for ordering
 - **Secondary Index**: Direct ID lookup via `msg:namespace:id` keys
 - **Pub/Sub**: Real-time notifications via Redis pub/sub
@@ -257,6 +306,10 @@ config = MessagingConfig(
     backend_class="InMemoryMessagingBackend",
     backend_config={}
 )
+
+# Shared memory backend helper
+from rustic_ai.core.messaging.backend.shared_memory_backend import create_shared_messaging_config
+shared_config = create_shared_messaging_config()
 
 # MessagingInterface uses config to create backend
 messaging = MessagingInterface(namespace="guild-123", messaging_config=config)
@@ -283,6 +336,7 @@ messaging_interface.publish(client_a, message)
 
 # 4. Backend stores and notifies:
 #    - InMemory: Immediate callback
+#    - SharedMemory: HTTP request + long polling notification
 #    - Redis: Pub/sub notification
 
 # 5. Agent B receives message:
@@ -290,13 +344,43 @@ messaging_interface.publish(client_a, message)
 #    - Message delivered to agent's message handler
 ```
 
+### Cross-Process Messaging Example
+
+```python
+# Process 1: Setup shared memory backend with MultiProcessExecutionEngine
+from rustic_ai.core.messaging.backend.shared_memory_backend import create_shared_messaging_config
+from rustic_ai.core.guild.execution.multiprocess import MultiProcessExecutionEngine
+
+# Create messaging config for cross-process communication
+messaging_config = create_shared_messaging_config()
+
+# Create guild with multiprocess execution
+guild = Guild(
+    guild_id="distributed-guild",
+    execution_engine=MultiProcessExecutionEngine(guild_id="distributed-guild"),
+    messaging_config=messaging_config
+)
+
+# Launch agents in separate processes
+for i in range(3):
+    agent_spec = create_worker_agent_spec(f"worker-{i}")
+    guild.launch_agent(agent_spec)
+
+# Agents can now communicate across processes via shared memory backend
+# - No Redis setup required
+# - Process isolation maintained
+# - Real-time messaging via long polling
+```
+
 ## Client Types
 
 ### MessageTrackingClient (Default)
+
 ```python
 class MessageTrackingClient(Client):
     """Tracks message processing with ordering and deduplication"""
 ```
+
 - **Message Ordering**: Processes messages in ID order
 - **Tracking**: Tracks last processed message ID
 - **Threading**: Uses events and heaps for efficient processing
@@ -317,6 +401,23 @@ class SimpleClient(Client):
 - **LoggingClient**: Add logging to message processing
 
 ## Integration with Execution Engines
+
+### Execution Engine Compatibility
+
+Different execution engines work optimally with different messaging backends:
+
+| Execution Engine | Recommended Backend | Reason |
+|------------------|-------------------|---------|
+| `SyncExecutionEngine` | `InMemoryMessagingBackend` | Fast, single-process operation |
+| `MultiThreadedEngine` | `InMemoryMessagingBackend` or `RedisMessagingBackend` | Thread-safe with shared memory |
+| `MultiProcessExecutionEngine` | **`SharedMemoryMessagingBackend`** or `RedisMessagingBackend` | Cross-process communication |
+| `RayExecutionEngine` | `RedisMessagingBackend` | Distributed messaging |
+
+The **SharedMemoryMessagingBackend** is particularly well-suited for the `MultiProcessExecutionEngine` because:
+- **No External Dependencies**: Works without Redis setup
+- **Process Isolation**: Each process gets proper isolation while maintaining communication
+- **Testing Friendly**: Ideal for testing distributed scenarios in CI/CD
+- **Redis-like Features**: Provides coordination primitives for process synchronization
 
 ### Execution Engine Responsibilities
 - **Configuration**: Provide `MessagingConfig` to agent wrappers
@@ -353,21 +454,30 @@ class AgentWrapper:
 
 ### Backend Performance Comparison
 
-| Feature | InMemoryBackend | RedisBackend |
-|---------|----------------|--------------|
-| **Latency** | ~1μs | ~1-10ms |
-| **Throughput** | Very High | High |
-| **Persistence** | None | Full |
-| **Scalability** | Single Process | Distributed |
-| **Memory Usage** | High (all in RAM) | Low (Redis manages) |
-| **Real-time** | Immediate | Near real-time |
+| Feature | InMemoryBackend | SharedMemoryBackend | RedisBackend |
+|---------|----------------|---------------------|--------------|
+| **Latency** | ~1μs | ~1-5ms | ~1-10ms |
+| **Throughput** | Very High | High | High |
+| **Persistence** | None | None | Full |
+| **Scalability** | Single Process | Multi-Process | Distributed |
+| **Memory Usage** | High (all in RAM) | Medium (HTTP overhead) | Low (Redis manages) |
+| **Real-time** | Immediate | Long polling | Near real-time |
+| **Cross-Process** | No | Yes | Yes |
+| **External Dependencies** | None | None | Redis Server |
 
 ## Best Practices
 
 ### Development
-- Use `InMemoryMessagingBackend` for fast iteration
+- Use `InMemoryMessagingBackend` for fast iteration and single-process testing
+- Use `SharedMemoryMessagingBackend` for testing multiprocess scenarios and process isolation
 - Enable debug logging for message flow visibility
 - Use `SyncExecutionEngine` for deterministic testing
+
+### Testing
+- Use `SharedMemoryMessagingBackend` with `MultiProcessExecutionEngine` for realistic testing
+- Leverage shared memory backend's Redis-like operations for test coordination
+- Use pattern subscriptions for flexible test monitoring
+- Take advantage of automatic cleanup for test isolation
 
 ### Production
 - Use `RedisMessagingBackend` for persistence and scalability
@@ -416,4 +526,4 @@ class AgentWrapper:
 - Backend performance metrics
 - Error rates and types
 
-> See the [Execution](execution.md) section for how messaging integrates with execution engines, and [Agents](agents.md) for agent-specific messaging patterns. 
+> See the [Execution](execution.md) section for how messaging integrates with execution engines, [Shared Memory Backend](shared_memory_backend.md) for detailed information about cross-process messaging, and [Agents](agents.md) for agent-specific messaging patterns. 

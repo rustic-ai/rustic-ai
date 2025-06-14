@@ -3332,6 +3332,21 @@ files = [
 ]
 
 [[package]]
+name = "mdx-truly-sane-lists"
+version = "1.3"
+description = "Extension for Python-Markdown that makes lists truly sane. Custom indents for nested lists and fix for messy linebreaks."
+optional = false
+python-versions = "*"
+groups = ["docs"]
+files = [
+    {file = "mdx_truly_sane_lists-1.3-py3-none-any.whl", hash = "sha256:b9546a4c40ff8f1ab692f77cee4b6bfe8ddf9cccf23f0a24e71f3716fe290a37"},
+    {file = "mdx_truly_sane_lists-1.3.tar.gz", hash = "sha256:b661022df7520a1e113af7c355c62216b384c867e4f59fb8ee7ad511e6e77f45"},
+]
+
+[package.dependencies]
+Markdown = ">=2.6"
+
+[[package]]
 name = "mergedeep"
 version = "1.3.4"
 description = "A deep merge function for 🐍."
@@ -8745,4 +8760,4 @@ google-cloud = ["gcsfs"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<3.13"
-content-hash = "0f5e546236c80450b8350e15acae1391ca140e4f343bd74612c480544db1ce36"
+content-hash = "d387c025e753bc74a81b2869a5f9863081af54beb7dee351eb4c02011304d17b"
