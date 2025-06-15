@@ -263,7 +263,7 @@ def test_agent_interaction(test_guild):
     probe_agent.publish("default_topic", StartMessage(data="test"))
     
     # Wait for messages to be processed
-    time.sleep(1)
+    time.sleep(0.01)
     
     # Get all messages captured by the probe
     messages = probe_agent.get_messages()
@@ -306,7 +306,7 @@ def test_llm_agent(probe_agent, guild):
         format=ChatCompletionRequest,
     )
     
-    time.sleep(1)  # Wait for processing
+    time.sleep(0.01)  # Wait for processing
     
     # Check the results
     messages = probe_agent.get_messages()

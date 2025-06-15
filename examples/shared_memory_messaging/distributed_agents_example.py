@@ -1,20 +1,22 @@
 #!/usr/bin/env python3
 """
-Example: Distributed Agents with Shared Memory Messaging
+Example: Distributed Agents with Embedded Messaging
 
-This example demonstrates how to use the SharedMemoryMessagingBackend
+This example demonstrates how to use the EmbeddedMessagingBackend
 to test distributed agents across different execution engines without
 requiring Redis or other external dependencies.
 
 The example shows:
-1. Setting up a shared memory server
+1. Setting up an embedded messaging server
 2. Creating agents with different execution engines
 3. Testing message passing between distributed agents
-4. Using Redis-like features for coordination
+4. Using message-based coordination features
 """
 
 import asyncio
+import threading
 import time
+from typing import Any, Dict, Set
 
 from rustic_ai.core.guild.agent import Agent
 from rustic_ai.core.guild.execution.multithreaded.multithreaded_exec_engine import (
@@ -22,24 +24,44 @@ from rustic_ai.core.guild.execution.multithreaded.multithreaded_exec_engine impo
 )
 from rustic_ai.core.guild.execution.sync.sync_exec_engine import SyncExecutionEngine
 from rustic_ai.core.guild.guild import Guild
-from rustic_ai.core.messaging.backend.shared_memory_backend import (
-    SharedMemoryMessagingBackend,
-    create_shared_messaging_config,
-    start_shared_memory_server,
+from rustic_ai.core.messaging.backend.embedded_backend import (
+    EmbeddedMessagingBackend,
+    EmbeddedServer,
+    create_embedded_messaging_config,
 )
 from rustic_ai.core.messaging.core.message import AgentTag, Message
 from rustic_ai.core.messaging.core.messaging_config import MessagingConfig
 from rustic_ai.core.utils.gemstone_id import GemstoneGenerator
 
 
+def start_server_thread(port=31143):
+    """Start server in background thread for examples."""
+    def run_server():
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        server = EmbeddedServer(port=port)
+        loop.run_until_complete(server.start())
+        try:
+            loop.run_forever()
+        finally:
+            loop.run_until_complete(server.stop())
+            loop.close()
+
+    thread = threading.Thread(target=run_server, daemon=True)
+    thread.start()
+    time.sleep(0.3)  # Wait for server to start
+    return port
+
+
 class CoordinatorAgent(Agent):
     """Agent that coordinates work between other agents."""
 
-    def __init__(self, agent_id: str, messaging_backend: SharedMemoryMessagingBackend):
+    def __init__(self, agent_id: str, messaging_backend: EmbeddedMessagingBackend):
         super().__init__(agent_id, agent_id)
         self.messaging_backend = messaging_backend
         self.tasks_assigned = 0
         self.results_received = 0
+        self.task_results: Dict[str, Dict[str, Any]] = {}  # Store results in memory since we don't have Redis operations
 
     async def handle_message(self, message: Message) -> None:
         """Handle incoming messages."""
@@ -47,21 +69,16 @@ class CoordinatorAgent(Agent):
             self.results_received += 1
             worker_id = message.payload.get("worker_id")
             result = message.payload.get("result")
+            task_id = message.payload.get("task_id")
 
             print(f"Coordinator received result from {worker_id}: {result}")
 
-            # Store result in shared memory for other agents
-            self.messaging_backend.hset(
-                "results",
-                f"task_{message.payload.get('task_id')}",
-                str(result)
-            )
-
-            # Update completion status
-            self.messaging_backend.set(
-                f"task_status_{message.payload.get('task_id')}",
-                "completed"
-            )
+            # Store result in memory
+            self.task_results[f"task_{task_id}"] = {
+                "worker_id": worker_id,
+                "result": result,
+                "status": "completed"
+            }
 
     def assign_task(self, task_id: int, task_data: str, worker_topic: str) -> None:
         """Assign a task to a worker."""
@@ -82,16 +99,13 @@ class CoordinatorAgent(Agent):
         self.messaging_backend.store_message("distributed_example", worker_topic, task_message)
         self.tasks_assigned += 1
 
-        # Track task in shared memory
-        self.messaging_backend.set(f"task_status_{task_id}", "assigned")
-
         print(f"Coordinator assigned task {task_id} to {worker_topic}")
 
 
 class WorkerAgent(Agent):
     """Agent that processes work tasks."""
 
-    def __init__(self, agent_id: str, messaging_backend: SharedMemoryMessagingBackend):
+    def __init__(self, agent_id: str, messaging_backend: EmbeddedMessagingBackend):
         super().__init__(agent_id, agent_id)
         self.messaging_backend = messaging_backend
         self.tasks_processed = 0
@@ -125,38 +139,37 @@ class WorkerAgent(Agent):
             self.messaging_backend.store_message("distributed_example", "coordinator_results", result_message)
             self.tasks_processed += 1
 
-            # Update worker status
-            self.messaging_backend.sadd("active_workers", self.id)
-
 
 class MonitorAgent(Agent):
     """Agent that monitors system status."""
 
-    def __init__(self, agent_id: str, messaging_backend: SharedMemoryMessagingBackend):
+    def __init__(self, agent_id: str, messaging_backend: EmbeddedMessagingBackend, coordinator: CoordinatorAgent):
         super().__init__(agent_id, agent_id)
         self.messaging_backend = messaging_backend
+        self.coordinator = coordinator
         self.monitoring = True
+        self.active_workers: Set[str] = set()
 
     async def handle_message(self, message: Message) -> None:
         """Handle monitoring commands."""
         if message.payload.get("type") == "status_request":
             await self.report_status()
+        elif message.payload.get("type") == "work_result":
+            # Track worker activity
+            worker_id = message.payload.get("worker_id")
+            if worker_id:
+                self.active_workers.add(worker_id)
 
     async def report_status(self) -> None:
         """Report system status."""
-        # Get active workers
-        active_workers = self.messaging_backend.smembers("active_workers")
-
-        # Get completed tasks
-        completed_tasks = []
-        for i in range(10):  # Check first 10 tasks
-            status = self.messaging_backend.get(f"task_status_{i}")
-            if status == "completed":
-                completed_tasks.append(i)
+        completed_tasks = [k for k, v in self.coordinator.task_results.items()
+                           if v.get("status") == "completed"]
 
         print("Monitor Report:")
-        print(f"  Active Workers: {len(active_workers)} - {list(active_workers)}")
-        print(f"  Completed Tasks: {len(completed_tasks)} - {completed_tasks}")
+        print(f"  Active Workers: {len(self.active_workers)} - {list(self.active_workers)}")
+        print(f"  Tasks Assigned: {self.coordinator.tasks_assigned}")
+        print(f"  Results Received: {self.coordinator.results_received}")
+        print(f"  Completed Tasks: {len(completed_tasks)} - {[t.replace('task_', '') for t in completed_tasks]}")
 
     async def start_monitoring(self) -> None:
         """Start periodic monitoring."""
@@ -165,12 +178,11 @@ class MonitorAgent(Agent):
             await asyncio.sleep(2)
 
 
-def create_guild_with_shared_memory(execution_engine_type: str,
-                                    messaging_backend: SharedMemoryMessagingBackend) -> Guild:
-    """Create a guild with the specified execution engine and shared memory messaging."""
+def create_guild_with_embedded_messaging(execution_engine_type: str, port: int) -> Guild:
+    """Create a guild with the specified execution engine and embedded messaging."""
 
     # Create messaging config
-    config_dict = create_shared_messaging_config(messaging_backend.server_url)
+    config_dict = create_embedded_messaging_config(port=port)
     config_dict["backend_config"]["auto_start_server"] = False
     messaging_config = MessagingConfig(**config_dict)
 
@@ -194,20 +206,20 @@ def create_guild_with_shared_memory(execution_engine_type: str,
 
 async def run_distributed_example():
     """Run the distributed agents example."""
-    print("Starting Distributed Agents Example with Shared Memory Messaging")
-    print("=" * 60)
+    print("Starting Distributed Agents Example with Embedded Messaging")
+    print("=" * 70)
 
-    # Start shared memory server
-    server, server_url = start_shared_memory_server()
-    print(f"Started shared memory server at: {server_url}")
+    # Start socket server
+    port = start_server_thread(31143)
+    print(f"Started socket server on port: {port}")
 
     try:
         # Create shared messaging backend for direct operations
-        shared_backend = SharedMemoryMessagingBackend(server_url, auto_start_server=False)
+        shared_backend = EmbeddedMessagingBackend(port=port, auto_start_server=False)
 
         # Create coordinator agent with sync execution
         print("\nCreating Coordinator Guild (Sync Execution)...")
-        coordinator_guild = create_guild_with_shared_memory("sync", shared_backend)
+        coordinator_guild = create_guild_with_embedded_messaging("sync", port)
         coordinator = CoordinatorAgent("coordinator_1", shared_backend)
         coordinator_guild.add_agent(coordinator)
 
@@ -220,7 +232,7 @@ async def run_distributed_example():
         workers = []
 
         for i in range(3):
-            worker_guild = create_guild_with_shared_memory("multithreaded", shared_backend)
+            worker_guild = create_guild_with_embedded_messaging("multithreaded", port)
             worker = WorkerAgent(f"worker_{i + 1}", shared_backend)
             worker_guild.add_agent(worker)
 
@@ -232,9 +244,12 @@ async def run_distributed_example():
 
         # Create monitor agent
         print("Creating Monitor Guild (Sync Execution)...")
-        monitor_guild = create_guild_with_shared_memory("sync", shared_backend)
-        monitor = MonitorAgent("monitor_1", shared_backend)
+        monitor_guild = create_guild_with_embedded_messaging("sync", port)
+        monitor = MonitorAgent("monitor_1", shared_backend, coordinator)
         monitor_guild.add_agent(monitor)
+
+        # Subscribe monitor to results to track worker activity
+        monitor_guild.messaging_interface.subscribe("coordinator_results", monitor.handle_message)
 
         # Start all guilds
         print("\nStarting all guilds...")
@@ -271,38 +286,15 @@ async def run_distributed_example():
         print("\nFinal Status Report:")
         await monitor.report_status()
 
-        # Show Redis-like data structures
-        print("\nShared Memory Data Structures:")
-        print(f"Active Workers: {shared_backend.smembers('active_workers')}")
-
         # Show task results
         print("\nTask Results:")
-        for i in range(1, 6):
-            result = shared_backend.hget("results", f"task_{i}")
-            status = shared_backend.get(f"task_status_{i}")
-            print(f"  Task {i}: {status} - {result}")
+        for task_key, result_info in coordinator.task_results.items():
+            print(f"  {task_key}: {result_info['status']} by {result_info['worker_id']} - {result_info['result']}")
 
-        # Test pattern subscription
-        print("\nTesting pattern subscription...")
-        pattern_messages = []
-
-        def pattern_handler(message):
-            pattern_messages.append(message)
-
-        shared_backend.psubscribe("worker_*_tasks", pattern_handler)
-
-        # Send a test message
-        generator = GemstoneGenerator(1)
-        test_msg = Message(
-            id_obj=generator.get_id(),
-            sender=AgentTag(id="test", name="Test"),
-            topics="worker_test_tasks",
-            payload={"type": "test", "data": "pattern_test"}
-        )
-        shared_backend.store_message("test", "worker_test_tasks", test_msg)
-
-        await asyncio.sleep(0.5)
-        print(f"Pattern subscription received {len(pattern_messages)} messages")
+        # Test message history
+        print("\nTesting message history...")
+        all_results = shared_backend.get_messages_for_topic("coordinator_results")
+        print(f"Total result messages: {len(all_results)}")
 
         # Stop monitoring
         monitor.monitoring = False
@@ -318,11 +310,9 @@ async def run_distributed_example():
         # Cleanup
         shared_backend.cleanup()
 
-    finally:
-        # Stop server
-        server.cleanup()
-        server.stop()
-        print("\nShared memory server stopped")
+    except Exception as e:
+        print(f"Error in distributed example: {e}")
+        raise
 
 
 def run_simple_messaging_test():
@@ -331,13 +321,13 @@ def run_simple_messaging_test():
     print("=" * 30)
 
     # Start server
-    server, url = start_shared_memory_server()
-    print(f"Server started at: {url}")
+    port = start_server_thread(31144)
+    print(f"Server started on port: {port}")
 
     try:
         # Create two backends
-        backend1 = SharedMemoryMessagingBackend(url, auto_start_server=False)
-        backend2 = SharedMemoryMessagingBackend(url, auto_start_server=False)
+        backend1 = EmbeddedMessagingBackend(port=port, auto_start_server=False)
+        backend2 = EmbeddedMessagingBackend(port=port, auto_start_server=False)
 
         # Test basic messaging
         generator = GemstoneGenerator(1)
@@ -357,15 +347,6 @@ def run_simple_messaging_test():
         if messages:
             print(f"Message content: {messages[0].payload}")
 
-        # Test Redis-like operations
-        backend1.set("shared_key", "shared_value")
-        value = backend2.get("shared_key")
-        print(f"Shared key-value: {value}")
-
-        backend1.sadd("shared_set", "item1", "item2", "item3")
-        members = backend2.smembers("shared_set")
-        print(f"Shared set members: {members}")
-
         # Test subscription
         received_messages = []
 
@@ -374,7 +355,7 @@ def run_simple_messaging_test():
             print(f"Subscription received: {message.payload}")
 
         backend2.subscribe("notifications", handler)
-        time.sleep(0.2)  # Let subscription register
+        time.sleep(0.3)  # Let subscription register
 
         # Send notification
         notification = Message(
@@ -388,13 +369,19 @@ def run_simple_messaging_test():
         time.sleep(0.5)  # Wait for delivery
         print(f"Received {len(received_messages)} notifications via subscription")
 
+        # Test message retrieval
+        all_notifications = backend2.get_messages_for_topic("notifications")
+        print(f"Total notifications in topic: {len(all_notifications)}")
+
         # Cleanup
         backend1.cleanup()
         backend2.cleanup()
 
-    finally:
-        server.stop()
-        print("Test completed")
+    except Exception as e:
+        print(f"Error in simple test: {e}")
+        raise
+
+    print("Test completed")
 
 
 if __name__ == "__main__":

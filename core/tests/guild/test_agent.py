@@ -1,3 +1,5 @@
+import time
+
 from rustic_ai.core.agents.testutils.probe_agent import ProbeAgent
 from rustic_ai.core.guild.agent import Agent
 from rustic_ai.core.guild.builders import AgentBuilder
@@ -35,6 +37,9 @@ class TestAgent:
         guild._add_local_agent(probe_agent)
 
         probe_agent.publish_dict(guild.DEFAULT_TOPIC, {"key1": "value1"})
+
+        # Allow time for asynchronous message delivery
+        time.sleep(0.5)
 
         assert len(agent.received_messages) == 1
         assert agent.received_messages[0].payload["key1"] == "value1"

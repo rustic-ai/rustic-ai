@@ -65,7 +65,15 @@ class TestGuildBuilder:
                     backend_config={},
                 ),
                 id="InMemoryMessagingBackend",
-            )
+            ),
+            pytest.param(
+                MessagingConfig(
+                    backend_module="rustic_ai.core.messaging.backend.embedded_backend",
+                    backend_class="EmbeddedMessagingBackend",
+                    backend_config={"auto_start_server": True},
+                ),
+                id="EmbeddedMessagingBackend",
+            ),
         ],
     )
     def messaging(self, request) -> MessagingConfig:
@@ -258,9 +266,9 @@ class TestGuildBuilder:
         msgconf = GuildHelper.get_messaging_config(new_spec)
 
         # This is not parameterized as we are testing initialization from a JSON file
-        assert msgconf.backend_module == "rustic_ai.core.messaging.backend"
-        assert msgconf.backend_class == "InMemoryMessagingBackend"
-        assert msgconf.backend_config == {}
+        assert msgconf.backend_module == "rustic_ai.core.messaging.backend.embedded_backend"
+        assert msgconf.backend_class == "EmbeddedMessagingBackend"
+        assert msgconf.backend_config == {"auto_start_server": True}
 
     def test_guild_from_yaml(
         self,
@@ -283,8 +291,8 @@ class TestGuildBuilder:
         msgconf = GuildHelper.get_messaging_config(new_spec)
 
         # This is not parameterized as we are testing initialization from a YAML file
-        assert msgconf.backend_module == "rustic_ai.core.messaging.backend"
-        assert msgconf.backend_class == "InMemoryMessagingBackend"
+        assert msgconf.backend_module == "rustic_ai.core.messaging.backend.embedded_backend"
+        assert msgconf.backend_class == "EmbeddedMessagingBackend"
         assert msgconf.backend_config == {}
 
     def test_guild_bootstrap(
@@ -337,7 +345,7 @@ class TestGuildBuilder:
 
         assert guild.routes == routing_slip
 
-        time.sleep(2)
+        time.sleep(0.01)
 
         # Test if the echo agent is added to the metastore
         with Session(engine) as session:
@@ -406,7 +414,7 @@ class TestGuildBuilder:
             format=AgentListRequest,
         )
 
-        time.sleep(2)
+        time.sleep(0.01)
 
         probe_agent_messages = probe_agent.get_messages()
         assert len(probe_agent_messages) == 1
@@ -422,7 +430,7 @@ class TestGuildBuilder:
             routing_slip=guild.routes,
         )
 
-        time.sleep(2)
+        time.sleep(0.01)
 
         probe_agent_messages = probe_agent.get_messages()
         assert len(probe_agent_messages) == 2
@@ -441,7 +449,7 @@ class TestGuildBuilder:
             format=AgentLaunchRequest,
         )
 
-        time.sleep(2)
+        time.sleep(1.0)  # Increased sleep time for EmbeddedMessagingBackend
 
         probe_agent_messages = probe_agent.get_messages()
         assert len(probe_agent_messages) == 3
@@ -461,7 +469,7 @@ class TestGuildBuilder:
             format=AgentGetRequest,
         )
 
-        time.sleep(2)
+        time.sleep(0.01)
 
         probe_agent_messages = probe_agent.get_messages()
         assert len(probe_agent_messages) == 1
@@ -480,7 +488,7 @@ class TestGuildBuilder:
             format=AgentListRequest,
         )
 
-        time.sleep(2)
+        time.sleep(0.01)
 
         probe_agent_messages = probe_agent.get_messages()
         assert len(probe_agent_messages) == 1
@@ -588,7 +596,7 @@ class TestGuildBuilder:
             format=UserAgentCreationRequest,
         )
 
-        time.sleep(2)
+        time.sleep(1.0)  # Increased sleep time for EmbeddedMessagingBackend
 
         probe_agent_messages = probe_agent.get_messages()
 
@@ -611,7 +619,7 @@ class TestGuildBuilder:
             format=RunningAgentListRequest,
         )
 
-        time.sleep(2)
+        time.sleep(0.01)
 
         probe_agent_messages = probe_agent.get_messages()
 
@@ -696,7 +704,7 @@ class TestGuildBuilder:
             recipient_list=[AgentTag(id=UserProxyAgent.get_user_agent_id("test_user"), name="test_user")],
         )
 
-        time.sleep(2)
+        time.sleep(0.01)
 
         probe_agent_messages = probe_agent.get_messages()
 
@@ -719,7 +727,7 @@ class TestGuildBuilder:
             format=UserAgentCreationRequest,
         )
 
-        time.sleep(2)
+        time.sleep(0.01)
 
         probe_agent_messages = probe_agent.get_messages()
 
@@ -736,7 +744,7 @@ class TestGuildBuilder:
             format=RunningAgentListRequest,
         )
 
-        time.sleep(2)
+        time.sleep(0.01)
 
         probe_agent_messages = probe_agent.get_messages()
 
@@ -857,7 +865,7 @@ class TestGuildBuilder:
 
         msg_id_int = msg_id.to_int()
 
-        time.sleep(1)
+        time.sleep(1.0)  # Increased sleep time for EmbeddedMessagingBackend
 
         probe_agent_messages = probe_agent.get_messages()
 
@@ -893,7 +901,7 @@ class TestGuildBuilder:
             msg_id=send_id,
         )
 
-        time.sleep(1)
+        time.sleep(1.0)  # Increased sleep time for EmbeddedMessagingBackend
 
         probe_agent_messages = probe_agent.get_messages()
 

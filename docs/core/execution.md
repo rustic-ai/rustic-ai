@@ -229,12 +229,12 @@ Different execution engines work best with different messaging backends:
 |--------|----------------------|-------|
 | `SyncExecutionEngine` | In-Memory | Simple, fast for single-process |
 | `MultiThreadedEngine` | In-Memory or Redis | Thread-safe messaging |
-| `MultiProcessExecutionEngine` | **Shared Memory** or Redis | Cross-process communication |
+| `MultiProcessExecutionEngine` | **Socket Messaging** or Redis | Cross-process communication |
 | `RayExecutionEngine` | Redis | Distributed messaging |
 
-For multiprocess execution, the [Shared Memory Backend](shared_memory_backend.md) is particularly well-suited as it provides:
+For multiprocess execution, the [Socket Messaging Backend](socket_messaging_backend.md) is particularly well-suited as it provides:
 - Cross-process messaging without external dependencies
-- Redis-like operations for process coordination
+- Real-time socket-based operations for process coordination
 - Automatic cleanup and resource management
 
 ### Fault Tolerance and Recovery

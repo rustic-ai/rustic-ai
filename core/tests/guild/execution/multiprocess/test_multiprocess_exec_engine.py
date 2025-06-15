@@ -26,9 +26,13 @@ class TestMultiProcessExecutionEngine:
         return "test_guild"
 
     @pytest.fixture
-    def engine(self, guild_id):
+    def organization_id(self):
+        return "test_organization"
+
+    @pytest.fixture
+    def engine(self, guild_id, organization_id):
         # Use a small max_processes for testing
-        engine = MultiProcessExecutionEngine(guild_id=guild_id, max_processes=2)
+        engine = MultiProcessExecutionEngine(guild_id=guild_id, organization_id=organization_id, max_processes=2)
         yield engine
         engine.shutdown()
 
@@ -57,20 +61,21 @@ class TestMultiProcessExecutionEngine:
             backend_config={},
         )
 
-    def test_engine_initialization(self, guild_id):
+    def test_engine_initialization(self, guild_id, organization_id):
         """Test that the engine initializes correctly."""
-        engine = MultiProcessExecutionEngine(guild_id=guild_id, max_processes=4)
+        engine = MultiProcessExecutionEngine(guild_id=guild_id, organization_id=organization_id, max_processes=4)
 
         assert engine.guild_id == guild_id
+        assert engine.organization_id == organization_id
         assert engine.max_processes == 4
         assert isinstance(engine.agent_tracker, MultiProcessAgentTracker)
         assert len(engine.owned_agents) == 0
 
         engine.shutdown()
 
-    def test_engine_initialization_default_max_processes(self, guild_id):
+    def test_engine_initialization_default_max_processes(self, guild_id, organization_id):
         """Test that the engine uses CPU count as default max_processes."""
-        engine = MultiProcessExecutionEngine(guild_id=guild_id)
+        engine = MultiProcessExecutionEngine(guild_id=guild_id, organization_id=organization_id)
 
         assert engine.max_processes == multiprocessing.cpu_count()
 

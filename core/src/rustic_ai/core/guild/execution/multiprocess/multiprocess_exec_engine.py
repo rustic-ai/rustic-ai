@@ -23,15 +23,16 @@ class MultiProcessExecutionEngine(ExecutionEngine):
     - Graceful shutdown handling
     """
 
-    def __init__(self, guild_id: str, max_processes: Optional[int] = None) -> None:
+    def __init__(self, guild_id: str, organization_id: str, max_processes: Optional[int] = None) -> None:
         """
         Initialize the multiprocess execution engine.
 
         Args:
             guild_id: The ID of the guild this engine manages
+            organization_id: The ID of the organization this engine belongs to
             max_processes: Maximum number of processes to use (defaults to CPU count)
         """
-        super().__init__(guild_id=guild_id)
+        super().__init__(guild_id=guild_id, organization_id=organization_id)
 
         # Set multiprocessing start method to 'spawn' for better cross-platform compatibility
         # and to avoid issues with shared state

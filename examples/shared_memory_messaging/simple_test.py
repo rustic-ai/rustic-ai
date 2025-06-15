@@ -1,31 +1,52 @@
 #!/usr/bin/env python3
 """
-Simple test of the SharedMemoryMessagingBackend functionality.
+Simple test of the EmbeddedMessagingBackend functionality.
 """
 
+import asyncio
+import threading
 import time
 
 from rustic_ai.core.messaging import Priority
-from rustic_ai.core.messaging.backend.shared_memory_backend import (
-    SharedMemoryMessagingBackend,
-    start_shared_memory_server,
+from rustic_ai.core.messaging.backend.embedded_backend import (
+    EmbeddedMessagingBackend,
+    EmbeddedServer,
 )
 from rustic_ai.core.messaging.core.message import AgentTag, Message
 from rustic_ai.core.utils.gemstone_id import GemstoneGenerator
+
+
+def start_server_thread(port=31141):
+    """Start server in background thread for examples."""
+    def run_server():
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        server = EmbeddedServer(port=port)
+        loop.run_until_complete(server.start())
+        try:
+            loop.run_forever()
+        finally:
+            loop.run_until_complete(server.stop())
+            loop.close()
+
+    thread = threading.Thread(target=run_server, daemon=True)
+    thread.start()
+    time.sleep(0.3)  # Wait for server to start
+    return port
 
 
 def test_basic_messaging():
     """Test basic message storage and retrieval."""
     print("Testing basic messaging...")
 
-    # Start server
-    server, url = start_shared_memory_server()
-    print(f"Server started at: {url}")
+    # Start server on a fixed port for examples
+    port = start_server_thread(31141)
+    print(f"Server started on port: {port}")
 
     try:
         # Create two backends
-        backend1 = SharedMemoryMessagingBackend(url, auto_start_server=False)
-        backend2 = SharedMemoryMessagingBackend(url, auto_start_server=False)
+        backend1 = EmbeddedMessagingBackend(port=port, auto_start_server=False)
+        backend2 = EmbeddedMessagingBackend(port=port, auto_start_server=False)
 
         # Test basic messaging
         generator = GemstoneGenerator(1)
@@ -45,15 +66,6 @@ def test_basic_messaging():
         if messages:
             print(f"  Message content: {messages[0].payload}")
 
-        # Test Redis-like operations
-        backend1.set("shared_key", "shared_value")
-        value = backend2.get("shared_key")
-        print(f"✓ Shared key-value: {value}")
-
-        backend1.sadd("shared_set", "item1", "item2", "item3")
-        members = backend2.smembers("shared_set")
-        print(f"✓ Shared set members: {members}")
-
         # Test subscription
         received_messages = []
 
@@ -62,7 +74,7 @@ def test_basic_messaging():
             print(f"✓ Subscription received: {message.payload}")
 
         backend2.subscribe("notifications", handler)
-        time.sleep(0.2)  # Let subscription register
+        time.sleep(0.3)  # Let subscription register
 
         # Send notification
         notification = Message(
@@ -76,62 +88,14 @@ def test_basic_messaging():
         time.sleep(0.5)  # Wait for delivery
         print(f"✓ Received {len(received_messages)} notifications via subscription")
 
-        # Test pattern subscription
-        pattern_messages = []
+        # Test message history
+        all_messages = backend2.get_messages_for_topic("test_topic")
+        print(f"✓ Total messages in topic: {len(all_messages)}")
 
-        def pattern_handler(message):
-            pattern_messages.append(message)
-            print(f"✓ Pattern subscription received: {message.payload}")
-
-        backend2.psubscribe("sensor.*", pattern_handler)
-        time.sleep(0.2)
-
-        # Send to matching pattern
-        sensor_msg = Message(
-            id_obj=generator.get_id(Priority.NORMAL),
-            sender=AgentTag(id="sensor", name="Sensor"),
-            topics="sensor.temperature",
-            payload={"value": 25.5, "unit": "celsius"}
-        )
-        backend1.store_message("test", "sensor.temperature", sensor_msg)
-
-        time.sleep(0.5)
-        print(f"✓ Pattern subscription received {len(pattern_messages)} messages")
-
-        # Test TTL
-        print("Testing TTL...")
-        ttl_msg = Message(
-            id_obj=generator.get_id(Priority.NORMAL),
-            sender=AgentTag(id="temp", name="Temp"),
-            topics="ttl_topic",
-            payload={"data": "expires_soon"},
-            ttl=1  # 1 second TTL
-        )
-        backend1.store_message("test", "ttl_topic", ttl_msg)
-
-        # Should exist immediately
-        messages = backend2.get_messages_for_topic("ttl_topic")
-        print(f"✓ TTL message exists: {len(messages)} messages")
-
-        # Wait for expiration
-        print("  Waiting for TTL expiration...")
-        time.sleep(2)
-
-        # Check if cleaned up (may still exist due to cleanup timing)
-        messages = backend2.get_messages_for_topic("ttl_topic")
-        print(f"  After TTL: {len(messages)} messages (may still exist due to cleanup timing)")
-
-        # Test server stats
-        print("\nServer Statistics:")
-        try:
-            import json
-            import urllib.request
-            response = urllib.request.urlopen(f"{url}/stats")
-            stats = json.loads(response.read().decode())
-            for key, value in stats.items():
-                print(f"  {key}: {value}")
-        except Exception as e:
-            print(f"  Could not get stats: {e}")
+        # Test get messages since
+        if all_messages:
+            recent_messages = backend2.get_messages_for_topic_since("test_topic", all_messages[0].id)
+            print(f"✓ Messages since first message: {len(recent_messages)}")
 
         # Cleanup
         backend1.cleanup()
@@ -139,71 +103,105 @@ def test_basic_messaging():
 
         print("\n✓ All tests completed successfully!")
 
-    finally:
-        server.stop()
-        print("✓ Server stopped")
+    except Exception as e:
+        print(f"❌ Test failed: {e}")
+        raise
 
 
 def test_distributed_coordination():
     """Test distributed coordination features."""
     print("\nTesting distributed coordination...")
 
-    server, url = start_shared_memory_server()
+    port = start_server_thread(31142)
 
     try:
         # Simulate coordinator process
-        coordinator = SharedMemoryMessagingBackend(url, auto_start_server=False)
+        coordinator = EmbeddedMessagingBackend(port=port, auto_start_server=False)
 
         # Simulate worker processes
-        worker1 = SharedMemoryMessagingBackend(url, auto_start_server=False)
-        worker2 = SharedMemoryMessagingBackend(url, auto_start_server=False)
+        worker1 = EmbeddedMessagingBackend(port=port, auto_start_server=False)
+        worker2 = EmbeddedMessagingBackend(port=port, auto_start_server=False)
 
-        # Coordinator assigns tasks
-        coordinator.set("task_1", "process_data_batch_1")
-        coordinator.set("task_2", "process_data_batch_2")
-        coordinator.sadd("pending_tasks", "task_1", "task_2")
-        coordinator.set("task_counter", "2")
+        generator = GemstoneGenerator(2)
+
+        # Coordinator assigns tasks via messages
+        task1_msg = Message(
+            id_obj=generator.get_id(Priority.NORMAL),
+            sender=AgentTag(id="coordinator", name="Coordinator"),
+            topics="task_assignments",
+            payload={"task_id": "task_1", "action": "process_data_batch_1", "assigned_to": "worker1"}
+        )
+
+        task2_msg = Message(
+            id_obj=generator.get_id(Priority.NORMAL),
+            sender=AgentTag(id="coordinator", name="Coordinator"),
+            topics="task_assignments",
+            payload={"task_id": "task_2", "action": "process_data_batch_2", "assigned_to": "worker2"}
+        )
+
+        coordinator.store_message("coordination", "task_assignments", task1_msg)
+        coordinator.store_message("coordination", "task_assignments", task2_msg)
 
         print("✓ Coordinator assigned tasks")
 
         # Workers pick up tasks
-        pending = worker1.smembers("pending_tasks")
-        print(f"✓ Worker1 sees {len(pending)} pending tasks: {pending}")
+        tasks = worker1.get_messages_for_topic("task_assignments")
+        print(f"✓ Worker1 sees {len(tasks)} assigned tasks")
 
-        # Worker1 processes task_1
-        task1 = worker1.get("task_1")
-        worker1.hset("results", "task_1", f"completed_{task1}")
-        worker1.sadd("completed_tasks", "task_1")
-        print(f"✓ Worker1 completed: {task1}")
+        # Set up result subscriptions
+        results = []
 
-        # Worker2 processes task_2
-        task2 = worker2.get("task_2")
-        worker2.hset("results", "task_2", f"completed_{task2}")
-        worker2.sadd("completed_tasks", "task_2")
-        print(f"✓ Worker2 completed: {task2}")
+        def result_handler(message):
+            results.append(message)
+            print(f"✓ Coordinator received result: {message.payload}")
 
-        # Coordinator checks results
-        completed = coordinator.smembers("completed_tasks")
-        print(f"✓ Coordinator sees {len(completed)} completed tasks: {completed}")
+        coordinator.subscribe("task_results", result_handler)
+        time.sleep(0.3)
 
-        for task in completed:
-            result = coordinator.hget("results", task)
-            print(f"  {task}: {result}")
+        # Workers complete tasks and report results
+        result1_msg = Message(
+            id_obj=generator.get_id(Priority.NORMAL),
+            sender=AgentTag(id="worker1", name="Worker 1"),
+            topics="task_results",
+            payload={"task_id": "task_1", "status": "completed", "result": "processed_data_batch_1"}
+        )
 
-        # Test pub/sub for notifications
+        result2_msg = Message(
+            id_obj=generator.get_id(Priority.NORMAL),
+            sender=AgentTag(id="worker2", name="Worker 2"),
+            topics="task_results",
+            payload={"task_id": "task_2", "status": "completed", "result": "processed_data_batch_2"}
+        )
+
+        worker1.store_message("coordination", "task_results", result1_msg)
+        worker2.store_message("coordination", "task_results", result2_msg)
+
+        print("✓ Workers completed tasks")
+
+        # Wait for results
+        time.sleep(0.5)
+        print(f"✓ Coordinator received {len(results)} results")
+
+        # Test pub/sub for system notifications
         notifications = []
 
         def notification_handler(message):
             notifications.append(message)
+            print(f"✓ Worker received notification: {message.payload}")
 
         # All workers subscribe to notifications
         worker1.subscribe("system_notifications", notification_handler)
         worker2.subscribe("system_notifications", notification_handler)
-        time.sleep(0.2)
+        time.sleep(0.3)
 
         # Coordinator publishes notification
-        count = coordinator.publish("system_notifications", "All tasks completed!")
-        print(f"✓ Notification sent to {count} subscribers")
+        notification = Message(
+            id_obj=generator.get_id(Priority.NORMAL),
+            sender=AgentTag(id="coordinator", name="Coordinator"),
+            topics="system_notifications",
+            payload={"type": "completion", "message": "All tasks completed!"}
+        )
+        coordinator.store_message("coordination", "system_notifications", notification)
 
         time.sleep(0.5)
         print(f"✓ Workers received {len(notifications)} notifications")
@@ -215,8 +213,9 @@ def test_distributed_coordination():
 
         print("✓ Distributed coordination test completed!")
 
-    finally:
-        server.stop()
+    except Exception as e:
+        print(f"❌ Test failed: {e}")
+        raise
 
 
 if __name__ == "__main__":

@@ -75,7 +75,7 @@ class TestVectorAgent:
             payload={"documents": [Document(id="doc1", content="test doc", name="doc1", metadata={}).model_dump()]},
             format=IngestDocuments,
         )
-        time.sleep(0.5)
+        time.sleep(2.0)  # Allow more time for document ingestion
 
         # Search for documents
         probe_agent.publish_dict(
@@ -83,10 +83,10 @@ class TestVectorAgent:
             payload={"query": "test"},
             format=VectorSearchQuery,
         )
-        time.sleep(0.5)
+        time.sleep(2.0)  # Allow more time for search processing
 
         messages = probe_agent.get_messages()
-        assert len(messages) == 2
+        assert len(messages) == 2, f"Expected 2 messages, got {len(messages)}"
         assert messages[0].payload["succeeded"] == ["doc1-0"]
         assert messages[1].payload["results"][0]["document"]["content"] == "test doc"
 

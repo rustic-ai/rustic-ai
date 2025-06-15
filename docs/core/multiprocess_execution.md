@@ -28,7 +28,7 @@ The multiprocess execution engine consists of three main components:
 - **Cross-platform Support**: Uses 'spawn' start method for compatibility
 
 ### Integration Features
-- **Messaging Support**: Works seamlessly with shared memory and Redis backends
+- **Messaging Support**: Works seamlessly with socket messaging and Redis backends
 - **Dependency Injection**: Full support for agent dependencies across processes
 - **Guild Integration**: Complete integration with guild lifecycle management
 - **Statistics**: Comprehensive engine and process statistics
@@ -52,10 +52,10 @@ engine = MultiProcessExecutionEngine(guild_id="my-guild", max_processes=8)
 ```python
 from rustic_ai.core.guild import Guild
 from rustic_ai.core.guild.execution.multiprocess import MultiProcessExecutionEngine
-from rustic_ai.core.messaging.backend.shared_memory_backend import create_shared_messaging_config
+from rustic_ai.core.messaging.backend.embedded_backend import create_embedded_messaging_config
 
 # Create messaging config that works well with multiprocess
-messaging_config = create_shared_messaging_config()
+messaging_config = create_embedded_messaging_config()
 
 # Create guild with multiprocess engine
 guild = Guild(
@@ -161,7 +161,7 @@ def robust_agent_management(engine, guild_id):
             break
         except Exception as e:
             print(f"Error in monitoring: {e}")
-            time.sleep(1)
+            time.sleep(0.01)
 ```
 
 ## Configuration Options
@@ -180,10 +180,10 @@ engine = MultiProcessExecutionEngine(
 For multiprocess execution, use messaging backends that support cross-process communication:
 
 ```python
-# Option 1: Shared Memory Backend (recommended)
-from rustic_ai.core.messaging.backend.shared_memory_backend import create_shared_messaging_config
+# Option 1: Embedded Messaging Backend (recommended)
+from rustic_ai.core.messaging.backend.embedded_backend import create_embedded_messaging_config
 
-messaging_config = create_shared_messaging_config()
+messaging_config = create_embedded_messaging_config()
 
 # Option 2: Redis Backend
 from rustic_ai.core.messaging.core.messaging_config import MessagingConfig
@@ -345,9 +345,9 @@ from rustic_ai.core.guild import Guild, AgentBuilder
 from rustic_ai.core.guild.execution.multiprocess import MultiProcessExecutionEngine
 
 def parallel_data_processing():
-    # Create shared memory messaging for cross-process communication
-    from rustic_ai.core.messaging.backend.shared_memory_backend import create_shared_messaging_config
-    messaging_config = create_shared_messaging_config()
+    # Create embedded messaging for cross-process communication
+    from rustic_ai.core.messaging.backend.embedded_backend import create_embedded_messaging_config
+    messaging_config = create_embedded_messaging_config()
     
     # Create guild with multiprocess engine
     guild = Guild(
@@ -385,7 +385,7 @@ def parallel_data_processing():
         while True:
             stats = engine.get_engine_stats()
             print(f"Running agents: {stats['owned_agents_count']}")
-            time.sleep(2)
+            time.sleep(0.01)
     except KeyboardInterrupt:
         print("Shutting down...")
         guild.shutdown()
@@ -399,7 +399,7 @@ def monte_carlo_simulation(num_workers=None):
         num_workers = multiprocessing.cpu_count()
     
     # Setup
-    messaging_config = create_shared_messaging_config()
+    messaging_config = create_embedded_messaging_config()
     guild = Guild(guild_id="monte_carlo", messaging_config=messaging_config)
     engine = MultiProcessExecutionEngine(guild_id="monte_carlo", max_processes=num_workers)
     
@@ -486,24 +486,42 @@ def monitor_engine_performance(engine, guild_id):
     print(f"Agents: {len(agents)}/{stats['max_processes']}")
 ```
 
-## Integration with Shared Memory Backend
+## Integration with Embedded Messaging Backend
 
-The multiprocess execution engine works particularly well with the [Shared Memory Backend](shared_memory_backend.md):
+The multiprocess execution engine works particularly well with the [Embedded Messaging Backend](embedded_messaging_backend.md):
 
 ```python
-from rustic_ai.core.messaging.backend.shared_memory_backend import (
-    SharedMemoryMessagingBackend,
-    start_shared_memory_server
+from rustic_ai.core.messaging.backend.embedded_backend import (
+    EmbeddedMessagingBackend,
+    EmbeddedServer
 )
+import asyncio
+import threading
 
-# Start shared server for cross-process messaging
-server, url = start_shared_memory_server()
+# Start socket server for cross-process messaging
+def start_server(port=31134):
+    def run_server():
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        server = EmbeddedServer(port=port)
+        loop.run_until_complete(server.start())
+        try:
+            loop.run_forever()
+        finally:
+            loop.run_until_complete(server.stop())
+            loop.close()
+    
+    thread = threading.Thread(target=run_server, daemon=True)
+    thread.start()
+    return port
 
-# Create multiprocess engine with shared memory messaging
+port = start_server(31134)
+
+# Create multiprocess engine with embedded messaging
 messaging_config = MessagingConfig(
-    backend_module="rustic_ai.core.messaging.backend.shared_memory_backend",
-    backend_class="SharedMemoryMessagingBackend",
-    backend_config={"server_url": url, "auto_start_server": False}
+    backend_module="rustic_ai.core.messaging.backend.embedded_backend",
+    backend_class="EmbeddedMessagingBackend",
+    backend_config={"port": port, "auto_start_server": False}
 )
 
 engine = MultiProcessExecutionEngine(guild_id="my-guild")
@@ -515,4 +533,4 @@ guild = Guild(guild_id="my-guild", messaging_config=messaging_config)
 
 ## Conclusion
 
-The Multiprocess Execution Engine provides a powerful solution for CPU-intensive and fault-tolerant agent systems. By escaping Python's GIL and providing process isolation, it enables true parallel execution while maintaining the full feature set of the Rustic AI framework. Combined with the shared memory backend, it offers a robust platform for building high-performance, distributed agent systems. 
+The Multiprocess Execution Engine provides a powerful solution for CPU-intensive and fault-tolerant agent systems. By escaping Python's GIL and providing process isolation, it enables true parallel execution while maintaining the full feature set of the Rustic AI framework. Combined with the embedded messaging backend, it offers a robust platform for building high-performance, distributed agent systems. 

@@ -151,7 +151,7 @@ class TestMultiProcessRedisIntegration(IntegrationTestABC):
         guild.launch_agent(responder_agent)
 
         # Add local test agent
-        local_exec_engine = SyncExecutionEngine(guild_id=guild.id)
+        local_exec_engine = SyncExecutionEngine(guild_id=guild.id, organization_id=guild.organization_id)
         guild._add_local_agent(local_test_agent, local_exec_engine)
 
         # Measure messaging performance
@@ -248,7 +248,9 @@ class TestMultiProcessRedisIntegration(IntegrationTestABC):
             MultiProcessExecutionEngine,
         )
 
-        limited_engine = MultiProcessExecutionEngine(guild_id=guild.id, max_processes=1)
+        limited_engine = MultiProcessExecutionEngine(
+            guild_id=guild.id, organization_id=guild.organization_id, max_processes=1
+        )
 
         # Replace the guild's execution engine temporarily
         original_engine = guild.execution_engine
