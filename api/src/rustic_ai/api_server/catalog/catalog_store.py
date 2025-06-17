@@ -400,7 +400,9 @@ class CatalogStore:
             session.delete(existing_mapping)
             session.commit()
 
-    def get_guilds_for_user(self, user_id, statuses: Optional[List[str]] = None) -> List[BasicGuildInfo]:
+    def get_guilds_for_user(
+        self, user_id, org_id: Optional[str] = None, statuses: Optional[List[str]] = None
+    ) -> List[BasicGuildInfo]:
         with Session(self.engine) as session:
             statement = (
                 select(
@@ -416,6 +418,9 @@ class CatalogStore:
                 )
                 .where(UserGuild.user_id == user_id)
             )
+
+            if org_id:
+                statement = statement.where(GuildModel.organization_id == org_id)
 
             if statuses:
                 statement = statement.where(GuildModel.status.in_(statuses))
