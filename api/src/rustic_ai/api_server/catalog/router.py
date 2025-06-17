@@ -269,7 +269,10 @@ async def add_user_to_guild(guild_id: str, user_id: str, engine: Engine = Depend
     tags=["users"],
 )
 async def get_guilds_for_user(
-    user_id: str, statuses: Annotated[list[str] | None, Query()] = None, engine: Engine = Depends(Metastore.get_engine)
+    user_id: str,
+    org_id: Annotated[str | None, Query()] = None,
+    statuses: Annotated[list[str] | None, Query()] = None,
+    engine: Engine = Depends(Metastore.get_engine),
 ):
     if statuses:
         valid_statuses = [s.value for s in GuildStatus]
@@ -280,7 +283,7 @@ async def get_guilds_for_user(
                 detail=f"Invalid status values: {invalid_statuses}. Valid statuses are: {valid_statuses}",
             )
 
-    return CatalogStore(engine).get_guilds_for_user(user_id, statuses)
+    return CatalogStore(engine).get_guilds_for_user(user_id, org_id, statuses)
 
 
 @catalog_router.delete(
