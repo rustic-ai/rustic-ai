@@ -1,0 +1,3849 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../architecture/">
+      
+      
+        <link rel="next" href="../guilds/">
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.jpg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.14">
+    
+    
+      
+        <title>Agents - Rustic AI Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.342714a4.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/theme.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#agents" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Rustic AI Documentation" class="md-header__button md-logo" aria-label="Rustic AI Documentation" data-md-component="logo">
+      
+  <img src="../../assets/images/logo.svg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Rustic AI Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Agents
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/rustic-ai/rustic-ai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Rustic AI Documentation" class="md-nav__button md-logo" aria-label="Rustic AI Documentation" data-md-component="logo">
+      
+  <img src="../../assets/images/logo.svg" alt="logo">
+
+    </a>
+    Rustic AI Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/rustic-ai/rustic-ai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Home
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Light Paper
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    How-To Guides
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            How-To Guides
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../howto/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../howto/creating_your_first_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Creating Your First Agent
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../howto/creating_a_guild/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Creating a Guild
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../howto/guild_specifications/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Guild Specifications
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../howto/dependency_injection/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Dependency Injection
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../howto/state_management/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    State Management
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../howto/testing_agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Testing Agents
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../howto/writing_effective_agent_tests/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Writing Effective Agent Tests
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Core
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            Core
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Architecture
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    Agents
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    Agents
+    
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#table-of-contents" class="md-nav__link">
+    <span class="md-ellipsis">
+      Table of Contents
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#core-concepts" class="md-nav__link">
+    <span class="md-ellipsis">
+      Core Concepts
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#agent-types-and-modes" class="md-nav__link">
+    <span class="md-ellipsis">
+      Agent Types and Modes
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Agent Types and Modes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#agenttype" class="md-nav__link">
+    <span class="md-ellipsis">
+      AgentType
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agentmode" class="md-nav__link">
+    <span class="md-ellipsis">
+      AgentMode
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#defining-an-agent-class" class="md-nav__link">
+    <span class="md-ellipsis">
+      Defining an Agent Class
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Defining an Agent Class">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#agent-properties-baseagentprops" class="md-nav__link">
+    <span class="md-ellipsis">
+      Agent Properties (BaseAgentProps)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#agent-specification-agentspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      Agent Specification (AgentSpec)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-agentmetaclass-and-its-magic" class="md-nav__link">
+    <span class="md-ellipsis">
+      The AgentMetaclass and its Magic
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#message-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      Message Handling
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Message Handling">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-agentprocessor-decorator" class="md-nav__link">
+    <span class="md-ellipsis">
+      The @agent.processor Decorator
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#asynchronous-handlers" class="md-nav__link">
+    <span class="md-ellipsis">
+      Asynchronous Handlers
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#incoming-message-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      Incoming Message Flow
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the-processcontext-ctx" class="md-nav__link">
+    <span class="md-ellipsis">
+      The ProcessContext (ctx)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#end-to-end-handler-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      End-to-End Handler Example
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#agent-fixtures-and-modifiers-agentfixtures" class="md-nav__link">
+    <span class="md-ellipsis">
+      Agent Fixtures and Modifiers (@AgentFixtures)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dependency-injection-in-handlers" class="md-nav__link">
+    <span class="md-ellipsis">
+      Dependency Injection in Handlers
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#agent-state-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      Agent State Management
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#error-handling-strategies" class="md-nav__link">
+    <span class="md-ellipsis">
+      Error Handling Strategies
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testing-agents-in-isolation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Testing Agents in Isolation
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Testing Agents in Isolation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#unit-testing-with-wrap_agent_for_testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      Unit Testing with wrap_agent_for_testing
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Unit Testing with wrap_agent_for_testing">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#example-test-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example Test Setup
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#key-aspects-of-testing-with-wrap_agent_for_testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      Key Aspects of Testing with wrap_agent_for_testing
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mocking-external-calls-with-unittestmockpatch" class="md-nav__link">
+    <span class="md-ellipsis">
+      Mocking External Calls with unittest.mock.patch
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#testing-asynchronous-handlers" class="md-nav__link">
+    <span class="md-ellipsis">
+      Testing Asynchronous Handlers
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#general-testing-guidelines" class="md-nav__link">
+    <span class="md-ellipsis">
+      General Testing Guidelines:
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#agent-mixins-behind-the-scenes-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      Agent Mixins: Behind-the-Scenes Support
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#advanced-topics" class="md-nav__link">
+    <span class="md-ellipsis">
+      Advanced Topics
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Advanced Topics">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#custom-mixins" class="md-nav__link">
+    <span class="md-ellipsis">
+      Custom Mixins
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dynamic-agent-deployment" class="md-nav__link">
+    <span class="md-ellipsis">
+      Dynamic Agent Deployment
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#performance-considerations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Performance Considerations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#asynchronous-handlers_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Asynchronous Handlers
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guilds/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Guilds
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../messaging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Messaging
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../execution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Execution
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dependencies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Dependencies
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../state_management/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    State Management
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Agents
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            Agents
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_2" id="__nav_5_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Core
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_2">
+            <span class="md-nav__icon md-icon"></span>
+            Core
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/core/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/core/guild_manager_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Guild Manager Agent
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/core/user_proxy_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    User Proxy Agent
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/core/vector_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Vector Agent
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/core/simple_llm_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Simple LLM Agent
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/core/probe_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Probe Agent
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_3" id="__nav_5_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    LiteLLM
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3">
+            <span class="md-nav__icon md-icon"></span>
+            LiteLLM
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/litellm/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/litellm/litellm_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    LiteLLM Agent
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_4" id="__nav_5_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    HuggingFace
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_4">
+            <span class="md-nav__icon md-icon"></span>
+            HuggingFace
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/huggingface/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/huggingface/llm_phi_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    LLM Phi Agent
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/huggingface/squad_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Squad Agent
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/huggingface/image2image_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Image2Image Agent
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/huggingface/runwayml_stable_diffusion_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Runwayml Stable Diffusion Agent
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/huggingface/speecht5_tts_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    SpeechT5 TTS Agent
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_5" id="__nav_5_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Playwright
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_5">
+            <span class="md-nav__icon md-icon"></span>
+            Playwright
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/playwright/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/playwright/playwright_scraper_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Playwright Scraper Agent
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_6" id="__nav_5_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    SerpAPI
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_6">
+            <span class="md-nav__icon md-icon"></span>
+            SerpAPI
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/serpapi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/serpapi/serp_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    SERP Agent
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_7" id="__nav_5_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Marvin
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_7">
+            <span class="md-nav__icon md-icon"></span>
+            Marvin
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/marvin/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/marvin/marvin_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Marvin Agent
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Dependencies
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            Dependencies
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_6_2" id="__nav_6_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Core
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6_2">
+            <span class="md-nav__icon md-icon"></span>
+            Core
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/core/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/core/env_secret_provider/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Environment Secret Provider
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/core/filesystem/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    File System Resolver
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/core/in_memory_kvstore/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    In-Memory KV Store
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/core/in_process_interpreter/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    In-Process Interpreter
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/core/python_exec_executor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Python Exec Executor
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_6_3" id="__nav_6_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Redis
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6_3">
+            <span class="md-nav__icon md-icon"></span>
+            Redis
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/redis/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/redis/redis_kvstore/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Redis KV Store
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_6_4" id="__nav_6_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    LiteLLM
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6_4">
+            <span class="md-nav__icon md-icon"></span>
+            LiteLLM
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/litellm/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/litellm/litellm_resolver/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    LiteLLM Resolver
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_6_5" id="__nav_6_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Chroma
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6_5">
+            <span class="md-nav__icon md-icon"></span>
+            Chroma
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/chroma/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/chroma/chroma_resolver/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Chroma Resolver
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6_6" id="__nav_6_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    LangChain
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6_6">
+            <span class="md-nav__icon md-icon"></span>
+            LangChain
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/langchain/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/langchain/character_splitter/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Character Splitter
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/langchain/openai_embeddings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    OpenAI Embeddings
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/langchain/recursive_splitter/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Recursive Splitter
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ray/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Ray
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../showcase/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Showcase
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    API
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Contributing
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#table-of-contents" class="md-nav__link">
+    <span class="md-ellipsis">
+      Table of Contents
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#core-concepts" class="md-nav__link">
+    <span class="md-ellipsis">
+      Core Concepts
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#agent-types-and-modes" class="md-nav__link">
+    <span class="md-ellipsis">
+      Agent Types and Modes
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Agent Types and Modes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#agenttype" class="md-nav__link">
+    <span class="md-ellipsis">
+      AgentType
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agentmode" class="md-nav__link">
+    <span class="md-ellipsis">
+      AgentMode
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#defining-an-agent-class" class="md-nav__link">
+    <span class="md-ellipsis">
+      Defining an Agent Class
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Defining an Agent Class">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#agent-properties-baseagentprops" class="md-nav__link">
+    <span class="md-ellipsis">
+      Agent Properties (BaseAgentProps)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#agent-specification-agentspec" class="md-nav__link">
+    <span class="md-ellipsis">
+      Agent Specification (AgentSpec)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-agentmetaclass-and-its-magic" class="md-nav__link">
+    <span class="md-ellipsis">
+      The AgentMetaclass and its Magic
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#message-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      Message Handling
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Message Handling">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-agentprocessor-decorator" class="md-nav__link">
+    <span class="md-ellipsis">
+      The @agent.processor Decorator
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#asynchronous-handlers" class="md-nav__link">
+    <span class="md-ellipsis">
+      Asynchronous Handlers
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#incoming-message-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      Incoming Message Flow
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the-processcontext-ctx" class="md-nav__link">
+    <span class="md-ellipsis">
+      The ProcessContext (ctx)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#end-to-end-handler-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      End-to-End Handler Example
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#agent-fixtures-and-modifiers-agentfixtures" class="md-nav__link">
+    <span class="md-ellipsis">
+      Agent Fixtures and Modifiers (@AgentFixtures)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dependency-injection-in-handlers" class="md-nav__link">
+    <span class="md-ellipsis">
+      Dependency Injection in Handlers
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#agent-state-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      Agent State Management
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#error-handling-strategies" class="md-nav__link">
+    <span class="md-ellipsis">
+      Error Handling Strategies
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testing-agents-in-isolation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Testing Agents in Isolation
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Testing Agents in Isolation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#unit-testing-with-wrap_agent_for_testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      Unit Testing with wrap_agent_for_testing
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Unit Testing with wrap_agent_for_testing">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#example-test-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example Test Setup
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#key-aspects-of-testing-with-wrap_agent_for_testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      Key Aspects of Testing with wrap_agent_for_testing
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mocking-external-calls-with-unittestmockpatch" class="md-nav__link">
+    <span class="md-ellipsis">
+      Mocking External Calls with unittest.mock.patch
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#testing-asynchronous-handlers" class="md-nav__link">
+    <span class="md-ellipsis">
+      Testing Asynchronous Handlers
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#general-testing-guidelines" class="md-nav__link">
+    <span class="md-ellipsis">
+      General Testing Guidelines:
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#agent-mixins-behind-the-scenes-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      Agent Mixins: Behind-the-Scenes Support
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#advanced-topics" class="md-nav__link">
+    <span class="md-ellipsis">
+      Advanced Topics
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Advanced Topics">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#custom-mixins" class="md-nav__link">
+    <span class="md-ellipsis">
+      Custom Mixins
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dynamic-agent-deployment" class="md-nav__link">
+    <span class="md-ellipsis">
+      Dynamic Agent Deployment
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#performance-considerations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Performance Considerations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#asynchronous-handlers_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Asynchronous Handlers
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="agents">Agents<a class="headerlink" href="#agents" title="Permanent link">&para;</a></h1>
+<p>Agents are the fundamental, autonomous, and message-driven entities in Rustic AI. They encapsulate specific logic, maintain their own state, communicate with other agents via asynchronous messages, and collaborate within a <a href="../guilds/">Guild</a> to achieve complex tasks. Agents can represent automated processes (bots) or act as proxies for human users.</p>
+<p><strong>Prerequisites</strong>: Familiarity with <a href="../guilds/">Guilds</a>, <a href="../messaging/">Messaging</a>, <a href="../state_management/">State Management</a>, and <a href="../dependencies/">Dependencies</a> is recommended.</p>
+<h2 id="table-of-contents">Table of Contents<a class="headerlink" href="#table-of-contents" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="#core-concepts">Core Concepts</a></li>
+<li><a href="#defining-an-agent-class">Defining an Agent Class</a></li>
+<li><a href="#agent-specification-agentspec">Agent Specification (AgentSpec)</a></li>
+<li><a href="#the-agentmetaclass-and-its-magic">The AgentMetaclass and its Magic</a></li>
+<li><a href="#message-handling">Message Handling</a></li>
+<li><a href="#agent-fixtures-and-modifiers-agentfixtures">Agent Fixtures and Modifiers</a></li>
+<li><a href="#dependency-injection-in-handlers">Dependency Injection in Handlers</a></li>
+<li><a href="#agent-state-management">Agent State Management</a></li>
+<li><a href="#error-handling-strategies">Error Handling Strategies</a></li>
+<li><a href="#testing-agents-in-isolation">Testing Agents in Isolation</a></li>
+<li><a href="#agent-mixins-behind-the-scenes-support">Agent Mixins: Behind-the-Scenes Support</a></li>
+<li><a href="#advanced-topics">Advanced Topics</a></li>
+</ul>
+<h2 id="core-concepts">Core Concepts<a class="headerlink" href="#core-concepts" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Encapsulation</strong>: Agents bundle their own logic, configuration, and state.</li>
+<li><strong>Message-Driven</strong>: Agents react to incoming messages, process them, and can send new messages.</li>
+<li><strong>Stateful</strong>: Agents can maintain internal state across message interactions. See <a href="../state_management/">State Management</a>.</li>
+<li><strong>Collaborative</strong>: Agents operate within Guilds, allowing for coordinated multi-agent workflows.</li>
+<li><strong>Configurable</strong>: Agent behavior is defined by their Python class and configured via an <code>AgentSpec</code>.</li>
+</ul>
+<h2 id="agent-types-and-modes">Agent Types and Modes<a class="headerlink" href="#agent-types-and-modes" title="Permanent link">&para;</a></h2>
+<p>Rustic AI provides two enumerations that define fundamental characteristics of agents:</p>
+<h3 id="agenttype">AgentType<a class="headerlink" href="#agenttype" title="Permanent link">&para;</a></h3>
+<p><code>AgentType</code> specifies the nature of the agent:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">rustic_ai.core.guild</span><span class="w"> </span><span class="kn">import</span> <span class="n">AgentType</span>
+
+<span class="c1"># Usage:</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">MyAgent</span><span class="p">(</span><span class="n">Agent</span><span class="p">[</span><span class="n">BaseAgentProps</span><span class="p">]):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">agent_spec</span><span class="p">:</span> <span class="n">AgentSpec</span><span class="p">[</span><span class="n">BaseAgentProps</span><span class="p">]):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">agent_spec</span><span class="p">,</span> <span class="n">agent_type</span><span class="o">=</span><span class="n">AgentType</span><span class="o">.</span><span class="n">BOT</span><span class="p">)</span>  <span class="c1"># Default is BOT</span>
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>AgentType.BOT</code></td>
+<td>A fully automated agent that operates without human intervention (default)</td>
+</tr>
+<tr>
+<td><code>AgentType.HUMAN</code></td>
+<td>Represents a human user or requires human participation</td>
+</tr>
+</tbody>
+</table>
+<h3 id="agentmode">AgentMode<a class="headerlink" href="#agentmode" title="Permanent link">&para;</a></h3>
+<p><code>AgentMode</code> defines how the agent is executed by the execution engine:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">rustic_ai.core.guild</span><span class="w"> </span><span class="kn">import</span> <span class="n">AgentMode</span>
+
+<span class="c1"># Usage:</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">MyAgent</span><span class="p">(</span><span class="n">Agent</span><span class="p">[</span><span class="n">BaseAgentProps</span><span class="p">]):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">agent_spec</span><span class="p">:</span> <span class="n">AgentSpec</span><span class="p">[</span><span class="n">BaseAgentProps</span><span class="p">]):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">agent_spec</span><span class="p">,</span> <span class="n">agent_mode</span><span class="o">=</span><span class="n">AgentMode</span><span class="o">.</span><span class="n">LOCAL</span><span class="p">)</span>  <span class="c1"># Default is LOCAL</span>
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>AgentMode.LOCAL</code></td>
+<td>Runs in the same process as the Guild (default)</td>
+</tr>
+<tr>
+<td><code>AgentMode.REMOTE</code></td>
+<td>Runs in a separate process (potentially distributed)</td>
+</tr>
+</tbody>
+</table>
+<p>These values are used by the execution engine to determine how to instantiate and run the agent, especially in distributed or multi-process environments.</p>
+<h2 id="defining-an-agent-class">Defining an Agent Class<a class="headerlink" href="#defining-an-agent-class" title="Permanent link">&para;</a></h2>
+<p>To create a custom agent, you define a Python class that inherits from <code>rustic_ai.core.guild.Agent</code>. This base class, along with the powerful <code>AgentMetaclass</code>, provides the core machinery for message handling, dependency injection, and lifecycle management.</p>
+<h3 id="agent-properties-baseagentprops">Agent Properties (<code>BaseAgentProps</code>)<a class="headerlink" href="#agent-properties-baseagentprops" title="Permanent link">&para;</a></h3>
+<p>Each agent can have its own set of configurable properties. These are defined in a Pydantic model that inherits from <code>rustic_ai.core.guild.dsl.BaseAgentProps</code>.</p>
+<p><div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">rustic_ai.core.guild</span><span class="w"> </span><span class="kn">import</span> <span class="n">Agent</span><span class="p">,</span> <span class="n">agent</span>  <span class="c1"># agent provides the @agent.processor decorator</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rustic_ai.core.guild.dsl</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseAgentProps</span><span class="p">,</span> <span class="n">AgentSpec</span>
+
+<span class="c1"># 1. Define messages models</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">GreetRequest</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="n">name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">GreetResponse</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="n">greeting</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">count</span><span class="p">:</span> <span class="nb">int</span>
+
+<span class="c1"># 1. Define Properties Model (Optional but Recommended)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">MyGreeterAgentProps</span><span class="p">(</span><span class="n">BaseAgentProps</span><span class="p">):</span>
+    <span class="n">greeting_prefix</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;Hello&quot;</span>
+    <span class="n">default_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;World&quot;</span>
+
+<span class="c1"># 2. Define the Agent Class</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">GreeterAgent</span><span class="p">(</span><span class="n">Agent</span><span class="p">[</span><span class="n">MyGreeterAgentProps</span><span class="p">]):</span> <span class="c1"># Generic type specifies the props model</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">agent_spec</span><span class="p">:</span> <span class="n">AgentSpec</span><span class="p">[</span><span class="n">MyGreeterAgentProps</span><span class="p">]):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">agent_spec</span><span class="p">)</span>
+        <span class="c1"># Access configured properties:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">greeting_prefix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_spec</span><span class="p">()</span><span class="o">.</span><span class="n">props</span><span class="o">.</span><span class="n">greeting_prefix</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">default_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_spec</span><span class="p">()</span><span class="o">.</span><span class="n">props</span><span class="o">.</span><span class="n">default_name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">greet_count</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="nd">@agent</span><span class="o">.</span><span class="n">processor</span><span class="p">(</span><span class="n">clz</span><span class="o">=</span><span class="n">GreetRequest</span><span class="p">)</span> <span class="c1"># Handles raw string payloads</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">handle_name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">agent</span><span class="o">.</span><span class="n">ProcessContext</span><span class="p">[</span><span class="n">GreetRequest</span><span class="p">]):</span>
+        <span class="n">name_to_greet</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">payload</span><span class="o">.</span><span class="n">name</span> <span class="k">if</span> <span class="n">ctx</span><span class="o">.</span><span class="n">payload</span><span class="o">.</span><span class="n">name</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">default_name</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">greeting_prefix</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">name_to_greet</span><span class="si">}</span><span class="s2">!&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">greet_count</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="c1"># Update agent&#39;s own state (illustrative, actual state updates are more structured)</span>
+        <span class="c1"># self._state[&quot;greet_count&quot;] = self.greet_count </span>
+
+        <span class="n">ctx</span><span class="o">.</span><span class="n">send_dict</span><span class="p">(</span><span class="n">GreetResponse</span><span class="p">(</span><span class="n">greeting</span> <span class="o">=</span> <span class="n">response</span><span class="p">,</span> <span class="n">count</span><span class="o">=</span><span class="n">count</span><span class="p">))</span>
+
+<span class="c1"># To use this agent, you&#39;d create an AgentSpec for it, often via AgentBuilder.</span>
+<span class="c1"># from rustic_ai.core.guild.builders import AgentBuilder</span>
+<span class="c1"># greeter_spec = AgentBuilder(GreeterAgent) \\</span>
+<span class="c1">#     .set_name(&quot;MyGreeter&quot;) \\</span>
+<span class="c1">#     .set_description(&quot;A friendly greeter agent.&quot;) \\</span>
+<span class="c1">#     .set_properties(MyGreeterAgentProps(greeting_prefix=&quot;Greetings&quot;)) \\</span>
+<span class="c1">#     .build_spec()</span>
+</code></pre></div>
+- The agent class is generic: <code>Agent[MyAgentPropsType]</code>. This tells the system about the expected structure of its <code>properties</code>.
+- The <code>__init__</code> method must call <code>super().__init__(agent_spec)</code>.
+- The <code>agent_spec</code> (an instance of <code>AgentSpec[MyAgentPropsType]</code>) provides access to configured properties via <code>self.get_spec().props</code>.</p>
+<h2 id="agent-specification-agentspec">Agent Specification (<code>AgentSpec</code>)<a class="headerlink" href="#agent-specification-agentspec" title="Permanent link">&para;</a></h2>
+<p>As introduced in <a href="../guilds/">Guilds</a>, an <code>AgentSpec</code> is a data structure (typically created via <code>AgentBuilder</code> or loaded from YAML/JSON) that defines an agent's configuration. Key fields relevant from an agent's perspective:</p>
+<ul>
+<li><code>id</code> (str): Unique identifier.</li>
+<li><code>name</code> (str): Human-readable name.</li>
+<li><code>description</code> (str): Purpose of the agent.</li>
+<li><code>class_name</code> (str): The fully qualified Python class name of the agent (e.g., <code>"my_project.agents.GreeterAgent"</code>).</li>
+<li><code>properties</code> (Pydantic Model | Dict): An instance of the agent's properties model (e.g., <code>MyGreeterAgentProps</code>) or a dictionary that can be validated into it. This is how you customize an agent instance.</li>
+<li><code>additional_topics</code> (List[str]): Specific message topics the agent subscribes to, beyond the default guild topic.</li>
+<li><code>listen_to_default_topic</code> (bool): If <code>True</code> (default), the agent listens to messages on the guild's default topic.</li>
+<li><code>dependency_map</code> (Dict[str, DependencySpec]): Agent-specific <a href="../dependencies/">dependencies</a>. These can override or supplement guild-level dependencies.</li>
+<li><code>act_only_when_tagged</code> (bool): If <code>True</code>, the agent will only process messages where its <code>AgentTag</code> (ID or name) is explicitly included in the message's <code>recipient_list</code>. This is useful for targeted communication in busy topics.</li>
+<li>
+<p><code>predicates</code> (Dict[str, SimpleRuntimePredicate]): A dictionary mapping method names (of <code>@processor</code> decorated methods) to <code>SimpleRuntimePredicate</code> objects. A predicate contains a JSONata expression that is evaluated against the incoming message, agent state, and guild state. The handler method is only invoked if the predicate evaluates to true.</p>
+<div class="highlight"><pre><span></span><code><span class="c1">// Example predicate in AgentSpec (conceptual)</span>
+<span class="nt">&quot;predicates&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;handle_urgent_task&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;expression&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;message.priority &gt; 7 and agent_state.is_available&quot;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+</li>
+</ul>
+<h2 id="the-agentmetaclass-and-its-magic">The <code>AgentMetaclass</code> and its Magic<a class="headerlink" href="#the-agentmetaclass-and-its-magic" title="Permanent link">&para;</a></h2>
+<p>The <code>Agent</code> base class uses <code>AgentMetaclass</code>. This metaclass works behind the scenes during agent class definition to automate several setup tasks:</p>
+<ul>
+<li><strong>Handler Registration</strong>: It inspects the agent class for methods decorated with <code>@agent.processor(...)</code> and registers them as message handlers.</li>
+<li><strong>Fixture Registration</strong>: It finds methods decorated with <code>@AgentFixtures.*</code> and registers them as lifecycle hooks or message modifiers.</li>
+<li><strong>Properties Type Inference</strong>: It determines the agent's specific properties type (e.g., <code>MyGreeterAgentProps</code>) from the generic type hint (<code>Agent[MyGreeterAgentProps]</code>).</li>
+<li><strong>Dependency Analysis</strong>: It can analyze <code>@processor</code> methods for <code>depends_on</code> arguments to understand their dependencies.</li>
+<li><strong>Mixin Injection</strong>: It automatically includes default mixins (e.g., <code>StateRefresherMixin</code>, <code>HealthMixin</code>, <code>TelemetryMixin</code>) that provide common cross-cutting concerns.</li>
+</ul>
+<p>This automation reduces boilerplate and allows developers to focus on the agent's core logic.</p>
+<h2 id="message-handling">Message Handling<a class="headerlink" href="#message-handling" title="Permanent link">&para;</a></h2>
+<p>Agents are fundamentally message-driven. The process of an agent receiving and handling a message involves several steps, orchestrated by the <code>AgentMetaclass</code> and the <code>Agent</code> base class.</p>
+<h3 id="the-agentprocessor-decorator">The <code>@agent.processor</code> Decorator<a class="headerlink" href="#the-agentprocessor-decorator" title="Permanent link">&para;</a></h3>
+<p>Methods that handle incoming messages are decorated with <code>@agent.processor</code>.</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseModel</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rustic_ai.core.guild</span><span class="w"> </span><span class="kn">import</span> <span class="n">Agent</span><span class="p">,</span> <span class="n">agent</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rustic_ai.core.guild.agent</span><span class="w"> </span><span class="kn">import</span> <span class="n">ProcessContext</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rustic_ai.core.messaging.core</span><span class="w"> </span><span class="kn">import</span> <span class="n">JsonDict</span> <span class="c1"># For raw JSON</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">MyData</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="n">value</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">count</span><span class="p">:</span> <span class="nb">int</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">MyOtherAgent</span><span class="p">(</span><span class="n">Agent</span><span class="p">[</span><span class="n">BaseAgentProps</span><span class="p">]):</span>
+    <span class="c1"># Handles messages where payload is MyData</span>
+    <span class="nd">@agent</span><span class="o">.</span><span class="n">processor</span><span class="p">(</span><span class="n">clz</span><span class="o">=</span><span class="n">MyData</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">handle_my_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">ProcessContext</span><span class="p">[</span><span class="n">MyData</span><span class="p">]):</span>
+        <span class="n">data_object</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">payload</span> <span class="c1"># data_object is an instance of MyData</span>
+        <span class="c1"># ... process data_object ...</span>
+        <span class="n">ctx</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">AnotherMessage</span><span class="p">(</span><span class="o">...</span><span class="p">))</span>
+
+    <span class="c1"># Handles messages where payload is a raw JSON dictionary</span>
+    <span class="nd">@agent</span><span class="o">.</span><span class="n">processor</span><span class="p">(</span><span class="n">clz</span><span class="o">=</span><span class="n">JsonDict</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">handle_any_json</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">ProcessContext</span><span class="p">[</span><span class="n">JsonDict</span><span class="p">]):</span>
+        <span class="n">raw_payload</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">payload</span> <span class="c1"># raw_payload is a dict</span>
+        <span class="c1"># ... process raw_payload ...</span>
+        <span class="n">ctx</span><span class="o">.</span><span class="n">send_dict</span><span class="p">({</span><span class="s2">&quot;status&quot;</span><span class="p">:</span> <span class="s2">&quot;processed raw json&quot;</span><span class="p">})</span>
+
+    <span class="c1"># Handles messages of MyData type only on &quot;essential&quot; topics,</span>
+    <span class="c1"># and also injects a &#39;db_connection&#39; dependency.</span>
+    <span class="nd">@agent</span><span class="o">.</span><span class="n">processor</span><span class="p">(</span><span class="n">clz</span><span class="o">=</span><span class="n">MyData</span><span class="p">,</span> <span class="n">handle_essential</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">depends_on</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;db_connection&quot;</span><span class="p">])</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">handle_essential_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">ProcessContext</span><span class="p">[</span><span class="n">MyData</span><span class="p">],</span> <span class="n">db_connection</span><span class="p">:</span> <span class="n">Any</span><span class="p">):</span>
+        <span class="c1"># This handler will run for MyData messages on system/status topics</span>
+        <span class="c1"># even if the agent doesn&#39;t explicitly subscribe to them.</span>
+        <span class="c1"># db_connection is resolved and injected.</span>
+        <span class="k">pass</span>
+</code></pre></div>
+<ul>
+<li><strong><code>clz</code></strong>: Specifies the expected Pydantic model for the message payload. If the incoming message's <code>format</code> matches the qualified name of this model, the payload is automatically parsed and validated into an instance of this model. Use <code>JsonDict</code> to receive the payload as a raw dictionary without parsing.</li>
+<li><strong><code>handle_essential</code></strong> (bool, default <code>False</code>): If <code>True</code>, this handler can process messages on essential guild topics (like status or system topics), even if the agent isn't explicitly subscribed to them or if the message isn't directly addressed to it.</li>
+<li><strong><code>depends_on</code></strong> (List[str | AgentDependency], optional): A list of dependency keys. These dependencies are resolved at runtime and injected as arguments into the handler method. See <a href="#dependency-injection-in-handlers">Dependency Injection in Handlers</a>.</li>
+<li><strong><code>predicate</code></strong> (Callable[[Agent, Message], bool], optional, less common): An older style of predicate, a callable that takes the agent instance and the raw message and returns <code>True</code> if the handler should run. Prefer <code>AgentSpec.predicates</code> for declarative JSONata-based predicates.</li>
+</ul>
+<h3 id="asynchronous-handlers">Asynchronous Handlers<a class="headerlink" href="#asynchronous-handlers" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">aiohttp</span><span class="w"> </span><span class="kn">import</span> <span class="n">ClientSession</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">AsyncAgent</span><span class="p">(</span><span class="n">Agent</span><span class="p">[</span><span class="n">BaseAgentProps</span><span class="p">]):</span>
+    <span class="nd">@agent</span><span class="o">.</span><span class="n">processor</span><span class="p">(</span><span class="n">clz</span><span class="o">=</span><span class="n">SearchQuery</span><span class="p">)</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">search_web</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">ProcessContext</span><span class="p">[</span><span class="n">SearchQuery</span><span class="p">]):</span>
+        <span class="n">query</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">payload</span><span class="o">.</span><span class="n">query</span>
+
+        <span class="c1"># Perform asynchronous operations</span>
+        <span class="k">async</span> <span class="k">with</span> <span class="n">ClientSession</span><span class="p">()</span> <span class="k">as</span> <span class="n">session</span><span class="p">:</span>
+            <span class="k">async</span> <span class="k">with</span> <span class="n">session</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;https://api.example.com/search?q=</span><span class="si">{</span><span class="n">query</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">response</span><span class="p">:</span>
+                <span class="n">result</span> <span class="o">=</span> <span class="k">await</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+
+        <span class="c1"># Process results and respond</span>
+        <span class="n">ctx</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">SearchResult</span><span class="p">(</span><span class="n">results</span><span class="o">=</span><span class="n">result</span><span class="p">[</span><span class="s2">&quot;items&quot;</span><span class="p">]))</span>
+</code></pre></div>
+<p>When an async handler is invoked:
+1. The framework detects it's an async function via <code>inspect.iscoroutinefunction()</code>
+2. The <code>ProcessorHelper.run_coroutine()</code> method handles scheduling:
+   - If in an already running event loop, it creates a new task
+   - Otherwise, it calls <code>asyncio.run()</code> to run the coroutine to completion</p>
+<p>This allows your agent to perform non-blocking I/O operations like network requests or database queries without blocking the entire agent/guild.</p>
+<h3 id="incoming-message-flow">Incoming Message Flow<a class="headerlink" href="#incoming-message-flow" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Delivery</strong>: A message is delivered to the agent's internal <code>_on_message(self, message: Message)</code> method by the messaging system.</li>
+<li><strong>Handler Discovery</strong>:<ul>
+<li>The <code>Agent</code> base class, using handler maps prepared by <code>AgentMetaclass</code>, identifies applicable <code>@processor</code> methods.</li>
+<li>This matching considers:<ul>
+<li>The <code>format</code> string in the <code>Message</code> against the <code>clz</code> argument of <code>@processor</code>.</li>
+<li>If <code>agent_spec.act_only_when_tagged</code> is <code>True</code>, the message must explicitly tag the agent.</li>
+<li>The <code>handle_essential</code> flag of the processor if the message is on an essential topic.</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><strong>Processing Each Applicable Handler</strong>: For each matched handler method:<ul>
+<li><strong>Runtime Predicate Check</strong>: If a predicate is defined for this handler in <code>agent_spec.predicates</code>, it's evaluated. If it returns <code>False</code>, the handler is skipped.</li>
+<li><strong>Dependency Resolution</strong>: Dependencies specified in <code>@processor(depends_on=[...])</code> are resolved.</li>
+<li><strong><code>ProcessContext</code> Creation</strong>: A <code>ProcessContext</code> instance (<code>ctx</code>) is created, providing access to the message, payload, agent state, and sending capabilities.</li>
+<li><strong><code>before_process</code> Fixtures</strong>: Any methods decorated with <code>@AgentFixtures.before_process</code> are executed.</li>
+<li><strong>Handler Invocation</strong>: The handler method is called with <code>self</code> (the agent instance), <code>ctx</code> (the <code>ProcessContext</code>), and any resolved dependencies as arguments.</li>
+<li><strong><code>after_process</code> Fixtures</strong>: Any methods decorated with <code>@AgentFixtures.after_process</code> are executed.</li>
+<li><strong>Error Handling</strong>: If the handler raises an unhandled exception, it's caught, wrapped in an <code>ErrorMessage</code>, and sent out (triggering <code>on_send_error</code> fixtures). The exception might also be bubbled to the execution engine.</li>
+</ul>
+</li>
+</ol>
+<h3 id="the-processcontext-ctx">The <code>ProcessContext</code> (<code>ctx</code>)<a class="headerlink" href="#the-processcontext-ctx" title="Permanent link">&para;</a></h3>
+<p>The <code>ProcessContext</code> is passed as the second argument (after <code>self</code>) to every message handler and provides essential tools for message processing:</p>
+<ul>
+<li><strong><code>ctx.payload</code> -&gt; <code>MDT</code> (MessageDataType)</strong>:<ul>
+<li>If the <code>@processor</code> specified a Pydantic model (e.g., <code>clz=MyData</code>), <code>ctx.payload</code> is an instance of that model, automatically parsed and validated from the message's payload.</li>
+<li>If <code>clz=JsonDict</code>, <code>ctx.payload</code> is the raw dictionary payload.</li>
+</ul>
+</li>
+<li><strong><code>ctx.message</code> -&gt; <code>Message</code></strong>: The full incoming <code>Message</code> object, including headers, sender/recipient info, topic, <code>routing_slip</code>, etc.</li>
+<li><strong><code>ctx.agent</code> -&gt; <code>Agent</code></strong>: The instance of the agent processing the message.</li>
+<li><strong><code>ctx.method_name</code> -&gt; <code>str</code></strong>: The name of the handler method currently being executed.</li>
+<li><strong><code>ctx.update_context(updates: JsonDict)</code></strong>: Updates a temporary, per-message-processing-flow, session-like state. This context is passed along if messages are sent via <code>ctx.send()</code> and the routing rules dictate context propagation.</li>
+<li><strong><code>ctx.get_context() -&gt; JsonDict</code></strong>: Retrieves the current per-message-flow context.</li>
+<li><strong><code>ctx.add_routing_step(routing_entry: RoutingRule)</code></strong>: Adds a new <code>RoutingRule</code> to the <code>RoutingSlip</code> of the <em>original incoming message</em>. This can dynamically alter the message's future path if it's part of a multi-step workflow.</li>
+<li>
+<p><strong>Sending Methods</strong>:</p>
+<ul>
+<li><strong><code>ctx.send(payload: BaseModel, new_thread: bool = False, forwarding: bool = False) -&gt; List[GemstoneID]</code></strong>:
+    Sends a new message with a Pydantic <code>BaseModel</code> as its payload.<ul>
+<li><code>new_thread</code>: If <code>True</code>, starts a new message thread ID.</li>
+<li><code>forwarding</code>: If <code>True</code>, indicates the message is being forwarded, which can affect routing rule application (e.g., <code>mark_forwarded</code>).</li>
+</ul>
+</li>
+<li><strong><code>ctx.send_dict(payload: JsonDict, format: str = MessageConstants.RAW_JSON_FORMAT, new_thread: bool = False, forwarding: bool = False) -&gt; List[GemstoneID]</code></strong>:
+    Sends a new message with a raw dictionary as its payload. The <code>format</code> string should indicate the type of the payload.</li>
+<li><strong><code>ctx.send_error(payload: BaseModel) -&gt; List[GemstoneID]</code></strong>:
+    Sends a new message marked as an error, typically using an <code>ErrorMessage</code> or a custom error model.</li>
+</ul>
+<p>When <code>ctx.send*</code> is called:
+1.  Registered <code>@AgentFixtures.on_send</code> (or <code>@AgentFixtures.on_send_error</code> for <code>send_error</code>) fixtures are executed.
+2.  The routing logic (detailed in <a href="../guilds/">Guilds</a> and <a href="../messaging/">Messaging</a>) determines the next step(s) based on the incoming message's <code>RoutingSlip</code> or guild-level routes.
+3.  For each routing step, a new <code>Message</code> is constructed.
+4.  Registered <code>@AgentFixtures.outgoing_message_modifier</code> fixtures can alter the new message before it's published.
+5.  The message is published via the agent's messaging client.
+6.  IDs of the sent messages are returned.</p>
+</li>
+</ul>
+<h3 id="end-to-end-handler-example">End-to-End Handler Example<a class="headerlink" href="#end-to-end-handler-example" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseModel</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rustic_ai.core.guild</span><span class="w"> </span><span class="kn">import</span> <span class="n">Agent</span><span class="p">,</span> <span class="n">agent</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rustic_ai.core.guild.agent</span><span class="w"> </span><span class="kn">import</span> <span class="n">ProcessContext</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rustic_ai.core.guild.dsl</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseAgentProps</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">UserQuery</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="n">text</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">user_id</span><span class="p">:</span> <span class="nb">str</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">QueryResponse</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="n">answer</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">source</span><span class="p">:</span> <span class="nb">str</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">MyQnAAgent</span><span class="p">(</span><span class="n">Agent</span><span class="p">[</span><span class="n">BaseAgentProps</span><span class="p">]):</span>
+    <span class="nd">@agent</span><span class="o">.</span><span class="n">processor</span><span class="p">(</span><span class="n">clz</span><span class="o">=</span><span class="n">UserQuery</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">handle_query</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">ProcessContext</span><span class="p">[</span><span class="n">UserQuery</span><span class="p">]):</span>
+        <span class="n">query_text</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">payload</span><span class="o">.</span><span class="n">text</span> <span class="c1"># Accessing typed payload</span>
+        <span class="n">user</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">payload</span><span class="o">.</span><span class="n">user_id</span>
+
+        <span class="c1"># Illustrative: update per-message context</span>
+        <span class="n">ctx</span><span class="o">.</span><span class="n">update_context</span><span class="p">({</span><span class="s2">&quot;current_user_id&quot;</span><span class="p">:</span> <span class="n">user</span><span class="p">,</span> <span class="s2">&quot;query_received_at&quot;</span><span class="p">:</span> <span class="s2">&quot;timestamp&quot;</span><span class="p">})</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Agent </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> received query: &#39;</span><span class="si">{</span><span class="n">query_text</span><span class="si">}</span><span class="s2">&#39; from </span><span class="si">{</span><span class="n">user</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Original message ID: </span><span class="si">{</span><span class="n">ctx</span><span class="o">.</span><span class="n">message</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">, Topic: </span><span class="si">{</span><span class="n">ctx</span><span class="o">.</span><span class="n">message</span><span class="o">.</span><span class="n">topic_published_to</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Simulate processing</span>
+        <span class="n">answer</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Answer to &#39;</span><span class="si">{</span><span class="n">query_text</span><span class="si">}</span><span class="s2">&#39;&quot;</span>
+
+        <span class="n">response_payload</span> <span class="o">=</span> <span class="n">QueryResponse</span><span class="p">(</span><span class="n">answer</span><span class="o">=</span><span class="n">answer</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+
+        <span class="c1"># Send the response</span>
+        <span class="c1"># Routing will be determined by incoming message&#39;s slip or guild routes</span>
+        <span class="n">sent_ids</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">response_payload</span><span class="p">)</span> 
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Sent response message(s) with IDs: </span><span class="si">{</span><span class="n">sent_ids</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+<h2 id="agent-fixtures-and-modifiers-agentfixtures">Agent Fixtures and Modifiers (<code>@AgentFixtures</code>)<a class="headerlink" href="#agent-fixtures-and-modifiers-agentfixtures" title="Permanent link">&para;</a></h2>
+<p>Fixtures allow you to inject logic at various points in an agent's message processing lifecycle or when messages are sent. They are methods in your agent class decorated with specific decorators from <code>rustic_ai.core.guild.agent.AgentFixtures</code>.</p>
+<ul>
+<li><strong><code>@AgentFixtures.before_process</code></strong>:<ul>
+<li>Signature: <code>def my_fixture(self, ctx: ProcessContext[MDT])</code></li>
+<li>Called before each message handler (<code>@processor</code>) method is executed for a message that the handler matches. <code>MDT</code> is the type the handler expects.</li>
+</ul>
+</li>
+<li><strong><code>@AgentFixtures.after_process</code></strong>:<ul>
+<li>Signature: <code>def my_fixture(self, ctx: ProcessContext[MDT])</code></li>
+<li>Called after each message handler method completes (normally or with an exception that was handled by the system).</li>
+</ul>
+</li>
+<li><strong><code>@AgentFixtures.on_send</code></strong>:<ul>
+<li>Signature: <code>def my_fixture(self, ctx: ProcessContext[Any])</code></li>
+<li>Called when <code>ctx.send()</code> or <code>ctx.send_dict()</code> is invoked (but <em>not</em> <code>ctx.send_error()</code>), before the routing logic determines the final outgoing message(s). The <code>ctx</code> here is the context of the handler that <em>initiated</em> the send.</li>
+</ul>
+</li>
+<li><strong><code>@AgentFixtures.on_send_error</code></strong>:<ul>
+<li>Signature: <code>def my_fixture(self, ctx: ProcessContext[Any])</code></li>
+<li>Called when <code>ctx.send_error()</code> is invoked, before the routing logic.</li>
+</ul>
+</li>
+<li><strong><code>@AgentFixtures.outgoing_message_modifier</code></strong>:<ul>
+<li>Signature: <code>def my_fixture(self, ctx: ProcessContext[Any], message_to_be_sent: Message)</code></li>
+<li>Called for each message that is about to be published via the agent's client (resulting from <code>ctx.send*</code> calls). Allows direct modification of the <code>message_to_be_sent</code> object (e.g., adding custom headers) before it goes out.</li>
+</ul>
+</li>
+</ul>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">rustic_ai.core.guild</span><span class="w"> </span><span class="kn">import</span> <span class="n">Agent</span><span class="p">,</span> <span class="n">agent</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rustic_ai.core.guild.agent</span><span class="w"> </span><span class="kn">import</span> <span class="n">AgentFixtures</span><span class="p">,</span> <span class="n">ProcessContext</span><span class="p">,</span> <span class="n">Message</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rustic_ai.core.guild.dsl</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseAgentProps</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseModel</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">LoggableEvent</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="n">event_data</span><span class="p">:</span> <span class="nb">str</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">FixtureDemoAgent</span><span class="p">(</span><span class="n">Agent</span><span class="p">[</span><span class="n">BaseAgentProps</span><span class="p">]):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">agent_spec</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">agent_spec</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">processed_count</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sent_count</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="nd">@agent</span><span class="o">.</span><span class="n">processor</span><span class="p">(</span><span class="n">LoggableEvent</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">log_event</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">ProcessContext</span><span class="p">[</span><span class="n">LoggableEvent</span><span class="p">]):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;HANDLER: Processing event: </span><span class="si">{</span><span class="n">ctx</span><span class="o">.</span><span class="n">payload</span><span class="o">.</span><span class="n">event_data</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">ctx</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">LoggableEvent</span><span class="p">(</span><span class="n">event_data</span><span class="o">=</span><span class="s2">&quot;Response to &quot;</span> <span class="o">+</span> <span class="n">ctx</span><span class="o">.</span><span class="n">payload</span><span class="o">.</span><span class="n">event_data</span><span class="p">))</span>
+
+    <span class="nd">@AgentFixtures</span><span class="o">.</span><span class="n">before_process</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">count_incoming</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">ProcessContext</span><span class="p">[</span><span class="n">LoggableEvent</span><span class="p">]):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">processed_count</span> <span class="o">+=</span><span class="mi">1</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;BEFORE_PROCESS: Message #</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">processed_count</span><span class="si">}</span><span class="s2"> for </span><span class="si">{</span><span class="n">ctx</span><span class="o">.</span><span class="n">method_name</span><span class="si">}</span><span class="s2">. Payload: </span><span class="si">{</span><span class="n">ctx</span><span class="o">.</span><span class="n">payload</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="nd">@AgentFixtures</span><span class="o">.</span><span class="n">after_process</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">confirm_processed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">ProcessContext</span><span class="p">[</span><span class="n">LoggableEvent</span><span class="p">]):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;AFTER_PROCESS: Finished processing for </span><span class="si">{</span><span class="n">ctx</span><span class="o">.</span><span class="n">method_name</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+
+    <span class="nd">@AgentFixtures</span><span class="o">.</span><span class="n">on_send</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">count_outgoing</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">ProcessContext</span><span class="p">[</span><span class="n">LoggableEvent</span><span class="p">]):</span> <span class="c1"># Context of the calling handler</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sent_count</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;ON_SEND: Agent </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> is sending message #</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">sent_count</span><span class="si">}</span><span class="s2"> (initiated by </span><span class="si">{</span><span class="n">ctx</span><span class="o">.</span><span class="n">method_name</span><span class="si">}</span><span class="s2">).&quot;</span><span class="p">)</span>
+
+    <span class="nd">@AgentFixtures</span><span class="o">.</span><span class="n">outgoing_message_modifier</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">add_custom_header</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">ProcessContext</span><span class="p">[</span><span class="n">LoggableEvent</span><span class="p">],</span> <span class="n">message_to_be_sent</span><span class="p">:</span> <span class="n">Message</span><span class="p">):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;OUTGOING_MODIFIER: Modifying message ID </span><span class="si">{</span><span class="n">message_to_be_sent</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">message_to_be_sent</span><span class="o">.</span><span class="n">payload</span><span class="p">:</span> <span class="c1"># Ensure payload exists</span>
+             <span class="n">message_to_be_sent</span><span class="o">.</span><span class="n">payload</span><span class="p">[</span><span class="s2">&quot;modified_by&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="c1"># Example modification</span>
+</code></pre></div>
+<h2 id="dependency-injection-in-handlers">Dependency Injection in Handlers<a class="headerlink" href="#dependency-injection-in-handlers" title="Permanent link">&para;</a></h2>
+<p>Message handlers can declare dependencies that are automatically resolved and injected by the framework when the handler is called. This is done using the <code>depends_on</code> argument of the <code>@agent.processor</code> decorator.</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">rustic_ai.core.guild</span><span class="w"> </span><span class="kn">import</span> <span class="n">Agent</span><span class="p">,</span> <span class="n">agent</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rustic_ai.core.guild.agent</span><span class="w"> </span><span class="kn">import</span> <span class="n">ProcessContext</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rustic_ai.core.guild.dsl</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseAgentProps</span><span class="p">,</span> <span class="n">AgentSpec</span><span class="p">,</span> <span class="n">DependencySpec</span>
+<span class="c1"># Assume MyDatabaseService and MyApiClient are defined elsewhere</span>
+
+<span class="c1"># Example Dependency Resolvers (simplified, see dependencies.md for full structure)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">MyDatabaseResolver</span><span class="p">:</span> <span class="c1"># Implements rustic_ai.core.guild.agent_ext.depends.DependencyResolver</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection_string</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span> 
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">conn_str</span> <span class="o">=</span> <span class="n">connection_string</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">resolve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">guild_id</span><span class="p">,</span> <span class="n">agent_id</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span> <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;DBConnection(</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">conn_str</span><span class="si">}</span><span class="s2">)&quot;</span> <span class="c1"># Returns actual service</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">MyApiClientResolver</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">api_key</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span> 
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">api_key</span> <span class="o">=</span> <span class="n">api_key</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">resolve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">guild_id</span><span class="p">,</span> <span class="n">agent_id</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span> <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;ApiClient(key=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">api_key</span><span class="si">}</span><span class="s2">)&quot;</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">OrderRequest</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="n">item_id</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">quantity</span><span class="p">:</span> <span class="nb">int</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">OrderProcessorAgent</span><span class="p">(</span><span class="n">Agent</span><span class="p">[</span><span class="n">BaseAgentProps</span><span class="p">]):</span>
+    <span class="nd">@agent</span><span class="o">.</span><span class="n">processor</span><span class="p">(</span><span class="n">clz</span><span class="o">=</span><span class="n">OrderRequest</span><span class="p">,</span> <span class="n">depends_on</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;db&quot;</span><span class="p">,</span> <span class="s2">&quot;api_client&quot;</span><span class="p">])</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">process_order</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">ProcessContext</span><span class="p">[</span><span class="n">OrderRequest</span><span class="p">],</span> <span class="n">db</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">api_client</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="c1"># &#39;db&#39; will be an instance of MyDatabaseService (or whatever the resolver returns)</span>
+        <span class="c1"># &#39;api_client&#39; will be an instance of MyApiClient</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Processing order for item </span><span class="si">{</span><span class="n">ctx</span><span class="o">.</span><span class="n">payload</span><span class="o">.</span><span class="n">item_id</span><span class="si">}</span><span class="s2"> using DB: </span><span class="si">{</span><span class="n">db</span><span class="si">}</span><span class="s2"> and API: </span><span class="si">{</span><span class="n">api_client</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="c1"># ... use db and api_client ...</span>
+        <span class="n">ctx</span><span class="o">.</span><span class="n">send_dict</span><span class="p">({</span><span class="s2">&quot;status&quot;</span><span class="p">:</span> <span class="s2">&quot;order processed&quot;</span><span class="p">})</span>
+
+<span class="c1"># In AgentSpec for OrderProcessorAgent:</span>
+<span class="c1"># &quot;dependency_map&quot;: {</span>
+<span class="c1">#   &quot;db&quot;: { </span>
+<span class="c1">#       &quot;class_name&quot;: &quot;my_project.resolvers.MyDatabaseResolver&quot;, </span>
+<span class="c1">#       &quot;properties&quot;: {&quot;connection_string&quot;: &quot;prod_db_uri&quot;} </span>
+<span class="c1">#   },</span>
+<span class="c1">#   &quot;api_client&quot;: { </span>
+<span class="c1">#       &quot;class_name&quot;: &quot;my_project.resolvers.MyApiClientResolver&quot;, </span>
+<span class="c1">#       &quot;properties&quot;: {&quot;api_key&quot;: &quot;secret_key&quot;}</span>
+<span class="c1">#   }</span>
+<span class="c1"># }</span>
+<span class="c1"># Or these could be defined at the Guild level and inherited/overridden.</span>
+</code></pre></div>
+<ul>
+<li>The <code>depends_on</code> list contains string keys.</li>
+<li>These keys must match entries in the agent's own <code>dependency_map</code> or the <code>dependency_map</code> of its <a href="../guilds/">Guild</a>.</li>
+<li>The corresponding <code>DependencySpec</code> defines a resolver class and its configuration.</li>
+<li>The resolver's <code>resolve()</code> method is called to provide the dependency instance.</li>
+<li>The names of the parameters in the handler method must match the keys in <code>depends_on</code>.</li>
+</ul>
+<p>Refer to the <a href="../dependencies/">Dependencies documentation</a> for a full explanation of dependency resolvers.</p>
+<h2 id="agent-state-management">Agent State Management<a class="headerlink" href="#agent-state-management" title="Permanent link">&para;</a></h2>
+<p>Agents are often stateful. Rustic AI provides mechanisms for managing agent state persistently.</p>
+<ul>
+<li><strong>Internal State Access</strong>: Within an agent, <code>self._state</code> holds a dictionary representing the agent's current state. <code>self._guild_state</code> holds the guild's state. <strong>Direct modification of these is generally discouraged for persistence.</strong></li>
+<li><strong><code>StateRefresherMixin</code></strong>: This default mixin, added by <code>AgentMetaclass</code>, handles messages like <code>StateFetchResponse</code> and <code>StateUpdateResponse</code> to keep <code>self._state</code> and <code>self._guild_state</code> synchronized with the authoritative <code>StateManager</code>.</li>
+<li><strong>Requesting State Changes</strong>: To persist state changes, an agent typically sends a <code>StateUpdateRequest</code> message (often to a system topic like <code>GuildTopics.GUILD_STATUS_TOPIC</code>). The <code>StateManager</code> (via a system agent like <code>GuildManagerAgent</code> or a dedicated state agent) processes this request.</li>
+<li><strong><code>ProcessContext</code> and State</strong>: While <code>ctx.update_context()</code> modifies a per-message-flow temporary context, it does <em>not</em> directly persist to the agent's long-term state.</li>
+</ul>
+<div class="highlight"><pre><span></span><code><span class="c1"># Conceptual example of an agent requesting a state update</span>
+<span class="c1"># (Actual implementation details may vary based on system setup)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rustic_ai.core.state.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">StateOwner</span><span class="p">,</span> <span class="n">StateUpdateRequest</span>
+
+<span class="c1"># Inside a handler:</span>
+<span class="c1"># new_state_values = {&quot;last_processed_id&quot;: ctx.message.id, &quot;item_count&quot;: self.item_count + 1}</span>
+<span class="c1"># update_request = StateUpdateRequest(</span>
+<span class="c1">#     state_owner=StateOwner.AGENT,</span>
+<span class="c1">#     guild_id=self.guild_id,</span>
+<span class="c1">#     agent_id=self.id,</span>
+<span class="c1">#     update_format=&quot;MERGE_DICT&quot;, # or &quot;REPLACE_DICT&quot;, &quot;JMESPATH_UPDATE&quot;</span>
+<span class="c1">#     state_update=new_state_values </span>
+<span class="c1"># )</span>
+<span class="c1"># # Send this request, typically to a system topic</span>
+<span class="c1"># ctx.send_dict(payload=update_request.model_dump(), format=StateUpdateRequest.get_qualified_class_name(), ...)</span>
+</code></pre></div>
+<p>For detailed information, see the <a href="../state_management/">State Management documentation</a>.</p>
+<h2 id="error-handling-strategies">Error Handling Strategies<a class="headerlink" href="#error-handling-strategies" title="Permanent link">&para;</a></h2>
+<p>Robust agents need to handle errors gracefully.</p>
+<ol>
+<li>
+<p><strong>Standard Exceptions in Handlers</strong>:</p>
+<ul>
+<li>If a <code>@processor</code> method raises an unhandled Python exception:<ol>
+<li>The system catches the exception.</li>
+<li>It wraps the error details into an <code>ErrorMessage</code> (or similar).</li>
+<li><code>ctx.send_error()</code> is implicitly called with this <code>ErrorMessage</code>.</li>
+<li>This triggers any <code>@AgentFixtures.on_send_error</code> hooks.</li>
+<li>The <code>ErrorMessage</code> is then published, often to a designated error topic or back to the sender based on routing.</li>
+<li>The original exception might also be logged and potentially bubbled up to the <code>ExecutionEngine</code>, which could have policies for restarting the agent.</li>
+</ol>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>Custom Typed Errors (<code>AgentError</code>)</strong>:</p>
+<ul>
+<li>For business logic errors or expected fault conditions, it's good practice to define custom exception classes inheriting from <code>rustic_ai.core.guild.AgentError</code> (or a more specific base error if available).</li>
+<li>Raise these custom errors from your handlers.</li>
+<li>Other agents can then have <code>@processor</code> methods specifically for these custom error types, allowing for targeted error handling workflows.</li>
+</ul>
+</li>
+</ol>
+<div class="highlight"><pre><span></span><code><span class="c1"># Create your own error class to support domain-specific error handling</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rustic_ai.core.guild</span><span class="w"> </span><span class="kn">import</span> <span class="n">Agent</span><span class="p">,</span> <span class="n">agent</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rustic_ai.core.guild.agent</span><span class="w"> </span><span class="kn">import</span> <span class="n">ProcessContext</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseModel</span>
+
+<span class="c1"># Define a custom error class based on exception or a framework base</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">AgentError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Base class for agent-specific exceptions&quot;&quot;&quot;</span>
+    <span class="k">pass</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">InsufficientStockError</span><span class="p">(</span><span class="n">AgentError</span><span class="p">):</span>
+    <span class="n">item_id</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">requested_qty</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">available_qty</span><span class="p">:</span> <span class="nb">int</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">item_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">requested_qty</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">available_qty</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;Insufficient stock&quot;</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">item_id</span> <span class="o">=</span> <span class="n">item_id</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">requested_qty</span> <span class="o">=</span> <span class="n">requested_qty</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">available_qty</span> <span class="o">=</span> <span class="n">available_qty</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">OrderRequest</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="n">item_id</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">quantity</span><span class="p">:</span> <span class="nb">int</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">StockCheckerAgent</span><span class="p">(</span><span class="n">Agent</span><span class="p">[</span><span class="n">BaseAgentProps</span><span class="p">]):</span>
+    <span class="nd">@agent</span><span class="o">.</span><span class="n">processor</span><span class="p">(</span><span class="n">OrderRequest</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">check_stock</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">ProcessContext</span><span class="p">[</span><span class="n">OrderRequest</span><span class="p">]):</span>
+        <span class="c1"># ... logic to check stock ...</span>
+        <span class="n">available</span> <span class="o">=</span> <span class="mi">5</span> <span class="c1"># simplified</span>
+        <span class="k">if</span> <span class="n">ctx</span><span class="o">.</span><span class="n">payload</span><span class="o">.</span><span class="n">quantity</span> <span class="o">&gt;</span> <span class="n">available</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">InsufficientStockError</span><span class="p">(</span>
+                <span class="n">item_id</span><span class="o">=</span><span class="n">ctx</span><span class="o">.</span><span class="n">payload</span><span class="o">.</span><span class="n">item_id</span><span class="p">,</span> 
+                <span class="n">requested_qty</span><span class="o">=</span><span class="n">ctx</span><span class="o">.</span><span class="n">payload</span><span class="o">.</span><span class="n">quantity</span><span class="p">,</span> 
+                <span class="n">available_qty</span><span class="o">=</span><span class="n">available</span>
+            <span class="p">)</span>
+        <span class="c1"># ... proceed with order ...</span>
+        <span class="n">ctx</span><span class="o">.</span><span class="n">send_dict</span><span class="p">({</span><span class="s2">&quot;status&quot;</span><span class="p">:</span> <span class="s2">&quot;stock_ok&quot;</span><span class="p">})</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">ErrorHandlerAgent</span><span class="p">(</span><span class="n">Agent</span><span class="p">[</span><span class="n">BaseAgentProps</span><span class="p">]):</span>
+    <span class="nd">@agent</span><span class="o">.</span><span class="n">processor</span><span class="p">(</span><span class="n">InsufficientStockError</span><span class="p">)</span> <span class="c1"># Handles the specific typed error</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">handle_stock_error</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">ProcessContext</span><span class="p">[</span><span class="n">InsufficientStockError</span><span class="p">]):</span>
+        <span class="n">error_data</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">payload</span> <span class="c1"># error_data is an InsufficientStockError instance</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Stock error: Item </span><span class="si">{</span><span class="n">error_data</span><span class="o">.</span><span class="n">item_id</span><span class="si">}</span><span class="s2">, wanted </span><span class="si">{</span><span class="n">error_data</span><span class="o">.</span><span class="n">requested_qty</span><span class="si">}</span><span class="s2">, have </span><span class="si">{</span><span class="n">error_data</span><span class="o">.</span><span class="n">available_qty</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="c1"># ... notify user, log, etc. ...</span>
+</code></pre></div>
+<h2 id="testing-agents-in-isolation">Testing Agents in Isolation<a class="headerlink" href="#testing-agents-in-isolation" title="Permanent link">&para;</a></h2>
+<p>Rustic AI promotes robust unit and integration testing of agents. The framework provides utilities, most notably <code>wrap_agent_for_testing</code> from <code>rustic_ai.testing.helpers</code>, to simplify the setup and execution of agent tests.</p>
+<p>The <code>wrap_agent_for_testing</code> helper typically handles:
+-   <strong>Agent Instantiation</strong>: Taking an agent instance (usually created via <code>AgentBuilder(...).build()</code>).
+-   <strong>Dependency Setup</strong>: Allowing you to provide <code>DependencySpec</code>s for the agent's dependencies, enabling the use of mock resolvers or test-specific configurations.
+-   <strong>Message ID Generation</strong>: Often takes a <code>generator</code> (e.g., a <code>GemstoneGenerator</code> instance) for creating unique message IDs during the test.
+-   <strong>Outgoing Message Capture</strong>: It returns the configured agent instance and a <code>results</code> list, which automatically collects all messages sent by the agent under test.</p>
+<h3 id="unit-testing-with-wrap_agent_for_testing">Unit Testing with <code>wrap_agent_for_testing</code><a class="headerlink" href="#unit-testing-with-wrap_agent_for_testing" title="Permanent link">&para;</a></h3>
+<p>Here's how you typically test an agent:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">pytest</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span> <span class="c1"># For testing async handlers</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseModel</span> <span class="c1"># For defining message payloads</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Callable</span> <span class="c1"># For type hinting mock callables</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">rustic_ai.core.guild</span><span class="w"> </span><span class="kn">import</span> <span class="n">Agent</span><span class="p">,</span> <span class="n">agent</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rustic_ai.core.guild.builders</span><span class="w"> </span><span class="kn">import</span> <span class="n">AgentBuilder</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rustic_ai.core.guild.dsl</span><span class="w"> </span><span class="kn">import</span> <span class="n">AgentSpec</span><span class="p">,</span> <span class="n">BaseAgentProps</span><span class="p">,</span> <span class="n">DependencySpec</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rustic_ai.core.guild.agent</span><span class="w"> </span><span class="kn">import</span> <span class="n">ProcessContext</span> <span class="c1"># For type hinting if needed</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rustic_ai.core.messaging.core.message</span><span class="w"> </span><span class="kn">import</span> <span class="n">Message</span><span class="p">,</span> <span class="n">AgentTag</span><span class="p">,</span> <span class="n">MessageConstants</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rustic_ai.core.utils.basic_class_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_qualified_class_name</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rustic_ai.core.utils.priority</span><span class="w"> </span><span class="kn">import</span> <span class="n">Priority</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rustic_ai.core.utils.gemstone_id</span><span class="w"> </span><span class="kn">import</span> <span class="n">GemstoneGenerator</span><span class="p">,</span> <span class="n">GemstoneID</span> <span class="c1"># For ID generation in tests</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rustic_ai.testing.helpers</span><span class="w"> </span><span class="kn">import</span> <span class="n">wrap_agent_for_testing</span> <span class="c1"># The real helper for testing agents</span>
+</code></pre></div>
+<h4 id="example-test-setup">Example Test Setup<a class="headerlink" href="#example-test-setup" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><span class="c1"># Agent under test </span>
+<span class="k">class</span><span class="w"> </span><span class="nc">GreeterAgentProps</span><span class="p">(</span><span class="n">BaseAgentProps</span><span class="p">):</span>
+    <span class="n">greeting</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;Hello&quot;</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">GreetingResponse</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="n">message</span><span class="p">:</span> <span class="nb">str</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">GreeterAgent</span><span class="p">(</span><span class="n">Agent</span><span class="p">[</span><span class="n">GreeterAgentProps</span><span class="p">]):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">agent_spec</span><span class="p">:</span> <span class="n">AgentSpec</span><span class="p">[</span><span class="n">GreeterAgentProps</span><span class="p">]):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">agent_spec</span><span class="p">)</span>
+
+    <span class="nd">@agent</span><span class="o">.</span><span class="n">processor</span><span class="p">(</span><span class="n">clz</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">greet</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">ProcessContext</span><span class="p">[</span><span class="nb">str</span><span class="p">]):</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">payload</span> <span class="ow">or</span> <span class="s2">&quot;World&quot;</span>
+        <span class="n">ctx</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">GreetingResponse</span><span class="p">(</span><span class="n">message</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">get_spec</span><span class="p">()</span><span class="o">.</span><span class="n">props</span><span class="o">.</span><span class="n">greeting</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">!&quot;</span><span class="p">))</span>
+
+<span class="c1"># Test fixture</span>
+<span class="nd">@pytest</span><span class="o">.</span><span class="n">fixture</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">greeter_test_setup</span><span class="p">():</span>
+    <span class="c1"># Create agent instance</span>
+    <span class="n">agent_instance</span> <span class="o">=</span> <span class="n">AgentBuilder</span><span class="p">(</span><span class="n">GreeterAgent</span><span class="p">)</span>\
+        <span class="o">.</span><span class="n">set_name</span><span class="p">(</span><span class="s2">&quot;TestGreeter&quot;</span><span class="p">)</span>\
+        <span class="o">.</span><span class="n">set_properties</span><span class="p">(</span><span class="n">GreeterAgentProps</span><span class="p">(</span><span class="n">greeting</span><span class="o">=</span><span class="s2">&quot;Greetings&quot;</span><span class="p">))</span>\
+        <span class="o">.</span><span class="n">build</span><span class="p">()</span>
+
+    <span class="c1"># Set up for testing</span>
+    <span class="n">id_generator</span> <span class="o">=</span> <span class="n">GemstoneGenerator</span><span class="p">(</span><span class="n">machine_id</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">test_agent</span><span class="p">,</span> <span class="n">results</span> <span class="o">=</span> <span class="n">wrap_agent_for_testing</span><span class="p">(</span><span class="n">agent_instance</span><span class="p">,</span> <span class="n">id_generator</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">test_agent</span><span class="p">,</span> <span class="n">results</span><span class="p">,</span> <span class="n">id_generator</span>
+
+<span class="c1"># Actual test</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">test_greeter</span><span class="p">(</span><span class="n">greeter_test_setup</span><span class="p">):</span>
+    <span class="n">agent</span><span class="p">,</span> <span class="n">results</span><span class="p">,</span> <span class="n">id_generator</span> <span class="o">=</span> <span class="n">greeter_test_setup</span>
+
+    <span class="c1"># Create test message</span>
+    <span class="n">msg</span> <span class="o">=</span> <span class="n">Message</span><span class="p">(</span>
+        <span class="n">id_obj</span><span class="o">=</span><span class="n">id_generator</span><span class="o">.</span><span class="n">get_id</span><span class="p">(</span><span class="n">Priority</span><span class="o">.</span><span class="n">NORMAL</span><span class="p">),</span>
+        <span class="n">topics</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;test_topic&quot;</span><span class="p">],</span>
+        <span class="n">sender</span><span class="o">=</span><span class="n">AgentTag</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="s2">&quot;test_sender&quot;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Tester&quot;</span><span class="p">),</span>
+        <span class="n">payload</span><span class="o">=</span><span class="s2">&quot;Friend&quot;</span><span class="p">,</span>
+        <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;str&quot;</span>  <span class="c1"># Matches @agent.processor(clz=str)</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Deliver message</span>
+    <span class="n">agent</span><span class="o">.</span><span class="n">_on_message</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+         <span class="c1"># Verify response</span>
+     <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span>
+     <span class="n">response</span> <span class="o">=</span> <span class="n">GreetingResponse</span><span class="o">.</span><span class="n">model_validate</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">payload</span><span class="p">)</span>
+     <span class="k">assert</span> <span class="n">response</span><span class="o">.</span><span class="n">message</span> <span class="o">==</span> <span class="s2">&quot;Greetings, Friend!&quot;</span>
+</code></pre></div>
+<h3 id="key-aspects-of-testing-with-wrap_agent_for_testing">Key Aspects of Testing with <code>wrap_agent_for_testing</code><a class="headerlink" href="#key-aspects-of-testing-with-wrap_agent_for_testing" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Agent Instantiation</strong>: Pass an <em>instance</em> of your agent (usually from <code>AgentBuilder(...).build()</code>) to <code>wrap_agent_for_testing</code>.</li>
+<li><strong>Dependency Management</strong>:</li>
+<li>Provide a <code>dependencies</code> dictionary to <code>wrap_agent_for_testing</code>. The keys are dependency names (as used in <code>@agent.processor(depends_on=[...])</code>) and values are <code>DependencySpec</code> objects.</li>
+<li>Your <code>DependencySpec</code> in the test should point to a mock resolver or a real resolver configured for a test environment. The mock resolver's <code>resolve()</code> method should return the mock object/function your agent expects.</li>
+<li><strong>Simulating Input</strong>: Craft <code>Message</code> objects with appropriate <code>payload</code>, <code>format</code>, <code>sender</code>, <code>id_obj</code> (using the provided <code>id_generator</code>), etc., to correctly trigger your target handler.</li>
+<li><strong>Invoking Handler</strong>: Call <code>agent_instance._on_message(input_message)</code> to simulate message arrival. The <code>AgentMetaclass</code> and base <code>Agent</code> logic will then find and invoke the correct <code>@processor</code>.</li>
+<li><strong>Capturing &amp; Asserting Output</strong>: The <code>results</code> list returned by <code>wrap_agent_for_testing</code> collects all <code>Message</code> objects sent by the agent. Assert their <code>payload</code>, <code>format</code>, <code>recipient_list</code>, <code>in_response_to</code> field, etc.</li>
+</ul>
+<h3 id="mocking-external-calls-with-unittestmockpatch">Mocking External Calls with <code>unittest.mock.patch</code><a class="headerlink" href="#mocking-external-calls-with-unittestmockpatch" title="Permanent link">&para;</a></h3>
+<p>If an agent makes direct external calls that are not managed via the <code>dependency_map</code> (e.g., using a globally imported library or a method on an unmanaged object), you can use Python's standard <code>unittest.mock.patch</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">unittest.mock</span><span class="w"> </span><span class="kn">import</span> <span class="n">patch</span>
+
+<span class="c1"># Inside your test function or class:</span>
+<span class="c1"># @patch(&#39;my_agent_module.some_external_library.some_function&#39;)</span>
+<span class="c1"># def test_agent_with_patched_call(mock_some_function, my_agent_test_setup):</span>
+<span class="c1">#     agent_uut, captured_messages, id_generator = my_agent_test_setup</span>
+<span class="c1">#     mock_some_function.return_value = &quot;mocked_external_data&quot;</span>
+<span class="c1">#     </span>
+<span class="c1">#     # ... create input message and call agent_uut._on_message(...) ...</span>
+<span class="c1">#     </span>
+<span class="c1">#     mock_some_function.assert_called_once_with(...)</span>
+<span class="c1">#     # ... assert on captured_messages ...</span>
+</code></pre></div>
+<h3 id="testing-asynchronous-handlers">Testing Asynchronous Handlers<a class="headerlink" href="#testing-asynchronous-handlers" title="Permanent link">&para;</a></h3>
+<p>If your agent's <code>@processor</code> methods are <code>async def</code>:
+-   The test function itself might need to be <code>async</code> (e.g., using <code>pytest-asyncio</code> and decorating the test with <code>@pytest.mark.asyncio</code>).
+-   The <code>Agent</code>'s <code>_on_message</code> method and the <code>@agent.processor</code> decorator handle the execution of the async handler correctly.
+-   If your assertions depend on the completion of asynchronous tasks that the handler might have initiated (e.g., messages sent after an <code>await</code> within the handler, or background tasks), you may need to use <code>await asyncio.sleep()</code> in your test to allow these operations time to complete before making assertions on the <code>captured_messages</code> list or other side effects. The Playwright agent tests demonstrate this pattern by looping with <code>await asyncio.sleep()</code> while checking the <code>results</code> list.</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Conceptual snippet for testing an async handler</span>
+<span class="c1"># @pytest.mark.asyncio</span>
+<span class="c1"># async def test_async_agent_handler(my_async_agent_test_setup):</span>
+<span class="c1">#     agent_uut, captured_messages, id_generator = my_async_agent_test_setup</span>
+<span class="c1">#     # ... prepare incoming_message ...</span>
+<span class="c1">#     agent_uut._on_message(incoming_message) # This will schedule the async handler</span>
+
+<span class="c1">#     # Allow time for async operations within the handler to complete</span>
+<span class="c1">#     await asyncio.sleep(0.1) </span>
+
+<span class="c1">#     # ... assertions on captured_messages ...</span>
+</code></pre></div>
+<h3 id="general-testing-guidelines">General Testing Guidelines:<a class="headerlink" href="#general-testing-guidelines" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Focus</strong>: Test the specific logic within your agent's handlers and fixtures.</li>
+<li><strong>Isolation</strong>: Use dependency injection (via <code>wrap_agent_for_testing</code> and <code>DependencySpec</code>) and standard mocking techniques (like <code>unittest.mock.patch</code>) to isolate your agent from external systems for unit tests.</li>
+<li><strong>Variety</strong>: Test with different valid and invalid input message payloads and formats to ensure robustness.</li>
+<li><strong>Error Conditions</strong>: Simulate errors from dependencies (e.g., make mock services raise exceptions or return error indicators) and verify your agent's error handling logic.</li>
+<li><strong>State Changes</strong>: If your agent is stateful, assert that its internal state is updated correctly after message processing. For persistent state, you might need more integrated tests involving a test <code>StateManager</code>.</li>
+<li><strong>Agent-to-Agent Interactions</strong>: For testing how multiple agents interact within a workflow, consider setting up a minimal test <code>Guild</code> (e.g., using <code>GuildBuilder().launch(add_probe=True)</code> or by manually adding a <code>ProbeAgent</code>) to capture messages on relevant topics or observe interactions.</li>
+</ul>
+<h2 id="agent-mixins-behind-the-scenes-support">Agent Mixins: Behind-the-Scenes Support<a class="headerlink" href="#agent-mixins-behind-the-scenes-support" title="Permanent link">&para;</a></h2>
+<p>When you define an agent class, the <code>AgentMetaclass</code> automatically incorporates several default "mixin" classes into its structure. These mixins operate largely behind the scenes, providing your agent with essential cross-cutting functionalities without requiring explicit code in your agent logic.</p>
+<p>The primary default mixins include:</p>
+<ul>
+<li>
+<p><strong><code>StateRefresherMixin</code></strong>: This is crucial for stateful agents. It listens for system messages (like <code>StateFetchResponse</code> and <code>StateUpdateResponse</code>) from the <code>StateManager</code> and ensures that the agent's local cached copies of its own state (<code>self._state</code>) and the guild's state (<code>self._guild_state</code>) are kept synchronized with the authoritative state. This allows you to access reasonably up-to-date state within your agent without manually fetching it on every message.</p>
+<p>This mixin provides helpful methods for state management that you can safely use in your handlers:
+<div class="highlight"><pre><span></span><code><span class="c1"># Get state from the state manager</span>
+<span class="bp">self</span><span class="o">.</span><span class="n">request_state</span><span class="p">(</span><span class="n">ctx</span><span class="p">)</span>  <span class="c1"># Request agent&#39;s own state </span>
+<span class="bp">self</span><span class="o">.</span><span class="n">request_guild_state</span><span class="p">(</span><span class="n">ctx</span><span class="p">)</span>  <span class="c1"># Request guild state</span>
+
+<span class="c1"># Update state persistently</span>
+<span class="bp">self</span><span class="o">.</span><span class="n">update_state</span><span class="p">(</span>
+    <span class="n">ctx</span><span class="p">,</span>
+    <span class="n">update_format</span><span class="o">=</span><span class="n">StateUpdateFormat</span><span class="o">.</span><span class="n">MERGE_DICT</span><span class="p">,</span>  <span class="c1"># or REPLACE_DICT, JMESPATH_UPDATE</span>
+    <span class="n">update</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;counter&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">counter</span><span class="p">}</span>  <span class="c1"># New state values</span>
+<span class="p">)</span>
+
+<span class="bp">self</span><span class="o">.</span><span class="n">update_guild_state</span><span class="p">(</span>
+    <span class="n">ctx</span><span class="p">,</span>
+    <span class="n">update_format</span><span class="o">=</span><span class="n">StateUpdateFormat</span><span class="o">.</span><span class="n">MERGE_DICT</span><span class="p">,</span>
+    <span class="n">update</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;last_active_agent&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">}</span>
+<span class="p">)</span>
+</code></pre></div></p>
+</li>
+<li>
+<p><strong><code>HealthMixin</code></strong>: This mixin provides a basic health check capability. It defines a handler for a system "ping" message (<code>Heartbeat</code>), allowing the execution environment or guild management services to verify that the agent is alive and responsive. The default implementation responds with <code>HeartbeatResponse</code> and status "OK".</p>
+</li>
+<li>
+<p><strong><code>TelemetryMixin</code></strong>: This mixin integrates the agent with the broader observability infrastructure. It helps in propagating tracing contexts across messages and emitting standard metrics, which are invaluable for monitoring and debugging distributed multi-agent interactions. It automatically adds tracing information to outgoing messages and captures spans for message processing.</p>
+</li>
+</ul>
+<p><strong>Interaction and Customization:</strong></p>
+<p>For most agent development, you don't need to interact directly with these mixins or even be explicitly aware of their detailed implementation. They are designed to provide foundational capabilities transparently.</p>
+<p>However, if you are an advanced user looking to deeply customize these core behaviors (e.g., changing how state is refreshed or implementing a very custom health check), you would then need to understand the specific mixin's interface and potentially override its methods or provide alternative implementations. For such advanced scenarios, referring to the source code of these mixins (typically found in <code>rustic_ai.core.guild.agent_ext.mixins.*</code>) would be necessary.</p>
+<h2 id="advanced-topics">Advanced Topics<a class="headerlink" href="#advanced-topics" title="Permanent link">&para;</a></h2>
+<p>In this section, we cover more advanced topics related to agent development and usage.</p>
+<h3 id="custom-mixins">Custom Mixins<a class="headerlink" href="#custom-mixins" title="Permanent link">&para;</a></h3>
+<p>You can create your own mixins and let the AgentMetaclass auto-inject them. To do this:</p>
+<ol>
+<li>Define your mixin class with functionality you want to add to agents</li>
+<li>Add your mixin to the <code>DEFAULT_MIXINS</code> list in a custom metaclass extending <code>AgentMetaclass</code></li>
+<li>Use your custom metaclass when defining agent classes</li>
+</ol>
+<h3 id="dynamic-agent-deployment">Dynamic Agent Deployment<a class="headerlink" href="#dynamic-agent-deployment" title="Permanent link">&para;</a></h3>
+<p>The <code>GuildManagerAgent</code> provides capabilities for dynamic agent deployment:</p>
+<ul>
+<li>Hot-reloading agents with updated implementation or configuration</li>
+<li>Blue-green deployment strategies for zero-downtime updates</li>
+<li>Dynamic scaling by adding/removing agent instances</li>
+</ul>
+<h3 id="performance-considerations">Performance Considerations<a class="headerlink" href="#performance-considerations" title="Permanent link">&para;</a></h3>
+<p>For high-performance agent systems:</p>
+<ul>
+<li>Message priority control using the <code>Priority</code> enum</li>
+<li>Message batching for reducing overhead</li>
+<li>Efficient state management strategies for agents with large state</li>
+<li>Gemstone ID sharding for distributed systems</li>
+</ul>
+<p>The <code>@agent.processor</code> decorator also supports asynchronous functions with <code>async def</code>. The framework will automatically detect and properly schedule these handlers:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">aiohttp</span><span class="w"> </span><span class="kn">import</span> <span class="n">ClientSession</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">AsyncAgent</span><span class="p">(</span><span class="n">Agent</span><span class="p">[</span><span class="n">BaseAgentProps</span><span class="p">]):</span>
+    <span class="nd">@agent</span><span class="o">.</span><span class="n">processor</span><span class="p">(</span><span class="n">clz</span><span class="o">=</span><span class="n">SearchQuery</span><span class="p">)</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">search_web</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">ProcessContext</span><span class="p">[</span><span class="n">SearchQuery</span><span class="p">]):</span>
+        <span class="n">query</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">payload</span><span class="o">.</span><span class="n">query</span>
+
+        <span class="c1"># Perform asynchronous operations</span>
+        <span class="k">async</span> <span class="k">with</span> <span class="n">ClientSession</span><span class="p">()</span> <span class="k">as</span> <span class="n">session</span><span class="p">:</span>
+            <span class="k">async</span> <span class="k">with</span> <span class="n">session</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;https://api.example.com/search?q=</span><span class="si">{</span><span class="n">query</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">response</span><span class="p">:</span>
+                <span class="n">result</span> <span class="o">=</span> <span class="k">await</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+
+        <span class="c1"># Process results and respond</span>
+        <span class="n">ctx</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">SearchResult</span><span class="p">(</span><span class="n">results</span><span class="o">=</span><span class="n">result</span><span class="p">[</span><span class="s2">&quot;items&quot;</span><span class="p">]))</span>
+</code></pre></div>
+<p>When an async handler is invoked:
+1. The framework detects it's an async function via <code>inspect.iscoroutinefunction()</code>
+2. The <code>ProcessorHelper.run_coroutine()</code> method handles scheduling:
+   - If in an already running event loop, it creates a new task
+   - Otherwise, it calls <code>asyncio.run()</code> to run the coroutine to completion</p>
+<p>This allows your agent to perform non-blocking I/O operations like network requests or database queries without blocking the entire agent/guild.</p>
+<h3 id="asynchronous-handlers_1">Asynchronous Handlers<a class="headerlink" href="#asynchronous-handlers_1" title="Permanent link">&para;</a></h3>
+<p>The <code>@agent.processor</code> decorator also supports asynchronous functions with <code>async def</code>. The framework will automatically detect and properly schedule these handlers:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">aiohttp</span><span class="w"> </span><span class="kn">import</span> <span class="n">ClientSession</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">AsyncAgent</span><span class="p">(</span><span class="n">Agent</span><span class="p">[</span><span class="n">BaseAgentProps</span><span class="p">]):</span>
+    <span class="nd">@agent</span><span class="o">.</span><span class="n">processor</span><span class="p">(</span><span class="n">clz</span><span class="o">=</span><span class="n">SearchQuery</span><span class="p">)</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">search_web</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">ProcessContext</span><span class="p">[</span><span class="n">SearchQuery</span><span class="p">]):</span>
+        <span class="n">query</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">payload</span><span class="o">.</span><span class="n">query</span>
+
+        <span class="c1"># Perform asynchronous operations</span>
+        <span class="k">async</span> <span class="k">with</span> <span class="n">ClientSession</span><span class="p">()</span> <span class="k">as</span> <span class="n">session</span><span class="p">:</span>
+            <span class="k">async</span> <span class="k">with</span> <span class="n">session</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;https://api.example.com/search?q=</span><span class="si">{</span><span class="n">query</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">response</span><span class="p">:</span>
+                <span class="n">result</span> <span class="o">=</span> <span class="k">await</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+
+        <span class="c1"># Process results and respond</span>
+        <span class="n">ctx</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">SearchResult</span><span class="p">(</span><span class="n">results</span><span class="o">=</span><span class="n">result</span><span class="p">[</span><span class="s2">&quot;items&quot;</span><span class="p">]))</span>
+</code></pre></div>
+<p>When an async handler is invoked:
+1. The framework detects it's an async function via <code>inspect.iscoroutinefunction()</code>
+2. The <code>ProcessorHelper.run_coroutine()</code> method handles scheduling:
+   - If in an already running event loop, it creates a new task
+   - Otherwise, it calls <code>asyncio.run()</code> to run the coroutine to completion</p>
+<p>This allows your agent to perform non-blocking I/O operations like network requests or database queries without blocking the entire agent/guild.</p>
+<ul>
+<li><strong><code>clz</code></strong>: Specifies the expected Pydantic model for the message payload. If the incoming message's <code>format</code> matches the qualified name of this model, the payload is automatically parsed and validated into an instance of this model. Use <code>JsonDict</code> to receive the payload as a raw dictionary without parsing.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      <script id="__config" type="application/json">{"base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.d50fe291.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.13a4f30d.min.js"></script>
+      
+    
+  </body>
+</html>
