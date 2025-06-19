@@ -364,7 +364,7 @@ class CatalogStore:
 
         return session.get(UserGuild, {"guild_id": guild_id, "user_id": user_id})
 
-    def get_guilds_for_org(self, org_id: str) -> List[BasicGuildInfo]:
+    def get_guilds_for_org(self, org_id: str, statuses: Optional[List[str]] = None) -> List[BasicGuildInfo]:
         with Session(self.engine) as session:
             statement = (
                 select(
@@ -378,6 +378,9 @@ class CatalogStore:
                 .outerjoin(Blueprint, Blueprint.id == BlueprintGuild.blueprint_id)  # type:ignore
                 .where(GuildModel.organization_id == org_id)
             )
+
+            if statuses:
+                statement = statement.where(GuildModel.status.in_(statuses))
 
             guilds: Sequence[BasicGuildInfo] = session.exec(statement).all()  # type:ignore
             return list(guilds)
