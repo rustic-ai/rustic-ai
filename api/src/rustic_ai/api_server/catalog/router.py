@@ -303,8 +303,21 @@ async def remove_user_from_guild(guild_id: str, user_id: str, engine: Engine = D
     operation_id="getGuildsForOrganization",
     tags=["organizations"],
 )
-async def get_guilds_for_organization(organization_id: str, engine: Engine = Depends(Metastore.get_engine)):
-    return CatalogStore(engine).get_guilds_for_org(organization_id)
+async def get_guilds_for_organization(
+    organization_id: str,
+    statuses: Annotated[list[str] | None, Query()] = None,
+    engine: Engine = Depends(Metastore.get_engine),
+):
+    if statuses:
+        valid_statuses = [s.value for s in GuildStatus]
+        invalid_statuses = [s for s in statuses if s not in valid_statuses]
+        if invalid_statuses:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid status values: {invalid_statuses}. Valid statuses are: {valid_statuses}",
+            )
+
+    return CatalogStore(engine).get_guilds_for_org(organization_id, statuses)
 
 
 @catalog_router.post(
