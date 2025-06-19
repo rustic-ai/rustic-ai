@@ -11,17 +11,17 @@ class TestMessagingConfig:
         Test the validate_config method.
         """
         config = MessagingConfig(
-            backend_module="rustic_ai.core.messaging.backend",
-            backend_class="InMemoryMessagingBackend",
-            backend_config={},
+            backend_module="rustic_ai.core.messaging.backend.embedded_backend",
+            backend_class="EmbeddedMessagingBackend",
+            backend_config={"auto_start_server": True},
         )
         config.validate_config()
 
     def test_validate_config_invalid_backend_module(self):
         config = MessagingConfig(
             backend_module="invalid_module",
-            backend_class="InMemoryMessagingBackend",
-            backend_config={},
+            backend_class="EmbeddedMessagingBackend",
+            backend_config={"auto_start_server": True},
         )
 
         with pytest.raises(ModuleNotFoundError):
@@ -39,8 +39,8 @@ class TestMessagingConfig:
 
     def test_validate_config_invalid_backend_config(self):
         config = MessagingConfig(
-            backend_module="rustic_ai.core.messaging.backend",
-            backend_class="InMemoryMessagingBackend",
+            backend_module="rustic_ai.core.messaging.backend.embedded_backend",
+            backend_class="EmbeddedMessagingBackend",
             backend_config={"invalid_key": "value"},
         )
 

@@ -106,7 +106,7 @@ def test_chat_agent_response(test_guild):
     )
     
     # Wait for processing
-    time.sleep(1)
+    time.sleep(0.01)
     
     # Get all messages captured by the probe
     messages = probe_agent.get_messages()

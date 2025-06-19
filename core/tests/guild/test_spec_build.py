@@ -25,9 +25,9 @@ class TestBuildFromSpec:
             description="A guild for testing",
             properties={
                 "backend": {
-                    "module": "rustic_ai.core.messaging.backend",
-                    "class": "InMemoryMessagingBackend",
-                    "config": {},
+                    "module": "rustic_ai.core.messaging.backend.embedded_backend",
+                    "class": "EmbeddedMessagingBackend",
+                    "config": {"auto_start_server": True},
                 }
             },
             agents=[
@@ -77,9 +77,9 @@ class TestBuildFromSpec:
             description="A guild for testing",
             properties={
                 "backend": {
-                    "module": "rustic_ai.core.messaging.backend",
-                    "class": "InMemoryMessagingBackend",
-                    "config": {},
+                    "module": "rustic_ai.core.messaging.backend.embedded_backend",
+                    "class": "EmbeddedMessagingBackend",
+                    "config": {"auto_start_server": True},
                 }
             },
             agents=[
@@ -127,9 +127,9 @@ class TestBuildFromSpec:
             description="A guild for testing",
             properties={
                 "backend": {
-                    "module": "rustic_ai.core.messaging.backend",
-                    "class": "InMemoryMessagingBackend",
-                    "config": {},
+                    "module": "rustic_ai.core.messaging.backend.embedded_backend",
+                    "class": "EmbeddedMessagingBackend",
+                    "config": {"auto_start_server": True},
                 }
             },
             agents=[
@@ -152,9 +152,9 @@ class TestBuildFromSpec:
             description="A guild for testing",
             properties={
                 "backend": {
-                    "module": "rustic_ai.core.messaging.backend",
-                    "class": "InMemoryMessagingBackend",
-                    "config": {},
+                    "module": "rustic_ai.core.messaging.backend.embedded_backend",
+                    "class": "EmbeddedMessagingBackend",
+                    "config": {"auto_start_server": True},
                 }
             },
             agents=[],
@@ -209,9 +209,9 @@ class TestBuildFromSpec:
                 description="A guild for testing",
                 properties={
                     "backend": {
-                        "module": "rustic_ai.core.messaging.backend",
-                        "class": "InMemoryMessagingBackend",
-                        "config": {},
+                        "module": "rustic_ai.core.messaging.backend.embedded_backend",
+                        "class": "EmbeddedMessagingBackend",
+                        "config": {"auto_start_server": True},
                     }
                 },
                 agents=[

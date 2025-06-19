@@ -18,7 +18,7 @@ Ready to contribute? Here's how to set up for local development.
 5. Install the dependencies:
     ```shell
     poetry self add poetry-plugin-mono-repo-deps@0.3.2
-    poetry install --with dev --all-extras --sync
+    poetry install --with dev --all-extras
     ```
 
 6. When you're done making changes, check that your changes pass the

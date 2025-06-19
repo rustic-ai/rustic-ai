@@ -1,3 +1,5 @@
+import time
+
 from rustic_ai.core.agents.testutils.echo_agent import EchoAgent
 from rustic_ai.core.agents.testutils.probe_agent import ProbeAgent
 from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder
@@ -57,6 +59,9 @@ class TestAgentTagging:
             recipient_list=[AgentTag(id="echo1")],
         )
 
+        # Allow time for asynchronous message delivery
+        time.sleep(0.5)
+
         msgs1 = probe_agent.get_messages()
 
         assert len(msgs1) == 3
@@ -75,6 +80,9 @@ class TestAgentTagging:
             {"key1": "value1"},
             recipient_list=[AgentTag(id="echo2")],
         )
+
+        # Allow time for asynchronous message delivery
+        time.sleep(0.5)
 
         msgs2 = probe_agent.get_messages()
 

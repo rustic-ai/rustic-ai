@@ -1,3 +1,5 @@
+import time
+
 from pydantic import BaseModel
 
 from rustic_ai.core.agents.testutils.probe_agent import ProbeAgent
@@ -103,6 +105,9 @@ class TestAgentFixtures:
 
         probe_agent.publish_dict(guild.DEFAULT_TOPIC, {"key1": "value1"})
 
+        # Allow time for asynchronous message processing
+        time.sleep(0.5)
+
         assert agent._before_process_count == 1
         assert agent._after_process_count == 1
         assert agent._send_message_count == 1
@@ -116,6 +121,9 @@ class TestAgentFixtures:
         assert agent._alt_message_mod_count == 1
 
         probe_agent.publish_dict(guild.DEFAULT_TOPIC, {"key1": "value1", "error": True})
+
+        # Allow time for asynchronous message processing
+        time.sleep(0.5)
 
         assert agent._before_process_count == 2
         assert agent._after_process_count == 2

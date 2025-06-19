@@ -117,7 +117,7 @@ class IntegrationTestABC(ABC):
 
         # Allow some time for message processing - adjust as necessary for your environment
         # Consider using a more sophisticated synchronization mechanism for real-world scenarios
-        time.sleep(2)
+        time.sleep(1.0)  # Increased wait time for EmbeddedMessagingBackend
 
         # Assertions to verify communication flow
         # Ensure the local test agent captured the messages as expected
@@ -159,7 +159,7 @@ class IntegrationTestABC(ABC):
         # Send a new message to ensure that the responder agent is no longer processing messages
         local_test_agent.publish_initial_message()
 
-        time.sleep(2)
+        time.sleep(1.0)  # Increased wait time for EmbeddedMessagingBackend
 
         # Ensure that the responder agent did not process the message
         assert len(local_test_agent.captured_messages) == 1

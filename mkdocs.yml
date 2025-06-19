@@ -18,7 +18,9 @@ nav:
       - Agents: core/agents.md
       - Guilds: core/guilds.md
       - Messaging: core/messaging.md
+      - Shared Memory Backend: core/shared_memory_backend.md
       - Execution: core/execution.md
+      - Multiprocess Execution: core/multiprocess_execution.md
       - Dependencies: core/dependencies.md
       - State Management: core/state_management.md
   - Agents:
@@ -95,4 +97,5 @@ markdown_extensions:
         - name: mermaid
           class: mermaid
           format: !!python/name:pymdownx.superfences.fence_code_format
-          
+  - pymdownx.extra
+  - mdx_truly_sane_lists   

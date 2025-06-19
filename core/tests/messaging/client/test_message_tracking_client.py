@@ -35,9 +35,9 @@ class TestMessageTrackingClient:
         Fixture that returns an instance of the Messaging Interface initialized with the given storage.
         """
         messaging_config = MessagingConfig(
-            backend_module="rustic_ai.core.messaging",
-            backend_class="InMemoryMessagingBackend",
-            backend_config={},
+            backend_module="rustic_ai.core.messaging.backend.embedded_backend",
+            backend_class="EmbeddedMessagingBackend",
+            backend_config={"auto_start_server": True},
         )
         return MessagingInterface(namespace, messaging_config)
 
@@ -104,6 +104,9 @@ class TestMessageTrackingClient:
             generator.get_id(Priority.NORMAL),
         )
 
+        # Allow time for asynchronous message delivery
+        time.sleep(0.5)
+
         # Check if the new_message_event is set
         assert len(notifications) == 1
 
@@ -123,6 +126,9 @@ class TestMessageTrackingClient:
         message_id = generator.get_id(Priority.NORMAL)
 
         message_publisher.send_message("topic1", MessageConstants.RAW_JSON_FORMAT, {"data": "test"}, message_id)
+
+        # Allow time for asynchronous message delivery
+        time.sleep(0.5)
 
         assert len(notifications) == 1
         assert len(handled) == 1
@@ -145,6 +151,9 @@ class TestMessageTrackingClient:
         message_publisher.send_message("topic1", MessageConstants.RAW_JSON_FORMAT, {"data": "test1"}, message_id1)
         message_publisher.send_message("topic1", MessageConstants.RAW_JSON_FORMAT, {"data": "test2"}, message_id2)
 
+        # Allow time for asynchronous message delivery
+        time.sleep(0.5)
+
         # Check if the last_processed_message_id is updated to the ID of the last message
         assert client.last_processed_message_id == message_id2.to_int()
 
@@ -165,6 +174,9 @@ class TestMessageTrackingClient:
         message_publisher.send_message("topic1", MessageConstants.RAW_JSON_FORMAT, {"data": "value1"}, message_id1)
         message_publisher.send_message("topic1", MessageConstants.RAW_JSON_FORMAT, {"data": "value2"}, message_id2)
         message_publisher.send_message("topic1", MessageConstants.RAW_JSON_FORMAT, {"data": "value3"}, message_id3)
+
+        # Allow time for asynchronous message delivery
+        time.sleep(1.0)  # Increased wait time for EmbeddedMessagingBackend
 
         # Check if all messages were processed
         assert len(messages_received) == 3
@@ -195,6 +207,9 @@ class TestMessageTrackingClient:
             {"data": "value2"},
             generator.get_id(Priority.NORMAL),
         )
+
+        # Allow time for asynchronous message delivery
+        time.sleep(0.5)
 
         # Check if both messages were processed
         assert len(messages_received) == 2

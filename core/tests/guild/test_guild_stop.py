@@ -22,9 +22,9 @@ class TestGuildStop:
     def messaging(self):
 
         return MessagingConfig(
-            backend_module="rustic_ai.core.messaging.backend",
-            backend_class="InMemoryMessagingBackend",
-            backend_config={},
+            backend_module="rustic_ai.core.messaging.backend.embedded_backend",
+            backend_class="EmbeddedMessagingBackend",
+            backend_config={"auto_start_server": True},
         )
 
     @pytest.fixture
@@ -80,10 +80,10 @@ class TestGuildStop:
 
         guild = builder.bootstrap(database, org_id)
 
-        time.sleep(2)
+        time.sleep(0.01)
         running_agents = guild.execution_engine.get_agents_in_guild(guild_id)
         assert len(running_agents) == 2
-         
+
         guild._add_local_agent(probe_agent)
 
         probe_agent.publish_dict(
@@ -92,7 +92,7 @@ class TestGuildStop:
             format=StopGuildRequest,
         )
 
-        time.sleep(2)
+        time.sleep(1.0)
 
         is_agent_running = guild.execution_engine.is_agent_running(guild_id, echo_agent.id)
         assert is_agent_running is False

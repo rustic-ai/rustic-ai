@@ -179,8 +179,8 @@ class GuildModel(SQLModel, table=True):
     description: str = Field(default="")
     execution_engine: str = Field(default=SyncExecutionEngine.get_qualified_class_name())
 
-    backend_module: str = Field(default="rustic_ai.core.messaging.backend")
-    backend_class: str = Field(default="InMemoryMessagingBackend")
+    backend_module: str = Field(default="rustic_ai.core.messaging.backend.embedded_backend")
+    backend_class: str = Field(default="EmbeddedMessagingBackend")
     backend_config: dict = Field(sa_column=Column(MutableDict.as_mutable(JSON(none_as_null=True)), default={}))
 
     organization_id: str = Field(index=True, nullable=False)

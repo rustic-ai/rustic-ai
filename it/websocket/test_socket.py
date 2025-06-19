@@ -57,7 +57,14 @@ class TestServer:
                 ),
                 id="RedisMessagingBackend",
             ),
-            None,
+            pytest.param(
+                MessagingConfig(
+                    backend_module="rustic_ai.core.messaging.backend.embedded_backend",
+                    backend_class="EmbeddedMessagingBackend",
+                    backend_config={"port": 31145, "auto_start_server": True},
+                ),
+                id="EmbeddedMessagingBackend",
+            ),
         ],
     )
     def guild(self, echo_agent, request) -> GuildSpec:
@@ -67,12 +74,11 @@ class TestServer:
             echo_agent
         )
 
-        if messaging:
-            builder.set_messaging(
-                messaging.backend_module,
-                messaging.backend_class,
-                messaging.backend_config,
-            )
+        builder.set_messaging(
+            messaging.backend_module,
+            messaging.backend_class,
+            messaging.backend_config,
+        )
 
         return builder.build_spec()
 
@@ -86,6 +92,7 @@ class TestServer:
     @pytest.mark.asyncio
     async def test_websocket_interaction(self, guild: GuildSpec, generator: GemstoneGenerator, org_id):
         server = "127.0.0.1:8880"
+        # Increase wait time for shared memory operations
         wait_time = 0.5
 
         routing_slip = RoutingSlip(
@@ -108,13 +115,14 @@ class TestServer:
 
         guild.routes = routing_slip
 
-        async with httpx.AsyncClient(base_url=f"http://{server}") as client:
+        async with httpx.AsyncClient(base_url=f"http://{server}", timeout=wait_time * 2) as client:
             req = LaunchGuildReq(spec=guild, org_id=org_id)
             req_data = json.loads(req.model_dump_json())
-            new_guild_resp = await asyncio.wait_for(client.post("/api/guilds", json=req_data), wait_time)
+            new_guild_resp = await asyncio.wait_for(client.post("/api/guilds", json=req_data), wait_time * 2)
 
             assert new_guild_resp.status_code == 201
-            time.sleep(wait_time)
+            # Extra wait for EmbeddedMessagingBackend to ensure agents are fully subscribed
+            time.sleep(wait_time * 2)
 
             no_messages = await asyncio.wait_for(
                 client.get(f"/api/guilds/{guild.id}/user123/messages", timeout=wait_time), wait_time
@@ -123,6 +131,9 @@ class TestServer:
             assert no_messages.status_code == 200
             no_messages_json = no_messages.json()
             assert len(no_messages_json) == 0
+
+        # Additional wait for EmbeddedMessagingBackend agents to be fully ready
+        time.sleep(wait_time)
 
         async with websockets.connect(
             f"ws://{server}/ws/guilds/{guild.id}/usercomms/user123/user_name_123"
@@ -142,7 +153,7 @@ class TestServer:
 
             await asyncio.sleep(wait_time)
             await asyncio.wait_for(websocket.send(json.dumps(msg_dict)), wait_time)
-            await asyncio.sleep(wait_time)
+            await asyncio.sleep(wait_time * 2)
 
             wresp0 = []
             while True:
@@ -288,8 +299,8 @@ class TestServer:
             assert json0["forward_header"]["on_behalf_of"]["name"] == "EchoAgent"
 
         # Test fetching historical messages
-        async with httpx.AsyncClient(base_url=f"http://{server}") as client:
-            messages = await asyncio.wait_for(client.get(f"/api/guilds/{guild.id}/user123/messages"), wait_time)
+        async with httpx.AsyncClient(base_url=f"http://{server}", timeout=wait_time * 2) as client:
+            messages = await asyncio.wait_for(client.get(f"/api/guilds/{guild.id}/user123/messages"), wait_time * 2)
 
             assert messages.status_code == 200
             messages_json = messages.json()

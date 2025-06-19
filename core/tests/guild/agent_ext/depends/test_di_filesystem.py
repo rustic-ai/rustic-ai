@@ -179,6 +179,11 @@ class TestFileSystem:
             format=WriteToFile,
         )
 
+        # Allow time for asynchronous message processing
+        import time
+
+        time.sleep(0.01)
+
         messages = probe_agent.get_messages()
 
         assert len(messages) == 1
@@ -197,6 +202,9 @@ class TestFileSystem:
             format=ReadFromFile,
         )
 
+        # Allow time for asynchronous message processing
+        time.sleep(0.01)
+
         messages = probe_agent.get_messages()
 
         assert len(messages) == 1
@@ -211,6 +219,9 @@ class TestFileSystem:
             payload=WriteToFile(content="Guild file content", filename="test_file", guild_path=True),
             format=WriteToFile,
         )
+
+        # Allow time for asynchronous message processing
+        time.sleep(0.01)
 
         messages = probe_agent.get_messages()
 
@@ -232,6 +243,9 @@ class TestFileSystem:
             payload=ReadFromFile(filename="test_file", guild_path=True),
             format=ReadFromFile,
         )
+
+        # Allow time for asynchronous message processing
+        time.sleep(0.01)
 
         messages = probe_agent.get_messages()
 

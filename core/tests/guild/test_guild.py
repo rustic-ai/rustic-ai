@@ -16,9 +16,9 @@ class TestGuild:
     def messaging(self):
 
         return MessagingConfig(
-            backend_module="rustic_ai.core.messaging.backend",
-            backend_class="InMemoryMessagingBackend",
-            backend_config={},
+            backend_module="rustic_ai.core.messaging.backend.embedded_backend",
+            backend_class="EmbeddedMessagingBackend",
+            backend_config={"auto_start_server": True},
         )
 
     @pytest.fixture
@@ -69,9 +69,9 @@ class TestGuild:
 
     def test_guild_initialization_with_messaging_config(self, org_id):
         messaging_config = MessagingConfig(
-            backend_module="rustic_ai.core.messaging.backend",
-            backend_class="InMemoryMessagingBackend",
-            backend_config={},
+            backend_module="rustic_ai.core.messaging.backend.embedded_backend",
+            backend_class="EmbeddedMessagingBackend",
+            backend_config={"auto_start_server": True},
         )
 
         guild_id = "e1"

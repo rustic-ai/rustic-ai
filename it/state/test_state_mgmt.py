@@ -152,7 +152,7 @@ class TestStateMgmt:
             routing_slip=RoutingSlip(steps=[guild_update_routing_rule]),
         )
 
-        time.sleep(1)
+        time.sleep(0.1)
 
         messages = probe_agent.get_messages()
         assert len(messages) == 1  # Second agent should not publish as data is empty
@@ -168,7 +168,7 @@ class TestStateMgmt:
             payload=EchoGuildState(guild_id=guild.id),
         )
 
-        time.sleep(1)
+        time.sleep(0.1)
 
         messages = probe_agent.get_messages()
         assert len(messages) == 2
@@ -205,7 +205,7 @@ class TestStateMgmt:
             routing_slip=RoutingSlip(steps=[agent_update_routing_rule]),
         )
 
-        time.sleep(1)
+        time.sleep(0.1)
 
         messages = probe_agent.get_messages()
 
@@ -222,7 +222,7 @@ class TestStateMgmt:
             payload=EchoAgentState(guild_id=guild.id, agent_id=state_aware_agent.id),
         )
 
-        time.sleep(1)
+        time.sleep(0.1)
 
         messages = probe_agent.get_messages()
         assert len(messages) == 2

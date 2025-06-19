@@ -278,6 +278,8 @@ class BaseTestKVStore(ABC):
             format=KVGet,
         )
 
+        time.sleep(0.1)
+
         messages = probe_agent.get_messages()
 
         assert len(messages) == 3

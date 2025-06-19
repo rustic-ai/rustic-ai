@@ -143,10 +143,12 @@ class AgentWrapper(ABC):
         if self.agent is None:
             return
 
-        for topic in self.agent.subscribed_topics:
-            self.messaging.unsubscribe(topic, self.agent._get_client())
+        # Check if messaging exists (could be a race condition in threaded environments)
+        if hasattr(self, "messaging") and self.messaging is not None:
+            for topic in self.agent.subscribed_topics:
+                self.messaging.unsubscribe(topic, self.agent._get_client())
 
-        self.messaging.unregister_client(self.agent._get_client())
+            self.messaging.unregister_client(self.agent._get_client())
 
-        if self.messaging_owned:
-            self.messaging.shutdown()
+            if self.messaging_owned:
+                self.messaging.shutdown()
