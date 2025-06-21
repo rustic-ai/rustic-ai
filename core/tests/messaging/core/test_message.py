@@ -383,7 +383,7 @@ class TestMessage:
         transformed = transformer.transform(origin=origin, agent_state={}, guild_state={}, routable=routable)
 
         assert transformed is not None
-        assert transformed.payload == {"key": "value"}
+        assert transformed.payload == {"key": "value", "agent_state": {}, "guild_state": {}}
 
     def test_simple_transformer_with_expression(self, generator):
         transformer = PayloadTransformer(expression="{'new_key': $.key}")

@@ -83,7 +83,7 @@ class TestGuildStop:
         time.sleep(2)
         running_agents = guild.execution_engine.get_agents_in_guild(guild_id)
         assert len(running_agents) == 2
-         
+
         guild._add_local_agent(probe_agent)
 
         probe_agent.publish_dict(
