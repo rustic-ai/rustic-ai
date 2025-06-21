@@ -136,7 +136,7 @@ class PayloadTransformer(Transformer):
         A simple transformer that applies a JSONata expression to the message payload.
         This transformer is basic and acts only on the payload.
         """
-        data = routable.payload
+        data = dict(routable.payload, agent_state=agent_state, guild_state=guild_state)
 
         try:
             if self.expression:
