@@ -41,14 +41,10 @@ def agent_process_function(
         agent_spec = pickle.loads(agent_spec_data)
         messaging_config = pickle.loads(messaging_config_data)
 
-        # Recreate the client type from its name
-        if client_type_name == "MessageTrackingClient":
-            from rustic_ai.core.messaging.client import MessageTrackingClient
+        # Recreate the client type from its name defaulting to MessageTrackingClient
+        from rustic_ai.core.messaging.client import MessageTrackingClient
 
-            client_type = MessageTrackingClient
-        else:
-            # For extensibility, could use importlib to dynamically import
-            client_type = MessageTrackingClient
+        client_type = MessageTrackingClient
 
         # Initialize agent directly (similar to AgentWrapper.initialize_agent())
         from rustic_ai.core.guild.agent_ext.depends.dependency_resolver import (
