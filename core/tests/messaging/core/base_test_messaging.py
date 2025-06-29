@@ -140,7 +140,7 @@ class BaseTestMessagingABC(ABC):
         message_id = generator.get_id(Priority.NORMAL)
         sender.send_message("topic1", MessageConstants.RAW_JSON_FORMAT, {"data": "value"}, message_id)
 
-        time.sleep(1)  # Give the message time to be processed
+        time.sleep(0.01)  # Give the message time to be processed
 
         assert len(messages_received) == 1
         assert messages_received[0].payload == {"data": "value"}
@@ -168,7 +168,7 @@ class BaseTestMessagingABC(ABC):
             message_id1,
         )
 
-        time.sleep(1)
+        time.sleep(0.01)
         assert len(messages_received) == 2
 
         assert messages_received[0].payload == {"data": "value1"}
@@ -223,7 +223,7 @@ class BaseTestMessagingABC(ABC):
         message_id = generator.get_id(Priority.NORMAL)
         sender.send_message("topic1", MessageConstants.RAW_JSON_FORMAT, {"data": "value"}, message_id)
 
-        time.sleep(1)  # Give the message time to be processed
+        time.sleep(0.01)  # Give the message time to be processed
 
         assert len(messages_received1) == 1
         assert len(messages_received2) == 1
@@ -248,7 +248,7 @@ class BaseTestMessagingABC(ABC):
         sender.send_message("topic1", MessageConstants.RAW_JSON_FORMAT, {"data": "value1"}, message_id1)
         sender.send_message("topic2", MessageConstants.RAW_JSON_FORMAT, {"data": "value2"}, message_id2)
 
-        time.sleep(1)  # Give the message time to be processed
+        time.sleep(0.01)  # Give the message time to be processed
 
         assert len(messages_received) == 2
         assert messages_received[0].payload == {"data": "value1"}
@@ -419,14 +419,12 @@ class BaseTestMessagingABC(ABC):
         message_id = generator.get_id(Priority.NORMAL)
         sender.send_message("topic1", MessageConstants.RAW_JSON_FORMAT, {"data": "value"}, message_id)
 
-        time.sleep(1)  # Give the message time to be processed
+        time.sleep(0.01)  # Give the message time to be processed
 
         assert len(messages_received) == 1
         assert len(alt_messages_received) == 0
 
-    def test_enrich_message(
-        self, messaging, alt_messaging, message_publisher, simple_client, simple_client_2, generator
-    ):
+    def test_enrich_message(self, messaging, message_publisher, simple_client, generator):
 
         topic = "enrich_topic"
         client, messages_received = simple_client
@@ -452,7 +450,7 @@ class BaseTestMessagingABC(ABC):
         )
         sender.send_message(topic, MessageConstants.RAW_JSON_FORMAT, {"data": "value2"}, message_id3, history, 2)
 
-        time.sleep(1)  # Give the message time to be processed
+        time.sleep(0.01)  # Give the message time to be processed
 
         assert len(messages_received) == 3
 

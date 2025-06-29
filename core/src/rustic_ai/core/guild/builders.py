@@ -645,9 +645,9 @@ class GuildHelper:
         return {
             GSKC.BACKEND_MODULE: os.environ.get(
                 EnvConstants.RUSTIC_AI_MESSAGING_MODULE,
-                "rustic_ai.core.messaging.backend",
+                "rustic_ai.core.messaging.backend.embedded_backend",
             ),
-            GSKC.BACKEND_CLASS: os.environ.get(EnvConstants.RUSTIC_AI_MESSAGING_CLASS, "InMemoryMessagingBackend"),
+            GSKC.BACKEND_CLASS: os.environ.get(EnvConstants.RUSTIC_AI_MESSAGING_CLASS, "EmbeddedMessagingBackend"),
             GSKC.BACKEND_CONFIG: json.loads(os.environ.get(EnvConstants.RUSTIC_AI_MESSAGING_BACKEND_CONFIG, "{}")),
         }
 

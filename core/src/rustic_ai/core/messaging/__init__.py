@@ -1,4 +1,4 @@
-from .backend import InMemoryMessagingBackend
+from .backend import EmbeddedMessagingBackend, InMemoryMessagingBackend
 from .client import (
     FilteringClient,
     LoggingClient,
@@ -40,6 +40,7 @@ __all__ = [
     "MessagingInterface",
     "MessagingBackend",
     "InMemoryMessagingBackend",
+    "EmbeddedMessagingBackend",
     "MessagingConfig",
     "AgentTag",
     "MDT",

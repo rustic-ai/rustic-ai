@@ -22,9 +22,9 @@ def guild(org_id) -> Guild:
     guild_id = f"test_guild_{TEST_GUILD_COUNT}"
 
     messaging_config: MessagingConfig = MessagingConfig(
-        backend_module="rustic_ai.core.messaging.backend",
-        backend_class="InMemoryMessagingBackend",
-        backend_config={},
+        backend_module="rustic_ai.core.messaging.backend.embedded_backend",
+        backend_class="EmbeddedMessagingBackend",
+        backend_config={"auto_start_server": True},
     )
 
     # Create and return a Guild
@@ -39,11 +39,13 @@ def guild(org_id) -> Guild:
 
 
 @pytest.fixture
-def probe_agent():
-
+def probe_agent(generator):
     probe: ProbeAgent = (
         AgentBuilder(ProbeAgent).set_id("test_agent").set_name("Test Agent").set_description("A test agent").build()
     )
+
+    # Initialize the ID generator that ProbeAgent needs for publishing messages
+    probe._set_generator(generator)
 
     yield probe
 

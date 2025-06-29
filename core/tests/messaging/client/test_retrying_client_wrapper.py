@@ -83,7 +83,7 @@ class TestRetryingClient:
         )
         retrying_client.notify_new_message(test_message)
 
-        time.sleep(1)
+        time.sleep(0.01)
 
         # Verify that the original handle_message was called max_retries times
         assert len(messages_received) == 3

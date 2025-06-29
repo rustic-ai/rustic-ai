@@ -24,6 +24,6 @@ echo "Adding poetry-plugin-mono-repo-deps to Poetry..."
 poetry self add poetry-plugin-mono-repo-deps
 
 echo "Installing project dependencies with Poetry..."
-poetry install --without dev --all-extras --sync
+poetry install --without dev --all-extras
 
 echo "Poetry setup and dependency installation complete in ${PROJECT_ROOT}."

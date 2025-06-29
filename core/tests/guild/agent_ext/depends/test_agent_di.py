@@ -88,7 +88,7 @@ class TestAgentDependencyInjection:
             priority=Priority.NORMAL,
         )
 
-        time.sleep(2)
+        time.sleep(0.01)
 
         messages = probe_agent.get_messages()
 

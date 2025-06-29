@@ -80,7 +80,7 @@ class TestHealthMixin:
             format=Heartbeat,
         ).to_int()
 
-        time.sleep(2)
+        time.sleep(0.1)
 
         messages = probe_agent.get_messages()
 

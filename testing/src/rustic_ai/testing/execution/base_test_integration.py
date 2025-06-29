@@ -28,7 +28,7 @@ class IntegrationTestABC(ABC):
 
     @pytest.fixture
     def wait_time(self) -> float:
-        return 0.01
+        return 0.1
 
     @pytest.fixture
     def guild(self, wait_time, messaging, execution_engine, guild_id, org_id):
@@ -107,13 +107,15 @@ class IntegrationTestABC(ABC):
         local_exec_engine = SyncExecutionEngine(guild_id=guild.id, organization_id=guild.organization_id)
         guild._add_local_agent(local_test_agent, local_exec_engine)
 
-        time.sleep(wait_time)
+        # Give more time for all agents to initialize fully, especially for Ray/distributed execution
+        time.sleep(max(wait_time * 10, 1.0))
+
         # Initiator sends a message to trigger communication
         local_test_agent.publish_initial_message()
 
-        # Allow some time for message processing - adjust as necessary for your environment
+        # Allow more time for message processing in distributed scenarios
         # Consider using a more sophisticated synchronization mechanism for real-world scenarios
-        time.sleep(2)
+        time.sleep(max(wait_time * 30, 3.0))
 
         # Assertions to verify communication flow
         # Ensure the local test agent captured the messages as expected
@@ -155,7 +157,7 @@ class IntegrationTestABC(ABC):
         # Send a new message to ensure that the responder agent is no longer processing messages
         local_test_agent.publish_initial_message()
 
-        time.sleep(2)
+        time.sleep(max(wait_time * 30, 3.0))
 
         # Ensure that the responder agent did not process the message
         assert len(local_test_agent.captured_messages) == 1

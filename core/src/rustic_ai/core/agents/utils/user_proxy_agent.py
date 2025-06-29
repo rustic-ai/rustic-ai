@@ -92,6 +92,7 @@ class UserProxyAgent(Agent[UserProxyAgentProps], GuildRefreshMixin):
             agent_type=AgentType.HUMAN,
             agent_mode=AgentMode.LOCAL,
         )
+        self.guilds_agents_ats: Dict[str, AgentTag] = {}
 
     @processor(Message, user_topic_filter)
     def unwrap_and_forward_message(self, ctx: ProcessContext[Message]) -> None:
