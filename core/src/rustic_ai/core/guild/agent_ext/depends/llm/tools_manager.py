@@ -4,6 +4,7 @@ import json
 from typing import List, Optional
 
 from pydantic import BaseModel
+from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 
 from .....utils import ModelClass
 from ..llm.models import (
@@ -163,3 +164,11 @@ class Toolset(ABC):
         """
 
         pass
+
+    @classmethod
+    def get_qualified_class_name(cls) -> str:
+        """
+        Returns the qualified class name for this tool set.
+        """
+
+        return get_qualified_class_name(cls)
