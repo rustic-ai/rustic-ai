@@ -283,6 +283,7 @@ class BasicGuildInfo(SQLModel):
     name: str
     blueprint_id: Optional[str] = Field(default=None)
     icon: Optional[str] = Field(default=None)
+    status: str
 
 
 class AgentIcon(SQLModel, table=True):

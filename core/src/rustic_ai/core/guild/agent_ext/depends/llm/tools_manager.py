@@ -4,6 +4,7 @@ import json
 from typing import List, Optional
 
 from pydantic import BaseModel
+
 from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 
 from .....utils import ModelClass
