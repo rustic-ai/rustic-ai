@@ -415,14 +415,16 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
         Stops all the agents in the guild.
         """
         if ctx.payload.guild_id == self.guild_id:
+            with Session(self.engine) as session:
+                self.guild_model.status = GuildStatus.STOPPING
+                session.add(self.guild_model)
+                session.commit()
             for agent_spec in self.guild.list_agents():
                 if agent_spec.id != self.id:
                     self.guild.remove_agent(agent_spec.id)
-            self.guild.remove_agent(self.id)
-
-        with Session(self.engine) as session:
-            self.guild_model = GuildModel.get_by_id(session, self.guild_id)
-            if self.guild_model:
+            with Session(self.engine) as session:
                 self.guild_model.status = GuildStatus.STOPPED
                 session.add(self.guild_model)
                 session.commit()
+                session.close()
+            self.guild.remove_agent(self.id)
