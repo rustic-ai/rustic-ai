@@ -20,6 +20,7 @@ class GuildStatus(str, Enum):
     STARTING = "starting"
     RUNNING = "running"
     STOPPED = "stopped"
+    STOPPING = "stopping"
 
 
 class GuildRoutes(SQLModel, table=True):
