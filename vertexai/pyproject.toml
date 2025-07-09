@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "rusticai-vertexai"
-version = "0.0.1"
+version = "0.1.0"
 description = "Rustic AI module with Vertex AI integrations"
 authors = ["Dragonscale Industries Inc. <dev@dragonscale.ai>"]
 license = "Apache-2.0"

@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "rusticai-showcase"
-version = "0.0.5"
+version = "0.1.0"
 description = "Module that showcases Rustic AI capabilities"
 authors = ["Dragonscale Industries Inc. <dev@dragonscale.ai>"]
 license = "Apache-2.0"
