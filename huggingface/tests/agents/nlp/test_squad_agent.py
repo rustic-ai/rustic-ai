@@ -15,9 +15,7 @@ from rustic_ai.huggingface.agents.nlp.squad_agent import (
 
 
 class TestSquadAgent:
-    @pytest.mark.skipif(
-        os.getenv("HUGGINGFACE_API_KEY") is None, reason="HUGGINGFACE_API_KEY environment variable not set"
-    )
+    @pytest.mark.skipif(os.getenv("HF_TOKEN") is None, reason="HF_TOKEN environment variable not set")
     def test_answer_question(self, probe_agent: ProbeAgent, guild: Guild):
 
         squad_agent = (
@@ -43,7 +41,7 @@ class TestSquadAgent:
 
         probe_agent.publish_dict(guild.DEFAULT_TOPIC, question.model_dump(), format=QuestionWithContext)
 
-        time.sleep(5)
+        time.sleep(60)
         messages = probe_agent.get_messages()
 
         assert len(messages) == 1

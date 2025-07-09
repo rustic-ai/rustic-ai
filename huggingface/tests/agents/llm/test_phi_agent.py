@@ -28,7 +28,7 @@ class TestPhiAgent:
             format=GenerationPromptRequest,
         )
 
-        time.sleep(0.01)
+        time.sleep(60)
 
         messages = probe_agent.get_messages()
 

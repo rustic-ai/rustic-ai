@@ -18,7 +18,7 @@ jobs:
     # The type of runner that the job will run on
     strategy:
       matrix:
-        python-versions: [3.12.10]
+        python-versions: [3.12.11]
         os: [ubuntu-latest]
         redis-versions: [7]
     runs-on: ${{ matrix.os }}

@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "rusticai-serpapi"
-version = "0.0.4"
+version = "0.1.0"
 description = "Rustic AI module supporting Search through SerpApi"
 authors = ["Dragonscale Industries Inc. <dev@dragonscale.ai>"]
 license = "Apache-2.0"

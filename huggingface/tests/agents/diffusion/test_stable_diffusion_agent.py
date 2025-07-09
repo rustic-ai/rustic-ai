@@ -71,7 +71,7 @@ class TestRunwaymlStableDiffusionAgent:
             format=ImageGenerationRequest,
         )
 
-        time.sleep(0.01)
+        time.sleep(120)
         messages = probe_agent.get_messages()
 
         assert len(messages) == 1

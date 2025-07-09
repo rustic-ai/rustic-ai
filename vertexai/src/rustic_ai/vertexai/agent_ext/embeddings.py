@@ -1,7 +1,7 @@
 from typing import List, Optional
 
+from google.genai.types import EmbedContentConfig, Part
 from pydantic.config import JsonDict
-from vertexai.language_models import TextEmbeddingInput, TextEmbeddingModel
 
 from rustic_ai.core.guild.agent_ext.depends import DependencyResolver
 from rustic_ai.core.guild.agent_ext.depends.embeddings import Embeddings
@@ -21,11 +21,11 @@ DEFAULT_MODEL: str = "text-embedding-005"
 
 class VertexAIEmbeddings(Embeddings, VertexAIBase):
     def __init__(self, model: str, conf: VertexAIEmbeddingConf):
-        VertexAIBase.__init__(self, conf.project_id, conf.location)
         self.conf = conf
-        self.model = TextEmbeddingModel.from_pretrained(model)
+        VertexAIBase.__init__(self, conf.project_id, conf.location)
+        self.model = model
 
-    def _create_embedding_batches(self, text: list[str], tokens_per_entry: int) -> list[list[TextEmbeddingInput]]:
+    def _create_embedding_batches(self, text: list[str], tokens_per_entry: int) -> list[list[Part]]:
         if not text:
             return []
 
@@ -38,7 +38,7 @@ class VertexAIEmbeddings(Embeddings, VertexAIBase):
         current_batch_tokens = 0
 
         for t in text:
-            embedding_input = TextEmbeddingInput(text=t, task_type=self.conf.task_type)
+            embedding_input = Part.from_text(text=t)
 
             # If adding this would exceed our token limit, start a new batch
             if current_batch_tokens + tokens_per_entry < self.conf.max_tokens_per_batch:
@@ -60,9 +60,15 @@ class VertexAIEmbeddings(Embeddings, VertexAIBase):
         input_batches = self._create_embedding_batches(text, self.conf.tokens_per_entry)
         result: List[List[float]] = []
         for batch in input_batches:
-            embeddings = self.model.get_embeddings(
-                batch, auto_truncate=self.conf.auto_truncate, output_dimensionality=self.conf.output_dimensionality
-            )
+            embeddings = self.genai_client.models.embed_content(
+                model=self.model,
+                contents=batch,
+                config=EmbedContentConfig(
+                    task_type=self.conf.task_type,
+                    auto_truncate=self.conf.auto_truncate,
+                    output_dimensionality=self.conf.output_dimensionality,
+                ),
+            ).embeddings
             for embedding in embeddings:
                 result.append(embedding.values)
         return result

@@ -21,7 +21,7 @@ class HuggingfaceInferenceMixin(HttpClientMixin):
             logging.info("prompt not provided")  # pragma: no cover
             return
 
-        huggingface_api_key = os.getenv("HUGGINGFACE_API_KEY", "")
+        huggingface_api_key = os.getenv("HF_TOKEN", "")
         if huggingface_api_key:
             headers["Authorization"] = f"Bearer {huggingface_api_key}"
 

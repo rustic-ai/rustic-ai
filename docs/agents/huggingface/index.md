@@ -29,7 +29,7 @@ To use HuggingFace agents, you'll need:
 
 1. The appropriate HuggingFace libraries installed in your environment
 2. Sufficient hardware resources for models running locally
-3. A HuggingFace API key for remote inference (when applicable)
+3. A HuggingFace API key for remote inference (when applicable). This could be exposed as an environment variable `HF_TOKEN` or handled through the [huggingface-cli](https://huggingface.co/docs/huggingface_hub/en/quick-start#authentication)
 4. Proper configuration of the respective agent in your guild
 
 Refer to the individual agent documentation for detailed implementation instructions. 

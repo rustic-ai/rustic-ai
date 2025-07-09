@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "rusticai-vertexai"
-version = "0.0.1"
+version = "0.1.0"
 description = "Rustic AI module with Vertex AI integrations"
 authors = ["Dragonscale Industries Inc. <dev@dragonscale.ai>"]
 license = "Apache-2.0"
@@ -20,6 +20,7 @@ packages = [{ include = "rustic_ai", from = "src" }]
 python = ">=3.12,<3.13"
 rusticai-core = { path = "../core", develop = true }
 google-cloud-aiplatform = "^1.91.0"
+google-genai = "^1.24.0"
 
 [tool.poetry-monorepo.deps]
 
