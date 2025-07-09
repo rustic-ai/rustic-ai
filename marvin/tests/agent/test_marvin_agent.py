@@ -169,7 +169,7 @@ class TestMarvinAgent:
         assert response.extracted_data[0].year == 2024
 
         classify_and_extract_request2 = ClassifyAndExtractRequest(
-            source_text="With an estimated population of 5.6 million as of 2024, it is Canada's third-most populous province.",
+            source_text="With an estimated population of 5.6 million as of 2024, British Columbia is Canada's third-most populous province.",
             classification_instructions="Categorize if the text is about a city or a state.",
             categories_extractions_map=category_map,
         )
