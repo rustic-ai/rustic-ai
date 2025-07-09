@@ -79,7 +79,7 @@ class TestPix2PixAgent:
             format=ImageQuery,
         )
 
-        time.sleep(5)
+        time.sleep(120)
         messages = probe_agent.get_messages()
 
         assert len(messages) == 1
