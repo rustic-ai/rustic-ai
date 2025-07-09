@@ -2,8 +2,9 @@ import mimetypes
 from typing import Literal, Optional
 import uuid
 
+from google.genai import types
+from google.genai.types import PersonGeneration, SafetyFilterLevel
 from pydantic import BaseModel
-from vertexai.vision_models import ImageGenerationModel
 
 from rustic_ai.core import Agent, AgentMode, AgentSpec, AgentType
 from rustic_ai.core.agents.commons.image_generation import ImageGenerationResponse
@@ -17,8 +18,8 @@ from rustic_ai.vertexai.client import VertexAIBase, VertexAIConf
 class VertexAiImagenAgentProps(BaseAgentProps, VertexAIConf):
     model_id: str = "imagen-3.0-fast-generate-001"
     add_watermark: Optional[bool] = True
-    safety_filter_level: Optional[Literal["block_most", "block_some", "block_few", "block_fewest"]] = None
-    person_generation: Optional[Literal["dont_allow", "allow_adult", "allow_all"]] = None
+    safety_filter_level: Optional[SafetyFilterLevel] = None
+    person_generation: Optional[PersonGeneration] = None
 
 
 class VertexAiImageGenerationRequest(BaseModel):
@@ -46,36 +47,42 @@ class VertexAiImagenAgent(Agent[VertexAiImagenAgentProps], VertexAIBase):
         self.conf = agent_spec.properties
         VertexAIBase.__init__(self, self.conf.project_id, self.conf.location)
         print("initialized vertexai")
-        self.model = ImageGenerationModel.from_pretrained(self.conf.model_id)
 
     @agent.processor(VertexAiImageGenerationRequest, depends_on=["filesystem:guild_fs:True"])
     def generate_image(self, ctx: agent.ProcessContext[VertexAiImageGenerationRequest], guild_fs: FileSystem) -> None:
         image_gen_request = ctx.payload
 
-        output_images = self.model.generate_images(
+        output_images = self.genai_client.models.generate_images(
+            model=self.conf.model_id,
             prompt=image_gen_request.prompt,
-            negative_prompt=image_gen_request.negative_prompt,
-            number_of_images=image_gen_request.number_of_images,
-            aspect_ratio=image_gen_request.aspect_ratio,
-            guidance_scale=image_gen_request.guidance_scale,
-            language=image_gen_request.language,
-            seed=image_gen_request.seed,
-            add_watermark=self.conf.add_watermark,
-            safety_filter_level=self.conf.safety_filter_level,
-            person_generation=self.conf.person_generation,
-        ).images
+            config=types.GenerateImagesConfig(
+                negative_prompt=image_gen_request.negative_prompt,
+                number_of_images=image_gen_request.number_of_images,
+                aspect_ratio=image_gen_request.aspect_ratio,
+                guidance_scale=image_gen_request.guidance_scale,
+                language=image_gen_request.language,
+                seed=image_gen_request.seed,
+                add_watermark=self.conf.add_watermark,
+                safety_filter_level=self.conf.safety_filter_level,
+                person_generation=self.conf.person_generation,
+            ),
+        ).generated_images
 
         result = ImageGenerationResponse(files=[], errors=[], request=image_gen_request.model_dump_json())
-        for i, image in enumerate(output_images):
-            filename = f"{uuid.uuid4()}.{image_gen_request.image_format}"
-            try:
-                with guild_fs.open(filename, "wb") as f:
-                    image.save(f)
-                # Create a MediaLink object for the image
-                media_link = MediaLink(
-                    url=filename, name=filename, mimetype=mimetypes.guess_type(filename)[0], on_filesystem=True
-                )
-                result.files.append(media_link)
-            except Exception as e:
-                result.errors.append(f"Failed to write image file {filename}:{e}")
+        for i, generated_image in enumerate(output_images):
+            if generated_image.image is not None:
+                # Note: the result is not a PIL.Image object but a custom Google one
+                image_obj: types.Image = generated_image.image
+                filename = f"{uuid.uuid4()}.{image_gen_request.image_format}"
+                try:
+                    with guild_fs.open(filename, "wb") as f:
+                        f.write(image_obj.image_bytes)
+
+                    # Create a MediaLink object for the image
+                    media_link = MediaLink(
+                        url=filename, name=filename, mimetype=mimetypes.guess_type(filename)[0], on_filesystem=True
+                    )
+                    result.files.append(media_link)
+                except Exception as e:
+                    result.errors.append(f"Failed to write image file {filename}:{e}")
         ctx.send(result)

@@ -70,7 +70,7 @@ class TestImagenAgent:
             format=VertexAiImageGenerationRequest,
         )
 
-        time.sleep(0.01)
+        time.sleep(30)
         messages = probe_agent.get_messages()
 
         assert len(messages) == 1
