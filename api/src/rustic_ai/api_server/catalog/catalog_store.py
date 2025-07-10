@@ -372,7 +372,7 @@ class CatalogStore:
                     GuildModel.name,
                     Blueprint.id.label("blueprint_id"),  # type:ignore
                     Blueprint.icon,
-                    GuildModel.status
+                    GuildModel.status,
                 )
                 .select_from(GuildModel)
                 .outerjoin(BlueprintGuild, GuildModel.id == BlueprintGuild.guild_id)  # type:ignore
@@ -414,7 +414,7 @@ class CatalogStore:
                     GuildModel.name,
                     Blueprint.id.label("blueprint_id"),  # type:ignore
                     Blueprint.icon,
-                    GuildModel.status
+                    GuildModel.status,
                 )
                 .select_from(
                     join(GuildModel, UserGuild, GuildModel.id == UserGuild.guild_id)  # type:ignore
