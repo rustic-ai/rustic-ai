@@ -39,7 +39,10 @@ class RayExecutionEngine(ExecutionEngine):
         # Instantiate the RayAgentWrapper with provided parameters. Note the use of Ray's remote function.
         guild_id = guild_spec.id
         agent_wrapper = RayAgentWrapper.options(
-            name=agent_spec.id, namespace=self._get_namespace(), lifetime="detached"
+            num_cpus=1,
+            name=agent_spec.id,
+            namespace=self._get_namespace(),
+            lifetime="detached",
         ).remote(  # type: ignore
             guild_spec=guild_spec,
             agent_spec=agent_spec,
