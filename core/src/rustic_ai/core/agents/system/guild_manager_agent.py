@@ -94,6 +94,10 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
                 logging.info(f"Loading existing guild : [{self.guild_model}]")
                 self.guild_spec = self.guild_model.to_guild_spec()
                 self.guild = GuildBuilder.from_spec(self.guild_spec).load(self.guild_model.organization_id)
+                self.guild_model.status = GuildStatus.STARTING
+                session.add(self.guild_model)
+                session.commit()
+
             else:
                 logging.info(f"Creating new guild : [{guild_spec}]")
                 # Create the guild model if it does not exist.
