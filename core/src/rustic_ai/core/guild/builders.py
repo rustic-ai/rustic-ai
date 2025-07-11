@@ -569,6 +569,9 @@ class GuildBuilder:
             guild.launch_agent(agent)
             logging.info(f"Agent {agent.name} launched")
 
+        is_running = guild.is_guild_running()
+        logging.info(f"Guild {guild.id} is running: {is_running}")
+
         if add_probe:
             probe_agent = AgentBuilder(ProbeAgent).set_name("ProbeAgent").set_description("Probe Agent").build()
             guild._add_local_agent(probe_agent)
