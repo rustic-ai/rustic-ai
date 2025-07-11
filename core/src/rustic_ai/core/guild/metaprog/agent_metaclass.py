@@ -220,6 +220,19 @@ class AgentMetaclass(ABCMeta):
                     if AgentAnnotations.DEPENDS_ON in method.__annotations__:
                         agent_dependencies.extend(method.__annotations__[AgentAnnotations.DEPENDS_ON])
 
+                    for base in bases:
+                        if AgentAnnotations.DEPENDS_ON in base.__annotations__:
+                            base_dependencies = base.__annotations__[AgentAnnotations.DEPENDS_ON]
+                            if isinstance(base_dependencies, list):
+                                agent_dependencies.extend(base_dependencies)
+                            elif isinstance(base_dependencies, AgentDependency):
+                                agent_dependencies.append(base_dependencies)
+
+            # Remove duplicates from agent dependencies
+            agent_dependencies = list({dep.dependency_key: dep for dep in agent_dependencies}.values())
+
+            logging.debug(f"Agent {name} has dependencies: {agent_dependencies}")
+
             agent_doc: str = cls.__doc__ if cls.__doc__ else "No documentation written for Agent"
 
             # for handler_name, calls in call_map.items():
@@ -320,11 +333,7 @@ class MetaclassHelper:
         for name, method in dct:
             if callable(method):
                 if method.__annotations__.get(AgentAnnotations.ISHANDLER):
-                    message_format = (
-                        method.__annotations__[AgentAnnotations.MESSAGE_FORMAT]
-                        if AgentAnnotations.MESSAGE_FORMAT in method.__annotations__
-                        else None
-                    )
+                    message_format = method.__annotations__.get(AgentAnnotations.MESSAGE_FORMAT)
 
                     message_format_name = (
                         get_qualified_class_name(message_format) if message_format else MessageConstants.RAW_JSON_FORMAT

@@ -11,6 +11,7 @@ from rustic_ai.core.guild.agent_ext.depends.llm.tools_manager import (
     ToolsManager,
     ToolSpec,
 )
+from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 
 from .models import (
     CleanDatasetRequest,
@@ -58,68 +59,68 @@ class DataAnalystToolset(Toolset):
 
     def get_data_analyst_tools(self) -> List[ToolSpec]:
         """
-        Returns a list of tool specifications for the data analyst.
+        Return ToolSpec objects that map natural-language requests
+        to the right data-analysis function.
         """
         return [
             ToolSpec(
                 name=FUNC_PREVIEW_DATASET,
-                description="Preview the first few rows of a dataset to understand its structure",
+                description="Preview the first N rows of a dataset when the user asks to ‘peek’, ‘sample rows’, or similar.",
                 parameter_class=PreviewDatasetRequest,
             ),
             ToolSpec(
                 name=FUNC_SUMMARIZE_DATASET,
-                description="Get a summary of a dataset including row/column count and basic stats",
+                description="Return a quick profile—row/column counts and basic stats—when the user wants a dataset ‘summary’ or ‘overview’.",
                 parameter_class=GetDatasetSummaryRequest,
             ),
             ToolSpec(
                 name=FUNC_QUERY_DATASET,
-                description="""Execute a query (SQL or pandas-style) on one or more datasets.
-                Always prefer SQL queries if possible. SQL queries are run using DuckDB.""",
+                description="Run an SQL (preferred) or pandas query to filter, aggregate, or compute metrics such as ‘total sales’ or ‘average by month’.",
                 parameter_class=QueryExecutionRequest,
             ),
             ToolSpec(
                 name=FUNC_TRANSFORM_DATASET,
-                description="Apply transformations to a dataset (filter, select, etc.)",
+                description="Apply structural or type transformations (filter rows, drop/rename columns, convert data types, forward-fill, etc.).",
                 parameter_class=TransformDatasetRequest,
             ),
             ToolSpec(
                 name=FUNC_DESCRIBE_DATASET,
-                description="Get descriptive statistics for numeric columns in a dataset",
+                description="Produce descriptive statistics (count, mean, quartiles) for numeric—and optionally categorical—columns.",
                 parameter_class=GetDescriptiveStatisticsRequest,
             ),
             ToolSpec(
                 name=FUNC_JOIN_DATASETS,
-                description="Join two datasets on common columns",
+                description="SQL-style join of two datasets on a key when the user wants to ‘merge’ or ‘combine’ data.",
                 parameter_class=JoinDatasetsRequest,
             ),
             ToolSpec(
                 name=FUNC_LIST_DATASETS,
-                description="List all available datasets",
+                description="Return the list of all datasets currently loaded in memory.",
                 parameter_class=ListDatasetsRequest,
             ),
             ToolSpec(
                 name=FUNC_GET_SCHEMA,
-                description="Get the schema of a dataset (column names and types)",
+                description="Return the column names and data types for a dataset.",
                 parameter_class=GetSchemaRequest,
             ),
             ToolSpec(
                 name=FUNC_CLEAN_DATASET,
-                description="Clean a dataset by handling missing values, outliers, etc.",
+                description="Perform common cleaning steps (drop NAs, handle outliers, impute, etc.) according to a strategy dictionary.",
                 parameter_class=CleanDatasetRequest,
             ),
             ToolSpec(
                 name=FUNC_VALUE_COUNTS,
-                description="Get the frequency distribution of values in a column",
+                description="Return counts or proportions for each unique value in a column.",
                 parameter_class=ValueCountsRequest,
             ),
             ToolSpec(
                 name=FUNC_CORRELATION_MATRIX,
-                description="Calculate correlation matrix for numeric columns in a dataset",
+                description="Compute Pearson, Kendall, or Spearman correlations between numeric columns.",
                 parameter_class=CorrelationMatrixRequest,
             ),
             ToolSpec(
                 name=FUNC_ASK_USER,
-                description="Pose a single clarifying question to the user and wait for the answer",
+                description="Pose one clarifying question if a required parameter is missing or ambiguous.",
                 parameter_class=AskUserRequest,
             ),
         ]
@@ -129,3 +130,10 @@ class DataAnalystToolset(Toolset):
         Creates a ToolsManager with all data analyst tools.
         """
         return ToolsManager(self.get_data_analyst_tools())
+
+    @classmethod
+    def get_qualified_class_name(cls) -> str:
+        """
+        Returns the fully qualified class name of this toolset.
+        """
+        return get_qualified_class_name(cls)

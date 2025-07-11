@@ -43,10 +43,12 @@ from .models import (
     ToNumericTransformation,
     TransformationType,
     TransformDatasetRequest,
+    UniqueValuesTransformation,
     UnloadDatasetRequest,
     UnloadDatasetResponse,
     ValueCountsRequest,
     ValueCountsResponse,
+    ValueCountsTransformation,
 )
 from .tools import DataAnalystToolset
 
@@ -99,4 +101,6 @@ __all__ = [
     "DropColumnsTransformation",
     "DataAnalystToolset",
     "TransformationType",
+    "UniqueValuesTransformation",
+    "ValueCountsTransformation",
 ]
