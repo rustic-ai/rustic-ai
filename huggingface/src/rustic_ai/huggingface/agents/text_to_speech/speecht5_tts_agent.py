@@ -28,7 +28,7 @@ class SpeechT5TTSAgent(Agent):
             AgentType.BOT,
             AgentMode.LOCAL,
         )
-        self._synthesiser = pipeline("text-to-speech", "microsoft/speecht5_tts")
+        self._synthesiser = pipeline("text-to-speech", "microsoft/speecht5_tts")  # type: ignore[call-overload]
 
         embeddings_dataset = load_dataset("Matthijs/cmu-arctic-xvectors", split="validation")
         self._speaker_embedding = torch.tensor(embeddings_dataset[7306]["xvector"]).unsqueeze(0)

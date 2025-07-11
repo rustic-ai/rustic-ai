@@ -54,15 +54,19 @@ class TestRayRedisIntegration(IntegrationTestABC):
         guild.launch_agent(initiator_agent)
         guild.launch_agent(responder_agent)
 
-        # Wait longer for Ray agents to start in distributed mode
-        time.sleep(wait_time * 20)
-
         # Test if the agent is in the execution engine
         agents = execution_engine.get_agents_in_guild(guild.id)
         assert len(agents) == 2
 
         ia = execution_engine.find_agents_by_name(guild.id, "Initiator Agent")
         assert len(ia) == 1
+
+        waited = 0
+        while execution_engine.is_agent_running(guild.id, ia[0].id) is False:
+            time.sleep(wait_time * 10)
+            waited += 1
+            if waited > 10:
+                break
 
         iair = execution_engine.is_agent_running(guild.id, ia[0].id)
         assert iair is True

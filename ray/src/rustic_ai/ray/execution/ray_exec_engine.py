@@ -1,6 +1,7 @@
-from typing import Any, Dict, List, Type, Union
+from typing import Any, Dict, List, Optional, Type, Union
 
 import ray
+from ray.actor import ActorHandle
 import ray.util.state
 
 from rustic_ai.core.guild.agent import Agent, AgentSpec
@@ -18,7 +19,7 @@ class RayExecutionEngine(ExecutionEngine):
         if not ray.is_initialized():
             raise Exception("Ray must be initialized before using RayExecutionEngine.")  # pragma: no cover
         self.agent_wrappers: Dict[str, Dict[str, RayAgentWrapper]] = {}
-        self.agent_actors: Dict[str, Dict[str, ray.actor.ActorHandle]] = {}
+        self.agent_actors: Dict[str, Dict[str, ray.ObjectRef]] = {}
 
     def _get_namespace(self):
         return f"{self.organization_id}_{self.guild_id}"
@@ -53,7 +54,7 @@ class RayExecutionEngine(ExecutionEngine):
         )
 
         # Execute the agent asynchronously
-        actor = ray.get(agent_wrapper.run.remote())  # type: ignore
+        actor = agent_wrapper.run.remote()  # type: ignore
 
         if guild_id not in self.agent_wrappers:
             self.agent_wrappers[guild_id] = {}
@@ -78,7 +79,13 @@ class RayExecutionEngine(ExecutionEngine):
 
     def is_agent_running(self, guild_id: str, agent_id: str) -> bool:
         try:
-            actor = ray.get_actor(name=agent_id, namespace=self._get_namespace())
+            actor: Optional[ActorHandle] = None
+            if guild_id in self.agent_actors and agent_id in self.agent_actors[guild_id]:
+                actor = ray.get(self.agent_actors[guild_id][agent_id])
+
+            if actor is None:
+                actor = ray.get_actor(name=agent_id, namespace=self._get_namespace())
+
             if actor is not None:
                 if self._is_rustic_agent(actor):
                     return ray.get(actor.is_running.remote())

@@ -241,3 +241,10 @@ class Guild:
             A list of all agents that are currently running.
         """
         return list(self.execution_engine.get_agents_in_guild(self.id).values())
+
+    def is_guild_running(self):
+        for agent in self._agents_by_id.keys():
+            if not self.execution_engine.is_agent_running(self.id, agent):
+                return False
+        else:
+            return True
