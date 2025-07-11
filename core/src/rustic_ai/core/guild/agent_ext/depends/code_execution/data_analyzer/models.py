@@ -103,6 +103,34 @@ class ToNumericTransformation(BaseTransformation):
     errors: Literal["raise", "coerce", "ignore"] = "coerce"
 
 
+class UniqueValuesTransformation(BaseTransformation):
+    """Extract unique values from specified columns.
+
+    Attributes:
+        columns: List of column names to extract unique values from
+        limit: Optional maximum number of unique values to return
+    """
+
+    op: Literal["unique_values"] = "unique_values"
+    columns: List[str]
+    limit: Optional[int] = 1000
+
+
+class ValueCountsTransformation(BaseTransformation):
+    """Get value counts for specified columns.
+
+    Attributes:
+        columns: List of column names to get value counts for
+        normalize: If True, return proportions instead of counts
+        max_unique_values: Maximum number of unique values to return
+    """
+
+    op: Literal["value_counts"] = "value_counts"
+    columns: List[str]
+    normalize: bool = False
+    max_unique_values: int = 50
+
+
 # Type for any transformation
 TransformationType = Union[
     FilterTransformation,
@@ -112,6 +140,8 @@ TransformationType = Union[
     FFillTransformation,
     ToDatetimeTransformation,
     ToNumericTransformation,
+    UniqueValuesTransformation,
+    ValueCountsTransformation,
     str,
     JsonDict,
 ]
@@ -138,6 +168,7 @@ class LoadDatasetRequest(BaseModel):
     options: Optional[Dict[str, Any]] = None
     transformations: Optional[List[TransformationType]] = None
     custom_name: Optional[str] = None
+    additional_info: Optional[Dict[str, List[TransformationType]]] = None
 
     def get_dataset_name(self) -> str:
         """Get the name to use for the dataset."""
@@ -469,6 +500,7 @@ class DatasetSummaryResponse(BaseModel):
     dataschema: Dict[str, str]
     memory_usage: Optional[str] = None
     basic_stats: Optional[Dict[str, Any]] = None
+    additional_info: Optional[Dict[str, Any]] = None
 
 
 class DatasetSummariesResponse(BaseModel):
