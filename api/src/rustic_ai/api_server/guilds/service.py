@@ -1,11 +1,16 @@
+import logging
+import os
+import time
 from typing import Optional
 
 from sqlalchemy import Engine
+from sqlmodel import Session
 
 from rustic_ai.api_server.guilds.schema import GuildSpecResponse
 from rustic_ai.core.guild import GuildSpec
 from rustic_ai.core.guild.builders import GuildBuilder, GuildHelper
-from rustic_ai.core.guild.metastore import GuildStore
+from rustic_ai.core.guild.metastore import GuildModel, GuildStore, Metastore
+from rustic_ai.core.guild.metastore.models import AgentModel, GuildStatus
 
 
 class GuildService:
@@ -31,7 +36,35 @@ class GuildService:
 
         guild_spec.dependency_map = GuildHelper.get_guild_dependency_map(guild_spec)
 
+        engine = Metastore.get_engine(metastore_url)
+        with Session(engine) as session:
+            logging.info(f"Creating new guild : [{guild_spec}]")
+            guild_model = GuildModel.from_guild_spec(guild_spec, organization_id)
+            guild_model.status = GuildStatus.REQUESTED
+            session.add(guild_model)
+            # Add the agents to the Metastore
+            for guild_agent in guild_spec.agents:
+                agent_model = AgentModel.from_agent_spec(guild_spec.id, guild_agent)
+                session.add(agent_model)
+            session.commit()
+
         guild = GuildBuilder.from_spec(guild_spec).bootstrap(metastore_url, organization_id)
+
+        RUSTIC_WAIT_TRIES = os.getenv("RUSTIC_WAIT_TRIES", "10")
+        loop = int(RUSTIC_WAIT_TRIES)
+
+        logging.info(f"WAITING FOR GUILD {guild_spec.id} TO BE RUNNING FOR {loop} SECONDS")
+        guild_running = False
+        while loop > 0:
+            with Session(engine) as session:
+                guild_model = GuildModel.get_by_id(session, guild_spec.id)
+                if guild_model and guild_model.status == GuildStatus.RUNNING:
+                    guild_running = guild_model.status
+                    break
+            loop -= 1
+            time.sleep(1)
+
+        logging.info(f"GUILD {guild_spec.id} RUNNING: {guild_running}")
 
         return guild.id
 

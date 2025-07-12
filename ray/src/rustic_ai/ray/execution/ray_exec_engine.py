@@ -1,3 +1,4 @@
+import logging
 from typing import Any, Dict, List, Optional, Type, Union
 
 import ray
@@ -39,6 +40,8 @@ class RayExecutionEngine(ExecutionEngine):
         """
         # Instantiate the RayAgentWrapper with provided parameters. Note the use of Ray's remote function.
         guild_id = guild_spec.id
+        logging.info(f"===== Running agent {agent_spec.id} for guild {guild_id} in namespace {self._get_namespace()}")
+        logging.info(f"===== Agent spec: {agent_spec}")
         agent_wrapper = RayAgentWrapper.options(
             num_cpus=1,
             name=agent_spec.id,
