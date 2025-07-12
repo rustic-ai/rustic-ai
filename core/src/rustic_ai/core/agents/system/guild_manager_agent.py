@@ -1,4 +1,6 @@
 import logging
+import os
+import time
 from typing import List, Optional
 
 from sqlmodel import Session
@@ -93,11 +95,12 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
             if self.guild_model:
                 logging.info(f"Loading existing guild : [{self.guild_model}]")
                 self.guild_spec = self.guild_model.to_guild_spec()
-                self.guild = GuildBuilder.from_spec(self.guild_spec).load(self.guild_model.organization_id)
+                self.guild = GuildBuilder.from_spec(self.guild_spec).load_or_launch(
+                    self.guild_model.organization_id, [self.id]
+                )
                 self.guild_model.status = GuildStatus.STARTING
                 session.add(self.guild_model)
                 session.commit()
-
             else:
                 logging.info(f"Creating new guild : [{guild_spec}]")
                 # Create the guild model if it does not exist.
@@ -121,12 +124,16 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
             self_model = AgentModel.from_agent_spec(guild_id, self_spec)
             session.add(self_model)
 
+            RUSTIC_WAIT_TRIES = os.getenv("RUSTIC_WAIT_TRIES", "10")
+            self.guild.wait_for_agents_to_start(int(RUSTIC_WAIT_TRIES), [self.id])
+
+            logging.info(f"ALL AGENTS RUNNING FOR GUILD {self.guild_id} : {self.guild.are_agents_running([self.id])}")
+
             if self.guild_model:
                 self.guild_model.status = GuildStatus.RUNNING
                 session.add(self.guild_model)
 
             session.commit()
-
             session.close()
 
             # TODO: Announce Guild state to all agents
@@ -135,6 +142,21 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
         self.guild.launch_agent(agent_spec)
 
         agent_model = AgentModel.from_agent_spec(self.guild_id, agent_spec)
+
+        logging.info(f"LAUNCHING AGENT {agent_spec.id} FOR GUILD {self.guild_id}")
+
+        RUSTIC_WAIT_TRIES = os.getenv("RUSTIC_WAIT_TRIES", "10")
+        loop = int(RUSTIC_WAIT_TRIES)
+
+        while loop > 0:
+            if self.guild.is_agent_running(agent_spec.id):
+                break
+            loop -= 1
+            time.sleep(0.1)
+
+        logging.info(
+            f"AGENT {agent_spec.id} LAUNCHED FOR GUILD {self.guild_id}: {self.guild.is_agent_running(agent_spec.id)}"
+        )
 
         if session is None:
             with Session(self.engine) as session:
@@ -190,6 +212,7 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
         """
         aar = ctx.payload
         self.guild.launch_agent(aar.agent_spec)
+
         with Session(self.engine) as session:
             session.add(AgentModel.from_agent_spec(self.guild_id, aar.agent_spec))
             session.commit()

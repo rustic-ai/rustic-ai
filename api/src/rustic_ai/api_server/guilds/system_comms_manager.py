@@ -145,7 +145,6 @@ class SystemCommunicationManager:
             await websocket.close()
             return
         else:
-            await websocket.accept()
 
             loop = asyncio.get_running_loop()
 
@@ -157,6 +156,8 @@ class SystemCommunicationManager:
             )
 
             user_agent_tag = AgentTag(id=f"sys_comms_socket:{user_id}")
+
+            await websocket.accept()
 
             try:
                 while True:

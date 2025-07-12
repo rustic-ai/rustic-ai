@@ -1,4 +1,6 @@
 import logging
+import os
+import time
 from typing import Optional
 
 from sqlalchemy import Engine
@@ -47,6 +49,22 @@ class GuildService:
             session.commit()
 
         guild = GuildBuilder.from_spec(guild_spec).bootstrap(metastore_url, organization_id)
+
+        RUSTIC_WAIT_TRIES = os.getenv("RUSTIC_WAIT_TRIES", "10")
+        loop = int(RUSTIC_WAIT_TRIES)
+
+        logging.info(f"WAITING FOR GUILD {guild_spec.id} TO BE RUNNING FOR {loop} SECONDS")
+        guild_running = False
+        while loop > 0:
+            with Session(engine) as session:
+                guild_model = GuildModel.get_by_id(session, guild_spec.id)
+                if guild_model and guild_model.status == GuildStatus.RUNNING:
+                    guild_running = guild_model.status
+                    break
+            loop -= 1
+            time.sleep(1)
+
+        logging.info(f"GUILD {guild_spec.id} RUNNING: {guild_running}")
 
         return guild.id
 

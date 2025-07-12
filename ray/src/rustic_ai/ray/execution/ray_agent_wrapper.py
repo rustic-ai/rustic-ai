@@ -75,8 +75,9 @@ class RayAgentWrapper(AgentWrapper):
         return True
 
     def shutdown(self):
+        logging.error(f"RayAgentWrapper.shutdown called on {self} of type {type(self)}")
         self._is_running = False
-        return super().shutdown()  # pragma: no cover
+        return AgentWrapper.shutdown(self)  # pragma: no cover
 
     def is_running(self):
         return self._is_running
