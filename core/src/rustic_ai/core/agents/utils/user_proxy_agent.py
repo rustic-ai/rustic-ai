@@ -78,14 +78,14 @@ class UserProxyAgent(Agent[UserProxyAgentProps], GuildRefreshMixin):
         self.user_topic = UserProxyAgent.get_user_inbox_topic(self.user_id)
         self.user_outbox_topic = UserProxyAgent.get_user_outbox_topic(self.user_id)
         self.user_notifications_topic = UserProxyAgent.get_user_notifications_topic(self.user_id)
-        self.user_system_notfication_topic = UserProxyAgent.get_user_system_notifications_topic(self.user_id)
+        self.user_system_notification_topic = UserProxyAgent.get_user_system_notifications_topic(self.user_id)
         self.guild_requests_topic = UserProxyAgent.get_user_system_requests_topic(self.user_id)
         agent_spec.id = UserProxyAgent.get_user_agent_id(self.user_id)
         agent_spec.additional_topics = [
             self.user_topic,
             self.user_outbox_topic,
             UserProxyAgent.BROADCAST_TOPIC,
-            self.user_system_notfication_topic,
+            self.user_system_notification_topic,
             self.guild_requests_topic,
             GuildTopics.GUILD_STATUS_TOPIC,
         ]
@@ -229,7 +229,7 @@ class UserProxyAgent(Agent[UserProxyAgentProps], GuildRefreshMixin):
             agent=ctx.agent.get_agent_tag(),  # TODO check what agent tag should be
             format=get_qualified_class_name(ParticipantList),
             destination=RoutingDestination(
-                topics=self.user_system_notfication_topic,
+                topics=self.user_system_notification_topic,
             ),
         )
         ctx.add_routing_step(routing_entry)
@@ -250,7 +250,7 @@ class UserProxyAgent(Agent[UserProxyAgentProps], GuildRefreshMixin):
             agent=ctx.agent.get_agent_tag(),
             format=get_qualified_class_name(ParticipantList),
             destination=RoutingDestination(
-                topics=self.user_system_notfication_topic,
+                topics=self.user_system_notification_topic,
             ),
         )
         ctx.add_routing_step(routing_entry)
@@ -275,7 +275,7 @@ class UserProxyAgent(Agent[UserProxyAgentProps], GuildRefreshMixin):
             agent=ctx.agent.get_agent_tag(),
             format=get_qualified_class_name(AgentsHealthReport),
             destination=RoutingDestination(
-                topics=self.user_system_notfication_topic,
+                topics=self.user_system_notification_topic,
             ),
         )
         ctx.add_routing_step(routing_entry)
