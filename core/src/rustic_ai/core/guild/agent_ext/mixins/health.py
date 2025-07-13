@@ -1,13 +1,23 @@
 from datetime import datetime
+from enum import Enum
 from typing import Dict
 
-from pydantic import BaseModel, JsonValue, SerializationInfo, field_serializer
+from pydantic import (
+    BaseModel,
+    Field,
+    JsonValue,
+    SerializationInfo,
+    computed_field,
+    field_serializer,
+)
 
 from rustic_ai.core.guild import agent
 from rustic_ai.core.guild.dsl import GuildTopics
+from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
+from rustic_ai.core.utils.priority import Priority
 
 
-class Heartbeat(BaseModel):
+class HealthCheckRequest(BaseModel):
     checktime: datetime
 
     @field_serializer("checktime")
@@ -15,14 +25,56 @@ class Heartbeat(BaseModel):
         return v.isoformat()
 
 
-class HeartbeatResponse(BaseModel):
+class HeartbeatStatus(str, Enum):
+    OK = "ok"
+    WARNING = "warning"
+    ERROR = "error"
+    BACKLOGGED = "backlogged"
+    UNKNOWN = "unknown"
+    LOADING = "loading"
+
+
+class Heartbeat(BaseModel):
     checktime: datetime
-    checkstatus: str
+    checkstatus: HeartbeatStatus
+    responsetime: datetime = Field(default_factory=datetime.now)
     checkmeta: Dict[str, JsonValue] = {}
 
     @field_serializer("checktime")
     def serialize_checktime(self, v: datetime, info: SerializationInfo) -> str:
         return v.isoformat()
+
+    @field_serializer("responsetime")
+    def serialize_responsetime(self, v: datetime, info: SerializationInfo) -> str:
+        return v.isoformat()
+
+
+class AgentsHealthReport(BaseModel):
+    agents: Dict[str, Heartbeat] = Field(default_factory=dict)
+
+    @computed_field  # type: ignore[misc]
+    @property
+    def guild_health(self) -> HeartbeatStatus:
+        if not self.agents:
+            return HeartbeatStatus.UNKNOWN
+        statuses = [agent.checkstatus for agent in self.agents.values()]
+        if all(status == HeartbeatStatus.OK for status in statuses):
+            return HeartbeatStatus.OK
+        if any(status == HeartbeatStatus.ERROR for status in statuses):
+            return HeartbeatStatus.ERROR
+        if any(status == HeartbeatStatus.BACKLOGGED for status in statuses):
+            return HeartbeatStatus.BACKLOGGED
+        if any(status == HeartbeatStatus.WARNING for status in statuses):
+            return HeartbeatStatus.WARNING
+        if any(status == HeartbeatStatus.UNKNOWN for status in statuses):
+            return HeartbeatStatus.UNKNOWN
+        if any(status == HeartbeatStatus.LOADING for status in statuses):
+            return HeartbeatStatus.LOADING
+        return HeartbeatStatus.UNKNOWN
+
+    @field_serializer("agents")
+    def serialize_agents(self, v: Dict[str, Heartbeat], info: SerializationInfo) -> Dict[str, JsonValue]:
+        return {k: v.model_dump() for k, v in v.items()}
 
 
 class HealthConstants:
@@ -35,10 +87,43 @@ if HealthConstants.HEARTBEAT_TOPIC not in GuildTopics.ESSENTIAL_TOPICS:
 
 class HealthMixin:
 
-    @agent.processor(Heartbeat, handle_essential=True)
-    def send_heartbeat(self, context: agent.ProcessContext[Heartbeat]):
-        hr = self.healthcheck(context.payload.checktime)
-        context.send(hr)
+    @agent.processor(HealthCheckRequest, handle_essential=True)
+    def send_heartbeat(self, ctx: agent.ProcessContext[HealthCheckRequest]):
+        hr = self.healthcheck(ctx.payload.checktime)
+        ctx.send(hr)
 
-    def healthcheck(self, checktime: datetime) -> HeartbeatResponse:
-        return HeartbeatResponse(checktime=checktime, checkstatus="OK", checkmeta={})
+    def healthcheck(self, checktime: datetime) -> Heartbeat:
+        status = HeartbeatStatus.OK
+        checkmeta = {}
+        if isinstance(self, agent.Agent):
+            qos_latency = self._agent_spec.qos.latency
+            time_now = datetime.now()
+            msg_latency = (time_now - checktime).total_seconds() * 1000  # Convert to milliseconds
+            if qos_latency and msg_latency > qos_latency:
+                status = HeartbeatStatus.BACKLOGGED
+
+            checkmeta["qos_latency"] = qos_latency
+
+        checkmeta["observed_latency"] = msg_latency
+
+        return Heartbeat(checktime=checktime, checkstatus=status, checkmeta=checkmeta)
+
+    @agent.processor(
+        agent.SelfReadyNotification,
+        predicate=lambda self, msg: msg.sender == self.get_agent_tag() and msg.topic_published_to == self._self_topic,
+    )
+    def send_first_heartbeat(self, ctx: agent.ProcessContext[agent.SelfReadyNotification]):
+        """
+        Sends the first heartbeat when the agent is ready.
+        """
+
+        hr = self.healthcheck(datetime.now())
+        ctx._raw_send(
+            priority=Priority.HIGH,
+            topic=HealthConstants.HEARTBEAT_TOPIC,
+            payload=hr.model_dump(),
+            format=get_qualified_class_name(Heartbeat),
+            recipient_list=[],
+            in_response_to=ctx.message.id,
+            thread=ctx.message.thread,
+        )

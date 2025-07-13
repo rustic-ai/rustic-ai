@@ -3,7 +3,6 @@ from typing import Any, Dict, List, Optional, Type, Union
 
 import ray
 from ray.actor import ActorHandle
-
 from rustic_ai.core.guild.agent import Agent, AgentSpec
 from rustic_ai.core.guild.dsl import GuildSpec
 from rustic_ai.core.guild.execution.execution_engine import ExecutionEngine
@@ -40,14 +39,12 @@ class RayExecutionEngine(ExecutionEngine):
         # Instantiate the RayAgentWrapper with provided parameters. Note the use of Ray's remote function.
         guild_id = guild_spec.id
 
-        default_num_cpus = 0.25
-        if os.environ.get("RUSTIC_NUM_CPUS_PER_AGENT"):
-            default_num_cpus = float(os.environ.get("RUSTIC_NUM_CPUS_PER_AGENT"))
+        default_num_cpus = float(os.environ.get("RUSTIC_NUM_CPUS_PER_AGENT", "0.25"))
 
         agent_wrapper = RayAgentWrapper.options(
             num_cpus=agent_spec.resources.num_cpus if agent_spec.resources.num_cpus else default_num_cpus,
             num_gpus=agent_spec.resources.num_gpus if agent_spec.resources.num_gpus else 0,
-            custom_resources=agent_spec.resources.custom_resources if agent_spec.resources.custom_resources else {},
+            resources=agent_spec.resources.custom_resources if agent_spec.resources.custom_resources else {},
             name=agent_spec.id,
             namespace=self._get_namespace(),
             lifetime="detached",

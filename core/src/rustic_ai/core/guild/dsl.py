@@ -64,6 +64,13 @@ class GuildTopics:
 
     ESSENTIAL_TOPICS: List[str] = [GUILD_STATUS_TOPIC]
 
+    @staticmethod
+    def get_self_topic(agent_id: str) -> str:
+        """
+        Returns the self topic for the guild.
+        """
+        return f"agent_self:{agent_id}"
+
 
 class RuntimePredicate(ABC, BaseModel):
     @abstractmethod
@@ -98,6 +105,21 @@ class ResourceSpec(BaseModel):
     num_cpus: Optional[int | float] = Field(default=None)
     num_gpus: Optional[int | float] = Field(default=None)
     custom_resources: Dict[str, int | float] = Field(default_factory=dict)
+
+
+class QOSSpec(BaseModel):
+    """
+    A specification for the Quality of Service (QoS) settings for an agent.
+
+    Attributes:
+        timeout (Optional[int]): The timeout for the agent's operations in seconds.
+        retry_count (Optional[int]): The number of retries for the agent's operations.
+        latency (Optional[int]): The maximum acceptable latency for the agent's operations in milliseconds.
+    """
+
+    timeout: Optional[int] = None
+    retry_count: Optional[int] = None
+    latency: Optional[int] = None
 
 
 class AgentSpec(BaseModel, Generic[APT]):
@@ -136,6 +158,9 @@ class AgentSpec(BaseModel, Generic[APT]):
     # Resource configuration for the agent useful for execution engines that support it
     resources: ResourceSpec = Field(default_factory=ResourceSpec)
 
+    # Quality of Service (QoS) settings for the agent
+    qos: QOSSpec = Field(default_factory=QOSSpec)
+
     _subscribed_topics: Set[str] = set()
 
     @property
@@ -149,6 +174,8 @@ class AgentSpec(BaseModel, Generic[APT]):
             topics: Set[str] = set(self.additional_topics)
             if self.listen_to_default_topic:
                 topics.update(set(GuildTopics.DEFAULT_TOPICS))
+
+            topics.add(GuildTopics.get_self_topic(self.id))
 
             topics.update(set(GuildTopics.ESSENTIAL_TOPICS))
             self._subscribed_topics = topics

@@ -1,3 +1,4 @@
+from datetime import datetime
 import logging
 from typing import List, Optional
 
@@ -36,9 +37,15 @@ from rustic_ai.core.guild import (
     agent,
 )
 from rustic_ai.core.guild.agent import ProcessContext, processor
+from rustic_ai.core.guild.agent_ext.mixins.health import (
+    AgentsHealthReport,
+    Heartbeat,
+    HeartbeatStatus,
+)
 from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder, GuildHelper
 from rustic_ai.core.guild.metastore import AgentModel, GuildModel, Metastore
 from rustic_ai.core.guild.metastore.models import GuildStatus
+from rustic_ai.core.state.manager.state_manager import StateManager
 from rustic_ai.core.state.models import (
     StateFetchError,
     StateFetchRequest,
@@ -50,6 +57,7 @@ from rustic_ai.core.state.models import (
 )
 from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 from rustic_ai.core.utils.class_utils import get_state_manager
+from rustic_ai.core.utils.json_utils import JsonDict
 from rustic_ai.core.utils.priority import Priority
 
 
@@ -71,21 +79,13 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
             guild_spec.id
         )  # Local guild_id in bootstrap because it set by Guild.run_agent after object is created
 
-        self.guild_name = guild_spec.name
-        self.manager_agent_name = f"{guild_spec.name}_manager"
-
-        agent_spec.id = f"{guild_spec.id}#manager_agent"
-        agent_spec.name = self.manager_agent_name
-        agent_spec.description = f"An agent with ability to manage the guild: {self.guild_name}"
-        agent_spec.additional_topics.append(GuildTopics.SYSTEM_TOPIC)
-
         super().__init__(
             agent_spec,
             AgentType.BOT,
             AgentMode.LOCAL,
         )
 
-        self.state_manager = get_state_manager(GuildHelper.get_state_manager(guild_spec))
+        self.state_manager: StateManager = get_state_manager(GuildHelper.get_state_manager(guild_spec))
 
         with Session(self.engine) as session:
             # Get the guild model from the database if it exists.
@@ -124,13 +124,30 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
             session.add(self_model)
 
             if self.guild_model:
-                self.guild_model.status = GuildStatus.RUNNING
+                self.guild_model.status = GuildStatus.STARTING
                 session.add(self.guild_model)
 
             session.commit()
             session.close()
 
-            # TODO: Announce Guild state to all agents
+            agent_health: JsonDict = self.state_manager.get_state(
+                StateFetchRequest(
+                    state_owner=StateOwner.AGENT,
+                    guild_id=self.guild_id,
+                    agent_id=self.id,
+                    state_path="$.agent_health",
+                )
+            ).state
+
+            for agent_spec in self.guild.list_agents():
+                if agent_spec.id == self.id:
+                    continue
+                if agent_spec.id not in agent_health:
+                    agent_health[agent_spec.id] = Heartbeat(
+                        checktime=datetime.now(),
+                        checkstatus=HeartbeatStatus.LOADING,
+                        checkmeta={},
+                    ).model_dump()
 
     def _add_agent(self, agent_spec: AgentSpec, session: Optional[Session] = None) -> None:
         self.guild.launch_agent(agent_spec)
@@ -238,6 +255,42 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
                 )
             )
 
+    @processor(Heartbeat)
+    def update_agent_status(self, ctx: ProcessContext[Heartbeat]) -> None:
+        """
+        Updates the agent status in the guild.
+        """
+        heartbeat: Heartbeat = ctx.payload
+
+        self.state_manager.update_state(
+            StateUpdateRequest(
+                state_owner=StateOwner.AGENT,
+                guild_id=self.guild_id,
+                agent_id=self.id,
+                update_path="$.agent_health",
+                state_update={f"{ctx.message.sender.id}": heartbeat.model_dump()},
+            )
+        )
+
+        agent_health = self.state_manager.get_state(
+            StateFetchRequest(
+                state_owner=StateOwner.AGENT,
+                guild_id=self.guild_id,
+                agent_id=self.id,
+                state_path="$.agent_health",
+            )
+        )
+
+        if agent_health:
+            ctx._raw_send(
+                priority=Priority.NORMAL,
+                format=get_qualified_class_name(AgentsHealthReport),
+                payload=AgentsHealthReport.model_validate(
+                    {"agents": {k: Heartbeat.model_validate(v) for k, v in agent_health.items()}}
+                ),
+                topics=[GuildTopics.GUILD_STATUS_TOPIC],
+            )
+
     @processor(RunningAgentListRequest)
     def list_running_agents(self, ctx: ProcessContext[RunningAgentListRequest]) -> None:
         alr = ctx.payload
@@ -343,6 +396,22 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
                 status_code=201,
                 status="Agent created successfully",
                 topic=user_topic,
+            )
+
+            self.state_manager.update_state(
+                StateUpdateRequest(
+                    state_owner=StateOwner.AGENT,
+                    guild_id=self.guild_id,
+                    agent_id=self.id,
+                    update_path="$.agent_health",
+                    state_update={
+                        user_agent_spec.id: Heartbeat(
+                            checktime=datetime.now(),
+                            checkstatus=HeartbeatStatus.LOADING,
+                            checkmeta={},
+                        ).model_dump()
+                    },
+                )
             )
 
             ctx.send(agent_addition_response)

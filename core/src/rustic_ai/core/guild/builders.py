@@ -27,6 +27,7 @@ from rustic_ai.core.guild.dsl import (
     BaseAgentProps,
     DependencySpec,
     GuildSpec,
+    GuildTopics,
 )
 from rustic_ai.core.guild.dsl import (
     RuntimePredicate,
@@ -633,16 +634,18 @@ class GuildBuilder:
 
         # Add GuildManagerAgent to the Guild.
         # Using class name instead of class to avoid circular import
+
         agent_spec = AgentSpec(  # type: ignore
             id=f"{guild.id}#manager_agent",
             name=f"GuildManagerAgent4{guild.id}",
-            description=f"Guild Manager Agent for {guild.id}",
+            description=f"Guild Manager Agent for {guild.name}",
             class_name="rustic_ai.core.agents.system.guild_manager_agent.GuildManagerAgent",
             properties={
                 "guild_spec": guild_spec.model_dump(),
                 "database_url": metastore_database_url,
                 "organization_id": organization_id,
             },
+            additional_topics=[GuildTopics.SYSTEM_TOPIC, "heartbeat"],  # "heartbeat" string to avoid circular import
         )
 
         try:
