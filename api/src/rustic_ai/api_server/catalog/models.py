@@ -331,3 +331,13 @@ class CatalogAgentEntry(SQLModel, table=True):
             agent_props_schema=base.agent_props_schema,
             agent_dependencies={dep.dependency_key: dep.model_dump() for dep in base.agent_dependencies},
         )
+
+
+class LaunchGuildFromBlueprintRequest(BaseModel):
+    """
+    Request to launch a guild from a blueprint.
+    """
+    guild_name: str
+    user_id: str
+    org_id: str
+    description: Optional[str] = None

@@ -11,8 +11,16 @@ exporters:
     endpoint: http://zipkin:9411/api/v2/spans
 
 
-  file:
+  # Add file exporter for metrics
+  file/metrics:
+    path: /tmp/metrics.json
+    format: json
+
+  # Optional: Add file exporter for traces too
+  file/traces:
     path: /tmp/traces.json
+    format: json
+
   debug:
     verbosity: detailed
 
@@ -24,12 +32,11 @@ service:
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [zipkin, file]
-  telemetry:
+      exporters: [zipkin, file/traces ]
     metrics:
-      address: 0.0.0.0:8888
-    logs:
-      level: DEBUG
+      receivers: [ otlp ]
+      processors: [ batch ]
+      exporters: [ file/metrics ]
 
 extensions:
   health_check:
