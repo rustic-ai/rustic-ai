@@ -1,6 +1,8 @@
+import os
 import time
 
 from fsspec import filesystem
+import pytest
 
 from rustic_ai.core.agents.commons.media import MediaLink
 from rustic_ai.core.agents.commons.message_formats import GenerationPromptRequest
@@ -18,7 +20,7 @@ from rustic_ai.huggingface.agents.text_to_speech.speecht5_tts_agent import (
 
 
 class TestSpeechT5TtsAgent:
-
+    @pytest.mark.skipif(os.getenv("HF_TOKEN") is None, reason="HF_TOKEN environment variable not set")
     def test_response_is_generated(self, probe_agent: ProbeAgent, org_id):
         """
         Test that the agent responds to a message with a message containing the filepath of the generated audio.

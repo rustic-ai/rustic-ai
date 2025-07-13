@@ -21,6 +21,7 @@ from rustic_ai.huggingface.agents.models import ImageGenerationRequest
 
 class TestRunwaymlStableDiffusionAgent:
     @pytest.mark.skipif(os.getenv("SKIP_EXPENSIVE_TESTS") == "true", reason="Skipping expensive tests")
+    @pytest.mark.skipif(os.getenv("HF_TOKEN") is None, reason="HF_TOKEN environment variable not set")
     def test_response_is_generated(self, probe_agent: ProbeAgent, org_id):
         """
         Test that the agent responds to a message with a message.
