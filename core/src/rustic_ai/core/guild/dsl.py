@@ -85,6 +85,21 @@ class SimpleRuntimePredicate(RuntimePredicate):
             return False
 
 
+class ResourceSpec(BaseModel):
+    """
+    A specification for the resources required by an agent.
+
+    Attributes:
+        num_cpus (Optional[int | float]): The number of CPUs required by the agent.
+        num_gpus (Optional[int | float]): The number of GPUs required by the agent.
+        custom_resources (Optional[Dict[str, int | float]]): A dictionary of custom resources required by the agent.
+    """
+
+    num_cpus: Optional[int | float] = Field(default=None)
+    num_gpus: Optional[int | float] = Field(default=None)
+    custom_resources: Dict[str, int | float] = Field(default_factory=dict)
+
+
 class AgentSpec(BaseModel, Generic[APT]):
     """
     A specification for an agent that describes its name, description, and properties.
@@ -117,6 +132,9 @@ class AgentSpec(BaseModel, Generic[APT]):
 
     # A mapping for guild's dependency to resolver class
     dependency_map: Dict[str, DependencySpec] = {}
+
+    # Resource configuration for the agent useful for execution engines that support it
+    resources: ResourceSpec = Field(default_factory=ResourceSpec)
 
     _subscribed_topics: Set[str] = set()
 

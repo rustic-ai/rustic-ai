@@ -1,6 +1,4 @@
 import logging
-import os
-import time
 from typing import List, Optional
 
 from sqlmodel import Session
@@ -42,6 +40,7 @@ from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder, GuildHelpe
 from rustic_ai.core.guild.metastore import AgentModel, GuildModel, Metastore
 from rustic_ai.core.guild.metastore.models import GuildStatus
 from rustic_ai.core.state.models import (
+    StateFetchError,
     StateFetchRequest,
     StateFetchResponse,
     StateOwner,
@@ -124,11 +123,6 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
             self_model = AgentModel.from_agent_spec(guild_id, self_spec)
             session.add(self_model)
 
-            RUSTIC_WAIT_TRIES = os.getenv("RUSTIC_WAIT_TRIES", "10")
-            self.guild.wait_for_agents_to_start(int(RUSTIC_WAIT_TRIES), [self.id])
-
-            logging.info(f"ALL AGENTS RUNNING FOR GUILD {self.guild_id} : {self.guild.are_agents_running([self.id])}")
-
             if self.guild_model:
                 self.guild_model.status = GuildStatus.RUNNING
                 session.add(self.guild_model)
@@ -142,22 +136,6 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
         self.guild.launch_agent(agent_spec)
 
         agent_model = AgentModel.from_agent_spec(self.guild_id, agent_spec)
-
-        logging.info(f"LAUNCHING AGENT {agent_spec.id} FOR GUILD {self.guild_id}")
-
-        RUSTIC_WAIT_TRIES = os.getenv("RUSTIC_WAIT_TRIES", "10")
-        loop = int(RUSTIC_WAIT_TRIES)
-
-        while loop > 0:
-            if self.guild.is_agent_running(agent_spec.id):
-                break
-            loop -= 1
-            time.sleep(0.1)
-
-        logging.info(
-            f"AGENT {agent_spec.id} LAUNCHED FOR GUILD {self.guild_id}: {self.guild.is_agent_running(agent_spec.id)}"
-        )
-
         if session is None:
             with Session(self.engine) as session:
                 session.add(agent_model)
@@ -416,7 +394,7 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
                 topics=[GuildTopics.GUILD_STATUS_TOPIC],
             )
         except Exception as e:
-            ctx.send_error(StateUpdateError(state_update_request=sfr, error=str(e)))
+            ctx.send_error(StateFetchError(state_fetch_request=sfr, error=str(e)))
 
     @processor(StateUpdateRequest, handle_essential=True)
     def update_state_handler(self, ctx: ProcessContext[StateUpdateRequest]) -> None:
@@ -443,15 +421,20 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
         """
         if ctx.payload.guild_id == self.guild_id:
             with Session(self.engine) as session:
-                self.guild_model.status = GuildStatus.STOPPING
-                session.add(self.guild_model)
-                session.commit()
+                guild_model = GuildModel.get_by_id(session, self.guild_id)
+                if guild_model:
+                    guild_model.status = GuildStatus.STOPPING
+                    session.add(guild_model)
+                    session.commit()
+
             for agent_spec in self.guild.list_agents():
                 if agent_spec.id != self.id:
                     self.guild.remove_agent(agent_spec.id)
+
             with Session(self.engine) as session:
-                self.guild_model.status = GuildStatus.STOPPED
-                session.add(self.guild_model)
-                session.commit()
-                session.close()
+                guild_model = GuildModel.get_by_id(session, self.guild_id)
+                if guild_model:
+                    guild_model.status = GuildStatus.STOPPED
+                    session.add(guild_model)
+                    session.commit()
             self.guild.remove_agent(self.id)

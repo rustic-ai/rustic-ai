@@ -355,8 +355,8 @@ class RoutingRule(BaseModel):
     origin_filter: Optional[RoutingOrigin] = None
     message_format: Optional[str] = None
     destination: Optional[RoutingDestination] = None
-    mark_forwarded: Optional[bool] = Field(default=False)
-    route_times: Optional[int] = Field(default=1)
+    mark_forwarded: bool = Field(default=False)
+    route_times: int = Field(default=1)
 
     transformer: Optional[Union[PayloadTransformer, FunctionalTransformer]] = None
 
