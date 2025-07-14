@@ -90,7 +90,7 @@ class TestAgentDependencyInjection:
 
         slept = 1
         while len(probe_agent.get_messages()) == 0 and slept < 50:
-            time.sleep(0.01)
+            time.sleep(0.1)
             slept += 1
 
         messages = probe_agent.get_messages()
