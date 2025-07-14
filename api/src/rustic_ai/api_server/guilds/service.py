@@ -70,5 +70,5 @@ class GuildService:
             return None
 
         return GuildSpecResponse(
-            **guild_spec.model_dump(), status=GuildStatus(guild_model.status if guild_model else GuildStatus.UNKNOWN)
+            **guild_spec.model_dump(), status=GuildStatus(guild_model.status) if guild_model else GuildStatus.UNKNOWN
         )
