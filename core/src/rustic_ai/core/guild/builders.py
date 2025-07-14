@@ -41,6 +41,7 @@ from rustic_ai.core.messaging.core.message import (
     PayloadTransformer,
     RoutingRule,
     RoutingSlip,
+    StateTransformer,
     TransformationType,
 )
 from rustic_ai.core.state.manager.in_memory_state_manager import InMemoryStateManager
@@ -959,15 +960,21 @@ class RouteBuilder:
         return self
 
     def set_agent_state_update(self, update_agent_state: Union[JxScript, str]) -> "RouteBuilder":
-        self.rule_dict["update_agent_state"] = (
-            update_agent_state.serialize() if isinstance(update_agent_state, JxScript) else update_agent_state
+        state_transformer = StateTransformer(
+            state_update=(
+                update_agent_state.serialize() if isinstance(update_agent_state, JxScript) else update_agent_state
+            )
         )
+        self.rule_dict["agent_state_update"] = state_transformer
         return self
 
     def set_guild_state_update(self, update_guild_state: Union[JxScript, str]) -> "RouteBuilder":
-        self.rule_dict["update_guild_state"] = (
-            update_guild_state.serialize() if isinstance(update_guild_state, JxScript) else update_guild_state
+        state_transformer = StateTransformer(
+            state_update=(
+                update_guild_state.serialize() if isinstance(update_guild_state, JxScript) else update_guild_state
+            )
         )
+        self.rule_dict["guild_state_update"] = state_transformer
         return self
 
     def build(self) -> RoutingRule:
