@@ -1,6 +1,6 @@
 from datetime import datetime
 import logging
-from typing import List, Optional
+from typing import List, Optional, Self
 
 from sqlmodel import Session
 
@@ -36,7 +36,7 @@ from rustic_ai.core.guild import (
     GuildTopics,
     agent,
 )
-from rustic_ai.core.guild.agent import ProcessContext, processor
+from rustic_ai.core.guild.agent import ProcessContext, SelfReadyNotification, processor
 from rustic_ai.core.guild.agent_ext.mixins.health import (
     AgentsHealthReport,
     Heartbeat,
@@ -200,6 +200,33 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
             topics=[GuildTopics.GUILD_STATUS_TOPIC],
         )
 
+    @processor(
+        SelfReadyNotification,
+        predicate=lambda self, msg: msg.sender == self.get_agent_tag() and msg.topic_published_to == self._self_topic,
+    )
+    def send_first_health_report(self, ctx: ProcessContext[SelfReadyNotification]) -> None:
+        """
+        Send the first agents health report from the manager agent when it is ready.
+        """
+        agent_health = self.state_manager.get_state(
+            StateFetchRequest(
+                state_owner=StateOwner.AGENT,
+                guild_id=self.guild_id,
+                agent_id=self.id,
+                state_path="$.agent_health",
+            )
+        )
+
+        if agent_health:
+            ctx._raw_send(
+                priority=Priority.NORMAL,
+                format=get_qualified_class_name(AgentsHealthReport),
+                payload=AgentsHealthReport.model_validate(
+                    {"agents": {k: Heartbeat.model_validate(v) for k, v in agent_health.items()}}
+                ),
+                topics=[GuildTopics.GUILD_STATUS_TOPIC],
+            )
+
     @processor(AgentLaunchRequest)
     def launch_agent(self, ctx: ProcessContext[AgentLaunchRequest]) -> None:
         """
@@ -282,12 +309,36 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
         )
 
         if agent_health:
+            health_report = AgentsHealthReport.model_validate(
+                {"agents": {k: Heartbeat.model_validate(v) for k, v in agent_health.items()}}
+            )
+
+            with Session(self.engine) as session:
+                guild_model = GuildModel.get_by_id(self.guild_id, session=session)
+                guild_status = GuildStatus.UNKNOWN
+
+                if heartbeat.checkstatus == HeartbeatStatus.OK:
+                    guild_status = GuildStatus.RUNNING
+                elif heartbeat.checkstatus == HeartbeatStatus.WARNING:
+                    guild_status = GuildStatus.WARNING
+                elif heartbeat.checkstatus == HeartbeatStatus.LOADING:
+                    guild_status = GuildStatus.LOADING
+                elif heartbeat.checkstatus == HeartbeatStatus.BACKLOGGED:
+                    guild_status = GuildStatus.BACKLOGGED
+                elif heartbeat.checkstatus == HeartbeatStatus.UNKNOWN:
+                    guild_status = GuildStatus.UNKNOWN
+                elif heartbeat.checkstatus == HeartbeatStatus.ERROR:
+                    guild_status = GuildStatus.ERROR
+
+                if guild_model:
+                    guild_model.status = guild_status
+                    session.add(guild_model)
+                    session.commit()
+
             ctx._raw_send(
                 priority=Priority.NORMAL,
                 format=get_qualified_class_name(AgentsHealthReport),
-                payload=AgentsHealthReport.model_validate(
-                    {"agents": {k: Heartbeat.model_validate(v) for k, v in agent_health.items()}}
-                ),
+                payload=health_report.model_dump(),
                 topics=[GuildTopics.GUILD_STATUS_TOPIC],
             )
 
@@ -506,4 +557,5 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
                     guild_model.status = GuildStatus.STOPPED
                     session.add(guild_model)
                     session.commit()
+
             self.guild.remove_agent(self.id)
