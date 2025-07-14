@@ -19,6 +19,7 @@ from rustic_ai.core.guild.agent import (
     processor,
 )
 from rustic_ai.core.guild.agent_ext.mixins.guild_refresher import GuildRefreshMixin
+from rustic_ai.core.guild.agent_ext.mixins.health import AgentsHealthReport
 from rustic_ai.core.guild.dsl import GuildSpec, GuildTopics
 from rustic_ai.core.messaging.core.message import (
     AgentTag,
@@ -77,15 +78,16 @@ class UserProxyAgent(Agent[UserProxyAgentProps], GuildRefreshMixin):
         self.user_topic = UserProxyAgent.get_user_inbox_topic(self.user_id)
         self.user_outbox_topic = UserProxyAgent.get_user_outbox_topic(self.user_id)
         self.user_notifications_topic = UserProxyAgent.get_user_notifications_topic(self.user_id)
-        self.guild_notifications_topic = UserProxyAgent.get_user_system_notifications_topic(self.user_id)
+        self.user_system_notification_topic = UserProxyAgent.get_user_system_notifications_topic(self.user_id)
         self.guild_requests_topic = UserProxyAgent.get_user_system_requests_topic(self.user_id)
         agent_spec.id = UserProxyAgent.get_user_agent_id(self.user_id)
         agent_spec.additional_topics = [
             self.user_topic,
             self.user_outbox_topic,
             UserProxyAgent.BROADCAST_TOPIC,
-            self.guild_notifications_topic,
+            self.user_system_notification_topic,
             self.guild_requests_topic,
+            GuildTopics.GUILD_STATUS_TOPIC,
         ]
         super().__init__(
             agent_spec=agent_spec,
@@ -225,8 +227,9 @@ class UserProxyAgent(Agent[UserProxyAgentProps], GuildRefreshMixin):
         result = self._get_participant_list()
         routing_entry = RoutingRule(
             agent=ctx.agent.get_agent_tag(),  # TODO check what agent tag should be
+            format=get_qualified_class_name(ParticipantList),
             destination=RoutingDestination(
-                topics=self.guild_notifications_topic,
+                topics=self.user_system_notification_topic,
             ),
         )
         ctx.add_routing_step(routing_entry)
@@ -245,8 +248,9 @@ class UserProxyAgent(Agent[UserProxyAgentProps], GuildRefreshMixin):
         participants = self._get_participant_list()
         routing_entry = RoutingRule(
             agent=ctx.agent.get_agent_tag(),
+            format=get_qualified_class_name(ParticipantList),
             destination=RoutingDestination(
-                topics=self.guild_notifications_topic,
+                topics=self.user_system_notification_topic,
             ),
         )
         ctx.add_routing_step(routing_entry)
@@ -256,6 +260,7 @@ class UserProxyAgent(Agent[UserProxyAgentProps], GuildRefreshMixin):
     def handle_stop_guild_request(self, ctx: ProcessContext[StopGuildRequest]):
         routing_entry = RoutingRule(
             agent=ctx.agent.get_agent_tag(),
+            format=get_qualified_class_name(StopGuildRequest),
             destination=RoutingDestination(
                 topics=GuildTopics.SYSTEM_TOPIC,
             ),
@@ -263,3 +268,15 @@ class UserProxyAgent(Agent[UserProxyAgentProps], GuildRefreshMixin):
         ctx.add_routing_step(routing_entry)
         stopReq = StopGuildRequest(guild_id=ctx.payload.guild_id).model_dump()
         ctx.send_dict(stopReq, format=get_qualified_class_name(StopGuildRequest), forwarding=True)
+
+    @processor(AgentsHealthReport, handle_essential=True)
+    def handle_agents_health_report(self, ctx: ProcessContext[AgentsHealthReport]):
+        routing_entry = RoutingRule(
+            agent=ctx.agent.get_agent_tag(),
+            format=get_qualified_class_name(AgentsHealthReport),
+            destination=RoutingDestination(
+                topics=self.user_system_notification_topic,
+            ),
+        )
+        ctx.add_routing_step(routing_entry)
+        ctx.send_dict(ctx.payload, format=get_qualified_class_name(AgentsHealthReport), forwarding=True)

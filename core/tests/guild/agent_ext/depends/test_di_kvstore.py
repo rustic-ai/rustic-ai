@@ -214,7 +214,11 @@ class BaseTestKVStore(ABC):
             format=KVGet,
         )
 
-        time.sleep(0.5)
+
+        slept = 1
+        while len(probe_agent.get_messages()) < 2 and slept < 50:
+            time.sleep(0.1)
+            slept += 1
 
         messages = probe_agent.get_messages()
 

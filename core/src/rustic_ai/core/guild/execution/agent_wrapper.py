@@ -112,6 +112,10 @@ class AgentWrapper(ABC):
             self.messaging.subscribe(topic, client)
             logging.info(f"Client registered and subscribed to topic: {topic}")
 
+        # Notify the agent that it is ready to process messages
+        logging.info(f"Agent {self.agent_spec.name} is ready to process messages")
+        self.agent._notify_ready()
+
     def _load_dependency_resolver(self, name: str) -> DependencyResolver:
         """
         Loads the dependency resolver for the given name.

@@ -7,7 +7,11 @@ import shortuuid
 
 from rustic_ai.core.agents.testutils.echo_agent import EchoAgent
 from rustic_ai.core.agents.testutils.probe_agent import EssentialProbeAgent
-from rustic_ai.core.guild.agent_ext.mixins.health import HealthConstants, Heartbeat
+from rustic_ai.core.guild.agent_ext.mixins.health import (
+    HealthCheckRequest,
+    HealthConstants,
+    HeartbeatStatus,
+)
 from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder
 from rustic_ai.core.guild.dsl import AgentSpec, GuildTopics
 from rustic_ai.core.guild.metastore.database import Metastore
@@ -71,13 +75,13 @@ class TestHealthMixin:
 
         guild._add_local_agent(probe_agent)
 
-        heartbeat = Heartbeat(checktime=datetime.now())
+        heartbeat = HealthCheckRequest(checktime=datetime.now())
         isotime = heartbeat.checktime.isoformat()
 
         msg_id = probe_agent.publish_dict(
             topic=HealthConstants.HEARTBEAT_TOPIC,
             payload=heartbeat.model_dump(),
-            format=Heartbeat,
+            format=HealthCheckRequest,
         ).to_int()
 
         time.sleep(0.1)
@@ -88,21 +92,23 @@ class TestHealthMixin:
 
         mpair = {msg.sender.name: msg for msg in messages}
 
+        manager_name = f"GuildManagerAgent4{guild.id}"
+
         assert "EchoAgent" in mpair
-        assert "test_guild_name_manager" in mpair
+        assert manager_name in mpair
 
         echo_message = mpair["EchoAgent"]
-        assert echo_message.format == "rustic_ai.core.guild.agent_ext.mixins.health.HeartbeatResponse"
+        assert echo_message.format == "rustic_ai.core.guild.agent_ext.mixins.health.Heartbeat"
         assert echo_message.in_response_to == msg_id
         assert echo_message.payload["checktime"] == isotime
-        assert echo_message.payload["checkstatus"] == "OK"
+        assert echo_message.payload["checkstatus"] == HeartbeatStatus.OK.value
         assert echo_message.topics == HealthConstants.HEARTBEAT_TOPIC
 
-        manager_message = mpair["test_guild_name_manager"]
-        assert manager_message.format == "rustic_ai.core.guild.agent_ext.mixins.health.HeartbeatResponse"
+        manager_message = mpair[manager_name]
+        assert manager_message.format == "rustic_ai.core.guild.agent_ext.mixins.health.Heartbeat"
         assert manager_message.in_response_to == msg_id
         assert manager_message.payload["checktime"] == isotime
-        assert manager_message.payload["checkstatus"] == "OK"
+        assert manager_message.payload["checkstatus"] == HeartbeatStatus.OK.value
         assert manager_message.topics == HealthConstants.HEARTBEAT_TOPIC
 
         probe_agent.clear_messages()

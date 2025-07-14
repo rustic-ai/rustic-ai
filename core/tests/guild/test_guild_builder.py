@@ -23,6 +23,7 @@ from rustic_ai.core.agents.testutils.echo_agent import EchoAgent
 from rustic_ai.core.agents.testutils.probe_agent import ProbeAgent
 from rustic_ai.core.agents.utils.user_proxy_agent import UserProxyAgent
 from rustic_ai.core.guild import GSKC, AgentSpec
+from rustic_ai.core.guild.agent_ext.mixins.health import HealthConstants
 from rustic_ai.core.guild.builders import (
     AgentBuilder,
     GuildBuilder,
@@ -346,6 +347,7 @@ class TestGuildBuilder:
         assert guild.routes == routing_slip
 
         time.sleep(0.01)
+        manager_name = f"GuildManagerAgent4{guild_id}"
 
         # Test if the echo agent is added to the metastore
         with Session(engine) as session:
@@ -359,7 +361,7 @@ class TestGuildBuilder:
             assert "EchoAgent" in agent_names
             assert "rustic_ai.core.agents.testutils.echo_agent.EchoAgent" in agent_classes
 
-            assert "test_guild_name_manager" in agent_names
+            assert manager_name in agent_names
             assert get_qualified_class_name(GuildManagerAgent) in agent_classes
 
         guild_store = GuildStore(engine)
@@ -388,9 +390,9 @@ class TestGuildBuilder:
         assert echo_agent_spec.act_only_when_tagged is False
 
         guild_manager_agent_spec = agent_specs[1]
-        assert guild_manager_agent_spec.name == "test_guild_name_manager"
+        assert guild_manager_agent_spec.name == manager_name
         assert guild_manager_agent_spec.class_name == get_qualified_class_name(GuildManagerAgent)
-        assert guild_manager_agent_spec.additional_topics == [GuildTopics.SYSTEM_TOPIC]
+        assert guild_manager_agent_spec.additional_topics == [GuildTopics.SYSTEM_TOPIC, HealthConstants.HEARTBEAT_TOPIC]
         assert guild_manager_agent_spec.properties
         assert guild_manager_agent_spec.listen_to_default_topic is True
         assert guild_manager_agent_spec.act_only_when_tagged is False
@@ -532,6 +534,7 @@ class TestGuildBuilder:
         guild = builder.bootstrap(database, org_id)
 
         time.sleep(0.5)
+        manager_name = f"GuildManagerAgent4{guild_id}"
 
         with Session(engine) as session:
             guild_model = GuildModel.get_by_id(session, guild_id)
@@ -556,10 +559,13 @@ class TestGuildBuilder:
             assert echo_agent_spec.listen_to_default_topic is False
             assert echo_agent_spec.act_only_when_tagged is False
 
-            guild_manager_agent_spec = agent_specs["test_guild_name_manager"]
-            assert guild_manager_agent_spec.name == "test_guild_name_manager"
+            guild_manager_agent_spec = agent_specs[manager_name]
+            assert guild_manager_agent_spec.name == manager_name
             assert guild_manager_agent_spec.class_name == get_qualified_class_name(GuildManagerAgent)
-            assert guild_manager_agent_spec.additional_topics == [GuildTopics.SYSTEM_TOPIC]
+            assert guild_manager_agent_spec.additional_topics == [
+                GuildTopics.SYSTEM_TOPIC,
+                HealthConstants.HEARTBEAT_TOPIC,
+            ]
             assert guild_manager_agent_spec.properties
             assert guild_manager_agent_spec.listen_to_default_topic is True
             assert guild_manager_agent_spec.act_only_when_tagged is False
@@ -572,6 +578,7 @@ class TestGuildBuilder:
         user_message_topic = UserProxyAgent.get_user_notifications_topic("test_user")
         user_message_forward_topic = "user_message_forward:test_user"
         user_outbox_topic = UserProxyAgent.get_user_outbox_topic("test_user")
+        user_system_notification_topic = UserProxyAgent.get_user_system_notifications_topic("test_user")
 
         probe_agent = (
             AgentBuilder(ProbeAgent)
@@ -583,6 +590,7 @@ class TestGuildBuilder:
             .add_additional_topic(user_message_topic)
             .add_additional_topic(user_message_forward_topic)
             .add_additional_topic(user_outbox_topic)
+            .add_additional_topic(user_system_notification_topic)
             .add_additional_topic("echo_topic")
             .add_additional_topic("default_topic")
             .build()
@@ -600,7 +608,7 @@ class TestGuildBuilder:
 
         probe_agent_messages = probe_agent.get_messages()
 
-        assert len(probe_agent_messages) == 1
+        assert len(probe_agent_messages) == 2
 
         user_agent_creation_response = UserAgentCreationResponse.model_validate(probe_agent_messages[0].payload)
 
@@ -632,12 +640,14 @@ class TestGuildBuilder:
         agent_names = [agent["name"] for agent in running_agents_response["agents"]]
         agent_names.sort()
 
-        assert agent_names == [
-            "EchoAgent",
-            "ProbeAgent",
-            "test_guild_name_manager",
-            "test_user",
-        ]
+        assert sorted(agent_names) == sorted(
+            [
+                "EchoAgent",
+                "ProbeAgent",
+                manager_name,
+                "test_user",
+            ]
+        )
 
         probe_agent.clear_messages()
         # Test that the UserProxyAgent will forwards wrapped messages
@@ -757,12 +767,14 @@ class TestGuildBuilder:
         agent_names = [agent["name"] for agent in running_agents_response["agents"]]
         agent_names.sort()
 
-        assert agent_names == [
-            "EchoAgent",
-            "ProbeAgent",
-            "test_guild_name_manager",
-            "test_user",
-        ]
+        assert sorted(agent_names) == sorted(
+            [
+                "EchoAgent",
+                "ProbeAgent",
+                manager_name,
+                "test_user",
+            ]
+        )
 
         probe_agent.clear_messages()
 

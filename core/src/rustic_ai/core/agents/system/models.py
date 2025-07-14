@@ -12,7 +12,7 @@ class BadInputResponse(BaseModel):
     """
 
     status_code: Literal[400] = 400
-    status: str = Field("Bad Request")
+    status: str = Field(default="Bad Request")
     error_field: str
     message: str
 
@@ -23,7 +23,7 @@ class ConflictResponse(BaseModel):
     """
 
     status_code: Literal[409] = 409
-    status: str = Field("Conflict")
+    status: str = Field(default="Conflict")
     error_field: str
     message: str
 
