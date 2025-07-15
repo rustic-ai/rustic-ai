@@ -168,7 +168,7 @@ class SystemCommunicationManager:
                 Message(
                     id_obj=self._gemstone.get_id(Priority.HIGH),
                     topics=[GuildTopics.GUILD_STATUS_TOPIC],
-                    sender=AgentTag(id=f"sys_comms_socket:{user_id}"),
+                    sender=user_agent_tag,
                     format=get_qualified_class_name(HealthCheckRequest),
                     payload=HealthCheckRequest(checktime=datetime.now()).model_dump(),
                 )
