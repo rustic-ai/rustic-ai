@@ -1,5 +1,7 @@
 import logging
 import multiprocessing
+import pickle
+from multiprocessing.synchronize import Event as EventType
 from typing import Any, Dict, List, Optional, Type, Union
 
 from rustic_ai.core.guild.agent import Agent, AgentSpec
@@ -11,10 +13,68 @@ from .agent_tracker import MultiProcessAgentTracker
 from .multiprocess_agent_wrapper import MultiProcessAgentWrapper
 
 
+def multiprocess_wrapper_runner(
+    guild_spec_data: bytes,
+    agent_spec_data: bytes,
+    messaging_config_data: bytes,
+    machine_id: int,
+    client_type_name: str,
+    client_properties: Dict[str, Any],
+    process_ready_event: EventType,
+    shutdown_event: EventType,
+):
+    """
+    Function that runs in the child process to execute the wrapper.
+    This follows the proper pattern where the wrapper's run() method is called,
+    which then calls initialize_agent() like sync and Ray implementations.
+    """
+    try:
+        # Deserialize the data
+        guild_spec = pickle.loads(guild_spec_data)
+        agent_spec = pickle.loads(agent_spec_data)
+        messaging_config = pickle.loads(messaging_config_data)
+
+        # Reconstruct the client type
+        from rustic_ai.core.messaging import MessageTrackingClient
+        if client_type_name == "MessageTrackingClient":
+            client_type = MessageTrackingClient
+        else:
+            # Default fallback
+            client_type = MessageTrackingClient
+
+        # Create the wrapper in the child process
+        wrapper = MultiProcessAgentWrapper(
+            guild_spec=guild_spec,
+            agent_spec=agent_spec,
+            messaging_config=messaging_config,
+            machine_id=machine_id,
+            client_type=client_type,
+            client_properties=client_properties,
+        )
+
+        # Set the shutdown event for the wrapper
+        wrapper.shutdown_event = shutdown_event
+
+        # Signal that the process is ready before running the wrapper
+        process_ready_event.set()
+
+        # Run the wrapper - this will call initialize_agent() like sync/Ray
+        wrapper.run()
+
+    except Exception as e:
+        logging.error(f"Error in multiprocess wrapper runner: {e}")
+        raise
+
+
 class MultiProcessExecutionEngine(ExecutionEngine):
     """
     An execution engine that runs agents in separate processes for true parallelism.
     This escapes the Python GIL and allows for genuine concurrent execution.
+
+    This implementation follows the proper pattern where:
+    1. The execution engine handles process creation
+    2. The process runs the wrapper's run() method directly
+    3. The wrapper calls initialize_agent() like sync/Ray implementations
 
     Features:
     - True parallelism by escaping the GIL
@@ -29,24 +89,19 @@ class MultiProcessExecutionEngine(ExecutionEngine):
 
         Args:
             guild_id: The ID of the guild this engine manages
-            organization_id: The ID of the organization this engine belongs to
-            max_processes: Maximum number of processes to use (defaults to CPU count)
+            organization_id: The organization ID
+            max_processes: Maximum number of processes to allow (defaults to CPU count)
         """
-        super().__init__(guild_id=guild_id, organization_id=organization_id)
-
-        # Set multiprocessing start method to 'spawn' for better cross-platform compatibility
-        # and to avoid issues with shared state
-        try:
-            multiprocessing.set_start_method("spawn", force=True)
-        except RuntimeError:
-            # Start method already set, ignore
-            pass
-
+        super().__init__(guild_id, organization_id)
         self.max_processes = max_processes or multiprocessing.cpu_count()
         self.agent_tracker = MultiProcessAgentTracker()
-        self.owned_agents: List[tuple[str, str]] = []
+        self.owned_agents: List[tuple[str, str]] = []  # (guild_id, agent_id) pairs
 
-        logging.info(f"Initialized MultiProcessExecutionEngine with max_processes={self.max_processes}")
+        # Track running processes
+        self.processes: Dict[str, multiprocessing.Process] = {}
+        self.process_events: Dict[str, tuple[EventType, EventType]] = {}
+
+        logging.info(f"MultiProcessExecutionEngine initialized with max_processes={self.max_processes}")
 
     def run_agent(
         self,
@@ -59,7 +114,9 @@ class MultiProcessExecutionEngine(ExecutionEngine):
         default_topic: str = "default_topic",
     ) -> None:
         """
-        Creates a MultiProcessAgentWrapper for the agent and runs it in a separate process.
+        Creates and runs an agent in a separate process.
+        This follows the proper pattern where the execution engine handles process creation
+        and the process runs the wrapper's run() method directly.
 
         Args:
             guild_spec: The guild specification
@@ -81,8 +138,51 @@ class MultiProcessExecutionEngine(ExecutionEngine):
             if len(current_agents) >= self.max_processes:
                 raise RuntimeError(f"Maximum number of processes ({self.max_processes}) reached")
 
-            # Create the agent wrapper
-            agent_wrapper = MultiProcessAgentWrapper(
+            # Create events for process coordination
+            process_ready_event = multiprocessing.Event()
+            shutdown_event = multiprocessing.Event()
+
+            # Serialize the data to pass to the process
+            guild_spec_data = pickle.dumps(guild_spec)
+            agent_spec_data = pickle.dumps(agent_spec)
+            messaging_config_data = pickle.dumps(messaging_config)
+
+            # Get the client type name for reconstruction in the process
+            client_type_name = client_type.__name__
+
+            # Create and start the process that will run the wrapper
+            process = multiprocessing.Process(
+                target=multiprocess_wrapper_runner,
+                args=(
+                    guild_spec_data,
+                    agent_spec_data,
+                    messaging_config_data,
+                    machine_id,
+                    client_type_name,
+                    client_properties,
+                    process_ready_event,
+                    shutdown_event,
+                ),
+                name=f"Agent-{actual_spec.id}",
+            )
+
+            # Start the process
+            process.start()
+
+            # Wait for the process to be ready (with timeout)
+            if not process_ready_event.wait(timeout=30):
+                logging.error(f"Agent {actual_spec.id} failed to start within timeout")
+                process.terminate()
+                process.join(timeout=5)
+                raise RuntimeError(f"Agent {actual_spec.id} failed to start")
+
+            # Store process information
+            self.processes[actual_spec.id] = process
+            self.process_events[actual_spec.id] = (process_ready_event, shutdown_event)
+
+            # Create a minimal wrapper for tracking purposes
+            # This is NOT run in the main process - it's just for tracking
+            tracking_wrapper = MultiProcessAgentWrapper(
                 guild_spec=guild_spec,
                 agent_spec=agent_spec,
                 messaging_config=messaging_config,
@@ -90,194 +190,157 @@ class MultiProcessExecutionEngine(ExecutionEngine):
                 client_type=client_type,
                 client_properties=client_properties,
             )
+            tracking_wrapper.process = process
 
-            # Add to tracking before starting to avoid race conditions
-            self.agent_tracker.add_agent(guild_id, actual_spec, agent_wrapper)
+            # Add to tracking
+            self.agent_tracker.add_agent(guild_id, actual_spec, tracking_wrapper)
             self.owned_agents.append((guild_id, actual_spec.id))
-
-            # Start the agent process
-            agent_wrapper.run()
 
             # Update process info after successful start
             self.agent_tracker.update_process_info(guild_id, actual_spec.id)
 
-            logging.info(f"Successfully started agent {actual_spec.id} in process {agent_wrapper.get_process_id()}")
+            logging.info(f"Successfully started agent {actual_spec.id} in process {process.pid}")
 
         except Exception as e:
             logging.error(f"Failed to run agent {agent_spec.id if hasattr(agent_spec, 'id') else 'unknown'}: {e}")
             # Clean up on failure
             if hasattr(agent_spec, "id"):
                 self.agent_tracker.remove_agent(guild_id, agent_spec.id)
-                try:
-                    self.owned_agents.remove((guild_id, agent_spec.id))
-                except ValueError:
-                    pass
+                if agent_spec.id in self.processes:
+                    del self.processes[agent_spec.id]
+                    if agent_spec.id in self.process_events:
+                        del self.process_events[agent_spec.id]
             raise
-
-    def get_agents_in_guild(self, guild_id: str) -> Dict[str, AgentSpec]:
-        """
-        Returns all agents currently running in the specified guild.
-
-        Args:
-            guild_id: The ID of the guild
-
-        Returns:
-            Dict[str, AgentSpec]: Dictionary mapping agent IDs to their specifications
-        """
-        return self.agent_tracker.get_agents_in_guild(guild_id)
-
-    def is_agent_running(self, guild_id: str, agent_id: str) -> bool:
-        """
-        Checks if an agent is currently running in the specified guild.
-
-        Args:
-            guild_id: The ID of the guild
-            agent_id: The ID of the agent to check
-
-        Returns:
-            bool: True if the agent is running, False otherwise
-        """
-        return self.agent_tracker.is_agent_alive(guild_id, agent_id)
-
-    def find_agents_by_name(self, guild_id: str, agent_name: str) -> List[AgentSpec]:
-        """
-        Returns all agents in the guild with the specified name.
-
-        Args:
-            guild_id: The ID of the guild
-            agent_name: The name to search for
-
-        Returns:
-            List[AgentSpec]: List of agent specifications matching the name
-        """
-        return self.agent_tracker.find_agents_by_name(guild_id, agent_name)
 
     def stop_agent(self, guild_id: str, agent_id: str) -> None:
         """
-        Stops an agent that is currently running.
+        Stops an agent by signaling its process to shutdown.
 
         Args:
-            guild_id: The ID of the guild the agent belongs to
+            guild_id: The ID of the guild containing the agent
             agent_id: The ID of the agent to stop
         """
         try:
-            # Get the agent wrapper
-            agent_wrapper = self.agent_tracker.get_agent_wrapper(guild_id, agent_id)
+            # Get the process and events
+            process = self.processes.get(agent_id)
+            events = self.process_events.get(agent_id)
 
-            if agent_wrapper is not None:
-                logging.info(f"Stopping agent {agent_id} in guild {guild_id}")
+            if process and events:
+                process_ready_event: EventType
+                shutdown_event: EventType
+                process_ready_event, shutdown_event = events
 
-                # Shutdown the agent process
-                agent_wrapper.shutdown()
+                # Signal shutdown
+                shutdown_event.set()
 
-                # Remove from tracking
-                self.agent_tracker.remove_agent(guild_id, agent_id)
+                # Wait for process to exit gracefully
+                process.join(timeout=10)
 
-                # Remove from owned agents
-                try:
-                    self.owned_agents.remove((guild_id, agent_id))
-                except ValueError:
-                    logging.warning(f"Agent {agent_id} not found in owned agents list")
+                # Force terminate if needed
+                if process.is_alive():
+                    logging.warning(f"Agent {agent_id} did not shutdown gracefully, terminating")
+                    process.terminate()
+                    process.join(timeout=5)
+
+                # Clean up
+                del self.processes[agent_id]
+                del self.process_events[agent_id]
 
                 logging.info(f"Successfully stopped agent {agent_id}")
             else:
-                logging.warning(f"Agent {agent_id} not found in guild {guild_id}")
+                logging.warning(f"Agent {agent_id} not found in processes")
+
+            # Remove from tracking
+            self.agent_tracker.remove_agent(guild_id, agent_id)
+
+            # Remove from owned agents
+            self.owned_agents = [(gid, aid) for gid, aid in self.owned_agents if not (gid == guild_id and aid == agent_id)]
 
         except Exception as e:
             logging.error(f"Error stopping agent {agent_id}: {e}")
-
-    def shutdown(self) -> None:
-        """
-        Shutdown the execution engine and all running agents.
-        """
-        try:
-            logging.info(f"Shutting down MultiProcessExecutionEngine with {len(self.owned_agents)} agents")
-
-            # Stop all owned agents
-            for guild_id, agent_id in list(self.owned_agents):
-                try:
-                    self.stop_agent(guild_id, agent_id)
-                except Exception as e:
-                    logging.error(f"Error stopping agent {agent_id} during shutdown: {e}")
-
-            # Clear the tracker
-            self.agent_tracker.clear()
-
-            # Clear owned agents list
-            self.owned_agents.clear()
-
-            logging.info("MultiProcessExecutionEngine shutdown complete")
-
-        except Exception as e:
-            logging.error(f"Error during execution engine shutdown: {e}")
-
-    def get_process_info(self, guild_id: str, agent_id: str) -> Dict:
-        """
-        Get process information for a specific agent.
-
-        Args:
-            guild_id: The ID of the guild the agent belongs to
-            agent_id: The ID of the agent
-
-        Returns:
-            Dict: Process information including PID, status, etc.
-        """
-        return self.agent_tracker.get_process_info(guild_id, agent_id) or {}
-
-    def get_engine_stats(self) -> Dict:
-        """
-        Get statistics about the execution engine.
-
-        Returns:
-            Dict: Statistics including agent counts, process info, etc.
-        """
-        try:
-            stats = self.agent_tracker.get_stats()
-            stats.update(
-                {
-                    "engine_type": "MultiProcessExecutionEngine",
-                    "guild_id": self.guild_id,
-                    "max_processes": self.max_processes,
-                    "owned_agents_count": len(self.owned_agents),
-                }
-            )
-            return stats
-        except Exception as e:
-            logging.error(f"Error getting engine stats: {e}")
-            return {"error": str(e)}
+            raise
 
     def cleanup_dead_processes(self) -> None:
         """
-        Clean up any dead agent processes that may have crashed.
-        This is called automatically by some methods but can be called manually.
+        Clean up any dead processes.
         """
-        try:
-            # Get all agents and check if they're alive
-            dead_agents = []
-            for guild_id, agent_id in self.owned_agents:
-                if not self.agent_tracker.is_agent_alive(guild_id, agent_id):
-                    dead_agents.append((guild_id, agent_id))
+        dead_agents = []
+        for agent_id, process in self.processes.items():
+            if not process.is_alive():
+                dead_agents.append(agent_id)
 
-            # Clean up dead agents
-            for guild_id, agent_id in dead_agents:
-                logging.warning(f"Cleaning up dead agent process: {agent_id}")
-                self.agent_tracker.remove_agent(guild_id, agent_id)
-                try:
-                    self.owned_agents.remove((guild_id, agent_id))
-                except ValueError:
-                    pass
+        for agent_id in dead_agents:
+            logging.info(f"Cleaning up dead process for agent {agent_id}")
+            # Find the guild_id for this agent
+            guild_id = None
+            for gid, aid in self.owned_agents:
+                if aid == agent_id:
+                    guild_id = gid
+                    break
 
-            if dead_agents:
-                logging.info(f"Cleaned up {len(dead_agents)} dead agent processes")
+            if guild_id:
+                self.stop_agent(guild_id, agent_id)
 
-        except Exception as e:
-            logging.error(f"Error during cleanup of dead processes: {e}")
-
-    def __del__(self):
+    def get_process_info(self, guild_id: str, agent_id: str) -> Dict[str, Any]:
         """
-        Ensure cleanup on destruction.
+        Get process information for an agent.
+
+        Args:
+            guild_id: The ID of the guild containing the agent
+            agent_id: The ID of the agent
+
+        Returns:
+            Dictionary containing process information
         """
-        try:
-            self.shutdown()
-        except Exception:
-            pass  # Ignore errors during destruction
+        process = self.processes.get(agent_id)
+        if process:
+            return {
+                "pid": process.pid,
+                "is_alive": process.is_alive(),
+                "name": process.name,
+                "exitcode": process.exitcode,
+            }
+        return {}
+
+    def shutdown(self) -> None:
+        """
+        Shutdown the execution engine and all managed agents.
+        """
+        logging.info("Shutting down MultiProcessExecutionEngine")
+
+        # Stop all agents
+        for guild_id, agent_id in self.owned_agents.copy():
+            try:
+                self.stop_agent(guild_id, agent_id)
+            except Exception as e:
+                logging.error(f"Error stopping agent {agent_id} during shutdown: {e}")
+
+        # Clean up agent tracker
+        self.agent_tracker.clear()
+
+        logging.info("MultiProcessExecutionEngine shutdown complete")
+
+    # Delegate methods to agent tracker
+    def get_agents_in_guild(self, guild_id: str) -> Dict[str, AgentSpec]:
+        """Get all agents in a guild."""
+        return self.agent_tracker.get_agents_in_guild(guild_id)
+
+    def find_agents_by_name(self, guild_id: str, name: str) -> List[AgentSpec]:
+        """Find agents by name in a guild."""
+        return self.agent_tracker.find_agents_by_name(guild_id, name)
+
+    def is_agent_running(self, guild_id: str, agent_id: str) -> bool:
+        """Check if an agent is running."""
+        return self.agent_tracker.is_agent_alive(guild_id, agent_id)
+
+    def get_engine_stats(self) -> Dict[str, Any]:
+        """Get engine statistics."""
+        base_stats = self.agent_tracker.get_stats()
+        base_stats.update({
+            "engine_type": "MultiProcessExecutionEngine",
+            "guild_id": self.guild_id,
+            "max_processes": self.max_processes,
+            "active_processes": len(self.processes),
+            "owned_agents_count": len(self.owned_agents),
+        })
+        return base_stats

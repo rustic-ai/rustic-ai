@@ -846,7 +846,16 @@ def processor(
 
         def wrapper(self: AT, msg: Message) -> None:
 
-            if (predicate is None or predicate(self, msg)) and (
+            logging.debug(f"Processing message {msg.id} for {self.get_agent_tag()}")
+
+            predicate_result = predicate(self, msg) if predicate else True
+
+            logging.debug(
+                f"Predicate result for {self.get_agent_tag()} on {func.__name__} with MessageFormat: {msg.format} "
+                f"and Predicate: {predicate}: {predicate_result}"
+            )
+
+            if (predicate_result) and (
                 not self._agent_spec.act_only_when_tagged or msg.is_tagged(self.get_agent_tag())
             ):
                 runtime_predicate = self._agent_spec.predicates.get(func.__name__)

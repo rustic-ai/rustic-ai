@@ -1,4 +1,5 @@
 import pytest
+from sqlalchemy import Engine
 
 from rustic_ai.core.agents.testutils.echo_agent import EchoAgent
 from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder
@@ -39,12 +40,13 @@ class TestGuildStore:
     def _get_guild(self, name):
         return GuildBuilder(name).set_name(name).set_description(name).build_spec()
 
-    def test_add_guild(self, engine, guild, org_id):
+    def test_add_guild(self, engine: Engine, guild, org_id):
         store = GuildStore(engine)
         gm1 = store.add_guild(guild, org_id)
         assert gm1.id == "guild1"
-        guild = store.get_guild(gm1.id)
-        assert guild.id == "guild1"
+        guild_model = store.get_guild(gm1.id)
+        assert guild_model is not None
+        assert guild_model.id == "guild1"
 
     def test_update_guild_status(self, engine, guild, org_id):
         store = GuildStore(engine)
@@ -86,6 +88,7 @@ class TestGuildStore:
 
         guild = store.get_guild(guild.id)
 
+        assert guild is not None
         assert len(guild.agents) == 2
         assert guild.agents[0].name == "agent1"
         assert guild.agents[1].name == "agent2"

@@ -1,6 +1,6 @@
 from datetime import datetime
 import logging
-from typing import List, Optional, Self
+from typing import List, Optional
 
 from sqlmodel import Session
 

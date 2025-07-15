@@ -214,7 +214,6 @@ class BaseTestKVStore(ABC):
             format=KVGet,
         )
 
-
         slept = 1
         while len(probe_agent.get_messages()) < 2 and slept < 50:
             time.sleep(0.1)

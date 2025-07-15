@@ -18,7 +18,7 @@ from rustic_ai.core.agents.system.guild_manager_agent import (
     UserAgentCreationRequest,
     UserAgentCreationResponse,
 )
-from rustic_ai.core.agents.system.models import ConflictResponse
+from rustic_ai.core.agents.system.models import AgentListResponse, ConflictResponse
 from rustic_ai.core.agents.testutils.echo_agent import EchoAgent
 from rustic_ai.core.agents.testutils.probe_agent import ProbeAgent
 from rustic_ai.core.agents.utils.user_proxy_agent import UserProxyAgent
@@ -278,7 +278,7 @@ class TestGuildBuilder:
         guild_name: str,
         guild_description: str,
     ):
-        yaml_path = importlib.resources.files("core.tests.resources.guild_specs").joinpath("test_guild.yaml")
+        yaml_path = importlib.resources.files("core.tests.resources.guild_specs").joinpath("test_guild.yaml")  # type: ignore
         new_spec = GuildBuilder.from_yaml_file(yaml_path).build_spec()
 
         assert new_spec.name == guild_name
@@ -420,10 +420,9 @@ class TestGuildBuilder:
 
         probe_agent_messages = probe_agent.get_messages()
         assert len(probe_agent_messages) == 1
-
-        agent_list_response = probe_agent_messages[0].payload
-        assert agent_list_response["agents"][0]["name"] == "EchoAgent"
-        assert agent_list_response["agents"][0]["class_name"] == get_qualified_class_name(EchoAgent)
+        agent_list_response = AgentListResponse.model_validate(probe_agent_messages[0].payload)
+        assert agent_list_response.agents[0].name == "EchoAgent"
+        assert agent_list_response.agents[0].class_name == get_qualified_class_name(EchoAgent)
 
         # Test the EchoAgent was launched correctly
         probe_agent.publish_dict(
@@ -633,11 +632,11 @@ class TestGuildBuilder:
 
         assert len(probe_agent_messages) == 1
 
-        running_agents_response = probe_agent_messages[0].payload
+        running_agents_response = AgentListResponse.model_validate(probe_agent_messages[0].payload)
 
-        assert len(running_agents_response["agents"]) == 4
+        assert len(running_agents_response.agents) == 4
 
-        agent_names = [agent["name"] for agent in running_agents_response["agents"]]
+        agent_names = [agent.name for agent in running_agents_response.agents]
         agent_names.sort()
 
         assert sorted(agent_names) == sorted(
@@ -676,6 +675,7 @@ class TestGuildBuilder:
         assert forwarded_message.topics == "echo_topic"
         assert forwarded_message.payload["message"] == "Hello, world! @EchoAgent"
         assert forwarded_message.sender.id == UserProxyAgent.get_user_agent_id("test_user")
+        assert forwarded_message.routing_slip is not None
         assert forwarded_message.routing_slip.get_steps_count() == 1
         assert forwarded_message.forward_header is None
         assert forwarded_message.recipient_list == [AgentTag(id="echo001", name="EchoAgent")]
@@ -885,9 +885,12 @@ class TestGuildBuilder:
 
         for message in probe_agent_messages:
             assert message.payload["message"] == "Broadcast message"
+            assert message.topics is not None
+            assert isinstance(message.topics, str)
             topic_type, user_id = message.topics.split(":")
             assert topic_type == "user_notifications"
             assert UserProxyAgent.get_user_agent_id(user_id) == message.sender.id
+            assert message.forward_header is not None
             assert message.forward_header.origin_message_id == msg_id_int
             assert message.forward_header.on_behalf_of.name == "ProbeAgent"
 
@@ -929,7 +932,11 @@ class TestGuildBuilder:
         assert default_topic_message.sender.id == UserProxyAgent.get_user_agent_id(user1)
 
         user_notifications = [
-            message for message in probe_agent_messages if message.topics.startswith("user_notifications")
+            message
+            for message in probe_agent_messages
+            if message.topics is not None
+            and isinstance(message.topics, str)
+            and message.topics.startswith("user_notifications")
         ]
 
         assert len(user_notifications) == 3
@@ -937,6 +944,8 @@ class TestGuildBuilder:
         notified_users = []
         for message in user_notifications:
             assert message.payload["message"] == "Hello, world!"
+            assert message.topics is not None
+            assert isinstance(message.topics, str)
             _, user_id = message.topics.split(":")
             assert message.sender.id == UserProxyAgent.get_user_agent_id(user_id)
             if message.forward_header:

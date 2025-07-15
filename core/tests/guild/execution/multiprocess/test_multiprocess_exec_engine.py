@@ -52,13 +52,50 @@ class TestMultiProcessExecutionEngine:
             .build_spec()
         )
 
+    @pytest.fixture(scope="module")
+    def messaging_server(self):
+        """Start a single embedded messaging server for all tests in this module."""
+        import asyncio
+        import threading
+        import time
+        from rustic_ai.core.messaging.backend.embedded_backend import EmbeddedServer
+
+        port = 31142
+        server = EmbeddedServer(port=port)
+
+        def run_server():
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            loop.run_until_complete(server.start())
+            try:
+                loop.run_forever()
+            except KeyboardInterrupt:
+                pass
+            finally:
+                loop.run_until_complete(server.stop())
+                loop.close()
+
+        thread = threading.Thread(target=run_server, daemon=True)
+        thread.start()
+        time.sleep(0.5)  # Wait for server to start
+
+        yield server, port
+
+        # Clean up
+        if server.running:
+            server.topics.clear()
+            server.messages.clear()
+            server.subscribers.clear()
+
     @pytest.fixture
-    def messaging_config(self):
-        # Use in-memory backend for unit tests
+    def messaging_config(self, messaging_server):
+        # Use embedded backend for multiprocess tests (in-memory can't work across processes)
+        # Connect to the shared server started by the messaging_server fixture
+        server, port = messaging_server
         return MessagingConfig(
-            backend_module="rustic_ai.core.messaging.backend.inmemory_backend",
-            backend_class="InMemoryMessagingBackend",
-            backend_config={},
+            backend_module="rustic_ai.core.messaging.backend.embedded_backend",
+            backend_class="EmbeddedMessagingBackend",
+            backend_config={"port": port, "auto_start_server": False},
         )
 
     def test_engine_initialization(self, guild_id, organization_id):
@@ -121,8 +158,9 @@ class TestMultiProcessExecutionEngine:
         info = engine.get_process_info(guild_id, "nonexistent_agent")
         assert info == {}
 
+    @patch("rustic_ai.core.guild.execution.multiprocess.multiprocess_exec_engine.multiprocess_wrapper_runner")
     @patch("rustic_ai.core.guild.execution.multiprocess.multiprocess_exec_engine.MultiProcessAgentWrapper")
-    def test_run_agent_success(self, mock_wrapper_class, engine, guild_spec, agent_spec, messaging_config):
+    def test_run_agent_success(self, mock_wrapper_class, mock_wrapper_runner, engine, guild_spec, agent_spec, messaging_config):
         """Test successfully running an agent."""
         # Setup mock
         mock_wrapper = Mock(spec=MultiProcessAgentWrapper)
@@ -133,16 +171,35 @@ class TestMultiProcessExecutionEngine:
         engine.agent_tracker = Mock(spec=MultiProcessAgentTracker)
         engine.agent_tracker.get_agents_in_guild.return_value = {}
 
-        # Run agent
-        engine.run_agent(guild_spec=guild_spec, agent_spec=agent_spec, messaging_config=messaging_config, machine_id=1)
+        # Mock the process ready event to simulate successful startup
+        with patch("multiprocessing.Event") as mock_event:
+            mock_ready_event = Mock()
+            mock_ready_event.wait.return_value = True  # Simulate successful startup
+            mock_event.return_value = mock_ready_event
 
-        # Verify wrapper was created and run
-        mock_wrapper_class.assert_called_once()
-        mock_wrapper.run.assert_called_once()
+            # Mock the process to simulate successful creation
+            with patch("multiprocessing.Process") as mock_process:
+                mock_proc = Mock()
+                mock_proc.pid = 12345
+                mock_proc.start.return_value = None
+                mock_process.return_value = mock_proc
 
-        # Verify tracking
-        engine.agent_tracker.add_agent.assert_called_once_with(guild_spec.id, agent_spec, mock_wrapper)
-        assert (guild_spec.id, agent_spec.id) in engine.owned_agents
+                # Run agent
+                engine.run_agent(guild_spec=guild_spec, agent_spec=agent_spec, messaging_config=messaging_config, machine_id=1)
+
+                # Verify process was created and started
+                mock_process.assert_called_once()
+                mock_proc.start.assert_called_once()
+
+                # Verify wrapper was created for tracking (not run in main process)
+                mock_wrapper_class.assert_called()
+
+                # Verify tracking
+                engine.agent_tracker.add_agent.assert_called_once_with(guild_spec.id, agent_spec, mock_wrapper)
+                assert (guild_spec.id, agent_spec.id) in engine.owned_agents
+
+                # Verify the process was stored
+                assert agent_spec.id in engine.processes
 
     @patch("rustic_ai.core.guild.execution.multiprocess.multiprocess_exec_engine.MultiProcessAgentWrapper")
     def test_run_agent_max_processes_exceeded(
@@ -173,8 +230,8 @@ class TestMultiProcessExecutionEngine:
         engine.agent_tracker = Mock(spec=MultiProcessAgentTracker)
         engine.agent_tracker.get_agents_in_guild.return_value = {}
 
-        # Should raise the exception
-        with pytest.raises(Exception, match="Wrapper creation failed"):
+        # Should raise the exception - wrapper failure in subprocess causes timeout in main process
+        with pytest.raises(RuntimeError, match="failed to start"):
             engine.run_agent(
                 guild_spec=guild_spec, agent_spec=agent_spec, messaging_config=messaging_config, machine_id=1
             )
@@ -186,19 +243,37 @@ class TestMultiProcessExecutionEngine:
         """Test successfully stopping an agent."""
         agent_id = "test_agent"
 
-        # Mock the agent tracker and wrapper
-        mock_wrapper = Mock(spec=MultiProcessAgentWrapper)
+        # Mock the agent tracker
         engine.agent_tracker = Mock(spec=MultiProcessAgentTracker)
-        engine.agent_tracker.get_agent_wrapper.return_value = mock_wrapper
         engine.owned_agents.append((guild_id, agent_id))
+
+        # Mock the process and events
+        mock_process = Mock()
+        mock_process.is_alive.return_value = False
+        mock_process.join.return_value = None
+
+        mock_shutdown_event = Mock()
+        mock_ready_event = Mock()
+
+        engine.processes[agent_id] = mock_process
+        engine.process_events[agent_id] = (mock_ready_event, mock_shutdown_event)
 
         # Stop agent
         engine.stop_agent(guild_id, agent_id)
 
-        # Verify shutdown was called
-        mock_wrapper.shutdown.assert_called_once()
+        # Verify shutdown event was set
+        mock_shutdown_event.set.assert_called_once()
+
+        # Verify process was joined
+        mock_process.join.assert_called_once_with(timeout=10)
+
+        # Verify cleanup happened
         engine.agent_tracker.remove_agent.assert_called_once_with(guild_id, agent_id)
         assert (guild_id, agent_id) not in engine.owned_agents
+
+        # Verify process was removed from tracking
+        assert agent_id not in engine.processes
+        assert agent_id not in engine.process_events
 
     def test_stop_agent_wrapper_not_found(self, engine, guild_id):
         """Test stopping an agent when wrapper is not found."""
@@ -236,9 +311,13 @@ class TestMultiProcessExecutionEngine:
         agent_id = "test_agent"
         engine.owned_agents.append((guild_id, agent_id))
 
-        # Mock the agent tracker to return False for is_agent_alive
+        # Mock a dead process
+        mock_process = Mock()
+        mock_process.is_alive.return_value = False
+        engine.processes[agent_id] = mock_process
+
+        # Mock the agent tracker
         engine.agent_tracker = Mock(spec=MultiProcessAgentTracker)
-        engine.agent_tracker.is_agent_alive.return_value = False
 
         # Cleanup
         engine.cleanup_dead_processes()
@@ -266,17 +345,25 @@ class TestMultiProcessExecutionEngine:
     def test_get_process_info_success(self, engine, guild_id):
         """Test getting process info successfully."""
         agent_id = "test_agent"
-        expected_info = {"pid": 12345, "status": "running"}
 
-        # Mock the agent tracker
-        engine.agent_tracker = Mock(spec=MultiProcessAgentTracker)
-        engine.agent_tracker.get_process_info.return_value = expected_info
+        # Mock a running process
+        mock_process = Mock()
+        mock_process.pid = 12345
+        mock_process.is_alive.return_value = True
+        mock_process.name = "Agent-test_agent"
+        mock_process.exitcode = None
+        engine.processes[agent_id] = mock_process
 
         # Get process info
         info = engine.get_process_info(guild_id, agent_id)
 
+        expected_info = {
+            "pid": 12345,
+            "is_alive": True,
+            "name": "Agent-test_agent",
+            "exitcode": None,
+        }
         assert info == expected_info
-        engine.agent_tracker.get_process_info.assert_called_once_with(guild_id, agent_id)
 
     def test_delegated_methods(self, engine, guild_id):
         """Test that methods properly delegate to the agent tracker."""
