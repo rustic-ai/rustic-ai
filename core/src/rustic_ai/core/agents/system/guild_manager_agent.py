@@ -298,7 +298,7 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
                 topics=[GuildTopics.GUILD_STATUS_TOPIC],
             )
 
-        # Let us also send a HealthCheckRequest so already running agents will sendd a heartbeat
+        # Let us also send a HealthCheckRequest so already running agents will send a heartbeat
         ctx._raw_send(
             priority=Priority.NORMAL,
             format=get_qualified_class_name(HealthCheckRequest),
