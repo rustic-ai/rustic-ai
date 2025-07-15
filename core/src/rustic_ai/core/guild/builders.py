@@ -21,6 +21,7 @@ import yaml
 
 from rustic_ai.core.agents.testutils.probe_agent import ProbeAgent
 from rustic_ai.core.guild import Agent, Guild
+from rustic_ai.core.guild.agent_ext.mixins.health import HealthConstants
 from rustic_ai.core.guild.dsl import (
     APT,
     AgentSpec,
@@ -29,10 +30,8 @@ from rustic_ai.core.guild.dsl import (
     GuildSpec,
     GuildTopics,
 )
-from rustic_ai.core.guild.dsl import (
-    RuntimePredicate,
-)
 from rustic_ai.core.guild.dsl import KeyConstants as GSKC
+from rustic_ai.core.guild.dsl import RuntimePredicate
 from rustic_ai.core.guild.execution import SyncExecutionEngine
 from rustic_ai.core.guild.metaprog.constants import MetaclassConstants
 from rustic_ai.core.messaging import Client, MessageTrackingClient, MessagingConfig
@@ -645,7 +644,12 @@ class GuildBuilder:
                 "database_url": metastore_database_url,
                 "organization_id": organization_id,
             },
-            additional_topics=[GuildTopics.SYSTEM_TOPIC, "heartbeat"],  # "heartbeat" string to avoid circular import
+            additional_topics=[
+                GuildTopics.SYSTEM_TOPIC,
+                HealthConstants.HEARTBEAT_TOPIC,
+                GuildTopics.GUILD_STATUS_TOPIC,
+            ],
+            listen_to_default_topic=False,
         )
 
         try:

@@ -8,6 +8,7 @@ from rustic_ai.core.state.manager.state_manager import StateManager
 from rustic_ai.core.state.models import (
     StateFetchRequest,
     StateOwner,
+    StateUpdateFormat,
     StateUpdateRequest,
 )
 
@@ -122,7 +123,7 @@ class TestStateManager(ABC):
             StateUpdateRequest(
                 state_owner=StateOwner.GUILD,
                 guild_id="GUILD001",
-                update_format="json-merge-patch",
+                update_format=StateUpdateFormat.JSON_MERGE_PATCH,
                 state_update={"some": {"key1": "new_value"}},
             ),
             {
@@ -141,7 +142,7 @@ class TestStateManager(ABC):
             StateUpdateRequest(
                 state_owner=StateOwner.GUILD,
                 guild_id="GUILD001",
-                update_format="json-merge-patch",
+                update_format=StateUpdateFormat.JSON_MERGE_PATCH,
                 state_update={
                     "some": {
                         "key1": "new_value",
@@ -169,7 +170,7 @@ class TestStateManager(ABC):
             StateUpdateRequest(
                 state_owner=StateOwner.GUILD,
                 guild_id="GUILD001",
-                update_format="json-patch",
+                update_format=StateUpdateFormat.JSON_PATCH,
                 state_update={
                     "operations": [
                         {"op": "replace", "path": "/some/key1", "value": "new_value"},
@@ -193,7 +194,7 @@ class TestStateManager(ABC):
                 state_owner=StateOwner.AGENT,
                 guild_id="GUILD001",
                 agent_id="AGENT001",
-                update_format="json-patch",
+                update_format=StateUpdateFormat.JSON_PATCH,
                 state_update={
                     "operations": [
                         {"op": "replace", "path": "/other/key1", "value": "new_value"},
@@ -217,7 +218,7 @@ class TestStateManager(ABC):
         self,
         state_manager: StateManager,
         base_state: JsonDict,
-        sur,
+        sur: StateUpdateRequest,
         expected_state,
     ):
         state_manager.init_from_state(base_state)
@@ -225,3 +226,16 @@ class TestStateManager(ABC):
 
         assert updated_state.state == expected_state
         assert updated_state.version == 1
+
+        sfr = state_manager.get_state(
+            StateFetchRequest(
+                state_owner=sur.state_owner,
+                guild_id=sur.guild_id,
+                agent_id=sur.agent_id,
+                state_path=sur.update_path,
+                version=sur.update_version,
+                timestamp=sur.update_timestamp,
+            )
+        )
+
+        assert sfr.state == expected_state

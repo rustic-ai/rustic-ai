@@ -21,6 +21,7 @@ New to Rustic AI? Here are the best places to begin:
 - [Core Concepts](core/index.md): Learn about the foundational architecture and concepts
 - [Creating Your First Agent](howto/creating_your_first_agent.md): A step-by-step guide to building your first agent
 - [Creating a Guild](howto/creating_a_guild.md): Learn how to organize multiple agents to work together
+- [Complete Client-Server Flow](howto/client_server_flow.md): Comprehensive guide for building client applications with proper API integration and real-time communication
 
 ## Core Components
 

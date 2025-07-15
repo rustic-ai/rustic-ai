@@ -1,5 +1,6 @@
 from datetime import datetime
 from enum import Enum
+import logging
 from typing import Dict
 
 from pydantic import (
@@ -18,7 +19,7 @@ from rustic_ai.core.utils.priority import Priority
 
 
 class HealthCheckRequest(BaseModel):
-    checktime: datetime
+    checktime: datetime = Field(default_factory=datetime.now)
 
     @field_serializer("checktime")
     def serialize_checktime(self, v: datetime, info: SerializationInfo) -> str:
@@ -31,7 +32,8 @@ class HeartbeatStatus(str, Enum):
     ERROR = "error"
     BACKLOGGED = "backlogged"
     UNKNOWN = "unknown"
-    LOADING = "loading"
+    STARTING = "starting"
+    PENDING_LAUNCH = "pending_launch"
 
 
 class Heartbeat(BaseModel):
@@ -68,8 +70,8 @@ class AgentsHealthReport(BaseModel):
             return HeartbeatStatus.WARNING
         if any(status == HeartbeatStatus.UNKNOWN for status in statuses):
             return HeartbeatStatus.UNKNOWN
-        if any(status == HeartbeatStatus.LOADING for status in statuses):
-            return HeartbeatStatus.LOADING
+        if any(status == HeartbeatStatus.STARTING for status in statuses):
+            return HeartbeatStatus.STARTING
         return HeartbeatStatus.UNKNOWN
 
     @field_serializer("agents")
@@ -93,37 +95,48 @@ class HealthMixin:
         ctx.send(hr)
 
     def healthcheck(self, checktime: datetime) -> Heartbeat:
-        status = HeartbeatStatus.OK
-        checkmeta = {}
+
+        checkmeta: dict = {}
         if isinstance(self, agent.Agent):
-            qos_latency = self._agent_spec.qos.latency
-            time_now = datetime.now()
-            msg_latency = (time_now - checktime).total_seconds() * 1000  # Convert to milliseconds
-            if qos_latency and msg_latency > qos_latency:
-                status = HeartbeatStatus.BACKLOGGED
+            logging.info(f"Healthcheck for {self.get_agent_tag()}")
+            status = HeartbeatStatus.OK
+            checkmeta = {}
+            if isinstance(self, agent.Agent):
+                qos_latency = self._agent_spec.qos.latency
+                time_now = datetime.now()
+                msg_latency = (time_now - checktime).total_seconds() * 1000  # Convert to milliseconds
+                if qos_latency and msg_latency > qos_latency:
+                    status = HeartbeatStatus.BACKLOGGED
 
-            checkmeta["qos_latency"] = qos_latency
+                checkmeta["qos_latency"] = qos_latency
 
-        checkmeta["observed_latency"] = msg_latency
+            checkmeta["observed_latency"] = msg_latency
 
         return Heartbeat(checktime=checktime, checkstatus=status, checkmeta=checkmeta)
 
     @agent.processor(
         agent.SelfReadyNotification,
         predicate=lambda self, msg: msg.sender == self.get_agent_tag() and msg.topic_published_to == self._self_topic,
+        handle_essential=True,
     )
     def send_first_heartbeat(self, ctx: agent.ProcessContext[agent.SelfReadyNotification]):
         """
         Sends the first heartbeat when the agent is ready.
         """
+        if not isinstance(self, agent.Agent):
+            return
+
+        logging.info(f"Received SelfReadyNotification[{self.name}] from {ctx.message.id}")
+        logging.info(f"{ctx.message.model_dump()}")
+
+        logging.info(f"Sending first heartbeat for {self.get_agent_tag()}")
 
         hr = self.healthcheck(datetime.now())
         ctx._raw_send(
             priority=Priority.HIGH,
-            topic=HealthConstants.HEARTBEAT_TOPIC,
+            topics=[HealthConstants.HEARTBEAT_TOPIC],
             payload=hr.model_dump(),
             format=get_qualified_class_name(Heartbeat),
             recipient_list=[],
             in_response_to=ctx.message.id,
-            thread=ctx.message.thread,
         )

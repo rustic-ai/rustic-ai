@@ -1,11 +1,11 @@
 import logging
 from textwrap import dedent
-import time
 from typing import Any, Dict, List, Optional, Type, Union
 
 from rustic_ai.core.guild import GSKC, Agent, AgentSpec, GuildSpec
 from rustic_ai.core.guild.dsl import DependencySpec
 from rustic_ai.core.guild.execution import ExecutionEngine
+from rustic_ai.core.guild.execution.sync.sync_exec_engine import SyncExecutionEngine
 from rustic_ai.core.messaging import MessageTrackingClient, MessagingConfig
 from rustic_ai.core.messaging.core.client import Client
 from rustic_ai.core.messaging.core.message import RoutingSlip
@@ -99,6 +99,8 @@ class Guild:
             execution_engine: The execution engine to run the agent with.
         """
         assert isinstance(agent, Agent), "agent must be an instance of Agent"
+        if execution_engine is None:
+            execution_engine = SyncExecutionEngine(guild_id=self.id, organization_id=self.organization_id)
         self._internal_add_agent(agent, execution_engine)
 
     def _internal_add_agent(
@@ -163,37 +165,6 @@ class Guild:
         """
         return self.execution_engine.is_agent_running(self.id, agent_id)
 
-    def are_agents_running(self, excluded: List[str] = []) -> bool:
-        """
-        Checks if all agents in the guild are running.
-        """
-        for agent_id in self._agents_by_id.keys():
-            if agent_id in excluded:
-                continue
-            if not self.execution_engine.is_agent_running(self.id, agent_id):
-                logging.info(f"Agent {agent_id} is not running")
-                return False
-        return True
-
-    def wait_for_agents_to_start(self, tries: int = 10, excluded: List[str] = []) -> bool:
-        """
-        Waits for all agents in the guild to start.
-
-        Parameters:
-            timeout: The maximum time to wait for the agents to start.
-
-        Returns:
-            True if all agents started within the timeout, False otherwise.
-        """
-        loop = tries
-        while loop > 0:
-            are_agents_running = self.are_agents_running(excluded)
-            if are_agents_running:
-                return True
-            time.sleep(0.1)
-            loop -= 1
-        return False
-
     def remove_agent(self, agent_id: str):
         """
         Removes an agent from the guild.
@@ -245,7 +216,7 @@ class Guild:
             properties={
                 GSKC.EXECUTION_ENGINE: self.execution_engine.get_qualified_class_name(),
                 GSKC.MESSAGING: self.messaging,
-                GSKC.CLIENT_TYPE: self.client_type,
+                GSKC.CLIENT_TYPE: self.client_type.get_qualified_class_name(),
                 GSKC.CLIENT_PROPERTIES: self.client_properties,
             },
             agents=self.list_agents(),
