@@ -346,7 +346,7 @@ class TestGuildBuilder:
 
         assert guild.routes == routing_slip
 
-        time.sleep(0.01)
+        time.sleep(0.5)  # Increased wait time for EmbeddedMessagingBackend
         manager_name = f"GuildManagerAgent4{guild_id}"
 
         # Test if the echo agent is added to the metastore
@@ -392,9 +392,9 @@ class TestGuildBuilder:
         guild_manager_agent_spec = agent_specs[1]
         assert guild_manager_agent_spec.name == manager_name
         assert guild_manager_agent_spec.class_name == get_qualified_class_name(GuildManagerAgent)
-        assert guild_manager_agent_spec.additional_topics == [GuildTopics.SYSTEM_TOPIC, HealthConstants.HEARTBEAT_TOPIC]
+        assert guild_manager_agent_spec.additional_topics == [GuildTopics.SYSTEM_TOPIC, HealthConstants.HEARTBEAT_TOPIC, GuildTopics.GUILD_STATUS_TOPIC]
         assert guild_manager_agent_spec.properties
-        assert guild_manager_agent_spec.listen_to_default_topic is True
+        assert guild_manager_agent_spec.listen_to_default_topic is False
         assert guild_manager_agent_spec.act_only_when_tagged is False
 
         probe_agent = (
@@ -416,7 +416,7 @@ class TestGuildBuilder:
             format=AgentListRequest,
         )
 
-        time.sleep(0.01)
+        time.sleep(1.0)  # Increased wait time to allow GuildManagerAgent to respond
 
         probe_agent_messages = probe_agent.get_messages()
         assert len(probe_agent_messages) == 1
@@ -564,9 +564,10 @@ class TestGuildBuilder:
             assert guild_manager_agent_spec.additional_topics == [
                 GuildTopics.SYSTEM_TOPIC,
                 HealthConstants.HEARTBEAT_TOPIC,
+                GuildTopics.GUILD_STATUS_TOPIC,
             ]
             assert guild_manager_agent_spec.properties
-            assert guild_manager_agent_spec.listen_to_default_topic is True
+            assert guild_manager_agent_spec.listen_to_default_topic is False
             assert guild_manager_agent_spec.act_only_when_tagged is False
 
             assert g2s.properties[GSKC.MESSAGING][GSKC.BACKEND_MODULE] == messaging.backend_module
@@ -607,7 +608,7 @@ class TestGuildBuilder:
 
         probe_agent_messages = probe_agent.get_messages()
 
-        assert len(probe_agent_messages) == 2
+        assert len(probe_agent_messages) == 3
 
         user_agent_creation_response = UserAgentCreationResponse.model_validate(probe_agent_messages[0].payload)
 

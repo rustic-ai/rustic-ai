@@ -19,12 +19,13 @@ from rustic_ai.core.messaging.core.message import (
 class TestGuildStop:
 
     @pytest.fixture
-    def messaging(self):
-
+    def messaging(self, messaging_server):
+        # Use the shared messaging server from conftest.py instead of auto-starting
+        server, port = messaging_server
         return MessagingConfig(
             backend_module="rustic_ai.core.messaging.backend.embedded_backend",
             backend_class="EmbeddedMessagingBackend",
-            backend_config={"auto_start_server": True},
+            backend_config={"auto_start_server": False, "port": port},
         )
 
     @pytest.fixture
@@ -80,7 +81,7 @@ class TestGuildStop:
 
         guild = builder.bootstrap(database, org_id)
 
-        time.sleep(0.01)
+        time.sleep(1.0)  # Increased wait time to allow GuildManagerAgent to launch EchoAgent
         running_agents = guild.execution_engine.get_agents_in_guild(guild_id)
         assert len(running_agents) == 2
 

@@ -61,7 +61,7 @@ class TestMultiProcessExecutionEngine:
 
         from rustic_ai.core.messaging.backend.embedded_backend import EmbeddedServer
 
-        port = 31142
+        port = 31145
         server = EmbeddedServer(port=port)
 
         def run_server():

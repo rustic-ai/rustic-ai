@@ -149,6 +149,12 @@ class TestFileSystem:
         ],
     )
     def test_filesystem(self, probe_agent: ProbeAgent, dep_map: Dict[str, DependencySpec], org_id):
+        import time
+        import uuid
+
+        # Use unique guild name to avoid interference between tests
+        guild_id = f"test_filesystem_guild_{int(time.time() * 1000)}_{uuid.uuid4().hex[:8]}"
+
         agent_spec: AgentSpec = (
             AgentBuilder(FileManagerAgent)
             .set_id("file_manager")
@@ -158,7 +164,7 @@ class TestFileSystem:
         )
 
         guild_builder = (
-            GuildBuilder("test_guild", "Test Guild", "Guild to test Filesystem Dependency")
+            GuildBuilder(guild_id, "Test Filesystem Guild", "Guild to test Filesystem Dependency")
             .add_agent_spec(agent_spec)
             .set_dependency_map(dep_map)
         )
@@ -168,7 +174,7 @@ class TestFileSystem:
 
         fs = filesystem(protocol, **protocol_props)
 
-        dfs = FileSystem(path="/tmp/test_guild/file_manager", fs=fs)
+        dfs = FileSystem(path=f"/tmp/{guild_id}/file_manager", fs=fs)
         guild = guild_builder.launch(organization_id=org_id)
 
         guild._add_local_agent(probe_agent)
@@ -232,7 +238,7 @@ class TestFileSystem:
 
         probe_agent.clear_messages()
 
-        gdfs = FileSystem(path="/tmp/test_guild/GUILD_GLOBAL", fs=fs)
+        gdfs = FileSystem(path=f"/tmp/{guild_id}/GUILD_GLOBAL", fs=fs)
 
         with gdfs.open("test_file", "rb") as f:
             content = f.readline()
