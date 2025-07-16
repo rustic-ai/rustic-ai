@@ -164,30 +164,32 @@ class TestHealthMixin:
         # Assert that there are guild status messages with AgentsHealthReport
         assert len(status_messages) > 0, "Expected at least one status message"
         assert all(
-            msg.format == "rustic_ai.core.guild.agent_ext.mixins.health.AgentsHealthReport" 
-            for msg in status_messages
+            msg.format == "rustic_ai.core.guild.agent_ext.mixins.health.AgentsHealthReport" for msg in status_messages
         ), "All status messages should be AgentsHealthReport format"
-        
+
         # Verify that we have health reports showing the echo agent
         echo_agent_reports = [
-            msg for msg in status_messages 
+            msg
+            for msg in status_messages
             if isinstance(msg.payload, dict) and echo_agent.id in msg.payload.get("agents", {})
         ]
         assert len(echo_agent_reports) > 0, f"Expected health reports containing echo agent {echo_agent.id}"
-        
+
         # Verify that the final health status shows 'ok' for the guild
         final_status_msg = status_messages[-1]
         assert isinstance(final_status_msg.payload, dict), "Status message payload should be a dict"
-        assert final_status_msg.payload.get("guild_health") == "ok", \
-            f"Expected final guild health to be 'ok', got '{final_status_msg.payload.get('guild_health')}'"
-        
+        assert (
+            final_status_msg.payload.get("guild_health") == "ok"
+        ), f"Expected final guild health to be 'ok', got '{final_status_msg.payload.get('guild_health')}'"
+
         # Verify that the echo agent eventually shows 'ok' status
         agents_data = final_status_msg.payload.get("agents", {})
         assert isinstance(agents_data, dict), "Agents data should be a dict"
         final_echo_status = agents_data.get(echo_agent.id, {})
         assert isinstance(final_echo_status, dict), "Echo agent status should be a dict"
-        assert final_echo_status.get("checkstatus") == "ok", \
-            f"Expected echo agent final status to be 'ok', got '{final_echo_status.get('checkstatus')}'"
+        assert (
+            final_echo_status.get("checkstatus") == "ok"
+        ), f"Expected echo agent final status to be 'ok', got '{final_echo_status.get('checkstatus')}'"
 
         health_messages = msging.get_messages_for_topic_since(
             HealthConstants.HEARTBEAT_TOPIC,
@@ -197,15 +199,21 @@ class TestHealthMixin:
 
         # Assert that health messages contain the heartbeat request and responses
         assert len(health_messages) >= 3  # Should have multiple heartbeat-related messages
-        
+
         # Separate HealthCheckRequest messages from Heartbeat response messages
-        request_messages = [msg for msg in health_messages if msg.format == "rustic_ai.core.guild.agent_ext.mixins.health.HealthCheckRequest"]
-        response_messages = [msg for msg in health_messages if msg.format == "rustic_ai.core.guild.agent_ext.mixins.health.Heartbeat"]
-        
+        request_messages = [
+            msg
+            for msg in health_messages
+            if msg.format == "rustic_ai.core.guild.agent_ext.mixins.health.HealthCheckRequest"
+        ]
+        response_messages = [
+            msg for msg in health_messages if msg.format == "rustic_ai.core.guild.agent_ext.mixins.health.Heartbeat"
+        ]
+
         # Verify we have both request and response messages
         assert len(request_messages) >= 1, f"Expected at least 1 HealthCheckRequest, got {len(request_messages)}"
         assert len(response_messages) >= 2, f"Expected at least 2 Heartbeat responses, got {len(response_messages)}"
-        
+
         # Verify that our original request is among the HealthCheckRequest messages
         our_request = next((msg for msg in request_messages if msg.payload["checktime"] == isotime), None)
         assert our_request is not None, f"Could not find our HealthCheckRequest with checktime {isotime}"

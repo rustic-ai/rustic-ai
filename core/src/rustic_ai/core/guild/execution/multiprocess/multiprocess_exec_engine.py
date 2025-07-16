@@ -1,7 +1,7 @@
 import logging
 import multiprocessing
-import pickle
 from multiprocessing.synchronize import Event as EventType
+import pickle
 from typing import Any, Dict, List, Optional, Type, Union
 
 from rustic_ai.core.guild.agent import Agent, AgentSpec
@@ -36,6 +36,7 @@ def multiprocess_wrapper_runner(
 
         # Reconstruct the client type
         from rustic_ai.core.messaging import MessageTrackingClient
+
         if client_type_name == "MessageTrackingClient":
             client_type = MessageTrackingClient
         else:
@@ -254,7 +255,9 @@ class MultiProcessExecutionEngine(ExecutionEngine):
             self.agent_tracker.remove_agent(guild_id, agent_id)
 
             # Remove from owned agents
-            self.owned_agents = [(gid, aid) for gid, aid in self.owned_agents if not (gid == guild_id and aid == agent_id)]
+            self.owned_agents = [
+                (gid, aid) for gid, aid in self.owned_agents if not (gid == guild_id and aid == agent_id)
+            ]
 
         except Exception as e:
             logging.error(f"Error stopping agent {agent_id}: {e}")
@@ -336,11 +339,13 @@ class MultiProcessExecutionEngine(ExecutionEngine):
     def get_engine_stats(self) -> Dict[str, Any]:
         """Get engine statistics."""
         base_stats = self.agent_tracker.get_stats()
-        base_stats.update({
-            "engine_type": "MultiProcessExecutionEngine",
-            "guild_id": self.guild_id,
-            "max_processes": self.max_processes,
-            "active_processes": len(self.processes),
-            "owned_agents_count": len(self.owned_agents),
-        })
+        base_stats.update(
+            {
+                "engine_type": "MultiProcessExecutionEngine",
+                "guild_id": self.guild_id,
+                "max_processes": self.max_processes,
+                "active_processes": len(self.processes),
+                "owned_agents_count": len(self.owned_agents),
+            }
+        )
         return base_stats

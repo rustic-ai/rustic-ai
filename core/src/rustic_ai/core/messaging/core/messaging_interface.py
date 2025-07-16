@@ -137,7 +137,6 @@ class MessagingInterface:
             message.session_state["enriched_history"] = prev_messages_json
         recipients = self.subscribers.get(self._get_namespaced_topic(message.topic_published_to), set())
 
-
         for recipient_id in recipients:
             if (
                 recipient_id in self.clients

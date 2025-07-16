@@ -1,8 +1,8 @@
 import logging
 from typing import Dict, Optional
 
-from jsonpath_ng.ext import parse
 from jsonpath_ng.exceptions import JsonPathParserError
+from jsonpath_ng.ext import parse
 from pydantic import JsonValue
 
 JsonDict = Dict[str, JsonValue]
@@ -20,7 +20,7 @@ class JsonUtils:
 
         Returns:
             The value found at the path, or None if path doesn't exist.
-            
+
         Raises:
             JsonPathParserError: If the path syntax is invalid.
             ValueError: If the path expression is malformed.
@@ -46,7 +46,7 @@ class JsonUtils:
 
         Returns:
             A new dictionary with the updated value. The original state is not modified.
-            
+
         Raises:
             JsonPathParserError: If the path syntax is invalid.
             ValueError: If the update operation fails.
@@ -55,32 +55,35 @@ class JsonUtils:
             expr = parse(path)
             logging.debug(f"Updating JSONPath '{path}' with value type: {type(value).__name__}")
             updated = expr.update(state, value)
-            
+
             # Check if the update actually happened (jsonpath-ng returns original state if path doesn't exist)
             if updated == state and JsonUtils.read_from_path(state, path) is None:
                 # Path doesn't exist, create intermediate structure manually
                 # For simple dot-notation paths like "agents.health"
                 import copy
                 from typing import cast
+
                 result = copy.deepcopy(state)
-                
+
                 # Split the path and create nested structure
-                path_parts = path.split('.')
+                path_parts = path.split(".")
                 current: JsonDict = result
-                
+
                 # Create intermediate dictionaries
                 for part in path_parts[:-1]:
                     if part not in current:
                         current[part] = {}
                     # Ensure current[part] is a dictionary before proceeding
                     if not isinstance(current[part], dict):
-                        raise ValueError(f"Cannot set nested path '{path}': intermediate path '{part}' is not a dictionary")
+                        raise ValueError(
+                            f"Cannot set nested path '{path}': intermediate path '{part}' is not a dictionary"
+                        )
                     current = cast(JsonDict, current[part])
-                
+
                 # Set the final value
                 current[path_parts[-1]] = value
                 updated = result
-            
+
             logging.debug(f"Successfully updated path '{path}'")
             return updated
         except JsonPathParserError as e:

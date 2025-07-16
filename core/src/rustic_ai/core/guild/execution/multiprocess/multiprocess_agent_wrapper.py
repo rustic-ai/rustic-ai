@@ -1,7 +1,7 @@
 import logging
 import multiprocessing
-import time
 from multiprocessing.synchronize import Event as EventType
+import time
 from typing import Any, Dict, Optional, Type, Union
 
 from rustic_ai.core.guild.agent import Agent, AgentSpec
@@ -64,7 +64,7 @@ class MultiProcessAgentWrapper(AgentWrapper):
             while self.shutdown_event is None or not self.shutdown_event.is_set():
                 time.sleep(0.1)
 
-            agent_id = self.agent.id if hasattr(self, 'agent') and self.agent else "unknown"
+            agent_id = self.agent.id if hasattr(self, "agent") and self.agent else "unknown"
             logging.info(f"Agent {agent_id} shutting down in process {multiprocessing.current_process().pid}")
 
             # Clean shutdown
@@ -79,19 +79,19 @@ class MultiProcessAgentWrapper(AgentWrapper):
         Clean up the agent resources.
         """
         try:
-            if hasattr(self, 'agent') and self.agent:
+            if hasattr(self, "agent") and self.agent:
                 # Unsubscribe from topics
-                if hasattr(self.agent, 'subscribed_topics') and hasattr(self.agent, 'client'):
+                if hasattr(self.agent, "subscribed_topics") and hasattr(self.agent, "client"):
                     for topic in self.agent.subscribed_topics:
-                        if hasattr(self, 'messaging') and self.messaging:
+                        if hasattr(self, "messaging") and self.messaging:
                             self.messaging.unsubscribe(topic, self.agent.client)  # type: ignore
 
                 # Unregister client
-                if hasattr(self, 'messaging') and self.messaging and hasattr(self.agent, 'client'):
+                if hasattr(self, "messaging") and self.messaging and hasattr(self.agent, "client"):
                     self.messaging.unregister_client(self.agent.client)  # type: ignore
 
                 # Shutdown messaging
-                if hasattr(self, 'messaging') and self.messaging:
+                if hasattr(self, "messaging") and self.messaging:
                     self.messaging.shutdown()
 
         except Exception as e:

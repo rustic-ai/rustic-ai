@@ -30,8 +30,10 @@ from rustic_ai.core.guild.dsl import (
     GuildSpec,
     GuildTopics,
 )
+from rustic_ai.core.guild.dsl import (
+    RuntimePredicate,
+)
 from rustic_ai.core.guild.dsl import KeyConstants as GSKC
-from rustic_ai.core.guild.dsl import RuntimePredicate
 from rustic_ai.core.guild.execution import SyncExecutionEngine
 from rustic_ai.core.guild.metaprog.constants import MetaclassConstants
 from rustic_ai.core.messaging import Client, MessageTrackingClient, MessagingConfig

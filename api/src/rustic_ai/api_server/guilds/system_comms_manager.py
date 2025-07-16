@@ -151,6 +151,7 @@ class SystemCommunicationManager:
         else:
 
             loop = asyncio.get_running_loop()
+            user_agent_tag = AgentTag(id=f"sys_comms_socket:{user_id}")
 
             messaging: MessagingInterface = await self.get_or_create_messaging_interface(guild_spec)
             guild_client: Client = await self.create_guild_client(guild_id, user_id, messaging, websocket, loop)
@@ -173,8 +174,6 @@ class SystemCommunicationManager:
                     payload=HealthCheckRequest(checktime=datetime.now()).model_dump(),
                 )
             )
-
-            user_agent_tag = AgentTag(id=f"sys_comms_socket:{user_id}")
 
             await websocket.accept()
 

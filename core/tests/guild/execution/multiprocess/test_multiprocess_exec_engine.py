@@ -58,6 +58,7 @@ class TestMultiProcessExecutionEngine:
         import asyncio
         import threading
         import time
+
         from rustic_ai.core.messaging.backend.embedded_backend import EmbeddedServer
 
         port = 31142
@@ -160,7 +161,9 @@ class TestMultiProcessExecutionEngine:
 
     @patch("rustic_ai.core.guild.execution.multiprocess.multiprocess_exec_engine.multiprocess_wrapper_runner")
     @patch("rustic_ai.core.guild.execution.multiprocess.multiprocess_exec_engine.MultiProcessAgentWrapper")
-    def test_run_agent_success(self, mock_wrapper_class, mock_wrapper_runner, engine, guild_spec, agent_spec, messaging_config):
+    def test_run_agent_success(
+        self, mock_wrapper_class, mock_wrapper_runner, engine, guild_spec, agent_spec, messaging_config
+    ):
         """Test successfully running an agent."""
         # Setup mock
         mock_wrapper = Mock(spec=MultiProcessAgentWrapper)
@@ -185,7 +188,9 @@ class TestMultiProcessExecutionEngine:
                 mock_process.return_value = mock_proc
 
                 # Run agent
-                engine.run_agent(guild_spec=guild_spec, agent_spec=agent_spec, messaging_config=messaging_config, machine_id=1)
+                engine.run_agent(
+                    guild_spec=guild_spec, agent_spec=agent_spec, messaging_config=messaging_config, machine_id=1
+                )
 
                 # Verify process was created and started
                 mock_process.assert_called_once()
