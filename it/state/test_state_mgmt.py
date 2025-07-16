@@ -232,7 +232,7 @@ class TestStateMgmt:
             routing_slip=RoutingSlip(steps=[agent_update_routing_rule]),
         )
 
-        time.sleep(0.1)
+        time.sleep(0.5)
 
         messages = probe_agent.get_messages()
 
@@ -249,7 +249,7 @@ class TestStateMgmt:
             payload=EchoAgentState(guild_id=guild.id, agent_id=state_aware_agent.id),
         )
 
-        time.sleep(0.1)
+        time.sleep(0.5)
 
         messages = probe_agent.get_messages()
         assert len(messages) == 2

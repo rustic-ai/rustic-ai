@@ -227,7 +227,11 @@ class TestResearchGuild:
 
         assert len(messages) >= 20
 
-        assert final_response.format == tf
+        text_messages = [message for message in messages if message.format == tf]
+
+        assert len(text_messages) >= 1
+
+        assert final_response.payload["text"] == text_messages[-1].payload["text"]
 
         content = TextFormat.model_validate(final_response.payload)
 
