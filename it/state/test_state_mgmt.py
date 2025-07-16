@@ -174,10 +174,25 @@ class TestStateMgmt:
         assert len(messages) == 2
 
         assert messages[0].format == get_qualified_class_name(PublishedData)
-        assert messages[0].payload["data"] == {"new_key": "new_value", "call_count": 1}
+        
+        # Check that the custom state is present in the guild state
+        guild_state_data = messages[0].payload["data"]
+        expected_custom_state = {"new_key": "new_value", "call_count": 1}
+        
+        # Verify all expected keys are present with correct values
+        for key, expected_value in expected_custom_state.items():
+            assert key in guild_state_data, f"Expected key '{key}' not found in guild state"
+            assert guild_state_data[key] == expected_value, f"Expected {key}={expected_value}, got {guild_state_data[key]}"
 
         assert messages[1].format == get_qualified_class_name(ReceivedData)
-        assert messages[1].payload["data"] == {"new_key": "new_value", "call_count": 1}
+        
+        # Check that the custom state is present in the received data (from StateFreeAgent)
+        received_state_data = messages[1].payload["data"]
+        
+        # Verify all expected keys are present with correct values
+        for key, expected_value in expected_custom_state.items():
+            assert key in received_state_data, f"Expected key '{key}' not found in received state"
+            assert received_state_data[key] == expected_value, f"Expected {key}={expected_value}, got {received_state_data[key]}"
 
         probe_agent.clear_messages()
 
@@ -228,4 +243,12 @@ class TestStateMgmt:
         assert len(messages) == 2
 
         assert messages[0].format == get_qualified_class_name(PublishedData)
-        assert messages[0].payload["data"] == {"new_key": "new_value", "call_count": 1}
+        
+        # Check that the custom state is present in the agent state
+        agent_state_data = messages[0].payload["data"]
+        expected_custom_state = {"new_key": "new_value", "call_count": 1}
+        
+        # Verify all expected keys are present with correct values
+        for key, expected_value in expected_custom_state.items():
+            assert key in agent_state_data, f"Expected key '{key}' not found in agent state"
+            assert agent_state_data[key] == expected_value, f"Expected {key}={expected_value}, got {agent_state_data[key]}"

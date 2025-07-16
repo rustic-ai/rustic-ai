@@ -31,7 +31,7 @@ def derive_port_from_test_name(test_name: str, start_port: int = 31143) -> int:
     # Create MD5 hash of test name for good distribution
     hash_obj = hashlib.md5(test_name.encode())
     hash_int = int(hash_obj.hexdigest(), 16)
-    
+
     # Map to port range (10,000 ports: 31143-41143)
     port_offset = hash_int % 10000
     return start_port + port_offset
@@ -67,17 +67,17 @@ def messaging_server(request):
 
     # Get unique port from test name, incorporating worker ID for parallel execution
     test_name = request.node.name or "session"
-    
+
     # Add worker ID for pytest-xdist parallel execution
     worker_id = os.environ.get("PYTEST_XDIST_WORKER", "master")
     unique_name = f"{test_name}_{worker_id}"
-    
+
     base_port = derive_port_from_test_name(unique_name)
-    
+
     # Find working port with fallback mechanism
     port = find_working_port(base_port)
     print(f"Worker '{worker_id}' test '{test_name}' using port {port} (base: {base_port})")
-    
+
     server = EmbeddedServer(port=port)
 
     def run_server():
@@ -126,14 +126,14 @@ def database(request):
     """Database fixture with test-name-derived filename."""
     # Create filename from test name (sanitize for filesystem)
     test_name = request.node.name.replace(':', '_').replace('[', '_').replace(']', '_').replace('/', '_')
-    
-    # Add worker ID for pytest-xdist parallel execution  
+
+    # Add worker ID for pytest-xdist parallel execution
     worker_id = os.environ.get("PYTEST_XDIST_WORKER", "master")
     db_file = f"test_rustic_app_{test_name}_{worker_id}.db"
     db = f"sqlite:///{db_file}"
-    
+
     print(f"Worker '{worker_id}' test '{request.node.name}' using database {db_file}")
-    
+
     # Clean up any existing database file
     if os.path.exists(db_file):
         os.remove(db_file)

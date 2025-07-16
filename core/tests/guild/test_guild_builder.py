@@ -70,7 +70,7 @@ class TestGuildBuilder:
     )
     def messaging(self, request, messaging_server) -> MessagingConfig:
         backend_type = request.param
-        
+
         if backend_type == "InMemoryMessagingBackend":
             return MessagingConfig(
                 backend_module="rustic_ai.core.messaging.backend",
@@ -390,7 +390,11 @@ class TestGuildBuilder:
         guild_manager_agent_spec = agent_specs[1]
         assert guild_manager_agent_spec.name == manager_name
         assert guild_manager_agent_spec.class_name == get_qualified_class_name(GuildManagerAgent)
-        assert guild_manager_agent_spec.additional_topics == [GuildTopics.SYSTEM_TOPIC, HealthConstants.HEARTBEAT_TOPIC, GuildTopics.GUILD_STATUS_TOPIC]
+        assert guild_manager_agent_spec.additional_topics == [
+            GuildTopics.SYSTEM_TOPIC,
+            HealthConstants.HEARTBEAT_TOPIC,
+            GuildTopics.GUILD_STATUS_TOPIC,
+        ]
         assert guild_manager_agent_spec.properties
         assert guild_manager_agent_spec.listen_to_default_topic is False
         assert guild_manager_agent_spec.act_only_when_tagged is False
