@@ -23,21 +23,21 @@ class TestGuildStore:
     def engine(self, request):
         import os
         import re
-        
+
         # Generate unique database filename based on test name and worker
         test_name = request.node.name
         worker_id = os.environ.get("PYTEST_XDIST_WORKER", "master")
-        
+
         # Sanitize test name for filename
-        sanitized_test_name = re.sub(r'[^\w\-_.]', '_', test_name)
+        sanitized_test_name = re.sub(r"[^\w\-_.]", "_", test_name)
         db_filename = f"rustic_store_test_{sanitized_test_name}_{worker_id}.db"
         db_url = f"sqlite:///{db_filename}"
-        
+
         Metastore.drop_db(True)
         Metastore.initialize_engine(db_url)
         yield Metastore.get_engine()
         Metastore.drop_db(True)
-        
+
         # Clean up database file
         try:
             os.remove(db_filename)

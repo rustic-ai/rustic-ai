@@ -6,11 +6,7 @@ from rustic_ai.core.guild.builders import GuildBuilder
 from rustic_ai.core.guild.dsl import AgentSpec, GuildSpec
 from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 
-from .sample_agents import (
-    DemoAgentGenericWithoutTypedParams,
-    DemoAgentProps,
-    DemoAgentWithMissingGenericAnnotation,
-)
+from .sample_agents import DemoAgentGenericWithoutTypedParams, DemoAgentProps
 from .simple_agent import SimpleAgent
 
 

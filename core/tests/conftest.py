@@ -1,4 +1,5 @@
 import multiprocessing
+
 import pytest
 
 
@@ -12,7 +13,7 @@ def configure_multiprocessing():
     except RuntimeError:
         # Start method may already be set, which is fine
         pass
-    
+
     yield
 
 

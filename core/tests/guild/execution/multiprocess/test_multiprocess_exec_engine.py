@@ -22,12 +22,12 @@ from rustic_ai.testing.execution.integration_agents import InitiatorProbeAgent
 def cleanup_multiprocessing_session():
     """Session-level cleanup to ensure all multiprocessing resources are cleaned up."""
     yield
-    
+
     # Final cleanup at session end to prevent pytest hanging
     try:
         import multiprocessing
         import time
-        
+
         # Clean up any remaining active children
         active_children = multiprocessing.active_children()
         if active_children:
@@ -41,10 +41,10 @@ def cleanup_multiprocessing_session():
                         child.join()
                 except Exception as e:
                     print(f"Warning: Error terminating child process {child.pid}: {e}")
-        
+
         # Small delay to allow cleanup to complete
         time.sleep(0.1)
-        
+
     except Exception as e:
         print(f"Warning: Error during session multiprocessing cleanup: {e}")
 
@@ -65,17 +65,19 @@ class TestMultiProcessExecutionEngine:
         # Use a small max_processes for testing
         engine = MultiProcessExecutionEngine(guild_id=guild_id, organization_id=organization_id, max_processes=2)
         yield engine
-        
+
         # Enhanced cleanup to prevent pytest hanging
         try:
             engine.shutdown()
-            
+
             # Give processes time to fully terminate
             import time
+
             time.sleep(0.1)
-            
+
             # Double-check that all multiprocessing children are cleaned up
             import multiprocessing
+
             active_children = multiprocessing.active_children()
             if active_children:
                 print(f"Warning: {len(active_children)} processes still active after engine shutdown")
@@ -85,12 +87,13 @@ class TestMultiProcessExecutionEngine:
                         child.join(timeout=1)
                     except Exception:
                         pass
-                        
+
         except Exception as e:
             print(f"Error during engine cleanup: {e}")
             # Try to force cleanup even if shutdown failed
             try:
                 import multiprocessing
+
                 for child in multiprocessing.active_children():
                     try:
                         child.terminate()
@@ -263,7 +266,7 @@ class TestMultiProcessExecutionEngine:
         engine.agent_tracker = Mock(spec=MultiProcessAgentTracker)
         engine.agent_tracker.get_agents_in_guild.return_value = {}
 
-        # With spawn method, wrapper failure in main process (tracking wrapper creation) 
+        # With spawn method, wrapper failure in main process (tracking wrapper creation)
         # raises the exception directly, not a RuntimeError from subprocess timeout
         with pytest.raises(Exception, match="Wrapper creation failed"):
             engine.run_agent(
@@ -433,21 +436,23 @@ class TestMultiProcessAgentTracker:
     def tracker(self):
         tracker = MultiProcessAgentTracker()
         yield tracker
-        
+
         # Enhanced cleanup to prevent pytest hanging
         try:
             tracker.clear()
-            
+
             # Give any background processes time to terminate
             import time
+
             time.sleep(0.05)
-            
+
             # Double-check multiprocessing cleanup
             import multiprocessing
+
             active_children = multiprocessing.active_children()
             if active_children:
                 print(f"Warning: {len(active_children)} processes still active after tracker cleanup")
-                
+
         except Exception as e:
             print(f"Error during tracker cleanup: {e}")
 
@@ -581,7 +586,7 @@ class TestMultiProcessAgentTracker:
         # Verify local wrapper cleanup
         mock_wrapper.shutdown.assert_called_once()
         assert len(tracker.local_wrappers) == 0
-        
+
         # Note: We can't verify shared_agents cleanup by accessing it after manager shutdown
         # because the manager process has been terminated, which is exactly what we want
         # to prevent pytest from hanging. The important thing is that shutdown was called.

@@ -326,7 +326,7 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
                 state_owner=StateOwner.GUILD,
                 guild_id=self.guild_id,
                 agent_id=self.id,
-                update_path=f"agents.health[\"{aar.agent_spec.id}\"]",
+                update_path=f'agents.health["{aar.agent_spec.id}"]',
                 state_update=Heartbeat(
                     checktime=datetime.now(),
                     checkstatus=HeartbeatStatus.STARTING,
@@ -395,7 +395,7 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
                 state_owner=StateOwner.GUILD,
                 guild_id=self.guild_id,
                 agent_id=self.id,
-                update_path=f"agents.health[\"{ctx.message.sender.id}\"]",
+                update_path=f'agents.health["{ctx.message.sender.id}"]',
                 state_update=heartbeat.model_dump(),
             )
         )

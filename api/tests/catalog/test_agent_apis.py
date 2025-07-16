@@ -1,3 +1,6 @@
+import os
+import re
+
 from fastapi.testclient import TestClient
 import pytest
 from sqlmodel import Session
@@ -6,13 +9,27 @@ from rustic_ai.api_server.catalog.models import CatalogAgentEntry
 from rustic_ai.core.guild.metastore.database import Metastore
 
 
-@pytest.fixture(scope="module")
-def catalog_engine():
-    db = "sqlite:///agent_api_test.db"
+@pytest.fixture
+def catalog_engine(request):
+    # Generate unique database filename based on test name and worker
+    test_name = request.node.name
+    worker_id = os.environ.get("PYTEST_XDIST_WORKER", "master")
+
+    # Sanitize test name for filename
+    sanitized_test_name = re.sub(r"[^\w\-_.]", "_", test_name)
+    db_filename = f"catalog_api_test_{sanitized_test_name}_{worker_id}.db"
+    db_url = f"sqlite:///{db_filename}"
+
     Metastore.drop_db(unsafe=True)
-    Metastore.initialize_engine(db)
+    Metastore.initialize_engine(db_url)
     yield Metastore.get_engine()
     Metastore.drop_db(unsafe=True)
+
+    # Clean up database file
+    try:
+        os.remove(db_filename)
+    except FileNotFoundError:
+        pass
 
 
 @pytest.fixture
@@ -22,94 +39,92 @@ def catalog_client(catalog_engine):
     return TestClient(app)
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def session(catalog_engine):
     with Session(catalog_engine) as session:
         yield session
 
 
-scrapper_agent = CatalogAgentEntry.model_validate(
-    {
-        "agent_name": "PlaywrightScrapperAgent",
-        "qualified_class_name": "tools.webscrape_playwright.playwright_agent.PlaywrightScrapperAgent",
-        "agent_doc": "No documentation written for Agent",
-        "agent_props_schema": {
-            "description": "Empty class for Agent properties.",
-            "properties": {},
-            "title": "BaseAgentProps",
-            "type": "object",
-        },
-        "message_handlers": {
-            "scrape": {
-                "handler_name": "scrape",
-                "message_format": "tools.webscrape_playwright.playwright_agent.WebScrappingRequest",
-                "message_format_schema": {
-                    "$defs": {
-                        "JsonValue": {},
-                        "MediaLink": {
-                            "properties": {
-                                "id": {"title": "Id", "type": "string"},
-                                "name": {
-                                    "anyOf": [{"type": "string"}, {"type": "null"}],
-                                    "default": None,
-                                    "title": "Name",
-                                },
-                                "metadata": {
-                                    "anyOf": [
-                                        {"additionalProperties": {"$ref": "#/$defs/JsonValue"}, "type": "object"},
-                                        {"type": "null"},
-                                    ],
-                                    "default": {},
-                                    "title": "Metadata",
-                                },
-                                "url": {"title": "Url", "type": "string"},
-                                "mimetype": {
-                                    "anyOf": [{"type": "string"}, {"type": "null"}],
-                                    "default": None,
-                                    "title": "Mimetype",
-                                },
-                                "encoding": {
-                                    "anyOf": [{"type": "string"}, {"type": "null"}],
-                                    "default": None,
-                                    "title": "Encoding",
-                                },
-                                "on_filesystem": {
-                                    "anyOf": [{"type": "boolean"}, {"type": "null"}],
-                                    "default": None,
-                                    "title": "On Filesystem",
-                                },
+scrapper_agent_data = {
+    "agent_name": "PlaywrightScrapperAgent",
+    "qualified_class_name": "tools.webscrape_playwright.playwright_agent.PlaywrightScrapperAgent",
+    "agent_doc": "No documentation written for Agent",
+    "agent_props_schema": {
+        "description": "Empty class for Agent properties.",
+        "properties": {},
+        "title": "BaseAgentProps",
+        "type": "object",
+    },
+    "message_handlers": {
+        "scrape": {
+            "handler_name": "scrape",
+            "message_format": "tools.webscrape_playwright.playwright_agent.WebScrappingRequest",
+            "message_format_schema": {
+                "$defs": {
+                    "JsonValue": {},
+                    "MediaLink": {
+                        "properties": {
+                            "id": {"title": "Id", "type": "string"},
+                            "name": {
+                                "anyOf": [{"type": "string"}, {"type": "null"}],
+                                "default": None,
+                                "title": "Name",
                             },
-                            "required": ["url"],
-                            "title": "MediaLink",
-                            "type": "object",
+                            "metadata": {
+                                "anyOf": [
+                                    {"additionalProperties": {"$ref": "#/$defs/JsonValue"}, "type": "object"},
+                                    {"type": "null"},
+                                ],
+                                "default": {},
+                                "title": "Metadata",
+                            },
+                            "url": {"title": "Url", "type": "string"},
+                            "mimetype": {
+                                "anyOf": [{"type": "string"}, {"type": "null"}],
+                                "default": None,
+                                "title": "Mimetype",
+                            },
+                            "encoding": {
+                                "anyOf": [{"type": "string"}, {"type": "null"}],
+                                "default": None,
+                                "title": "Encoding",
+                            },
+                            "on_filesystem": {
+                                "anyOf": [{"type": "boolean"}, {"type": "null"}],
+                                "default": None,
+                                "title": "On Filesystem",
+                            },
                         },
+                        "required": ["url"],
+                        "title": "MediaLink",
+                        "type": "object",
                     },
-                    "properties": {
-                        "id": {"title": "ID of the request", "type": "string"},
-                        "links": {"items": {"$ref": "#/$defs/MediaLink"}, "title": "URL to scrape", "type": "array"},
-                    },
-                    "required": ["links"],
-                    "title": "WebScrappingRequest",
-                    "type": "object",
                 },
-                "handler_doc": None,
-                "send_message_calls": [],
-            }
-        },
-        "agent_dependencies": {
-            "filesystem": {
-                "dependency_key": "filesystem",
-                "dependency_var": None,
-                "guild_level": True,
-                "agent_level": False,
-                "variable_name": "filesystem",
-            }
-        },
-    }
-)
+                "properties": {
+                    "id": {"title": "ID of the request", "type": "string"},
+                    "links": {"items": {"$ref": "#/$defs/MediaLink"}, "title": "URL to scrape", "type": "array"},
+                },
+                "required": ["links"],
+                "title": "WebScrappingRequest",
+                "type": "object",
+            },
+            "handler_doc": None,
+            "send_message_calls": [],
+        }
+    },
+    "agent_dependencies": {
+        "filesystem": {
+            "dependency_key": "filesystem",
+            "dependency_var": None,
+            "guild_level": True,
+            "agent_level": False,
+            "variable_name": "filesystem",
+        }
+    },
+}
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def setup_data(session: Session):
     # Prepare agent data
     echo_agent = {
@@ -142,9 +157,16 @@ def setup_data(session: Session):
     }
 
     echo_agent_entry = CatalogAgentEntry(**echo_agent)
+
+    # Create scrapper_agent in the session context
+    scrapper_agent_entry = CatalogAgentEntry.model_validate(scrapper_agent_data)
+
     session.add(echo_agent_entry)
-    session.add(scrapper_agent)
+    session.add(scrapper_agent_entry)
     session.commit()
+
+    # Return both agents so tests can access them
+    return echo_agent_entry, scrapper_agent_entry
 
 
 def test_register_agent(catalog_client):
@@ -224,6 +246,7 @@ def test_agent_listing_with_class_name(catalog_client, setup_data):
 
 
 def test_fetch_message_schema(catalog_client, setup_data):
+    echo_agent, scrapper_agent = setup_data
     scrape_handler = scrapper_agent.message_handlers["scrape"]
     request_format = scrape_handler["message_format"]  # type: ignore
     response1 = catalog_client.get(f"/catalog/agents/message_schema/?message_format={request_format}")

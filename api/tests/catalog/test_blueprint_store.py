@@ -25,17 +25,17 @@ class TestCatalogStore:
         # Generate unique database filename based on test name and worker
         test_name = request.node.name
         worker_id = os.environ.get("PYTEST_XDIST_WORKER", "master")
-        
+
         # Sanitize test name for filename
         sanitized_test_name = re.sub(r"[^\w\-_.]", "_", test_name)
         db_filename = f"catalog_store_test_{sanitized_test_name}_{worker_id}.db"
         db_url = f"sqlite:///{db_filename}"
-        
+
         Metastore.drop_db(unsafe=True)
         Metastore.initialize_engine(db_url)
         yield Metastore.get_engine()
         Metastore.drop_db(unsafe=True)
-        
+
         # Clean up database file
         try:
             os.remove(db_filename)

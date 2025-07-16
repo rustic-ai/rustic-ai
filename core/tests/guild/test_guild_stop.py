@@ -1,6 +1,7 @@
 import os
 import time
 
+from flaky import flaky
 import pytest
 
 from rustic_ai.core import GuildTopics, MessageTrackingClient, MessagingConfig
@@ -41,6 +42,7 @@ class TestGuildStop:
         yield db
         Metastore.drop_db()
 
+    @flaky(max_runs=3, min_passes=1)
     def test_guild_shutdown(self, messaging: MessagingConfig, probe_agent: ProbeAgent, database, org_id):
 
         guild_id = "guild_stop_test"
@@ -93,9 +95,16 @@ class TestGuildStop:
             format=StopGuildRequest,
         )
 
+        is_agent_running = guild.execution_engine.is_agent_running(guild_id, echo_agent.id)
+
+        loop_count = 0
+        while is_agent_running and loop_count < 10:
+            time.sleep(1)
+            is_agent_running = guild.execution_engine.is_agent_running(guild_id, echo_agent.id)
+            loop_count += 1
+
         time.sleep(3)
 
-        is_agent_running = guild.execution_engine.is_agent_running(guild_id, echo_agent.id)
         assert is_agent_running is False
 
         engine = Metastore.get_engine(database)

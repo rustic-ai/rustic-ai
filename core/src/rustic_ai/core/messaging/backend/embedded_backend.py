@@ -842,19 +842,18 @@ class EmbeddedMessagingBackend(MessagingBackend):
             for task in self._subscription_tasks:
                 if not task.done():
                     task.cancel()
-            
+
             # Wait for all tasks to be cancelled with a timeout
             if self._subscription_tasks:
                 try:
                     await asyncio.wait_for(
-                        asyncio.gather(*self._subscription_tasks, return_exceptions=True),
-                        timeout=2.0
+                        asyncio.gather(*self._subscription_tasks, return_exceptions=True), timeout=2.0
                     )
                 except asyncio.TimeoutError:
                     logging.warning("Some subscription tasks did not cancel within timeout")
                 except Exception as e:
                     logging.debug(f"Exception during task cancellation (expected): {e}")
-            
+
             self._subscription_tasks.clear()
 
     def cleanup(self) -> None:

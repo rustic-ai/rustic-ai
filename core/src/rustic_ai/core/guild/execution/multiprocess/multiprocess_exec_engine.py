@@ -344,6 +344,7 @@ class MultiProcessExecutionEngine(ExecutionEngine):
         # Force cleanup any remaining active children (this is important for pytest)
         try:
             import multiprocessing
+
             active_children = multiprocessing.active_children()
             if active_children:
                 logging.warning(f"Terminating {len(active_children)} remaining multiprocessing children")

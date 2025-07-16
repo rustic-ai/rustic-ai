@@ -316,7 +316,7 @@ class MultiProcessAgentTracker:
 
             # CRITICAL: Shut down the multiprocessing manager process
             # This is what prevents pytest from hanging - the manager creates a background process
-            if hasattr(self, 'manager') and self.manager:
+            if hasattr(self, "manager") and self.manager:
                 try:
                     self.manager.shutdown()
                     # Don't set to None as it breaks type checking, just mark as shut down

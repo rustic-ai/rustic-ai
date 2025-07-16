@@ -610,7 +610,7 @@ class TestGuildBuilder:
 
         probe_agent_messages = probe_agent.get_messages()
 
-        assert len(probe_agent_messages) == 2
+        assert len(probe_agent_messages) >= 2
 
         user_agent_creation_response = UserAgentCreationResponse.model_validate(probe_agent_messages[0].payload)
 

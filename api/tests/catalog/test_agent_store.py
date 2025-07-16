@@ -1,3 +1,6 @@
+import os
+import re
+
 import pytest
 
 from rustic_ai.api_server.catalog.catalog_store import CatalogStore
@@ -5,18 +8,35 @@ from rustic_ai.core.guild.metaprog.agent_registry import AgentEntry, HandlerEntr
 from rustic_ai.core.guild.metastore.database import Metastore
 
 
-class TestAgentCatalog:
-    @pytest.fixture(scope="module")
-    def catalog_engine(self):
-        db = "sqlite:///agent_store_test.db"
-        Metastore.drop_db(unsafe=True)
-        Metastore.initialize_engine(db)
-        yield Metastore.get_engine()
-        Metastore.drop_db(unsafe=True)
+@pytest.fixture
+def catalog_engine(request):
+    # Generate unique database filename based on test name and worker
+    test_name = request.node.name
+    worker_id = os.environ.get("PYTEST_XDIST_WORKER", "master")
 
-    @pytest.fixture
-    def catalog_store(self, catalog_engine):
-        return CatalogStore(catalog_engine)
+    # Sanitize test name for filename
+    sanitized_test_name = re.sub(r"[^\w\-_.]", "_", test_name)
+    db_filename = f"catalog_api_test_{sanitized_test_name}_{worker_id}.db"
+    db_url = f"sqlite:///{db_filename}"
+
+    Metastore.drop_db(unsafe=True)
+    Metastore.initialize_engine(db_url)
+    yield Metastore.get_engine()
+    Metastore.drop_db(unsafe=True)
+
+    # Clean up database file
+    try:
+        os.remove(db_filename)
+    except FileNotFoundError:
+        pass
+
+
+@pytest.fixture
+def catalog_store(catalog_engine):
+    return CatalogStore(catalog_engine)
+
+
+class TestAgentCatalog:
 
     def test_agent_actions(self, catalog_store: CatalogStore):
         new_agent_1 = AgentEntry(
