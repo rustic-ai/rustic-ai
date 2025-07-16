@@ -227,7 +227,7 @@ class UserProxyAgent(Agent[UserProxyAgentProps], GuildRefreshMixin):
         result = self._get_participant_list()
         routing_entry = RoutingRule(
             agent=ctx.agent.get_agent_tag(),  # TODO check what agent tag should be
-            format=get_qualified_class_name(ParticipantList),
+            message_format=get_qualified_class_name(ParticipantList),
             destination=RoutingDestination(
                 topics=self.user_system_notification_topic,
             ),
@@ -248,7 +248,7 @@ class UserProxyAgent(Agent[UserProxyAgentProps], GuildRefreshMixin):
         participants = self._get_participant_list()
         routing_entry = RoutingRule(
             agent=ctx.agent.get_agent_tag(),
-            format=get_qualified_class_name(ParticipantList),
+            message_format=get_qualified_class_name(ParticipantList),
             destination=RoutingDestination(
                 topics=self.user_system_notification_topic,
             ),
@@ -260,7 +260,7 @@ class UserProxyAgent(Agent[UserProxyAgentProps], GuildRefreshMixin):
     def handle_stop_guild_request(self, ctx: ProcessContext[StopGuildRequest]):
         routing_entry = RoutingRule(
             agent=ctx.agent.get_agent_tag(),
-            format=get_qualified_class_name(StopGuildRequest),
+            message_format=get_qualified_class_name(StopGuildRequest),
             destination=RoutingDestination(
                 topics=GuildTopics.SYSTEM_TOPIC,
             ),
@@ -273,10 +273,10 @@ class UserProxyAgent(Agent[UserProxyAgentProps], GuildRefreshMixin):
     def handle_agents_health_report(self, ctx: ProcessContext[AgentsHealthReport]):
         routing_entry = RoutingRule(
             agent=ctx.agent.get_agent_tag(),
-            format=get_qualified_class_name(AgentsHealthReport),
+            message_format=get_qualified_class_name(AgentsHealthReport),
             destination=RoutingDestination(
                 topics=self.user_system_notification_topic,
             ),
         )
         ctx.add_routing_step(routing_entry)
-        ctx.send_dict(ctx.payload, format=get_qualified_class_name(AgentsHealthReport), forwarding=True)
+        ctx.send_dict(ctx.payload.model_dump(), format=get_qualified_class_name(AgentsHealthReport), forwarding=True)
