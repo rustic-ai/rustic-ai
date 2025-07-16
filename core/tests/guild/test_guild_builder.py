@@ -612,7 +612,17 @@ class TestGuildBuilder:
 
         assert len(probe_agent_messages) >= 2
 
-        user_agent_creation_response = UserAgentCreationResponse.model_validate(probe_agent_messages[0].payload)
+        only_user_agent_creation_response = [
+            message
+            for message in probe_agent_messages
+            if message.format == get_qualified_class_name(UserAgentCreationResponse)
+        ]
+
+        assert len(only_user_agent_creation_response) == 1
+
+        user_agent_creation_response = UserAgentCreationResponse.model_validate(
+            only_user_agent_creation_response[0].payload
+        )
 
         assert user_agent_creation_response.user_id == "test_user"
         assert user_agent_creation_response.agent_id

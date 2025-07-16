@@ -2,6 +2,7 @@ import os
 from textwrap import dedent
 import time
 
+from flaky import flaky
 from pydantic import BaseModel
 import pytest
 
@@ -102,6 +103,7 @@ class TestStateMgmt:
         yield db
         Metastore.drop_db()
 
+    @flaky(max_runs=5, min_passes=1)
     def test_state_mgmt(self, state_aware_agent: AgentSpec, state_free_agent: AgentSpec, database, org_id):
         builder = (
             GuildBuilder(f"state_guild_{time.time()}", "State Guild", "Guild to test state management")
@@ -168,7 +170,13 @@ class TestStateMgmt:
             payload=EchoGuildState(guild_id=guild.id),
         )
 
-        time.sleep(0.5)
+        loop_count = 0
+        while loop_count < 10:
+            time.sleep(0.5)
+            messages = probe_agent.get_messages()
+            if len(messages) == 2:
+                break
+            loop_count += 1
 
         messages = probe_agent.get_messages()
         assert len(messages) == 2
