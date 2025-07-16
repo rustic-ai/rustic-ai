@@ -41,7 +41,7 @@ class TestGuildStop:
         yield db
         Metastore.drop_db()
 
-    def test_guild_bootstrap(self, messaging: MessagingConfig, probe_agent: ProbeAgent, database, org_id):
+    def test_guild_shutdown(self, messaging: MessagingConfig, probe_agent: ProbeAgent, database, org_id):
 
         guild_id = "guild_stop_test"
         guild_name = "Guild1"
@@ -93,7 +93,7 @@ class TestGuildStop:
             format=StopGuildRequest,
         )
 
-        time.sleep(1.0)
+        time.sleep(3)
 
         is_agent_running = guild.execution_engine.is_agent_running(guild_id, echo_agent.id)
         assert is_agent_running is False

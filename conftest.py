@@ -1,8 +1,18 @@
+import hashlib
+import multiprocessing
 import os
+import socket
 import time
 import uuid
 
 import pytest
+
+# Configure multiprocessing early to avoid fork() warnings in multi-threaded test environments
+try:
+    multiprocessing.set_start_method("spawn", force=True)
+except RuntimeError:
+    # Start method may already be set, which is fine
+    pass
 
 from rustic_ai.core.agents.testutils.probe_agent import ProbeAgent
 from rustic_ai.core.guild.builders import AgentBuilder
@@ -12,7 +22,33 @@ from rustic_ai.core.guild.metastore.database import Metastore
 from rustic_ai.core.messaging.core.messaging_config import MessagingConfig
 from rustic_ai.core.utils.gemstone_id import GemstoneGenerator
 
-TEST_GUILD_COUNT: int = 0
+# Global counter for unique guild IDs
+TEST_GUILD_COUNT = 0
+
+
+def derive_port_from_test_name(test_name: str, start_port: int = 31143) -> int:
+    """Derive a unique port number from test name using hash."""
+    # Create MD5 hash of test name for good distribution
+    hash_obj = hashlib.md5(test_name.encode())
+    hash_int = int(hash_obj.hexdigest(), 16)
+    
+    # Map to port range (10,000 ports: 31143-41143)
+    port_offset = hash_int % 10000
+    return start_port + port_offset
+
+
+def find_working_port(start_port: int, max_attempts: int = 50) -> int:
+    """Find an available port starting from start_port with fallback mechanism."""
+    for offset in range(max_attempts):
+        port = start_port + offset
+        try:
+            # Quick availability check
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.bind(('localhost', port))
+                return port
+        except OSError:
+            continue
+    raise RuntimeError(f"No available ports found starting from {start_port}")
 
 
 @pytest.fixture(scope="session")
@@ -21,36 +57,49 @@ def org_id():
 
 
 @pytest.fixture(scope="session")
-def messaging_server():
-    """Start a single embedded messaging server for all tests in this session."""
+def messaging_server(request):
+    """Start embedded messaging server with test-name-derived port."""
     import asyncio
     import threading
     import time
 
     from rustic_ai.core.messaging.backend.embedded_backend import EmbeddedServer
 
-    port = 31143  # Use unique port for conftest tests
+    # Get unique port from test name, incorporating worker ID for parallel execution
+    test_name = request.node.name or "session"
+    
+    # Add worker ID for pytest-xdist parallel execution
+    worker_id = os.environ.get("PYTEST_XDIST_WORKER", "master")
+    unique_name = f"{test_name}_{worker_id}"
+    
+    base_port = derive_port_from_test_name(unique_name)
+    
+    # Find working port with fallback mechanism
+    port = find_working_port(base_port)
+    print(f"Worker '{worker_id}' test '{test_name}' using port {port} (base: {base_port})")
+    
     server = EmbeddedServer(port=port)
 
     def run_server():
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        loop.run_until_complete(server.start())
         try:
+            loop.run_until_complete(server.start())
             loop.run_forever()
         except KeyboardInterrupt:
             pass
         finally:
-            loop.run_until_complete(server.stop())
+            if server.running:
+                loop.run_until_complete(server.stop())
             loop.close()
 
     thread = threading.Thread(target=run_server, daemon=True)
     thread.start()
-    time.sleep(1.0)  # Wait for server to start
+    time.sleep(1.0)  # Wait for server startup
 
     yield server, port
 
-    # Clean up
+    # Cleanup
     if server.running:
         server.topics.clear()
         server.messages.clear()
@@ -73,28 +122,42 @@ def cleanup_messaging_server_state(messaging_server):
 
 
 @pytest.fixture
-def database():
-    """Database fixture that properly initializes the database for tests."""
-    db = "sqlite:///test_rustic_app.db"
+def database(request):
+    """Database fixture with test-name-derived filename."""
+    # Create filename from test name (sanitize for filesystem)
+    test_name = request.node.name.replace(':', '_').replace('[', '_').replace(']', '_').replace('/', '_')
+    
+    # Add worker ID for pytest-xdist parallel execution  
+    worker_id = os.environ.get("PYTEST_XDIST_WORKER", "master")
+    db_file = f"test_rustic_app_{test_name}_{worker_id}.db"
+    db = f"sqlite:///{db_file}"
+    
+    print(f"Worker '{worker_id}' test '{request.node.name}' using database {db_file}")
     
     # Clean up any existing database file
-    if os.path.exists("test_rustic_app.db"):
-        os.remove("test_rustic_app.db")
-    
+    if os.path.exists(db_file):
+        os.remove(db_file)
+
     # Initialize the database properly
     Metastore.initialize_engine(db)
     Metastore.get_engine(db)
     Metastore.create_db()
-    
+
     yield db
-    
-    # Clean up after test
+
+    # Cleanup
     try:
         Metastore.drop_db()
     except Exception:
         # If cleanup fails, just remove the file
-        if os.path.exists("test_rustic_app.db"):
-            os.remove("test_rustic_app.db")
+        pass
+    finally:
+        try:
+            if os.path.exists(db_file):
+                os.remove(db_file)
+        except Exception:
+            # Ignore file removal errors
+            pass
 
 
 @pytest.fixture
@@ -144,6 +207,11 @@ def guild(org_id, database, messaging_server):
 
 
 @pytest.fixture
+def generator():
+    return GemstoneGenerator(1)
+
+
+@pytest.fixture
 def probe_agent(generator):
     # Create a unique probe agent for each test to avoid state sharing
     probe_id = f"test_agent_{int(time.time() * 1000000) % 1000000}_{uuid.uuid4().hex[:8]}"
@@ -178,11 +246,3 @@ def probe_agent(generator):
     except Exception as e:
         # Log but don't fail test cleanup
         print(f"Warning: Error during probe agent cleanup: {e}")
-
-
-@pytest.fixture
-def generator() -> GemstoneGenerator:
-    """
-    Fixture that returns a GemstoneGenerator instance with a seed of 1.
-    """
-    return GemstoneGenerator(1)

@@ -537,6 +537,9 @@ class EmbeddedMessagingBackend(MessagingBackend):
         self._response_counter = 0
         self._response_lock = asyncio.Lock() if asyncio._get_running_loop() is None else None
 
+        # Track subscription handler tasks for proper cleanup
+        self._subscription_tasks: Set[asyncio.Task] = set()
+
         if auto_start_server:
             self._ensure_server_running()
 
@@ -690,7 +693,11 @@ class EmbeddedMessagingBackend(MessagingBackend):
                     try:
                         message = Message.from_json(message_json)
                         # Execute handler in a separate task to avoid blocking
-                        asyncio.create_task(self._execute_subscription_handler(topic, message))
+                        task = asyncio.create_task(self._execute_subscription_handler(topic, message))
+                        # Track the task for proper cleanup
+                        self._subscription_tasks.add(task)
+                        # Clean up completed tasks automatically
+                        task.add_done_callback(self._subscription_tasks.discard)
                     except Exception as e:
                         logging.error(f"Error processing subscription message: {e}")
 
@@ -827,9 +834,41 @@ class EmbeddedMessagingBackend(MessagingBackend):
         self.subscription_handlers.pop(topic, None)
         self._send_command("UNSUBSCRIBE", topic)
 
+    async def _cancel_subscription_tasks(self):
+        """Cancel all pending subscription handler tasks."""
+        if self._subscription_tasks:
+            logging.debug(f"Cancelling {len(self._subscription_tasks)} subscription tasks")
+            # Cancel all tasks
+            for task in self._subscription_tasks:
+                if not task.done():
+                    task.cancel()
+            
+            # Wait for all tasks to be cancelled with a timeout
+            if self._subscription_tasks:
+                try:
+                    await asyncio.wait_for(
+                        asyncio.gather(*self._subscription_tasks, return_exceptions=True),
+                        timeout=2.0
+                    )
+                except asyncio.TimeoutError:
+                    logging.warning("Some subscription tasks did not cancel within timeout")
+                except Exception as e:
+                    logging.debug(f"Exception during task cancellation (expected): {e}")
+            
+            self._subscription_tasks.clear()
+
     def cleanup(self) -> None:
         """Clean up the backend."""
         self.subscription_handlers.clear()
+
+        # Cancel any pending subscription tasks in the client loop
+        if self.loop and not self.loop.is_closed():
+            try:
+                # Submit task cancellation to the client event loop
+                future = asyncio.run_coroutine_threadsafe(self._cancel_subscription_tasks(), self.loop)
+                future.result(timeout=3.0)
+            except Exception as e:
+                logging.debug(f"Error cancelling subscription tasks: {e}")
 
         # Signal stop to all threads
         self._stop_event.set()

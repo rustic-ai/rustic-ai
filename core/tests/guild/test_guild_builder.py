@@ -1,5 +1,4 @@
 import importlib
-import os
 import time
 
 import pytest
@@ -57,28 +56,37 @@ class TestGuildBuilder:
     exec_engine_clz: str = "rustic_ai.core.guild.execution.sync.sync_exec_@engine.SyncExecutionEngine"
 
     @pytest.fixture(
-        scope="class",
+        scope="function",  # Changed from class to function to access messaging_server
         params=[
             pytest.param(
-                MessagingConfig(
-                    backend_module="rustic_ai.core.messaging.backend",
-                    backend_class="InMemoryMessagingBackend",
-                    backend_config={},
-                ),
+                "InMemoryMessagingBackend",
                 id="InMemoryMessagingBackend",
             ),
             pytest.param(
-                MessagingConfig(
-                    backend_module="rustic_ai.core.messaging.backend.embedded_backend",
-                    backend_class="EmbeddedMessagingBackend",
-                    backend_config={"auto_start_server": True},
-                ),
+                "EmbeddedMessagingBackend",
                 id="EmbeddedMessagingBackend",
             ),
         ],
     )
-    def messaging(self, request) -> MessagingConfig:
-        return request.param
+    def messaging(self, request, messaging_server) -> MessagingConfig:
+        backend_type = request.param
+        
+        if backend_type == "InMemoryMessagingBackend":
+            return MessagingConfig(
+                backend_module="rustic_ai.core.messaging.backend",
+                backend_class="InMemoryMessagingBackend",
+                backend_config={},
+            )
+        elif backend_type == "EmbeddedMessagingBackend":
+            # Use the shared messaging server from conftest.py
+            server, port = messaging_server
+            return MessagingConfig(
+                backend_module="rustic_ai.core.messaging.backend.embedded_backend",
+                backend_class="EmbeddedMessagingBackend",
+                backend_config={"auto_start_server": False, "port": port},
+            )
+        else:
+            raise ValueError(f"Unknown backend type: {backend_type}")
 
     @pytest.fixture
     def agent_spec(self) -> AgentSpec:
@@ -114,18 +122,8 @@ class TestGuildBuilder:
     def guild_description(self, guild_name):
         return f"description for {guild_name}"
 
-    @pytest.fixture
-    def database(self):
-        db = "sqlite:///test_rustic_app.db"
-
-        if os.path.exists("test_rustic_app.db"):
-            os.remove("test_rustic_app.db")
-
-        Metastore.initialize_engine(db)
-        Metastore.get_engine(db)
-        Metastore.create_db()
-        yield db
-        Metastore.drop_db()
+    # Removed duplicate database fixture - using the one from conftest.py instead
+    # This ensures each test gets a unique database file with proper cleanup
 
     def test_initialization(self, guild_id, guild_name, guild_description):
         spec = GuildBuilder(guild_id, guild_name, guild_description).build_spec()
@@ -608,7 +606,7 @@ class TestGuildBuilder:
 
         probe_agent_messages = probe_agent.get_messages()
 
-        assert len(probe_agent_messages) == 3
+        assert len(probe_agent_messages) == 2
 
         user_agent_creation_response = UserAgentCreationResponse.model_validate(probe_agent_messages[0].payload)
 

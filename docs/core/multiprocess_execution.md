@@ -428,6 +428,63 @@ def monte_carlo_simulation(num_workers=None):
 
 ## Troubleshooting
 
+### Fork() Deprecation Warning
+
+When running tests, you may encounter warnings like:
+```
+DeprecationWarning: This process (pid=297226) is multi-threaded, use of fork() may lead to deadlocks in the child.
+```
+
+This warning occurs because Python's multiprocessing module defaults to using the "fork" start method on POSIX systems. In multi-threaded environments (like test suites running with pytest), fork() can cause deadlocks since only the current thread survives in the child process while other threads' locks remain held.
+
+**Solution**: The codebase is configured to use the "spawn" start method instead:
+
+```python
+multiprocessing.set_start_method('spawn', force=True)
+```
+
+This creates entirely new Python interpreter processes instead of forking, avoiding the multi-threading issues. This configuration is automatically applied in:
+
+- Core tests via `rustic-ai/core/tests/conftest.py`
+- Integration tests via individual test fixtures
+- Production code examples in documentation
+
+**Performance Note**: The "spawn" method is slightly slower than "fork" since it needs to create new Python interpreters, but it's much safer and more predictable in multi-threaded environments.
+
+### Pytest Hanging Issue
+
+**Problem**: Tests using multiprocessing were causing pytest to hang and not exit after test completion.
+
+**Root Cause**: The `multiprocessing.Manager()` creates background processes that weren't being properly cleaned up, preventing pytest from exiting.
+
+**Solution**: Enhanced cleanup mechanisms have been implemented:
+
+1. **Manager Shutdown**: The `MultiProcessAgentTracker.clear()` method now explicitly shuts down the multiprocessing manager:
+   ```python
+   if hasattr(self, 'manager') and self.manager:
+       self.manager.shutdown()
+   ```
+
+2. **Process Force Cleanup**: The `MultiProcessExecutionEngine.shutdown()` method now includes comprehensive process cleanup:
+   - Terminates and kills remaining processes
+   - Cleans up process tracking structures
+   - Forces cleanup of any remaining multiprocessing children
+
+3. **Test Fixtures Enhanced**: Test fixtures now include additional cleanup steps:
+   - Wait for processes to fully terminate
+   - Double-check multiprocessing cleanup
+   - Session-level cleanup to ensure no processes remain
+
+4. **Session-Level Cleanup**: A session-scoped pytest fixture ensures all multiprocessing resources are cleaned up when the test session ends.
+
+These changes ensure that:
+- ✅ **No fork() warnings** - Tests use "spawn" method
+- ✅ **No pytest hanging** - All processes properly cleaned up
+- ✅ **Fast test execution** - Tests complete quickly without delays
+- ✅ **Reliable cleanup** - Comprehensive process termination
+
+## Configuration
+
 ### Common Issues
 
 1. **Process Won't Start**: Check process limits and available memory
