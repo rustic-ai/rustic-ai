@@ -1,11 +1,13 @@
+from datetime import datetime
 import json
+import logging
 import re
 from typing import Dict, List
 
 from pydantic import BaseModel
 import pydantic_core
 
-from rustic_ai.core import AgentSpec, Message
+from rustic_ai.core import AgentSpec, Message, Priority
 from rustic_ai.core.agents.system.models import (
     GuildUpdatedAnnouncement,
     StopGuildRequest,
@@ -16,10 +18,15 @@ from rustic_ai.core.guild.agent import (
     AgentMode,
     AgentType,
     ProcessContext,
+    SelfReadyNotification,
     processor,
 )
 from rustic_ai.core.guild.agent_ext.mixins.guild_refresher import GuildRefreshMixin
-from rustic_ai.core.guild.agent_ext.mixins.health import AgentsHealthReport
+from rustic_ai.core.guild.agent_ext.mixins.health import (
+    AgentsHealthReport,
+    HealthConstants,
+    Heartbeat,
+)
 from rustic_ai.core.guild.dsl import GuildSpec, GuildTopics
 from rustic_ai.core.messaging.core.message import (
     AgentTag,
@@ -224,16 +231,13 @@ class UserProxyAgent(Agent[UserProxyAgentProps], GuildRefreshMixin):
         return result
 
     def guild_refresh_handler(self, ctx: ProcessContext[GuildUpdatedAnnouncement]) -> None:
-        result = self._get_participant_list()
-        routing_entry = RoutingRule(
-            agent=ctx.agent.get_agent_tag(),  # TODO check what agent tag should be
-            message_format=get_qualified_class_name(ParticipantList),
-            destination=RoutingDestination(
-                topics=self.user_system_notification_topic,
-            ),
+        participants = self._get_participant_list()
+        ctx._raw_send(
+            priority=Priority.NORMAL,
+            payload=participants,
+            format=get_qualified_class_name(ParticipantList),
+            topics=[self.user_system_notification_topic],
         )
-        ctx.add_routing_step(routing_entry)
-        ctx.send_dict(result, format="Participants", forwarding=True)
 
     def find_tagged_users(self, message: str) -> List[AgentTag]:
         found_user_tags = re.findall(UserProxyAgent._tag_pattern, message)
@@ -246,15 +250,12 @@ class UserProxyAgent(Agent[UserProxyAgentProps], GuildRefreshMixin):
     @processor(ParticipantListRequest, predicate=system_req_filter)
     def handle_participants_request(self, ctx: ProcessContext[ParticipantListRequest]):
         participants = self._get_participant_list()
-        routing_entry = RoutingRule(
-            agent=ctx.agent.get_agent_tag(),
-            message_format=get_qualified_class_name(ParticipantList),
-            destination=RoutingDestination(
-                topics=self.user_system_notification_topic,
-            ),
+        ctx._raw_send(
+            priority=Priority.NORMAL,
+            payload=participants,
+            format=get_qualified_class_name(ParticipantList),
+            topics=[self.user_system_notification_topic],
         )
-        ctx.add_routing_step(routing_entry)
-        ctx.send_dict(participants, format="Participants", forwarding=True)
 
     @processor(StopGuildRequest, predicate=system_req_filter)
     def handle_stop_guild_request(self, ctx: ProcessContext[StopGuildRequest]):
@@ -280,3 +281,38 @@ class UserProxyAgent(Agent[UserProxyAgentProps], GuildRefreshMixin):
         )
         ctx.add_routing_step(routing_entry)
         ctx.send_dict(ctx.payload.model_dump(), format=get_qualified_class_name(AgentsHealthReport), forwarding=True)
+
+    @processor(
+        SelfReadyNotification,
+        predicate=lambda self, msg: msg.sender == self.get_agent_tag() and msg.topic_published_to == self._self_topic,
+        handle_essential=True,
+    )
+    def send_initial_participants(self, ctx: ProcessContext[SelfReadyNotification]) -> None:
+        """
+        Sends the first heartbeat when the agent is ready.
+        """
+        if not isinstance(self, Agent):
+            return
+
+        logging.info(f"Received SelfReadyNotification[{self.name}] from {ctx.message.id}")
+        logging.info(f"{ctx.message.model_dump()}")
+
+        logging.info(f"Sending first heartbeat for {self.get_agent_tag()}")
+
+        hr = self.healthcheck(datetime.now())
+        ctx._raw_send(
+            priority=Priority.HIGH,
+            topics=[HealthConstants.HEARTBEAT_TOPIC],
+            payload=hr.model_dump(),
+            format=get_qualified_class_name(Heartbeat),
+            recipient_list=[],
+            in_response_to=ctx.message.id,
+        )  # TODO - remove this once multiple handlers for message type are supported
+
+        participants = self._get_participant_list()
+        ctx._raw_send(
+            priority=Priority.NORMAL,
+            payload=participants,
+            format=get_qualified_class_name(ParticipantList),
+            topics=[self.user_system_notification_topic],
+        )
