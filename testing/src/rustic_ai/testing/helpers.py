@@ -1,3 +1,4 @@
+from functools import partial
 from typing import Dict, List, Tuple, TypeVar
 from unittest.mock import MagicMock
 
@@ -95,5 +96,13 @@ def wrap_agent_for_testing(
 
     guild_spec = GuildBuilder(f"{agent.id}_test_guild", "Test Guild", "Test Guild").build_spec()
     agent._set_guild_spec(guild_spec)
+
+    def process_message(self, message: Message):
+        message.topic_published_to = message.topics[0]
+        self._original_on_message(message)
+
+    agent._original_on_message = agent._on_message  # type: ignore
+
+    agent._on_message = partial(process_message, agent)  # type: ignore
 
     return agent, results

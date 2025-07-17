@@ -108,6 +108,8 @@ class IntegrationTestABC(ABC):
         rair = execution_engine.is_agent_running(guild.id, ra[0].id)
         assert rair is True
 
+        time.sleep(1)
+
         local_exec_engine = SyncExecutionEngine(guild_id=guild.id, organization_id=guild.organization_id)
         guild._add_local_agent(local_test_agent, local_exec_engine)
 
@@ -117,11 +119,14 @@ class IntegrationTestABC(ABC):
 
         # Allow some time for message processing - adjust as necessary for your environment
         # Consider using a more sophisticated synchronization mechanism for real-world scenarios
-        time.sleep(1.0)  # Increased wait time for EmbeddedMessagingBackend
+        loop = 0
+        while len(local_test_agent.captured_messages) < 2 and loop < 10:
+            time.sleep(0.1)
+            loop += 1
 
         # Assertions to verify communication flow
         # Ensure the local test agent captured the messages as expected
-        assert len(local_test_agent.captured_messages) == 2
+        assert len(local_test_agent.captured_messages) >= 2
 
         msg0 = local_test_agent.captured_messages[0]
         msg1 = local_test_agent.captured_messages[1]

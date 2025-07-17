@@ -21,6 +21,7 @@ import yaml
 
 from rustic_ai.core.agents.testutils.probe_agent import ProbeAgent
 from rustic_ai.core.guild import Agent, Guild
+from rustic_ai.core.guild.agent_ext.mixins.health import HealthConstants
 from rustic_ai.core.guild.dsl import (
     APT,
     AgentSpec,
@@ -645,7 +646,12 @@ class GuildBuilder:
                 "database_url": metastore_database_url,
                 "organization_id": organization_id,
             },
-            additional_topics=[GuildTopics.SYSTEM_TOPIC, "heartbeat"],  # "heartbeat" string to avoid circular import
+            additional_topics=[
+                GuildTopics.SYSTEM_TOPIC,
+                HealthConstants.HEARTBEAT_TOPIC,
+                GuildTopics.GUILD_STATUS_TOPIC,
+            ],
+            listen_to_default_topic=False,
         )
 
         try:

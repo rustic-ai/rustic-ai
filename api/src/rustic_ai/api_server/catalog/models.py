@@ -337,6 +337,7 @@ class LaunchGuildFromBlueprintRequest(BaseModel):
     """
     Request to launch a guild from a blueprint.
     """
+
     guild_name: str
     user_id: str
     org_id: str

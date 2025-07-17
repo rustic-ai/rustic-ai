@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 import time
+import uuid
 
 from pydantic import BaseModel, JsonValue
 import pytest
@@ -106,7 +107,7 @@ class KVStoreAgent(Agent):
                 guild_level=True,
             ),
         ],
-    )
+    )  # type: ignore
     def get_kv(
         self,
         ctx: ProcessContext[KVGet],
@@ -182,12 +183,15 @@ class BaseTestKVStore(ABC):
         raise NotImplementedError("This fixture should be overridden in subclasses.")
 
     def test_kvstore(self, probe_agent: ProbeAgent, dep_map: dict, org_id):
+        # Use unique guild name to avoid interference between tests
+        guild_id = f"test_kvstore_guild_{int(time.time() * 1000)}_{uuid.uuid4().hex[:8]}"
+
         agent_spec: AgentSpec = (
             AgentBuilder(KVStoreAgent).set_description("KV Store Agent").set_name("KVStoreAgent").build_spec()
         )
 
         guild_builder = (
-            GuildBuilder("test_guild", "Test Guild", "Guild to test KV Store Agent")
+            GuildBuilder(guild_id, "Test KVStore Guild", "Guild to test KV Store Agent")
             .add_agent_spec(agent_spec)
             .set_dependency_map(dep_map)
         )
@@ -213,7 +217,6 @@ class BaseTestKVStore(ABC):
             payload=KVGet(key="key1").model_dump(),
             format=KVGet,
         )
-
 
         slept = 1
         while len(probe_agent.get_messages()) < 2 and slept < 50:

@@ -13,11 +13,12 @@ class TestMultiProcessEmbeddedIntegration(IntegrationTestABC):
     """
 
     @pytest.fixture
-    def messaging(self, guild_id) -> MessagingConfig:
+    def messaging(self, guild_id, messaging_server) -> MessagingConfig:
+        server, port = messaging_server
         return MessagingConfig(
             backend_module="rustic_ai.core.messaging.backend.embedded_backend",
             backend_class="EmbeddedMessagingBackend",
-            backend_config={"auto_start_server": True},
+            backend_config={"auto_start_server": False, "port": port},
         )
 
     @pytest.fixture

@@ -1,3 +1,6 @@
+import os
+import re
+
 from fastapi.testclient import TestClient
 import pytest
 from sqlmodel import Session
@@ -23,13 +26,27 @@ from rustic_ai.testing.agents.sample_agents import DemoAgentSimple, MessageDataT
 from rustic_ai.testing.agents.simple_agent import SimpleAgent
 
 
-@pytest.fixture(scope="module")
-def catalog_engine():
-    db = "sqlite:///catalog_test.db"
+@pytest.fixture
+def catalog_engine(request):
+    # Generate unique database filename based on test name and worker
+    test_name = request.node.name
+    worker_id = os.environ.get("PYTEST_XDIST_WORKER", "master")
+
+    # Sanitize test name for filename
+    sanitized_test_name = re.sub(r"[^\w\-_.]", "_", test_name)
+    db_filename = f"catalog_api_test_{sanitized_test_name}_{worker_id}.db"
+    db_url = f"sqlite:///{db_filename}"
+
     Metastore.drop_db(unsafe=True)
-    Metastore.initialize_engine(db)
+    Metastore.initialize_engine(db_url)
     yield Metastore.get_engine()
     Metastore.drop_db(unsafe=True)
+
+    # Clean up database file
+    try:
+        os.remove(db_filename)
+    except FileNotFoundError:
+        pass
 
 
 @pytest.fixture
@@ -39,12 +56,12 @@ def catalog_client(catalog_engine):
     return TestClient(app)
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def catalog_store(catalog_engine):
     return CatalogStore(catalog_engine)
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def session(catalog_engine):
     with Session(catalog_engine) as session:
         yield session
@@ -129,7 +146,7 @@ demo_agent = {
 }
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def setup_data(catalog_store: CatalogStore, session: Session):
     user_id = "b145c434-28a8-4393-885b-716494700249"
     org_id = "e3602047-7e30-4504-ab2d-b081ff227494"
