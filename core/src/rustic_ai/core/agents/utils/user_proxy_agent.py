@@ -30,6 +30,7 @@ from rustic_ai.core.guild.agent_ext.mixins.health import (
 from rustic_ai.core.guild.dsl import GuildSpec, GuildTopics
 from rustic_ai.core.messaging.core.message import (
     AgentTag,
+    ForwardHeader,
     JsonDict,
     RoutingDestination,
     RoutingRule,
@@ -259,28 +260,31 @@ class UserProxyAgent(Agent[UserProxyAgentProps], GuildRefreshMixin):
 
     @processor(StopGuildRequest, predicate=system_req_filter)
     def handle_stop_guild_request(self, ctx: ProcessContext[StopGuildRequest]):
-        routing_entry = RoutingRule(
-            agent=ctx.agent.get_agent_tag(),
-            message_format=get_qualified_class_name(StopGuildRequest),
-            destination=RoutingDestination(
-                topics=GuildTopics.SYSTEM_TOPIC,
-            ),
-        )
-        ctx.add_routing_step(routing_entry)
         stopReq = StopGuildRequest(guild_id=ctx.payload.guild_id).model_dump()
-        ctx.send_dict(stopReq, format=get_qualified_class_name(StopGuildRequest), forwarding=True)
+        ctx._raw_send(
+            priority=Priority.NORMAL,
+            format=get_qualified_class_name(StopGuildRequest),
+            payload=stopReq,
+            topics=[GuildTopics.SYSTEM_TOPIC],
+            forward_header=ForwardHeader(origin_message_id=ctx.message.id, on_behalf_of=ctx.message.sender),
+        )
 
     @processor(AgentsHealthReport, handle_essential=True)
     def handle_agents_health_report(self, ctx: ProcessContext[AgentsHealthReport]):
-        routing_entry = RoutingRule(
-            agent=ctx.agent.get_agent_tag(),
-            message_format=get_qualified_class_name(AgentsHealthReport),
-            destination=RoutingDestination(
-                topics=self.user_system_notification_topic,
-            ),
+        ctx._raw_send(
+            priority=Priority.NORMAL,
+            payload=ctx.payload.model_dump(),
+            format=get_qualified_class_name(AgentsHealthReport),
+            topics=[self.user_system_notification_topic],
+            forward_header=ForwardHeader(origin_message_id=ctx.message.id, on_behalf_of=ctx.message.sender),
         )
-        ctx.add_routing_step(routing_entry)
-        ctx.send_dict(ctx.payload.model_dump(), format=get_qualified_class_name(AgentsHealthReport), forwarding=True)
+        participants = self._get_participant_list()
+        ctx._raw_send(
+            priority=Priority.NORMAL,
+            payload=participants,
+            format=get_qualified_class_name(ParticipantList),
+            topics=[self.user_system_notification_topic],
+        )
 
     @processor(
         SelfReadyNotification,
