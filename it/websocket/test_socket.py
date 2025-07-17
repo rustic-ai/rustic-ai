@@ -133,7 +133,7 @@ class TestServer:
             assert len(no_messages_json) == 0
 
         # Additional wait for EmbeddedMessagingBackend agents to be fully ready
-        time.sleep(wait_time)
+        time.sleep(wait_time * 2)
 
         async with websockets.connect(
             f"ws://{server}/ws/guilds/{guild.id}/usercomms/user123/user_name_123"

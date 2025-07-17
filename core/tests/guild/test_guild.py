@@ -13,12 +13,13 @@ class TestGuild:
     exec_engine_clz: str = "rustic_ai.core.guild.execution.sync.sync_exec_engine.SyncExecutionEngine"
 
     @pytest.fixture
-    def messaging(self):
-
+    def messaging(self, messaging_server):
+        # Use the shared messaging server from conftest.py instead of auto-starting
+        server, port = messaging_server
         return MessagingConfig(
             backend_module="rustic_ai.core.messaging.backend.embedded_backend",
             backend_class="EmbeddedMessagingBackend",
-            backend_config={"auto_start_server": True},
+            backend_config={"auto_start_server": False, "port": port},
         )
 
     @pytest.fixture
@@ -67,11 +68,13 @@ class TestGuild:
         assert guild.description == description
         assert guild.messaging == messaging
 
-    def test_guild_initialization_with_messaging_config(self, org_id):
+    def test_guild_initialization_with_messaging_config(self, org_id, messaging_server):
+        # Use the shared messaging server from conftest.py instead of auto-starting
+        server, port = messaging_server
         messaging_config = MessagingConfig(
             backend_module="rustic_ai.core.messaging.backend.embedded_backend",
             backend_class="EmbeddedMessagingBackend",
-            backend_config={"auto_start_server": True},
+            backend_config={"auto_start_server": False, "port": port},
         )
 
         guild_id = "e1"

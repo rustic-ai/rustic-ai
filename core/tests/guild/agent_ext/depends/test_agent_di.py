@@ -1,5 +1,6 @@
 import time
 from typing import Optional
+import uuid
 
 from rustic_ai.core.agents.testutils.probe_agent import ProbeAgent
 from rustic_ai.core.guild import agent
@@ -49,8 +50,11 @@ class TestAgentDependencyInjection:
 
         agent_id = agent_spec.id
 
+        # Use unique guild name to avoid interference between tests
+        guild_id = f"test_di_guild_{int(time.time() * 1000)}_{uuid.uuid4().hex[:8]}"
+
         guild_builder = (
-            GuildBuilder("test_guild", "Test Guild", "Guild to test agent dependency injection")
+            GuildBuilder(guild_id, "Test DI Guild", "Guild to test agent dependency injection")
             .add_agent_spec(agent_spec)
             .set_dependency_map(
                 {"searchindex": DependencySpec(class_name=SearchIndexDependencyResolver.get_qualified_class_name())}
@@ -90,7 +94,7 @@ class TestAgentDependencyInjection:
 
         slept = 1
         while len(probe_agent.get_messages()) == 0 and slept < 50:
-            time.sleep(0.01)
+            time.sleep(0.1)
             slept += 1
 
         messages = probe_agent.get_messages()
@@ -99,8 +103,8 @@ class TestAgentDependencyInjection:
 
         data = messages[0].payload
 
-        assert data["filepath"] == f"rustic-files/filepath_test_guild_{agent_id}"
-        assert data["searchindex"] == f"searchindex_test_guild_{agent_id}"
+        assert data["filepath"] == f"rustic-files/filepath_{guild_id}_{agent_id}"
+        assert data["searchindex"] == f"searchindex_{guild_id}_{agent_id}"
 
         probe_agent.clear_messages()
 

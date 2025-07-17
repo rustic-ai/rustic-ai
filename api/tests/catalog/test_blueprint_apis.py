@@ -1,3 +1,6 @@
+import os
+import re
+
 from fastapi.testclient import TestClient
 import pytest
 from sqlmodel import Session
@@ -11,6 +14,7 @@ from rustic_ai.api_server.catalog.models import (
     BlueprintCreate,
     BlueprintReviewCreate,
     CatalogAgentEntry,
+    LaunchGuildFromBlueprintRequest,
 )
 from rustic_ai.api_server.guilds.schema import LaunchGuildReq
 from rustic_ai.core.agents.testutils import EchoAgent
@@ -22,13 +26,27 @@ from rustic_ai.testing.agents.sample_agents import DemoAgentSimple, MessageDataT
 from rustic_ai.testing.agents.simple_agent import SimpleAgent
 
 
-@pytest.fixture(scope="module")
-def catalog_engine():
-    db = "sqlite:///catalog_test.db"
+@pytest.fixture
+def catalog_engine(request):
+    # Generate unique database filename based on test name and worker
+    test_name = request.node.name
+    worker_id = os.environ.get("PYTEST_XDIST_WORKER", "master")
+
+    # Sanitize test name for filename
+    sanitized_test_name = re.sub(r"[^\w\-_.]", "_", test_name)
+    db_filename = f"catalog_api_test_{sanitized_test_name}_{worker_id}.db"
+    db_url = f"sqlite:///{db_filename}"
+
     Metastore.drop_db(unsafe=True)
-    Metastore.initialize_engine(db)
+    Metastore.initialize_engine(db_url)
     yield Metastore.get_engine()
     Metastore.drop_db(unsafe=True)
+
+    # Clean up database file
+    try:
+        os.remove(db_filename)
+    except FileNotFoundError:
+        pass
 
 
 @pytest.fixture
@@ -38,12 +56,12 @@ def catalog_client(catalog_engine):
     return TestClient(app)
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def catalog_store(catalog_engine):
     return CatalogStore(catalog_engine)
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def session(catalog_engine):
     with Session(catalog_engine) as session:
         yield session
@@ -128,7 +146,7 @@ demo_agent = {
 }
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def setup_data(catalog_store: CatalogStore, session: Session):
     user_id = "b145c434-28a8-4393-885b-716494700249"
     org_id = "e3602047-7e30-4504-ab2d-b081ff227494"
@@ -767,3 +785,100 @@ def test_create_blueprints_with_same_agent(setup_data, catalog_client):
     assert response_2.status_code == 201
     blueprint_2_id = response_2.json()["id"]
     assert blueprint_2_id is not None
+
+
+def test_launch_guild_from_blueprint(setup_data, catalog_client):
+    """
+    Test the endpoint to launch a guild from a blueprint.
+    """
+    # Create a blueprint with a valid GuildSpec
+    blueprint_data = {
+        "name": "Echo App",
+        "description": "An app that echoes the input",
+        "exposure": "private",
+        "author_id": setup_data["user_id"],
+        "organization_id": setup_data["organization_id"],
+        "version": "1.0.0",
+        "spec": {
+            "name": "Echo guild",
+            "description": "some description",
+            "properties": {},
+            "agents": [
+                {
+                    "name": "echo_agent",
+                    "description": "Echo Agent",
+                    "class_name": "rustic_ai.core.agents.testutils.echo_agent.EchoAgent",
+                    "additional_topics": ["echo_topic"],
+                    "properties": {},
+                    "listen_to_default_topic": False,
+                    "act_only_when_tagged": False,
+                    "dependency_map": {},
+                },
+            ],
+            "dependency_map": {},
+            "routes": {
+                "steps": [
+                    {
+                        "agent_type": "rustic_ai.agents.utils.user_proxy_agent.UserProxyAgent",
+                        "method_name": "unwrap_and_forward_message",
+                        "destination": {"topic": "echo_topic"},
+                        "route_times": 1,
+                    },
+                    {
+                        "agent": {"name": "echo_agent"},
+                        "destination": {"topic": "user_message_broadcast"},
+                        "route_times": 1,
+                    },
+                ]
+            },
+        },
+        "category_id": setup_data["category"].id,
+    }
+
+    blueprint_create = BlueprintCreate.model_validate(blueprint_data)
+    response = catalog_client.post("/catalog/blueprints/", json=blueprint_create.model_dump())
+    assert response.status_code == 201
+    blueprint_id = response.json()["id"]
+
+    # Test successful guild launch
+    launch_request = LaunchGuildFromBlueprintRequest(
+        guild_name="My New Guild",
+        user_id=setup_data["user_id"],
+        org_id=setup_data["organization_id"],
+        description="A custom guild description",
+    )
+
+    launch_response = catalog_client.post(
+        f"/catalog/blueprints/{blueprint_id}/guilds",
+        json=launch_request.model_dump(),
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert launch_response.status_code == 201
+    assert "id" in launch_response.json()
+    guild_id = launch_response.json()["id"]
+
+    # Verify the guild was created and associated with the blueprint
+    blueprint_guild_response = catalog_client.get(f"/catalog/guilds/{guild_id}/blueprints/")
+    assert blueprint_guild_response.status_code == 200
+    assert blueprint_guild_response.json()["id"] == blueprint_id
+
+    # Verify the user was added to the guild
+    user_guilds_response = catalog_client.get(f"/catalog/users/{setup_data['user_id']}/guilds/")
+    assert user_guilds_response.status_code == 200
+    guild_ids = [guild["id"] for guild in user_guilds_response.json()]
+    assert guild_id in guild_ids
+
+    # Test error case: blueprint not found
+    invalid_launch_request = LaunchGuildFromBlueprintRequest(
+        guild_name="Invalid Guild", user_id=setup_data["user_id"], org_id=setup_data["organization_id"]
+    )
+
+    invalid_response = catalog_client.post(
+        "/catalog/blueprints/non-existent-blueprint-id/guilds",
+        json=invalid_launch_request.model_dump(),
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert invalid_response.status_code == 404
+    assert "Blueprint not found" in invalid_response.json()["detail"]

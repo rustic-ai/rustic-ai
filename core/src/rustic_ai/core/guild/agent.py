@@ -7,7 +7,7 @@ import inspect
 import logging
 from typing import Any, Callable, Dict, Generic, List, Optional, Type, TypeVar
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from rustic_ai.core.agents.commons.message_formats import ErrorMessage
 from rustic_ai.core.guild.agent_ext.depends import DependencyResolver
@@ -35,6 +35,15 @@ from rustic_ai.core.messaging.core.message import (
 from rustic_ai.core.state.models import StateOwner, StateUpdateRequest
 from rustic_ai.core.utils import GemstoneGenerator, GemstoneID, JsonDict
 from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
+
+
+class SelfReadyNotification(BaseModel):
+    """
+    Notification message to indicate that the agent is ready to process messages.
+    This is sent to the agent itself.
+    """
+
+    message: str = Field(default="Agent is ready")
 
 
 class AgentType(Enum):
@@ -85,6 +94,8 @@ class Agent(Generic[APT], metaclass=AgentMetaclass):  # type: ignore
         self.description = agent_spec.description
         self.mode = agent_mode
         self.handled_formats = handled_formats
+        self._self_topic: str = GuildTopics.get_self_topic(self.id)
+
         self.subscribed_topics = agent_spec.subscribed_topics
 
         self._dependency_resolvers: Dict[str, DependencyResolver] = {}
@@ -102,6 +113,99 @@ class Agent(Generic[APT], metaclass=AgentMetaclass):  # type: ignore
             AgentSpec: The specification for the agent.
         """
         return self._agent_spec
+
+    def _send_to_self(
+        self,
+        payload: BaseModel,
+        new_thread: bool = True,
+        origin_message: Optional[Message] = None,
+        is_error_message: bool = False,
+    ) -> GemstoneID:
+        """
+        Sends a message to the agent itself.
+
+        Returns:
+            GemstoneID: The ID of the message sent to the agent.
+        """
+        return self._send_dict_to_self(
+            payload=payload.model_dump(),
+            format=get_qualified_class_name(payload.__class__),
+            new_thread=new_thread,
+            origin_message=origin_message,
+            is_error_message=is_error_message,
+        )
+
+    def _send_dict_to_self(
+        self,
+        payload: JsonDict,
+        priority: Priority = Priority.NORMAL,
+        format: str = MessageConstants.RAW_JSON_FORMAT,
+        new_thread: bool = True,
+        origin_message: Optional[Message] = None,
+        is_error_message: bool = False,
+    ) -> GemstoneID:
+        """
+        Sends a message to the agent itself.
+
+        Args:
+            payload (JsonDict): The payload of the message.
+            priority (Priority): The priority of the message.
+            format (str): The format of the message.
+            new_thread (bool): Whether to create a new thread for the message.
+            origin_message (Message): The message that is sending the message.
+            is_error_message (bool): Whether the message is an error message.
+
+        Returns:
+            GemstoneID: The ID of the message sent to the agent.
+        """
+
+        topics = [self._self_topic]
+        msg_id = self._generate_id(priority)
+
+        in_response_to: Optional[int] = None
+        recipient_list: List[AgentTag] = []
+        thread: List[int] = []
+        ttl: Optional[int] = None
+        message_history: List[ProcessEntry] = []
+        traceparent: Optional[str] = None
+
+        if origin_message:
+            in_response_to = origin_message.id
+            thread = origin_message.thread.copy()
+            if new_thread:
+                thread.append(msg_id.to_int())
+            ttl = origin_message.ttl
+
+            message_history = origin_message.message_history.copy()
+            message_history.append(
+                ProcessEntry(agent=self._agent_tag, origin=origin_message.id, result=msg_id.to_int())
+            )
+            traceparent = origin_message.traceparent
+
+        routing_slip = self.guild_spec.routes
+
+        msg = Message(
+            id_obj=msg_id,
+            topics=topics,
+            sender=self.get_agent_tag(),
+            payload=payload,
+            format=format,
+            in_response_to=in_response_to,
+            recipient_list=recipient_list,
+            thread=thread,
+            ttl=ttl,
+            message_history=message_history,
+            routing_slip=routing_slip,
+            is_error_message=is_error_message,
+            traceparent=traceparent,
+        )
+
+        self._client.publish(msg)
+
+        logging.debug(f"Sending to Self[{self.name}] {msg_id.to_int()}:")
+        logging.debug(f"{msg.model_dump()}")
+
+        return msg_id
 
     @classmethod
     def get_qualified_class_name(cls):
@@ -145,6 +249,18 @@ class Agent(Generic[APT], metaclass=AgentMetaclass):  # type: ignore
 
     def _get_client(self) -> Client:
         return self._client
+
+    def _notify_ready(self):
+        """
+        Notifies the agent is ready to itself.
+        This is used to notify the agent that it is ready to process messages.
+        """
+        self._send_to_self(
+            payload=SelfReadyNotification(),
+            new_thread=True,
+            origin_message=None,
+            is_error_message=False,
+        )
 
     def _set_generator(self, generator: GemstoneGenerator):
         """
@@ -237,12 +353,22 @@ class Agent(Generic[APT], metaclass=AgentMetaclass):  # type: ignore
         format_handlers: Dict[str, MessageHandler] = {}
         raw_handlers: Dict[str, MessageHandler] = {}
 
-        if message.topic_published_to not in GuildTopics.ESSENTIAL_TOPICS:
+        if (
+            message.topic_published_to not in GuildTopics.ESSENTIAL_TOPICS
+            and message.topic_published_to is not None
+            and not message.topic_published_to.startswith("agent_self:")
+        ):
             format_handlers = fh.get_handlers_for_format(message.format)
             raw_handlers = rh.get_handlers()
-        else:
+        elif message.topic_published_to in GuildTopics.ESSENTIAL_TOPICS or (
+            message.topic_published_to is not None and message.topic_published_to == self._self_topic
+        ):
             format_handlers = fh.get_essential_handlers_for_format(message.format)
             raw_handlers = rh.get_essential_handlers()
+        else:
+            logging.info(
+                f"[{self.name}:{self.id}] Agent skipped message from {message.sender.name}:{message.sender.id} - \n{message.model_dump()}"
+            )
 
         handlers = {**format_handlers, **raw_handlers}
         return handlers
@@ -639,6 +765,10 @@ class ProcessContext[MDT]:
         msg_id = self._get_id(priority)
         thread = self._origin_message.thread.copy()
 
+        logging.info(
+            f"Sending message to topics: {topics} from {self._agent.get_agent_tag()} in response to {in_response_to}"
+        )
+
         self._client.publish(
             Message(
                 id_obj=msg_id,
@@ -741,7 +871,16 @@ def processor(
 
         def wrapper(self: AT, msg: Message) -> None:
 
-            if (predicate is None or predicate(self, msg)) and (
+            logging.debug(f"Processing message {msg.id} for {self.get_agent_tag()}")
+
+            predicate_result = predicate(self, msg) if predicate else True
+
+            logging.debug(
+                f"Predicate result for {self.get_agent_tag()} on {func.__name__} with MessageFormat: {msg.format} "
+                f"and Predicate: {predicate}: {predicate_result}"
+            )
+
+            if (predicate_result) and (
                 not self._agent_spec.act_only_when_tagged or msg.is_tagged(self.get_agent_tag())
             ):
                 runtime_predicate = self._agent_spec.predicates.get(func.__name__)

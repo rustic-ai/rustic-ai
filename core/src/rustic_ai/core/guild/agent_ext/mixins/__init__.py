@@ -1,3 +1,3 @@
-from .health import HealthMixin, Heartbeat, HeartbeatResponse
+from .health import HealthCheckRequest, HealthConstants, HealthMixin, Heartbeat
 
-__all__ = ["HealthMixin", "HeartbeatResponse", "Heartbeat"]
+__all__ = ["HealthMixin", "Heartbeat", "HealthCheckRequest", "HealthConstants"]

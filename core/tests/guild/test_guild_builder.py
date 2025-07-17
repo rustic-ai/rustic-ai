@@ -1,5 +1,4 @@
 import importlib
-import os
 import time
 
 import pytest
@@ -18,11 +17,12 @@ from rustic_ai.core.agents.system.guild_manager_agent import (
     UserAgentCreationRequest,
     UserAgentCreationResponse,
 )
-from rustic_ai.core.agents.system.models import ConflictResponse
+from rustic_ai.core.agents.system.models import AgentListResponse, ConflictResponse
 from rustic_ai.core.agents.testutils.echo_agent import EchoAgent
 from rustic_ai.core.agents.testutils.probe_agent import ProbeAgent
 from rustic_ai.core.agents.utils.user_proxy_agent import UserProxyAgent
 from rustic_ai.core.guild import GSKC, AgentSpec
+from rustic_ai.core.guild.agent_ext.mixins.health import HealthConstants
 from rustic_ai.core.guild.builders import (
     AgentBuilder,
     GuildBuilder,
@@ -56,28 +56,37 @@ class TestGuildBuilder:
     exec_engine_clz: str = "rustic_ai.core.guild.execution.sync.sync_exec_@engine.SyncExecutionEngine"
 
     @pytest.fixture(
-        scope="class",
+        scope="function",  # Changed from class to function to access messaging_server
         params=[
             pytest.param(
-                MessagingConfig(
-                    backend_module="rustic_ai.core.messaging.backend",
-                    backend_class="InMemoryMessagingBackend",
-                    backend_config={},
-                ),
+                "InMemoryMessagingBackend",
                 id="InMemoryMessagingBackend",
             ),
             pytest.param(
-                MessagingConfig(
-                    backend_module="rustic_ai.core.messaging.backend.embedded_backend",
-                    backend_class="EmbeddedMessagingBackend",
-                    backend_config={"auto_start_server": True},
-                ),
+                "EmbeddedMessagingBackend",
                 id="EmbeddedMessagingBackend",
             ),
         ],
     )
-    def messaging(self, request) -> MessagingConfig:
-        return request.param
+    def messaging(self, request, messaging_server) -> MessagingConfig:
+        backend_type = request.param
+
+        if backend_type == "InMemoryMessagingBackend":
+            return MessagingConfig(
+                backend_module="rustic_ai.core.messaging.backend",
+                backend_class="InMemoryMessagingBackend",
+                backend_config={},
+            )
+        elif backend_type == "EmbeddedMessagingBackend":
+            # Use the shared messaging server from conftest.py
+            server, port = messaging_server
+            return MessagingConfig(
+                backend_module="rustic_ai.core.messaging.backend.embedded_backend",
+                backend_class="EmbeddedMessagingBackend",
+                backend_config={"auto_start_server": False, "port": port},
+            )
+        else:
+            raise ValueError(f"Unknown backend type: {backend_type}")
 
     @pytest.fixture
     def agent_spec(self) -> AgentSpec:
@@ -113,18 +122,8 @@ class TestGuildBuilder:
     def guild_description(self, guild_name):
         return f"description for {guild_name}"
 
-    @pytest.fixture
-    def database(self):
-        db = "sqlite:///test_rustic_app.db"
-
-        if os.path.exists("test_rustic_app.db"):
-            os.remove("test_rustic_app.db")
-
-        Metastore.initialize_engine(db)
-        Metastore.get_engine(db)
-        Metastore.create_db()
-        yield db
-        Metastore.drop_db()
+    # Removed duplicate database fixture - using the one from conftest.py instead
+    # This ensures each test gets a unique database file with proper cleanup
 
     def test_initialization(self, guild_id, guild_name, guild_description):
         spec = GuildBuilder(guild_id, guild_name, guild_description).build_spec()
@@ -277,7 +276,7 @@ class TestGuildBuilder:
         guild_name: str,
         guild_description: str,
     ):
-        yaml_path = importlib.resources.files("core.tests.resources.guild_specs").joinpath("test_guild.yaml")
+        yaml_path = importlib.resources.files("core.tests.resources.guild_specs").joinpath("test_guild.yaml")  # type: ignore
         new_spec = GuildBuilder.from_yaml_file(yaml_path).build_spec()
 
         assert new_spec.name == guild_name
@@ -345,7 +344,8 @@ class TestGuildBuilder:
 
         assert guild.routes == routing_slip
 
-        time.sleep(0.01)
+        time.sleep(0.5)  # Increased wait time for EmbeddedMessagingBackend
+        manager_name = f"GuildManagerAgent4{guild_id}"
 
         # Test if the echo agent is added to the metastore
         with Session(engine) as session:
@@ -359,7 +359,7 @@ class TestGuildBuilder:
             assert "EchoAgent" in agent_names
             assert "rustic_ai.core.agents.testutils.echo_agent.EchoAgent" in agent_classes
 
-            assert "test_guild_name_manager" in agent_names
+            assert manager_name in agent_names
             assert get_qualified_class_name(GuildManagerAgent) in agent_classes
 
         guild_store = GuildStore(engine)
@@ -388,11 +388,15 @@ class TestGuildBuilder:
         assert echo_agent_spec.act_only_when_tagged is False
 
         guild_manager_agent_spec = agent_specs[1]
-        assert guild_manager_agent_spec.name == "test_guild_name_manager"
+        assert guild_manager_agent_spec.name == manager_name
         assert guild_manager_agent_spec.class_name == get_qualified_class_name(GuildManagerAgent)
-        assert guild_manager_agent_spec.additional_topics == [GuildTopics.SYSTEM_TOPIC]
+        assert guild_manager_agent_spec.additional_topics == [
+            GuildTopics.SYSTEM_TOPIC,
+            HealthConstants.HEARTBEAT_TOPIC,
+            GuildTopics.GUILD_STATUS_TOPIC,
+        ]
         assert guild_manager_agent_spec.properties
-        assert guild_manager_agent_spec.listen_to_default_topic is True
+        assert guild_manager_agent_spec.listen_to_default_topic is False
         assert guild_manager_agent_spec.act_only_when_tagged is False
 
         probe_agent = (
@@ -414,14 +418,13 @@ class TestGuildBuilder:
             format=AgentListRequest,
         )
 
-        time.sleep(0.01)
+        time.sleep(1.0)  # Increased wait time to allow GuildManagerAgent to respond
 
         probe_agent_messages = probe_agent.get_messages()
         assert len(probe_agent_messages) == 1
-
-        agent_list_response = probe_agent_messages[0].payload
-        assert agent_list_response["agents"][0]["name"] == "EchoAgent"
-        assert agent_list_response["agents"][0]["class_name"] == get_qualified_class_name(EchoAgent)
+        agent_list_response = AgentListResponse.model_validate(probe_agent_messages[0].payload)
+        assert agent_list_response.agents[0].name == "EchoAgent"
+        assert agent_list_response.agents[0].class_name == get_qualified_class_name(EchoAgent)
 
         # Test the EchoAgent was launched correctly
         probe_agent.publish_dict(
@@ -532,6 +535,7 @@ class TestGuildBuilder:
         guild = builder.bootstrap(database, org_id)
 
         time.sleep(0.5)
+        manager_name = f"GuildManagerAgent4{guild_id}"
 
         with Session(engine) as session:
             guild_model = GuildModel.get_by_id(session, guild_id)
@@ -556,12 +560,16 @@ class TestGuildBuilder:
             assert echo_agent_spec.listen_to_default_topic is False
             assert echo_agent_spec.act_only_when_tagged is False
 
-            guild_manager_agent_spec = agent_specs["test_guild_name_manager"]
-            assert guild_manager_agent_spec.name == "test_guild_name_manager"
+            guild_manager_agent_spec = agent_specs[manager_name]
+            assert guild_manager_agent_spec.name == manager_name
             assert guild_manager_agent_spec.class_name == get_qualified_class_name(GuildManagerAgent)
-            assert guild_manager_agent_spec.additional_topics == [GuildTopics.SYSTEM_TOPIC]
+            assert guild_manager_agent_spec.additional_topics == [
+                GuildTopics.SYSTEM_TOPIC,
+                HealthConstants.HEARTBEAT_TOPIC,
+                GuildTopics.GUILD_STATUS_TOPIC,
+            ]
             assert guild_manager_agent_spec.properties
-            assert guild_manager_agent_spec.listen_to_default_topic is True
+            assert guild_manager_agent_spec.listen_to_default_topic is False
             assert guild_manager_agent_spec.act_only_when_tagged is False
 
             assert g2s.properties[GSKC.MESSAGING][GSKC.BACKEND_MODULE] == messaging.backend_module
@@ -572,6 +580,7 @@ class TestGuildBuilder:
         user_message_topic = UserProxyAgent.get_user_notifications_topic("test_user")
         user_message_forward_topic = "user_message_forward:test_user"
         user_outbox_topic = UserProxyAgent.get_user_outbox_topic("test_user")
+        user_system_notification_topic = UserProxyAgent.get_user_system_notifications_topic("test_user")
 
         probe_agent = (
             AgentBuilder(ProbeAgent)
@@ -583,6 +592,7 @@ class TestGuildBuilder:
             .add_additional_topic(user_message_topic)
             .add_additional_topic(user_message_forward_topic)
             .add_additional_topic(user_outbox_topic)
+            .add_additional_topic(user_system_notification_topic)
             .add_additional_topic("echo_topic")
             .add_additional_topic("default_topic")
             .build()
@@ -600,9 +610,19 @@ class TestGuildBuilder:
 
         probe_agent_messages = probe_agent.get_messages()
 
-        assert len(probe_agent_messages) == 1
+        assert len(probe_agent_messages) >= 2
 
-        user_agent_creation_response = UserAgentCreationResponse.model_validate(probe_agent_messages[0].payload)
+        only_user_agent_creation_response = [
+            message
+            for message in probe_agent_messages
+            if message.format == get_qualified_class_name(UserAgentCreationResponse)
+        ]
+
+        assert len(only_user_agent_creation_response) == 1
+
+        user_agent_creation_response = UserAgentCreationResponse.model_validate(
+            only_user_agent_creation_response[0].payload
+        )
 
         assert user_agent_creation_response.user_id == "test_user"
         assert user_agent_creation_response.agent_id
@@ -625,19 +645,21 @@ class TestGuildBuilder:
 
         assert len(probe_agent_messages) == 1
 
-        running_agents_response = probe_agent_messages[0].payload
+        running_agents_response = AgentListResponse.model_validate(probe_agent_messages[0].payload)
 
-        assert len(running_agents_response["agents"]) == 4
+        assert len(running_agents_response.agents) == 4
 
-        agent_names = [agent["name"] for agent in running_agents_response["agents"]]
+        agent_names = [agent.name for agent in running_agents_response.agents]
         agent_names.sort()
 
-        assert agent_names == [
-            "EchoAgent",
-            "ProbeAgent",
-            "test_guild_name_manager",
-            "test_user",
-        ]
+        assert sorted(agent_names) == sorted(
+            [
+                "EchoAgent",
+                "ProbeAgent",
+                manager_name,
+                "test_user",
+            ]
+        )
 
         probe_agent.clear_messages()
         # Test that the UserProxyAgent will forwards wrapped messages
@@ -666,6 +688,7 @@ class TestGuildBuilder:
         assert forwarded_message.topics == "echo_topic"
         assert forwarded_message.payload["message"] == "Hello, world! @EchoAgent"
         assert forwarded_message.sender.id == UserProxyAgent.get_user_agent_id("test_user")
+        assert forwarded_message.routing_slip is not None
         assert forwarded_message.routing_slip.get_steps_count() == 1
         assert forwarded_message.forward_header is None
         assert forwarded_message.recipient_list == [AgentTag(id="echo001", name="EchoAgent")]
@@ -757,12 +780,14 @@ class TestGuildBuilder:
         agent_names = [agent["name"] for agent in running_agents_response["agents"]]
         agent_names.sort()
 
-        assert agent_names == [
-            "EchoAgent",
-            "ProbeAgent",
-            "test_guild_name_manager",
-            "test_user",
-        ]
+        assert sorted(agent_names) == sorted(
+            [
+                "EchoAgent",
+                "ProbeAgent",
+                manager_name,
+                "test_user",
+            ]
+        )
 
         probe_agent.clear_messages()
 
@@ -873,9 +898,12 @@ class TestGuildBuilder:
 
         for message in probe_agent_messages:
             assert message.payload["message"] == "Broadcast message"
+            assert message.topics is not None
+            assert isinstance(message.topics, str)
             topic_type, user_id = message.topics.split(":")
             assert topic_type == "user_notifications"
             assert UserProxyAgent.get_user_agent_id(user_id) == message.sender.id
+            assert message.forward_header is not None
             assert message.forward_header.origin_message_id == msg_id_int
             assert message.forward_header.on_behalf_of.name == "ProbeAgent"
 
@@ -917,7 +945,11 @@ class TestGuildBuilder:
         assert default_topic_message.sender.id == UserProxyAgent.get_user_agent_id(user1)
 
         user_notifications = [
-            message for message in probe_agent_messages if message.topics.startswith("user_notifications")
+            message
+            for message in probe_agent_messages
+            if message.topics is not None
+            and isinstance(message.topics, str)
+            and message.topics.startswith("user_notifications")
         ]
 
         assert len(user_notifications) == 3
@@ -925,6 +957,8 @@ class TestGuildBuilder:
         notified_users = []
         for message in user_notifications:
             assert message.payload["message"] == "Hello, world!"
+            assert message.topics is not None
+            assert isinstance(message.topics, str)
             _, user_id = message.topics.split(":")
             assert message.sender.id == UserProxyAgent.get_user_agent_id(user_id)
             if message.forward_header:

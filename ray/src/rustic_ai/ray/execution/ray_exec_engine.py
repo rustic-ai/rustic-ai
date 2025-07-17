@@ -1,8 +1,8 @@
+import os
 from typing import Any, Dict, List, Optional, Type, Union
 
 import ray
 from ray.actor import ActorHandle
-import ray.util.state
 
 from rustic_ai.core.guild.agent import Agent, AgentSpec
 from rustic_ai.core.guild.dsl import GuildSpec
@@ -15,7 +15,7 @@ from .ray_agent_wrapper import RayAgentWrapper
 class RayExecutionEngine(ExecutionEngine):
     def __init__(self, guild_id: str, organization_id: str) -> None:
         super().__init__(guild_id=guild_id, organization_id=organization_id)
-        # Initialize Ray if not already done
+        # Ray must be initialized before using RayExecutionEngine.
         if not ray.is_initialized():
             raise Exception("Ray must be initialized before using RayExecutionEngine.")  # pragma: no cover
         self.agent_wrappers: Dict[str, Dict[str, RayAgentWrapper]] = {}
@@ -39,8 +39,13 @@ class RayExecutionEngine(ExecutionEngine):
         """
         # Instantiate the RayAgentWrapper with provided parameters. Note the use of Ray's remote function.
         guild_id = guild_spec.id
+
+        default_num_cpus = float(os.environ.get("RUSTIC_NUM_CPUS_PER_AGENT", "0.25"))
+
         agent_wrapper = RayAgentWrapper.options(
-            num_cpus=1,
+            num_cpus=agent_spec.resources.num_cpus if agent_spec.resources.num_cpus else default_num_cpus,
+            num_gpus=agent_spec.resources.num_gpus if agent_spec.resources.num_gpus else 0,
+            resources=agent_spec.resources.custom_resources if agent_spec.resources.custom_resources else {},
             name=agent_spec.id,
             namespace=self._get_namespace(),
             lifetime="detached",

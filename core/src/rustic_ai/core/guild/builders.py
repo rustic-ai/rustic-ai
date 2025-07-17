@@ -21,12 +21,14 @@ import yaml
 
 from rustic_ai.core.agents.testutils.probe_agent import ProbeAgent
 from rustic_ai.core.guild import Agent, Guild
+from rustic_ai.core.guild.agent_ext.mixins.health import HealthConstants
 from rustic_ai.core.guild.dsl import (
     APT,
     AgentSpec,
     BaseAgentProps,
     DependencySpec,
     GuildSpec,
+    GuildTopics,
 )
 from rustic_ai.core.guild.dsl import (
     RuntimePredicate,
@@ -599,6 +601,26 @@ class GuildBuilder:
 
         return guild
 
+    def load_or_launch(self, organization_id: str, skip_agents: List[str] = []) -> Guild:
+        """
+        Build and return a Guild instance with the set properties.
+        This WILL launch the agents in the guild if they are not already running, or just register them in the guild instance.
+        This method is useful when you want to load the guild from a saved state and launch it.
+        Note: This can be used directly in development and testing, but should not be used in production.
+        In production, use bootstrap().
+
+        Returns:
+            Guild: The built Guild instance.
+        """
+        guild_spec = self.build_spec()
+        guild = GuildHelper.shallow_guild_from_spec(guild_spec, organization_id)
+
+        for agent in guild_spec.agents:
+            if agent.id not in skip_agents:
+                guild.register_or_launch_agent(agent)
+
+        return guild
+
     def bootstrap(self, metastore_database_url: str, organization_id: str) -> Guild:
         """
         Build and return a Guild instance with the set properties.
@@ -614,15 +636,23 @@ class GuildBuilder:
 
         # Add GuildManagerAgent to the Guild.
         # Using class name instead of class to avoid circular import
+
         agent_spec = AgentSpec(  # type: ignore
+            id=f"{guild.id}#manager_agent",
             name=f"GuildManagerAgent4{guild.id}",
-            description=f"Guild Manager Agent for {guild.id}",
+            description=f"Guild Manager Agent for {guild.name}",
             class_name="rustic_ai.core.agents.system.guild_manager_agent.GuildManagerAgent",
             properties={
                 "guild_spec": guild_spec.model_dump(),
                 "database_url": metastore_database_url,
                 "organization_id": organization_id,
             },
+            additional_topics=[
+                GuildTopics.SYSTEM_TOPIC,
+                HealthConstants.HEARTBEAT_TOPIC,
+                GuildTopics.GUILD_STATUS_TOPIC,
+            ],
+            listen_to_default_topic=False,
         )
 
         try:

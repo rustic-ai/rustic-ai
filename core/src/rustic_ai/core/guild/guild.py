@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional, Type, Union
 from rustic_ai.core.guild import GSKC, Agent, AgentSpec, GuildSpec
 from rustic_ai.core.guild.dsl import DependencySpec
 from rustic_ai.core.guild.execution import ExecutionEngine
+from rustic_ai.core.guild.execution.sync.sync_exec_engine import SyncExecutionEngine
 from rustic_ai.core.messaging import MessageTrackingClient, MessagingConfig
 from rustic_ai.core.messaging.core.client import Client
 from rustic_ai.core.messaging.core.message import RoutingSlip
@@ -76,6 +77,17 @@ class Guild:
         assert isinstance(agent_spec, AgentSpec), "agent_spec must be an instance of AgentSpec"
         self._internal_add_agent(agent_spec, execution_engine)
 
+    def register_or_launch_agent(self, agent_spec: AgentSpec):
+        """
+        Registers an agent with the guild and uses the execution engine to run it.
+        """
+        if not self.execution_engine.is_agent_running(self.id, agent_spec.id):
+            logging.info(f"Launching agent {agent_spec.name} in guild {self.name}")
+            self.launch_agent(agent_spec, self.execution_engine)
+        else:
+            logging.info(f"Registering agent {agent_spec.name} in guild {self.name}")
+            self.register_agent(agent_spec)
+
     def _add_local_agent(self, agent: Agent, execution_engine: Optional[ExecutionEngine] = None):
         """
         Adds a local agent to the guild and uses the execution engine to run it.
@@ -87,6 +99,8 @@ class Guild:
             execution_engine: The execution engine to run the agent with.
         """
         assert isinstance(agent, Agent), "agent must be an instance of Agent"
+        if execution_engine is None:
+            execution_engine = SyncExecutionEngine(guild_id=self.id, organization_id=self.organization_id)
         self._internal_add_agent(agent, execution_engine)
 
     def _internal_add_agent(
@@ -145,6 +159,12 @@ class Guild:
         """
         return len(self._agents_by_id)
 
+    def is_agent_running(self, agent_id: str) -> bool:
+        """
+        Checks if the guild is running.
+        """
+        return self.execution_engine.is_agent_running(self.id, agent_id)
+
     def remove_agent(self, agent_id: str):
         """
         Removes an agent from the guild.
@@ -196,7 +216,7 @@ class Guild:
             properties={
                 GSKC.EXECUTION_ENGINE: self.execution_engine.get_qualified_class_name(),
                 GSKC.MESSAGING: self.messaging,
-                GSKC.CLIENT_TYPE: self.client_type,
+                GSKC.CLIENT_TYPE: self.client_type.get_qualified_class_name(),
                 GSKC.CLIENT_PROPERTIES: self.client_properties,
             },
             agents=self.list_agents(),

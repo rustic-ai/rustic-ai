@@ -1,11 +1,14 @@
+import logging
 from typing import Optional
 
 from sqlalchemy import Engine
+from sqlmodel import Session
 
 from rustic_ai.api_server.guilds.schema import GuildSpecResponse
 from rustic_ai.core.guild import GuildSpec
 from rustic_ai.core.guild.builders import GuildBuilder, GuildHelper
-from rustic_ai.core.guild.metastore import GuildStore
+from rustic_ai.core.guild.metastore import GuildModel, GuildStore, Metastore
+from rustic_ai.core.guild.metastore.models import AgentModel, GuildStatus
 
 
 class GuildService:
@@ -31,6 +34,18 @@ class GuildService:
 
         guild_spec.dependency_map = GuildHelper.get_guild_dependency_map(guild_spec)
 
+        engine = Metastore.get_engine(metastore_url)
+        with Session(engine) as session:
+            logging.info(f"Creating new guild : [{guild_spec}]")
+            guild_model = GuildModel.from_guild_spec(guild_spec, organization_id)
+            guild_model.status = GuildStatus.REQUESTED
+            session.add(guild_model)
+            # Add the agents to the Metastore
+            for guild_agent in guild_spec.agents:
+                agent_model = AgentModel.from_agent_spec(guild_spec.id, guild_agent)
+                session.add(agent_model)
+            session.commit()
+
         guild = GuildBuilder.from_spec(guild_spec).bootstrap(metastore_url, organization_id)
 
         return guild.id
@@ -54,4 +69,6 @@ class GuildService:
         if guild_spec is None:
             return None
 
-        return GuildSpecResponse(**guild_spec.model_dump(), status=guild_model.status)
+        return GuildSpecResponse(
+            **guild_spec.model_dump(), status=GuildStatus(guild_model.status) if guild_model else GuildStatus.UNKNOWN
+        )

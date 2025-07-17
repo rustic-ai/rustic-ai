@@ -9,6 +9,7 @@ from sqlalchemy import Engine
 from starlette import status
 
 from rustic_ai.api_server.guilds.schema import IdInfo
+from rustic_ai.api_server.guilds.service import GuildService
 from rustic_ai.core.guild.dsl import GuildSpec
 from rustic_ai.core.guild.metaprog.agent_registry import AgentEntry
 from rustic_ai.core.guild.metastore.database import Metastore
@@ -28,9 +29,11 @@ from .models import (
     BlueprintReviewCreate,
     BlueprintReviewResponse,
     BlueprintReviewsResponse,
+    LaunchGuildFromBlueprintRequest,
 )
 
 catalog_router = APIRouter()
+guild_service = GuildService()
 
 
 @catalog_router.post(
@@ -235,8 +238,10 @@ async def list_tags(engine: Engine = Depends(Metastore.get_engine)):
     status_code=status.HTTP_204_NO_CONTENT,
     operation_id="addGuildToBlueprint",
     tags=["blueprints"],
+    deprecated=True,
 )
 async def add_guild_to_blueprint(blueprint_id: str, guild_id: str, engine: Engine = Depends(Metastore.get_engine)):
+    """This API is deprecated. Please use `/blueprints/{blueprint_id}/guilds` instead to launch a guild from a blueprint."""
     CatalogStore(engine).add_guild_to_blueprint(blueprint_id, guild_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
@@ -427,3 +432,40 @@ def get_agent(class_name: str, engine: Engine = Depends(Metastore.get_engine)):
 )
 def get_message_schema(message_format: str, engine: Engine = Depends(Metastore.get_engine)):
     return CatalogStore(engine).get_agent_by_message_format(message_format)
+
+
+@catalog_router.post(
+    "/blueprints/{blueprint_id}/guilds",
+    response_model=IdInfo,
+    status_code=status.HTTP_201_CREATED,
+    operation_id="launchGuildFromBlueprint",
+    tags=["blueprints", "guilds"],
+)
+async def launch_guild_from_blueprint(
+    blueprint_id: str, launch_request: LaunchGuildFromBlueprintRequest, engine: Engine = Depends(Metastore.get_engine)
+):
+    blueprint = CatalogStore(engine).get_blueprint(blueprint_id)
+    if not blueprint:
+        raise HTTPException(status_code=404, detail="Blueprint not found")
+
+    try:
+        guild_spec = GuildSpec.model_validate(blueprint.spec)
+
+        # Update the guild name
+        guild_spec.name = launch_request.guild_name
+
+        # Update the description if provided
+        if launch_request.description is not None:
+            guild_spec.description = launch_request.description
+
+        guild_id = guild_service.create_guild(Metastore.get_db_url(), guild_spec, launch_request.org_id)
+
+        # Add the user to the guild
+        CatalogStore(engine).add_user_to_guild(guild_id, launch_request.user_id)
+
+        # Add the guild to the blueprint
+        CatalogStore(engine).add_guild_to_blueprint(blueprint_id, guild_id)
+
+        return IdInfo(id=guild_id)
+    except ValidationError as e:
+        raise HTTPException(status_code=400, detail=e.errors())

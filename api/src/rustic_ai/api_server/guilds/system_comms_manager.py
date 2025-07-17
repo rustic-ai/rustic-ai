@@ -1,4 +1,5 @@
 import asyncio
+from datetime import datetime
 import logging
 import random
 import time
@@ -20,10 +21,13 @@ from rustic_ai.core import (
     Priority,
 )
 from rustic_ai.core.agents.utils import UserProxyAgent
+from rustic_ai.core.guild.agent_ext.mixins.health import HealthCheckRequest
 from rustic_ai.core.guild.agent_ext.mixins.telemetry import TelemetryConstants
 from rustic_ai.core.guild.builders import GuildHelper
+from rustic_ai.core.guild.dsl import GuildTopics
 from rustic_ai.core.guild.metastore import GuildStore
 from rustic_ai.core.utils import GemstoneGenerator
+from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 
 
 class SystemCommunicationManager:
@@ -145,9 +149,9 @@ class SystemCommunicationManager:
             await websocket.close()
             return
         else:
-            await websocket.accept()
 
             loop = asyncio.get_running_loop()
+            user_agent_tag = AgentTag(id=f"sys_comms_socket:{user_id}")
 
             messaging: MessagingInterface = await self.get_or_create_messaging_interface(guild_spec)
             guild_client: Client = await self.create_guild_client(guild_id, user_id, messaging, websocket, loop)
@@ -156,7 +160,22 @@ class SystemCommunicationManager:
                 guild_client,
             )
 
-            user_agent_tag = AgentTag(id=f"sys_comms_socket:{user_id}")
+            messaging.subscribe(
+                GuildTopics.GUILD_STATUS_TOPIC,
+                guild_client,
+            )
+
+            guild_client.publish(
+                Message(
+                    id_obj=self._gemstone.get_id(Priority.HIGH),
+                    topics=[GuildTopics.GUILD_STATUS_TOPIC],
+                    sender=user_agent_tag,
+                    format=get_qualified_class_name(HealthCheckRequest),
+                    payload=HealthCheckRequest(checktime=datetime.now()).model_dump(),
+                )
+            )
+
+            await websocket.accept()
 
             try:
                 while True:

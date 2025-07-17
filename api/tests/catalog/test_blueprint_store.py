@@ -1,3 +1,6 @@
+import os
+import re
+
 import pytest
 
 from rustic_ai.api_server.catalog.catalog_store import BlueprintCreate, CatalogStore
@@ -17,19 +20,33 @@ from rustic_ai.core.guild.metastore.database import Metastore
 
 
 class TestCatalogStore:
-    @pytest.fixture(scope="module")
-    def catalog_engine(self):
-        db = "sqlite:///catalog_test.db"
+    @pytest.fixture
+    def catalog_engine(self, request):
+        # Generate unique database filename based on test name and worker
+        test_name = request.node.name
+        worker_id = os.environ.get("PYTEST_XDIST_WORKER", "master")
+
+        # Sanitize test name for filename
+        sanitized_test_name = re.sub(r"[^\w\-_.]", "_", test_name)
+        db_filename = f"catalog_store_test_{sanitized_test_name}_{worker_id}.db"
+        db_url = f"sqlite:///{db_filename}"
+
         Metastore.drop_db(unsafe=True)
-        Metastore.initialize_engine(db)
+        Metastore.initialize_engine(db_url)
         yield Metastore.get_engine()
         Metastore.drop_db(unsafe=True)
+
+        # Clean up database file
+        try:
+            os.remove(db_filename)
+        except FileNotFoundError:
+            pass
 
     @pytest.fixture
     def catalog_store(self, catalog_engine):
         return CatalogStore(catalog_engine)
 
-    def test_blueprint_actions(setup_data, catalog_store: CatalogStore):
+    def test_blueprint_actions(self, catalog_store: CatalogStore):
         echo_agent = AgentEntry(
             agent_name="EchoAgent",
             qualified_class_name="rustic_ai.core.agents.testutils.echo_agent.EchoAgent",

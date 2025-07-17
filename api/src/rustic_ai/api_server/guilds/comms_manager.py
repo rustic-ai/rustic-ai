@@ -146,8 +146,6 @@ class GuildCommunicationManager:
             await websocket.close()
             return
         else:
-            await websocket.accept()
-
             loop = asyncio.get_running_loop()
 
             messaging: MessagingInterface = await self.get_or_create_messaging_interface(guild_spec)
@@ -165,6 +163,8 @@ class GuildCommunicationManager:
                     payload=UserAgentCreationRequest(user_id=user_id, user_name=user_name).model_dump(),
                 )
             )
+
+            await websocket.accept()
 
             try:
                 while True:

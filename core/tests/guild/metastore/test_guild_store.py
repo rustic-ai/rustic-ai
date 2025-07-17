@@ -1,4 +1,5 @@
 import pytest
+from sqlalchemy import Engine
 
 from rustic_ai.core.agents.testutils.echo_agent import EchoAgent
 from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder
@@ -19,11 +20,29 @@ from rustic_ai.core.messaging.core.message import (
 class TestGuildStore:
 
     @pytest.fixture
-    def engine(self):
+    def engine(self, request):
+        import os
+        import re
+
+        # Generate unique database filename based on test name and worker
+        test_name = request.node.name
+        worker_id = os.environ.get("PYTEST_XDIST_WORKER", "master")
+
+        # Sanitize test name for filename
+        sanitized_test_name = re.sub(r"[^\w\-_.]", "_", test_name)
+        db_filename = f"rustic_store_test_{sanitized_test_name}_{worker_id}.db"
+        db_url = f"sqlite:///{db_filename}"
+
         Metastore.drop_db(True)
-        Metastore.initialize_engine("sqlite:///rustic_store_test.db")
+        Metastore.initialize_engine(db_url)
         yield Metastore.get_engine()
         Metastore.drop_db(True)
+
+        # Clean up database file
+        try:
+            os.remove(db_filename)
+        except FileNotFoundError:
+            pass
 
     @pytest.fixture
     def guild(self):
@@ -39,12 +58,13 @@ class TestGuildStore:
     def _get_guild(self, name):
         return GuildBuilder(name).set_name(name).set_description(name).build_spec()
 
-    def test_add_guild(self, engine, guild, org_id):
+    def test_add_guild(self, engine: Engine, guild, org_id):
         store = GuildStore(engine)
         gm1 = store.add_guild(guild, org_id)
         assert gm1.id == "guild1"
-        guild = store.get_guild(gm1.id)
-        assert guild.id == "guild1"
+        guild_model = store.get_guild(gm1.id)
+        assert guild_model is not None
+        assert guild_model.id == "guild1"
 
     def test_update_guild_status(self, engine, guild, org_id):
         store = GuildStore(engine)
@@ -86,6 +106,7 @@ class TestGuildStore:
 
         guild = store.get_guild(guild.id)
 
+        assert guild is not None
         assert len(guild.agents) == 2
         assert guild.agents[0].name == "agent1"
         assert guild.agents[1].name == "agent2"

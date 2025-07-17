@@ -17,10 +17,16 @@ from rustic_ai.core.utils.priority import Priority
 class GuildStatus(str, Enum):
     """Status values for Guild models."""
 
+    REQUESTED = "requested"
     STARTING = "starting"
     RUNNING = "running"
     STOPPED = "stopped"
     STOPPING = "stopping"
+    UNKNOWN = "unknown"
+    WARNING = "warning"
+    BACKLOGGED = "backlogged"
+    ERROR = "error"
+    PENDING_LAUNCH = "not_launched"
 
 
 class GuildRoutes(SQLModel, table=True):
@@ -188,7 +194,7 @@ class GuildModel(SQLModel, table=True):
 
     dependency_map: dict = Field(sa_column=Column(MutableDict.as_mutable(JSON(none_as_null=True)), default={}))
     # Use GuildStatus enum to ensure valid status values
-    status: str = Field()
+    status: str = Field(default=GuildStatus.UNKNOWN)
     routes: list[GuildRoutes] = Relationship(
         back_populates="guild",
         sa_relationship_kwargs={"cascade": "all", "lazy": "joined"},
