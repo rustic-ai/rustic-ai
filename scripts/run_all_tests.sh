@@ -17,9 +17,12 @@ cd "${PROJECT_ROOT}"
 # ───────────────── cleanup on exit ─────────────────────
 cleanup() {
     printf '🧹  Cleaning up…\n'
+    # kill uvicorn server and subprocesses    
     if [ -n "${UVICORN_PID:-}" ]; then
-        kill "${UVICORN_PID}" 2>/dev/null || :
+        pgid=$(ps -o pgid= -p "${UVICORN_PID}" | tr -d ' ')
+        kill -9 -"${pgid}" 2>/dev/null || :
         wait "${UVICORN_PID}" 2>/dev/null || :
+        kill -9 "${UVICORN_PID}" 2>/dev/null || :
     fi
     rm -f integration_testing_app.db
 }
