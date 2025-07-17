@@ -55,9 +55,9 @@ class TestServer:
                     backend_class="RedisMessagingBackend",
                     backend_config={
                         "redis_client": {
-                            "host": "localhost", 
+                            "host": "localhost",
                             "port": 6379,
-                            "pubsub_health_monitor_initial_delay": 0.1  # Fast startup for integration tests
+                            "pubsub_health_monitor_initial_delay": 0.1,  # Fast startup for integration tests
                         }
                     },
                 ),

@@ -40,7 +40,7 @@ class RayExecutionEngine(ExecutionEngine):
         # Instantiate the RayAgentWrapper with provided parameters. Note the use of Ray's remote function.
         guild_id = guild_spec.id
 
-        default_num_cpus = float(os.environ.get("RUSTIC_NUM_CPUS_PER_AGENT", "0.25"))
+        default_num_cpus = float(os.environ.get("RUSTIC_NUM_CPUS_PER_AGENT", "0.3"))
 
         agent_wrapper = RayAgentWrapper.options(
             num_cpus=agent_spec.resources.num_cpus if agent_spec.resources.num_cpus else default_num_cpus,

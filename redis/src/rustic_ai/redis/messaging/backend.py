@@ -68,7 +68,7 @@ class RedisMessagingBackend(MessagingBackend):
         Args:
             redis_client: A Redis client instance.
         """
-        self.r: redis.StrictRedis | redis.RedisCluster
+        self.r: redis.StrictRedis | redis.RedisCluster  # type: ignore[attr-ignored]
         self._config: Optional[RedisBackendConfig] = None
         self._pubsub_thread: Optional[threading.Thread] = None
         self._pubsub_health_thread: Optional[threading.Thread] = None
@@ -76,6 +76,10 @@ class RedisMessagingBackend(MessagingBackend):
         self._subscriptions: Dict[str, Callable[[Message], None]] = {}
         self._initialization_complete = False
         self._failure_callback: Optional[Callable[[Exception], None]] = None
+
+        # Reconnection state management
+        self._reconnection_in_progress = threading.Lock()
+        self._reconnection_active = False
 
         if isinstance(redis_client, dict):
             redis_client = RedisBackendConfig(**redis_client)
@@ -125,8 +129,12 @@ class RedisMessagingBackend(MessagingBackend):
         self._initialization_complete = True
         self._setup_pubsub()
 
-    def _setup_pubsub(self) -> None:
-        """Initialize pub/sub connection with retry logic."""
+    def _setup_pubsub(self, is_reconnection: bool = False) -> None:
+        """Initialize pub/sub connection with retry logic.
+
+        Args:
+            is_reconnection: True if this is being called during a reconnection attempt.
+        """
         try:
             self.p = self.r.pubsub(ignore_subscribe_messages=True)
             self.redis_thread = self.p.run_in_thread(sleep_time=0.001, daemon=True)
@@ -136,10 +144,25 @@ class RedisMessagingBackend(MessagingBackend):
                 self._start_pubsub_health_monitor()
 
             logging.info("Pub/sub connection established successfully")
+
+            # Clear reconnection flag on successful connection
+            if is_reconnection:
+                with self._reconnection_in_progress:
+                    self._reconnection_active = False
+
         except Exception as e:
             logging.error(f"Failed to setup pub/sub: {e}")
-            # Only start retry logic if initialization is complete to avoid race conditions
-            if self._initialization_complete and self._config and self._config.pubsub_retry_enabled:
+
+            # Only start retry logic if:
+            # 1. Initialization is complete (to avoid race conditions)
+            # 2. Retry is enabled
+            # 3. We're not already in a reconnection context (to prevent recursive calls)
+            if (
+                self._initialization_complete
+                and self._config
+                and self._config.pubsub_retry_enabled
+                and not is_reconnection
+            ):
                 self._schedule_pubsub_reconnect()
             elif self._config and self._config.pubsub_crash_on_failure:
                 # If retry is disabled but crash_on_failure is enabled, crash immediately
@@ -192,6 +215,13 @@ class RedisMessagingBackend(MessagingBackend):
         if not self._config or not self._config.pubsub_retry_enabled:
             return
 
+        # Prevent multiple concurrent reconnection attempts
+        with self._reconnection_in_progress:
+            if self._reconnection_active:
+                logging.debug("Reconnection already in progress, skipping new attempt")
+                return
+            self._reconnection_active = True
+
         config = self._config  # Type guard for mypy
 
         def reconnect_with_backoff():
@@ -205,53 +235,60 @@ class RedisMessagingBackend(MessagingBackend):
             start_time = time.time()
             attempt = 0
 
-            while not self._shutdown_event.is_set():
-                attempt += 1
-                elapsed_time = time.time() - start_time
+            try:
+                while not self._shutdown_event.is_set():
+                    attempt += 1
+                    elapsed_time = time.time() - start_time
 
-                # Check if we've exceeded limits
-                if attempt > max_attempts:
-                    error_msg = f"Redis pub/sub reconnection failed after {max_attempts} attempts"
-                    logging.error(error_msg)
-                    if crash_on_failure:
-                        # For fail-fast behavior, we need to crash the main process, not just this thread
-                        self._trigger_critical_failure(RedisConnectionFailureError(error_msg))
-                        return
-                    else:
-                        logging.warning("Max retry attempts exceeded, giving up on pub/sub reconnection")
-                        return
+                    # Check if we've exceeded limits
+                    if attempt > max_attempts:
+                        error_msg = f"Redis pub/sub reconnection failed after {max_attempts} attempts"
+                        logging.error(error_msg)
+                        if crash_on_failure:
+                            # For fail-fast behavior, we need to crash the main process, not just this thread
+                            self._trigger_critical_failure(RedisConnectionFailureError(error_msg))
+                            return
+                        else:
+                            logging.warning("Max retry attempts exceeded, giving up on pub/sub reconnection")
+                            return
 
-                if elapsed_time > max_total_time:
-                    error_msg = f"Redis pub/sub reconnection failed after {elapsed_time:.1f}s (max: {max_total_time}s)"
-                    logging.error(error_msg)
-                    if crash_on_failure:
-                        # For fail-fast behavior, we need to crash the main process, not just this thread
-                        self._trigger_critical_failure(RedisConnectionFailureError(error_msg))
-                        return
-                    else:
-                        logging.warning("Max retry time exceeded, giving up on pub/sub reconnection")
-                        return
+                    if elapsed_time > max_total_time:
+                        error_msg = (
+                            f"Redis pub/sub reconnection failed after {elapsed_time:.1f}s (max: {max_total_time}s)"
+                        )
+                        logging.error(error_msg)
+                        if crash_on_failure:
+                            # For fail-fast behavior, we need to crash the main process, not just this thread
+                            self._trigger_critical_failure(RedisConnectionFailureError(error_msg))
+                            return
+                        else:
+                            logging.warning("Max retry time exceeded, giving up on pub/sub reconnection")
+                            return
 
-                try:
-                    logging.info(f"Attempting pub/sub reconnection (attempt {attempt}/{max_attempts})...")
+                    try:
+                        logging.info(f"Attempting pub/sub reconnection (attempt {attempt}/{max_attempts})...")
 
-                    # Clean up old connection
-                    self._cleanup_pubsub()
+                        # Clean up old connection
+                        self._cleanup_pubsub()
 
-                    # Re-establish connection
-                    self._setup_pubsub()
+                        # Re-establish connection (pass is_reconnection=True to prevent recursive calls)
+                        self._setup_pubsub(is_reconnection=True)
 
-                    # Re-subscribe to all topics
-                    self._resubscribe_all()
+                        # Re-subscribe to all topics
+                        self._resubscribe_all()
 
-                    logging.info(f"Pub/sub reconnection successful after {attempt} attempts")
-                    break
-
-                except Exception as e:
-                    logging.warning(f"Pub/sub reconnection attempt {attempt} failed: {e}, retrying in {delay:.1f}s")
-                    if self._shutdown_event.wait(delay):
+                        logging.info(f"Pub/sub reconnection successful after {attempt} attempts")
                         break
-                    delay = min(delay * multiplier, max_delay)
+
+                    except Exception as e:
+                        logging.warning(f"Pub/sub reconnection attempt {attempt} failed: {e}, retrying in {delay:.1f}s")
+                        if self._shutdown_event.wait(delay):
+                            break
+                        delay = min(delay * multiplier, max_delay)
+            finally:
+                # Always clear the reconnection flag when done, regardless of success or failure
+                with self._reconnection_in_progress:
+                    self._reconnection_active = False
 
         # Run reconnection in background thread
         reconnect_thread = threading.Thread(target=reconnect_with_backoff, daemon=True, name="redis-pubsub-reconnect")
@@ -450,6 +487,10 @@ class RedisMessagingBackend(MessagingBackend):
         """
         # Signal shutdown to all background threads
         self._shutdown_event.set()
+
+        # Reset reconnection state to prevent any new reconnection attempts
+        with self._reconnection_in_progress:
+            self._reconnection_active = False
 
         # Clean up pub/sub connection
         self._cleanup_pubsub()
