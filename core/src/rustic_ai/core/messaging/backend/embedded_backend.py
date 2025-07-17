@@ -3,6 +3,7 @@ import base64
 from collections import defaultdict
 import json
 import logging
+import multiprocessing
 import threading
 import time
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple
@@ -17,7 +18,7 @@ EMBEDDED_SERVER_PORT = 31134
 
 # Global server instance
 _server_instance = None
-_server_lock = threading.Lock()
+_server_lock = multiprocessing.Lock()
 
 
 class SocketMessage:
@@ -528,9 +529,9 @@ class EmbeddedMessagingBackend(MessagingBackend):
         # Async event loop management
         self.loop: Optional[asyncio.AbstractEventLoop] = None
         self.client_thread: Optional[threading.Thread] = None
-        self._stop_event = threading.Event()
-        self._server_ready = threading.Event()
-        self._client_ready = threading.Event()
+        self._stop_event = multiprocessing.Event()
+        self._server_ready = multiprocessing.Event()
+        self._client_ready = multiprocessing.Event()
 
         # Command/response handling
         self._pending_responses: Dict[str, asyncio.Future] = {}
@@ -554,16 +555,16 @@ class EmbeddedMessagingBackend(MessagingBackend):
                 _server_instance = EmbeddedServer(self.host, self.port)
                 self.owned_server = _server_instance
 
-                # Start the server in a separate thread with its own event loop
-                server_thread = threading.Thread(target=self._run_server_thread, daemon=True)
-                server_thread.start()
+                # Start the server in a separate process with its own event loop
+                server_process = multiprocessing.Process(target=self._run_server_process, daemon=True)
+                server_process.start()
 
                 # Wait for server to be ready
                 if not self._server_ready.wait(timeout=5.0):
                     raise RuntimeError("Server failed to start within timeout")
 
-    def _run_server_thread(self):
-        """Run the server in its own thread with asyncio event loop."""
+    def _run_server_process(self):
+        """Run the server in its own process with asyncio event loop."""
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
 
@@ -580,7 +581,7 @@ class EmbeddedMessagingBackend(MessagingBackend):
                 loop.run_until_complete(asyncio.sleep(0.1))
 
         except Exception as e:
-            logging.error(f"Server thread error: {e}")
+            logging.error(f"Server process error: {e}")
             self._server_ready.set()  # Set even on error to avoid hanging
         finally:
             if self.owned_server and self.owned_server.running:
@@ -878,7 +879,7 @@ class EmbeddedMessagingBackend(MessagingBackend):
 
         # Clean up server if we own it
         if self.owned_server:
-            # Server cleanup is handled by its own thread
+            # The server process will shut down on its own when the stop event is set
             pass
 
     def supports_subscription(self) -> bool:
