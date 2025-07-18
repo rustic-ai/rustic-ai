@@ -85,10 +85,10 @@ class AgentWrapper(ABC):
 
         self.logger.debug(f"Agent dependencies: {agent_deps}")
 
-        dependecy_resolvers = {
+        dependency_resolvers = {
             dep.dependency_key: self._load_dependency_resolver(dep.dependency_key) for dep in agent_deps
         }
-        self.agent._set_dependency_resolvers(dependecy_resolvers)
+        self.agent._set_dependency_resolvers(dependency_resolvers)
         self.logger.info("Dependencies loaded")
 
         # Initialize the Messaging
