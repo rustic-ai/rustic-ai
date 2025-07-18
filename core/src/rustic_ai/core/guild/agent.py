@@ -202,8 +202,8 @@ class Agent(Generic[APT], metaclass=AgentMetaclass):  # type: ignore
 
         self._client.publish(msg)
 
-        logging.debug(f"Sending to Self[{self.name}] {msg_id.to_int()}:")
-        logging.debug(f"{msg.model_dump()}")
+        self.logger.debug(f"Sending to Self[{self.name}] {msg_id.to_int()}:")
+        self.logger.debug(f"{msg.model_dump()}")
 
         return msg_id
 
@@ -280,6 +280,8 @@ class Agent(Generic[APT], metaclass=AgentMetaclass):  # type: ignore
             guild_spec (GuildSpec): The spec for the guild this agent belongs to.
         """
         self.guild_spec = guild_spec
+        # Create a named logger for this class
+        self.logger = logging.getLogger(f"{guild_spec.id}.{guild_spec.name}.{self.name}")
 
     @property
     def guild_id(self) -> str:
@@ -366,7 +368,7 @@ class Agent(Generic[APT], metaclass=AgentMetaclass):  # type: ignore
             format_handlers = fh.get_essential_handlers_for_format(message.format)
             raw_handlers = rh.get_essential_handlers()
         else:
-            logging.info(
+            self.logger.info(
                 f"[{self.name}:{self.id}] Agent skipped message from {message.sender.name}:{message.sender.id} - \n{message.model_dump()}"
             )
 
