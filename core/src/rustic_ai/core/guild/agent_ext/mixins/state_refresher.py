@@ -1,7 +1,8 @@
 from typing import Optional
 
 from rustic_ai.core.guild.agent import ProcessContext, processor
-from rustic_ai.core.messaging import JsonDict
+from rustic_ai.core.guild.dsl import GuildTopics
+from rustic_ai.core.messaging import JsonDict, Priority
 from rustic_ai.core.state.models import (
     StateFetchRequest,
     StateFetchResponse,
@@ -10,6 +11,7 @@ from rustic_ai.core.state.models import (
     StateUpdateRequest,
     StateUpdateResponse,
 )
+from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 
 
 class StateRefresherMixin:
@@ -96,16 +98,20 @@ class StateRefresherMixin:
         """
         Update the state of the guild.
         """
-        ctx.send(
-            StateUpdateRequest(
-                state_owner=StateOwner.GUILD,
-                guild_id=self.guild_id,
-                update_format=update_format,
-                state_update=update,
-                update_path=update_path,
-                update_version=update_version,
-                update_timestamp=update_timestamp,
-            )
+        gsu = StateUpdateRequest(
+            state_owner=StateOwner.GUILD,
+            guild_id=self.guild_id,
+            update_format=update_format,
+            state_update=update,
+            update_path=update_path,
+            update_version=update_version,
+            update_timestamp=update_timestamp,
+        )
+        ctx._raw_send(
+            priority=Priority.NORMAL,
+            topics=[GuildTopics.SYSTEM_TOPIC],
+            payload=gsu.model_dump(),
+            format=get_qualified_class_name(StateUpdateRequest),
         )
 
     @processor(StateFetchResponse, handle_essential=True)
