@@ -50,6 +50,7 @@ from rustic_ai.core.state.manager.in_memory_state_manager import InMemoryStateMa
 from rustic_ai.core.utils import class_utils
 from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 from rustic_ai.core.utils.jexpr import JxScript
+from rustic_ai.core.state.manager.state_manager import StateUpdateActions
 
 
 class KeyConstants:
@@ -995,7 +996,7 @@ class RouteBuilder:
                 update_agent_state.serialize() if isinstance(update_agent_state, JxScript) else update_agent_state
             )
         )
-        self.rule_dict["agent_state_update"] = state_transformer
+        self.rule_dict[StateUpdateActions.AGENT_STATE_UPDATE] = state_transformer
         return self
 
     def set_guild_state_update(self, update_guild_state: Union[JxScript, str]) -> "RouteBuilder":
@@ -1004,7 +1005,7 @@ class RouteBuilder:
                 update_guild_state.serialize() if isinstance(update_guild_state, JxScript) else update_guild_state
             )
         )
-        self.rule_dict["guild_state_update"] = state_transformer
+        self.rule_dict[StateUpdateActions.GUILD_STATE_UPDATE] = state_transformer
         return self
 
     def build(self) -> RoutingRule:

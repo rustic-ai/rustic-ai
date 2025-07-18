@@ -20,6 +20,11 @@ class StateUpdaters(Enum):
     JSON_MERGE_PATCH = json_merge_patch_updater.JsonMergePatchUpdater
 
 
+class StateUpdateActions(Enum):
+    AGENT_STATE_UPDATE = "agent_state_update"
+    GUILD_STATE_UPDATE = "guild_state_update"
+
+
 class StateManager(ABC):
 
     updaters: Dict[StateUpdateFormat, Type[StateUpdater]] = {
