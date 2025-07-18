@@ -44,6 +44,9 @@ class AgentWrapper(ABC):
             client_properties: Properties to initialize the client with.
             dependencies: A dictionary of dependencies for the agent.
         """
+        # Create a named logger for this class
+        self.logger = logging.getLogger(f"{guild_spec.id}.{guild_spec.name}.{agent_spec.name}")
+
         self.agent: Optional[Agent] = None
 
         if isinstance(agent_spec, Agent):
@@ -66,30 +69,32 @@ class AgentWrapper(ABC):
         """
         Common logic for initializing the agent with the Messaging and its client.
         """
-        logging.info(f"Starting initialization of agent {self.agent_spec.name} from class {self.agent_spec.class_name}")
+        self.logger.info(
+            f"Starting initialization of agent {self.agent_spec.name} from class {self.agent_spec.class_name}"
+        )
         if self.agent is None:
             self.agent = create_agent_from_spec(self.agent_spec)
 
-        logging.debug("Agent object instance created")
+        self.logger.debug("Agent object instance created")
         # Set the guild_spec on the agent
         self.agent._set_guild_spec(self.guild_spec)
 
         # Initialize the agent's dependencies
-        logging.debug(f"Loading dependencies for agent {self.agent_spec.name}")
+        self.logger.debug(f"Loading dependencies for agent {self.agent_spec.name}")
         agent_deps = self.agent.list_all_dependencies()
 
-        logging.debug(f"Agent dependencies: {agent_deps}")
+        self.logger.debug(f"Agent dependencies: {agent_deps}")
 
-        dependecy_resolvers = {
+        dependency_resolvers = {
             dep.dependency_key: self._load_dependency_resolver(dep.dependency_key) for dep in agent_deps
         }
-        self.agent._set_dependency_resolvers(dependecy_resolvers)
-        logging.info("Dependencies loaded")
+        self.agent._set_dependency_resolvers(dependency_resolvers)
+        self.logger.info("Dependencies loaded")
 
         # Initialize the Messaging
-        logging.info(f"Initializing messaging from config: {self.messaging_config}")
+        self.logger.info(f"Initializing messaging from config: {self.messaging_config}")
         self.messaging = MessagingInterface(self.agent.guild_id, self.messaging_config)
-        logging.debug(f"Messaging initialized: {self.messaging}")
+        self.logger.debug(f"Messaging initialized: {self.messaging}")
         self.messaging_owned = True
 
         client_properties = self.client_properties.copy()
@@ -101,7 +106,7 @@ class AgentWrapper(ABC):
 
         client = self.client_type(**client_properties)
         self.agent._set_client(client)
-        logging.debug(f"Client initialized: {client}")
+        self.logger.debug(f"Client initialized: {client}")
 
         generator = GemstoneGenerator(self.machine_id)
         self.agent._set_generator(generator)
@@ -110,10 +115,10 @@ class AgentWrapper(ABC):
         self.messaging.register_client(client)
         for topic in self.agent.subscribed_topics:
             self.messaging.subscribe(topic, client)
-            logging.debug(f"Client [{self.agent.name}:{self.agent.id}] registered and subscribed to topic: {topic}")
+            self.logger.debug(f"Client [{self.agent.name}:{self.agent.id}] registered and subscribed to topic: {topic}")
 
         # Notify the agent that it is ready to process messages
-        logging.info(f"Agent {self.agent_spec.name} is ready to process messages")
+        self.logger.info(f"Agent {self.agent_spec.name} is ready to process messages")
         self.agent._notify_ready()
 
     def _load_dependency_resolver(self, name: str) -> DependencyResolver:
