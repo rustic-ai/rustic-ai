@@ -47,10 +47,10 @@ from rustic_ai.core.messaging.core.message import (
     TransformationType,
 )
 from rustic_ai.core.state.manager.in_memory_state_manager import InMemoryStateManager
+from rustic_ai.core.state.manager.state_manager import StateUpdateActions
 from rustic_ai.core.utils import class_utils
 from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 from rustic_ai.core.utils.jexpr import JxScript
-from rustic_ai.core.state.manager.state_manager import StateUpdateActions
 
 
 class KeyConstants:
