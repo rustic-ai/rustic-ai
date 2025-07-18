@@ -40,7 +40,7 @@ class MessageTrackingClient(Client):
         heapq.heappush(self.message_heap, (message.id, message))
         self.new_message_event.set()
         if not self.is_processing:
-            logging.debug("{self.id} :: Starting message processing thread")
+            logging.debug(f"{self.id} :: Starting message processing thread")
             self.handle_message()
 
     def handle_message(self) -> None:
