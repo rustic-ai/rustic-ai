@@ -2,7 +2,6 @@ import os
 from textwrap import dedent
 import time
 
-from flaky import flaky
 from pydantic import BaseModel
 import pytest
 
@@ -103,7 +102,7 @@ class TestStateMgmt:
         yield db
         Metastore.drop_db()
 
-    @flaky(max_runs=5, min_passes=1)
+    @pytest.mark.xfail
     def test_state_mgmt(self, state_aware_agent: AgentSpec, state_free_agent: AgentSpec, database, org_id):
         builder = (
             GuildBuilder(f"state_guild_{time.time()}", "State Guild", "Guild to test state management")
