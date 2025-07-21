@@ -113,16 +113,16 @@ class ClientConnection:
             return False
 
     async def queue_message(self, topic: str, message_data: str) -> bool:
-        """Queue a message for delivery. Returns False if queue is full."""
+        """Queue a message for delivery. Returns False if connection is broken."""
         try:
             if not self.active:
                 return False
 
             msg = SocketMessage("MESSAGE", topic, message_data)
-            self.message_queue.put_nowait(msg)
+            await self.message_queue.put(msg)
             return True
-        except asyncio.QueueFull:
-            logging.warning(f"Message queue full for client {self.client_id}, dropping message")
+        except Exception as e:
+            logging.warning(f"Failed to queue message for client {self.client_id}: {e}")
             return False
 
     def close(self):
@@ -372,9 +372,6 @@ class EmbeddedServer:
 
             # Store in topic
             self.topics[topic].append(stored_msg)
-
-            # Keep topic messages sorted by timestamp
-            self.topics[topic].sort(key=lambda m: m["timestamp"])
 
             # Notify subscribers
             count = 0
