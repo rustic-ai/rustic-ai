@@ -21,8 +21,11 @@ cleanup() {
     if [ -n "${UVICORN_PID:-}" ]; then
         pgid=$(ps -o pgid= -p "${UVICORN_PID}" | tr -d ' ')
         kill -9 -"${pgid}" 2>/dev/null || :
+        # loop over all processes in the group
+        for pid in $(ps -o pid= -g "${pgid}"); do
+            kill -9 "${pid}" 2>/dev/null || :
+        done
         wait "${UVICORN_PID}" 2>/dev/null || :
-        kill -9 "${UVICORN_PID}" 2>/dev/null || :
     fi
     rm -f integration_testing_app.db
 }
