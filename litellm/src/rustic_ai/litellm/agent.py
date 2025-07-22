@@ -124,7 +124,8 @@ class LiteLLMAgent(Agent[LiteLLMConf]):
             }
 
             if tools:
-                full_prompt["tools"] = tools
+                # Convert ChatCompletionTool objects to dictionaries for litellm
+                full_prompt["tools"] = [tool.model_dump(exclude_none=True) for tool in tools]
 
             response = self._invoke_llm_and_process_response(ctx, full_prompt, all_messages)
 
