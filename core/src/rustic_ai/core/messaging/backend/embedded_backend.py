@@ -16,8 +16,7 @@ from rustic_ai.core.utils.gemstone_id import GemstoneID
 # Fixed port for the embedded server
 EMBEDDED_SERVER_PORT = 31134
 
-# Global server instance
-_server_instance = None
+# Global lock for server startup coordination
 _server_lock = multiprocessing.Lock()
 
 
@@ -158,10 +157,16 @@ class EmbeddedServer:
         # Background tasks
         self.tasks: List[asyncio.Task] = []
 
+        # Synchronization for shared data structures
+        self._data_lock: asyncio.Lock  # Will be initialized in start()
+
     async def start(self) -> str:
         """Start the asyncio server."""
         if self.running:
             return f"http://{self.host}:{self.port}"
+
+        # Initialize the data lock in the event loop context
+        self._data_lock = asyncio.Lock()
 
         self.server = await asyncio.start_server(self._handle_client, self.host, self.port)
         self.running = True
@@ -244,11 +249,14 @@ class EmbeddedServer:
                 pass
 
             connection.close()
-            self.connections.pop(client_id, None)
 
-            # Remove from all subscriptions
-            for topic_subs in self.subscribers.values():
-                topic_subs.discard(client_id)
+            # Protect shared data during cleanup
+            async with self._data_lock:
+                self.connections.pop(client_id, None)
+
+                # Remove from all subscriptions
+                for topic_subs in self.subscribers.values():
+                    topic_subs.discard(client_id)
 
             logging.debug(f"Client {client_id} disconnected")
 
@@ -325,8 +333,10 @@ class EmbeddedServer:
             return
 
         topic = args[0]
-        self.subscribers[topic].add(connection.client_id)
-        connection.subscriptions.add(topic)
+
+        async with self._data_lock:
+            self.subscribers[topic].add(connection.client_id)
+            connection.subscriptions.add(topic)
 
         await connection.send_message(SocketMessage("OK", "SUBSCRIBED", topic))
 
@@ -337,12 +347,14 @@ class EmbeddedServer:
             return
 
         topic = args[0]
-        self.subscribers[topic].discard(connection.client_id)
-        connection.subscriptions.discard(topic)
 
-        # Clean up empty subscriber sets
-        if not self.subscribers[topic]:
-            del self.subscribers[topic]
+        async with self._data_lock:
+            self.subscribers[topic].discard(connection.client_id)
+            connection.subscriptions.discard(topic)
+
+            # Clean up empty subscriber sets
+            if not self.subscribers[topic]:
+                del self.subscribers[topic]
 
         await connection.send_message(SocketMessage("OK", "UNSUBSCRIBED", topic))
 
@@ -368,14 +380,17 @@ class EmbeddedServer:
             if "ttl" in message_data and message_data["ttl"]:
                 stored_msg["ttl_expires"] = time.time() + message_data["ttl"]
 
-            self.messages[key] = stored_msg
+            # Protect shared data structures
+            async with self._data_lock:
+                self.messages[key] = stored_msg
+                # Store in topic
+                self.topics[topic].append(stored_msg)
+                # Get current subscribers (copy to avoid holding lock during I/O)
+                topic_subscribers = set(self.subscribers.get(topic, set()))
 
-            # Store in topic
-            self.topics[topic].append(stored_msg)
-
-            # Notify subscribers
+            # Notify subscribers (outside the lock to avoid blocking other operations)
             count = 0
-            for client_id in self.subscribers.get(topic, set()):
+            for client_id in topic_subscribers:
                 if client_id in self.connections:
                     success = await self.connections[client_id].queue_message(topic, message_json)
                     if success:
@@ -395,9 +410,11 @@ class EmbeddedServer:
         topic = args[0]
         messages = []
 
-        for stored_msg in self.topics.get(topic, []):
-            if not self._is_message_expired(stored_msg):
-                messages.append(stored_msg["data"])
+        # Protect reading from shared data
+        async with self._data_lock:
+            for stored_msg in self.topics.get(topic, []):
+                if not self._is_message_expired(stored_msg):
+                    messages.append(stored_msg["data"])
 
         # Sort by priority first (lower values = higher priority), then by message ID
         messages.sort(key=lambda m: (m.get("priority", 4), m.get("id", 0)))
@@ -420,12 +437,14 @@ class EmbeddedServer:
             return
 
         messages = []
-        for stored_msg in self.topics.get(topic, []):
-            if not self._is_message_expired(stored_msg):
-                # Compare timestamps like InMemoryBackend does
-                stored_timestamp = stored_msg["data"].get("timestamp", 0)
-                if stored_timestamp > timestamp_since:
-                    messages.append(stored_msg["data"])
+        # Protect reading from shared data
+        async with self._data_lock:
+            for stored_msg in self.topics.get(topic, []):
+                if not self._is_message_expired(stored_msg):
+                    # Compare timestamps like InMemoryBackend does
+                    stored_timestamp = stored_msg["data"].get("timestamp", 0)
+                    if stored_timestamp > timestamp_since:
+                        messages.append(stored_msg["data"])
 
         # Sort by priority first (lower values = higher priority), then by message ID
         messages.sort(key=lambda m: (m.get("priority", 4), m.get("id", 0)))
@@ -480,18 +499,20 @@ class EmbeddedServer:
             while self.running:
                 await asyncio.sleep(30)  # Clean up every 30 seconds
 
-                # Clean up messages
-                expired_keys = []
-                for key, stored_msg in self.messages.items():
-                    if self._is_message_expired(stored_msg):
-                        expired_keys.append(key)
+                # Protect shared data during cleanup
+                async with self._data_lock:
+                    # Clean up messages
+                    expired_keys = []
+                    for key, stored_msg in self.messages.items():
+                        if self._is_message_expired(stored_msg):
+                            expired_keys.append(key)
 
-                for key in expired_keys:
-                    del self.messages[key]
+                    for key in expired_keys:
+                        del self.messages[key]
 
-                # Clean up topic messages
-                for topic, messages in self.topics.items():
-                    self.topics[topic] = [msg for msg in messages if not self._is_message_expired(msg)]
+                    # Clean up topic messages
+                    for topic, messages in self.topics.items():
+                        self.topics[topic] = [msg for msg in messages if not self._is_message_expired(msg)]
 
                 if expired_keys:
                     logging.debug(f"Cleaned up {len(expired_keys)} expired messages")
@@ -533,7 +554,7 @@ class EmbeddedMessagingBackend(MessagingBackend):
         # Command/response handling
         self._pending_responses: Dict[str, asyncio.Future] = {}
         self._response_counter = 0
-        self._response_lock = asyncio.Lock() if asyncio._get_running_loop() is None else None
+        self._response_lock: Optional[asyncio.Lock] = None  # Created in event loop context
 
         # Track subscription handler tasks for proper cleanup
         self._subscription_tasks: Set[asyncio.Task] = set()
@@ -543,22 +564,41 @@ class EmbeddedMessagingBackend(MessagingBackend):
 
         self._start_async_client()
 
+    def _test_server_connection(self) -> bool:
+        """Test if server is reachable with a quick connection attempt."""
+        try:
+            import socket
+
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                sock.settimeout(1.0)  # Quick timeout
+                result = sock.connect_ex((self.host, self.port))
+                return result == 0  # 0 means connection successful
+        except Exception:
+            return False
+
     def _ensure_server_running(self):
-        """Ensure the socket server is running."""
-        global _server_instance
+        """Ensure the socket server is running by attempting to connect."""
+        # Try to connect to see if server is already running
+        if self._test_server_connection():
+            logging.debug(f"Server already running on {self.host}:{self.port}")
+            return
 
+        # Server not reachable, start a new one
+        logging.debug(f"Starting new server on {self.host}:{self.port}")
         with _server_lock:
-            if _server_instance is None or not _server_instance.running:
-                _server_instance = EmbeddedServer(self.host, self.port)
-                self.owned_server = _server_instance
+            # Double-check after acquiring lock (another process might have started it)
+            if self._test_server_connection():
+                return
 
-                # Start the server in a separate process with its own event loop
-                server_process = multiprocessing.Process(target=self._run_server_process, daemon=True)
-                server_process.start()
+            self.owned_server = EmbeddedServer(self.host, self.port)
 
-                # Wait for server to be ready
-                if not self._server_ready.wait(timeout=5.0):
-                    raise RuntimeError("Server failed to start within timeout")
+            # Start the server in a separate process with its own event loop
+            server_process = multiprocessing.Process(target=self._run_server_process, daemon=True)
+            server_process.start()
+
+            # Wait for server to be ready
+            if not self._server_ready.wait(timeout=5.0):
+                raise RuntimeError("Server failed to start within timeout")
 
     def _run_server_process(self):
         """Run the server in its own process with asyncio event loop."""

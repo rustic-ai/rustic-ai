@@ -49,6 +49,7 @@ class RayExecutionEngine(ExecutionEngine):
             name=agent_spec.id,
             namespace=self._get_namespace(),
             lifetime="detached",
+            max_restarts=3,
         ).remote(  # type: ignore
             guild_spec=guild_spec,
             agent_spec=agent_spec,

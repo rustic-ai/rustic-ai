@@ -66,7 +66,7 @@ class RayAgentWrapper(AgentWrapper):
 
         except Exception as e:
             logging.error(f"Error initializing agent {self.agent_spec.name}: {e}", exc_info=True)
-            raise e
+            ray.actor.exit_actor()
 
     def get_agent_spec(self):
         return self.agent_spec  # pragma: no cover
