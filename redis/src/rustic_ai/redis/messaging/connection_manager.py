@@ -4,6 +4,7 @@ from typing import Dict, Optional, Union
 
 from pydantic import BaseModel, Field
 import redis
+from redis.cluster import ClusterNode
 
 
 class RedisBackendConfig(BaseModel):
@@ -97,12 +98,7 @@ class RedisConnectionManager:
         """Create a Redis client from configuration."""
         if config.is_cluster:
             return redis.RedisCluster(
-                startup_nodes=[
-                    {
-                        "host": config.host,
-                        "port": config.port,
-                    }
-                ],
+                startup_nodes=[ClusterNode(config.host, config.port)],
                 username=config.username,
                 password=config.password,
                 ssl=config.ssl,
