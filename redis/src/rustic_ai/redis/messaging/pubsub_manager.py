@@ -1,17 +1,19 @@
 """Redis pub/sub manager for handling publish/subscribe operations."""
 
 import logging
-import random
-import ssl
 import threading
 import time
-from typing import Any, Callable, Dict, Optional, Union
+from typing import Callable, Dict, Optional, Union
 
 import redis
 
 from rustic_ai.core.messaging.core.message import Message
 from rustic_ai.redis.messaging.connection_manager import RedisBackendConfig
 from rustic_ai.redis.messaging.exceptions import RedisConnectionFailureError
+from rustic_ai.redis.messaging.retry_utils import (
+    calculate_exponential_backoff,
+    execute_with_retry,
+)
 
 
 class RedisPubSubManager:
@@ -48,7 +50,7 @@ class RedisPubSubManager:
             self._setup_internal()
 
         try:
-            self._execute_with_retry("Pub/sub setup", setup_operation)
+            execute_with_retry("Pub/sub setup", setup_operation, self.config, self.shutdown_event)
         except RedisConnectionFailureError:
             if self.config and self.config.pubsub_crash_on_failure:
                 raise
@@ -102,9 +104,7 @@ class RedisPubSubManager:
         self.shutdown_event.clear()
 
         self.health_thread = threading.Thread(
-            target=self._health_monitor_loop,
-            daemon=True,
-            name="redis-pubsub-health-monitor"
+            target=self._health_monitor_loop, daemon=True, name="redis-pubsub-health-monitor"
         )
         self.health_thread.start()
         logging.debug("Started new health monitor thread")
@@ -143,7 +143,9 @@ class RedisPubSubManager:
             handler: Callback function for messages
         """
         # Perform the subscription first
-        self._execute_with_retry(f"Subscribe to {topic}", self._subscribe_internal, topic, handler)
+        execute_with_retry(
+            f"Subscribe to {topic}", self._subscribe_internal, self.config, self.shutdown_event, topic, handler
+        )
 
         # Only store subscription after successful operation
         with self.lock:
@@ -157,7 +159,7 @@ class RedisPubSubManager:
             # Handle both bytes and string data for decode_responses compatibility
             message_data = redis_message["data"]
             if isinstance(message_data, bytes):
-                message_data = message_data.decode('utf-8')
+                message_data = message_data.decode("utf-8")
             handler(Message.from_json(message_data))
 
         logging.debug(f"Subscribing to topic: {topic}")
@@ -185,7 +187,7 @@ class RedisPubSubManager:
                 if self.pubsub:
                     self.pubsub.unsubscribe(topic)
 
-        self._execute_with_retry(f"Unsubscribe from {topic}", unsubscribe_operation)
+        execute_with_retry(f"Unsubscribe from {topic}", unsubscribe_operation, self.config, self.shutdown_event)
         logging.debug(f"Unsubscribed from topic: {topic}")
 
     def publish(self, topic: str, message: str) -> int:
@@ -204,80 +206,6 @@ class RedisPubSubManager:
         if hasattr(result, "__await__"):
             raise RuntimeError("Unexpected awaitable from synchronous Redis client")
         return result  # type: ignore
-
-    def _execute_with_retry(self, operation_name: str, operation_func: Callable, *args, **kwargs) -> Any:
-        """Execute an operation with retry logic."""
-        if not self.config or not self.config.pubsub_retry_enabled:
-            return operation_func(*args, **kwargs)
-
-        max_attempts = self.config.pubsub_immediate_retry_attempts
-        delay = self.config.pubsub_immediate_retry_delay
-        multiplier = self.config.pubsub_immediate_retry_multiplier
-
-        last_exception: Optional[Exception] = None
-
-        # Phase 1: Immediate retries
-        for attempt in range(max_attempts):
-            try:
-                result = operation_func(*args, **kwargs)
-                if attempt > 0:
-                    logging.info(f"{operation_name} succeeded after {attempt + 1} attempts")
-                return result
-
-            except (redis.exceptions.ConnectionError, ssl.SSLError, redis.exceptions.TimeoutError) as e:
-                last_exception = e
-
-                if attempt < max_attempts - 1:
-                    logging.warning(f"{operation_name} failed (attempt {attempt + 1}/{max_attempts}): {e}")
-
-                    if not self.shutdown_event.wait(delay):
-                        # Apply exponential backoff with jitter for immediate retries
-                        delay = min(delay * multiplier, self.config.pubsub_retry_max_delay)
-                        delay *= random.uniform(0.5, 1.5)  # Add jitter to prevent thundering herd
-                        continue
-                    else:
-                        raise RedisConnectionFailureError(f"{operation_name} aborted due to shutdown")
-                else:
-                    logging.warning(f"{operation_name} failed all {max_attempts} attempts: {e}")
-                    break
-
-            except Exception as e:
-                logging.error(f"{operation_name} failed with non-retryable error: {e}")
-                raise
-
-        # Phase 2: Synchronous reconnection attempt
-        logging.info(f"{operation_name} attempting synchronous reconnection...")
-        try:
-            self._cleanup()
-            self._setup_internal()
-
-            # Clear reconnection flag
-            with self.reconnection_lock:
-                self.reconnection_active = False
-
-            logging.info(f"{operation_name} synchronous reconnection successful")
-
-            # Phase 3: Final retry
-            try:
-                result = operation_func(*args, **kwargs)
-                logging.info(f"{operation_name} succeeded after reconnection")
-                return result
-
-            except (redis.exceptions.ConnectionError, ssl.SSLError, redis.exceptions.TimeoutError) as e:
-                logging.error(f"{operation_name} failed even after reconnection: {e}")
-                last_exception = e
-
-        except Exception as e:
-            logging.error(f"{operation_name} synchronous reconnection failed: {e}")
-            last_exception = e
-
-        # All attempts failed
-        error_msg = f"{operation_name} failed after all retry attempts"
-        if last_exception:
-            error_msg += f": {last_exception}"
-
-        logging.error(error_msg)
-        raise RedisConnectionFailureError(error_msg)
 
     def _schedule_reconnect(self) -> None:
         """Schedule pub/sub reconnection with exponential backoff."""
@@ -347,8 +275,7 @@ class RedisPubSubManager:
                         if self.shutdown_event.wait(delay):
                             break
                         # Apply exponential backoff with jitter to avoid herd reconnections
-                        delay = min(delay * multiplier, max_delay)
-                        delay *= random.uniform(0.5, 1.5)  # Add jitter to prevent thundering herd
+                        delay = calculate_exponential_backoff(delay, multiplier, max_delay)
             finally:
                 # Clear reconnection flag
                 with self.reconnection_lock:
@@ -364,7 +291,9 @@ class RedisPubSubManager:
             subscriptions_snapshot = self.subscriptions.copy()
 
         for topic, handler in subscriptions_snapshot.items():
-            self._execute_with_retry(f"Re-subscribe to {topic}", self._subscribe_internal, topic, handler)
+            execute_with_retry(
+                f"Re-subscribe to {topic}", self._subscribe_internal, self.config, self.shutdown_event, topic, handler
+            )
 
     def _trigger_critical_failure(self, exception: Exception) -> None:
         """Trigger a critical failure."""

@@ -1,9 +1,9 @@
 import logging
 import socket
-from typing import Optional, Dict, Union
+from typing import Dict, Optional, Union
 
-import redis
 from pydantic import BaseModel, Field
+import redis
 
 
 class RedisBackendConfig(BaseModel):

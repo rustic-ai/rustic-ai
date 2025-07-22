@@ -156,8 +156,8 @@ class EmbeddedServer:
 
         # Background tasks
         self.tasks: List[asyncio.Task] = []
-        
-        # Synchronization for shared data structures  
+
+        # Synchronization for shared data structures
         self._data_lock: asyncio.Lock  # Will be initialized in start()
 
     async def start(self) -> str:
@@ -249,11 +249,11 @@ class EmbeddedServer:
                 pass
 
             connection.close()
-            
+
             # Protect shared data during cleanup
             async with self._data_lock:
                 self.connections.pop(client_id, None)
-                
+
                 # Remove from all subscriptions
                 for topic_subs in self.subscribers.values():
                     topic_subs.discard(client_id)
@@ -333,7 +333,7 @@ class EmbeddedServer:
             return
 
         topic = args[0]
-        
+
         async with self._data_lock:
             self.subscribers[topic].add(connection.client_id)
             connection.subscriptions.add(topic)
@@ -347,7 +347,7 @@ class EmbeddedServer:
             return
 
         topic = args[0]
-        
+
         async with self._data_lock:
             self.subscribers[topic].discard(connection.client_id)
             connection.subscriptions.discard(topic)
@@ -380,7 +380,7 @@ class EmbeddedServer:
             if "ttl" in message_data and message_data["ttl"]:
                 stored_msg["ttl_expires"] = time.time() + message_data["ttl"]
 
-            # Protect shared data structures  
+            # Protect shared data structures
             async with self._data_lock:
                 self.messages[key] = stored_msg
                 # Store in topic
@@ -568,6 +568,7 @@ class EmbeddedMessagingBackend(MessagingBackend):
         """Test if server is reachable with a quick connection attempt."""
         try:
             import socket
+
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
                 sock.settimeout(1.0)  # Quick timeout
                 result = sock.connect_ex((self.host, self.port))

@@ -5,8 +5,10 @@ import redis
 from rustic_ai.core.messaging.core.message import Message
 from rustic_ai.core.messaging.core.messaging_backend import MessagingBackend
 from rustic_ai.core.utils import GemstoneID
-
-from rustic_ai.redis.messaging.connection_manager import RedisConnectionManager, RedisBackendConfig
+from rustic_ai.redis.messaging.connection_manager import (
+    RedisBackendConfig,
+    RedisConnectionManager,
+)
 from rustic_ai.redis.messaging.message_store import RedisMessageStore
 from rustic_ai.redis.messaging.pubsub_manager import RedisPubSubManager
 
@@ -23,17 +25,17 @@ class RedisMessagingBackend(MessagingBackend):
         """
         # Initialize connection manager
         self._connection_manager = RedisConnectionManager(redis_client)
-        
+
         # Get client and config from connection manager
         self.r = self._connection_manager.get_client()
         config = self._connection_manager.get_config()
-        
+
         # Initialize message store
         self._message_store = RedisMessageStore(self.r, config)
-        
+
         # Initialize pub/sub manager
         self._pubsub_manager = RedisPubSubManager(self.r, config)
-        
+
         # Setup pub/sub connection
         self._pubsub_manager.setup()
 
@@ -47,12 +49,7 @@ class RedisMessagingBackend(MessagingBackend):
             message: The message object to be stored.
         """
         # Use message store with pub/sub publish callback
-        self._message_store.store_message(
-            namespace,
-            topic,
-            message,
-            self._pubsub_manager.publish
-        )
+        self._message_store.store_message(namespace, topic, message, self._pubsub_manager.publish)
 
     def get_messages_for_topic(self, topic: str) -> List[Message]:
         """

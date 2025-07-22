@@ -2,16 +2,14 @@
 
 import logging
 import os
-import random
-import ssl
 from typing import Awaitable, Callable, List, Optional, Union
 
 import redis
 
 from rustic_ai.core.messaging.core.message import Message
-from rustic_ai.core.utils import GemstoneID
+from rustic_ai.core.utils.gemstone_id import GemstoneID
 from rustic_ai.redis.messaging.connection_manager import RedisBackendConfig
-from rustic_ai.redis.messaging.exceptions import RedisConnectionFailureError
+from rustic_ai.redis.messaging.retry_utils import execute_with_retry
 
 
 class RedisMessageStore:
@@ -65,7 +63,7 @@ class RedisMessageStore:
             )
 
         try:
-            self._execute_with_retry(f"Store message {message.id} to topic {topic}", store_operation)
+            execute_with_retry(f"Store message {message.id} to topic {topic}", store_operation, self.config)
         except Exception as e:
             logging.error(f"Atomic message storage failed for message {message.id} on topic {topic}: {e}")
             raise
@@ -91,7 +89,7 @@ class RedisMessageStore:
             # Sort by message.id like the original implementation for proper priority+timestamp ordering
             return sorted(messages, key=lambda msg: msg.id)
 
-        return self._execute_with_retry(f"Get messages for topic {topic}", get_operation)
+        return execute_with_retry(f"Get messages for topic {topic}", get_operation, self.config)
 
     def get_messages_for_topic_since(self, topic: str, msg_id_since: int) -> List[Message]:
         """
@@ -118,7 +116,7 @@ class RedisMessageStore:
             # Sort by ID to get proper priority+timestamp ordering
             return sorted(messages, key=lambda msg: msg.id)
 
-        return self._execute_with_retry(f"Get messages for topic {topic} since {msg_id_since}", get_operation)
+        return execute_with_retry(f"Get messages for topic {topic} since {msg_id_since}", get_operation, self.config)
 
     def get_next_message_for_topic_since(self, topic: str, last_message_id: int) -> Optional[Message]:
         """
@@ -142,13 +140,15 @@ class RedisMessageStore:
 
             if not raw_messages:
                 return None
-            
+
             # Sort by ID like the original and return the first one
             messages = [Message.from_json(raw_message) for raw_message in raw_messages]
             sorted_messages = sorted(messages, key=lambda msg: msg.id)
             return sorted_messages[0]
 
-        return self._execute_with_retry(f"Get next message for topic {topic} since {last_message_id}", get_operation)
+        return execute_with_retry(
+            f"Get next message for topic {topic} since {last_message_id}", get_operation, self.config
+        )
 
     def get_messages_by_id(self, namespace: str, msg_ids: List[int]) -> List[Message]:
         """
@@ -182,7 +182,7 @@ class RedisMessageStore:
                     result.append(Message.from_json(raw_message))
             return result
 
-        return self._execute_with_retry(f"Get messages by IDs for namespace {namespace}", get_operation)
+        return execute_with_retry(f"Get messages by IDs for namespace {namespace}", get_operation, self.config)
 
     @staticmethod
     def _get_msg_key(namespace: str, message_id: int) -> str:
@@ -201,52 +201,3 @@ class RedisMessageStore:
             float: The timestamp of the message.
         """
         return GemstoneID.from_int(msg_id).timestamp
-
-    def _execute_with_retry(self, operation_name: str, operation_func: Callable, *args, **kwargs):
-        """Execute an operation with retry logic."""
-        if not self.config or not self.config.pubsub_retry_enabled:
-            return operation_func(*args, **kwargs)
-
-        max_attempts = self.config.pubsub_immediate_retry_attempts
-        delay = self.config.pubsub_immediate_retry_delay
-        multiplier = self.config.pubsub_immediate_retry_multiplier
-
-        last_exception: Optional[Exception] = None
-
-        # Immediate retries with short delays
-        for attempt in range(max_attempts):
-            try:
-                result = operation_func(*args, **kwargs)
-                if attempt > 0:
-                    logging.info(f"{operation_name} succeeded after {attempt + 1} attempts")
-                return result
-
-            except (redis.exceptions.ConnectionError, ssl.SSLError, redis.exceptions.TimeoutError) as e:
-                last_exception = e
-
-                if attempt < max_attempts - 1:
-                    logging.warning(f"{operation_name} failed (attempt {attempt + 1}/{max_attempts}): {e}")
-
-                    # Simple sleep since we don't have shutdown event here
-                    import time
-
-                    time.sleep(delay)
-                    # Apply exponential backoff with jitter to avoid herd reconnections
-                    delay = min(delay * multiplier, self.config.pubsub_retry_max_delay)
-                    delay *= random.uniform(0.5, 1.5)  # Add jitter to prevent thundering herd
-                else:
-                    logging.warning(f"{operation_name} failed all {max_attempts} attempts: {e}")
-                    break
-
-            except Exception as e:
-                # Non-connection related errors should not be retried
-                logging.error(f"{operation_name} failed with non-retryable error: {e}")
-                raise
-
-        # All attempts failed
-        error_msg = f"{operation_name} failed after all retry attempts"
-        if last_exception:
-            error_msg += f": {last_exception}"
-
-        logging.error(error_msg)
-        raise RedisConnectionFailureError(error_msg)
