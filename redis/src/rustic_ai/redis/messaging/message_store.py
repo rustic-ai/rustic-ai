@@ -48,9 +48,9 @@ class RedisMessageStore:
 
         # Execute with retry logic
         def store_operation():
-            # Use Redis transaction (MULTI/EXEC) for atomic storage
-            with self.client.pipeline(transaction=True) as pipe:
-                # All commands execute atomically when pipe.execute() is called
+            # Use pipeline to execute commands in batch
+            # Note: We don't use transaction=True because it is not supported by RedisCluster
+            with self.client.pipeline(transaction=False) as pipe:
                 pipe.set(msg_key, message_json, ex=self.message_ttl)
                 # Use timestamp as score like the original implementation
                 pipe.zadd(topic, {message_json: message.timestamp})
