@@ -767,7 +767,7 @@ class ProcessContext[MDT]:
         msg_id = self._get_id(priority)
         thread = self._origin_message.thread.copy()
 
-        logging.info(
+        logging.debug(
             f"Sending message to topics: {topics} from {self._agent.get_agent_tag()} in response to {in_response_to}"
         )
 

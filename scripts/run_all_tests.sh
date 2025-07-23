@@ -40,6 +40,7 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 # -------- run everything inside its own session --------
+# Pass script name as $0, then all arguments
 setsid sh -c '
     echo $$ > .test_session_pid     # session leader PID for cleanup
 
@@ -58,12 +59,13 @@ setsid sh -c '
 
     sleep 5   # let the server bind
 
-    printf "🧪  Running pytest…\n"
+    # Arguments are already in correct positions ($1, $2, etc.)
+    printf "🧪  Running pytest with: \n"
     PYTHONFAULTHANDLER=true \
     coverage run --source=. --context=TESTS \
         --data-file="coverage/coverage-tests" \
         -m pytest -vvvv --showlocals "$@"
-' "$@" &
+' run_all_tests "$@" &
 SESSION_PID=$!
 
 # propagate pytest’s exit code
