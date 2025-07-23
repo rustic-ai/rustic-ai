@@ -40,7 +40,8 @@ class LiteLLM(LLM):
         }
 
         if tools:
-            full_prompt["tools"] = tools
+            # Convert ChatCompletionTool objects to dictionaries for litellm
+            full_prompt["tools"] = [tool.model_dump(exclude_none=True) for tool in tools]
 
         return full_prompt
 

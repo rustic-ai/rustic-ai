@@ -121,9 +121,9 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
                 f"Guild Manager has stored guild {guild_id} in the metastore - \n{self.guild_spec.model_dump()}"
             )
 
-            agent_health: JsonDict = (
-                {}
-            )  # We don't need stale guild health as we will refresh this once manager is ready
+            # We don't need stale guild health as we will refresh this once manager is ready
+            self.agent_health: JsonDict = {}
+            self.launch_triggered = False
 
             for agent_spec in self.guild_spec.agents:
                 if agent_spec.id == self.id:
@@ -131,21 +131,20 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
 
                 # Set all agents to pending launch, even if they are already running.
                 # It will stabilize once the agents send their first heartbeat or respond to the health check.
-                if agent_spec.id not in agent_health:
-                    agent_health[agent_spec.id] = Heartbeat(
-                        checktime=datetime.now(),
-                        checkstatus=HeartbeatStatus.PENDING_LAUNCH,
-                        checkmeta={},
-                    ).model_dump()
+                self.agent_health[agent_spec.id] = Heartbeat(
+                    checktime=datetime.now(),
+                    checkstatus=HeartbeatStatus.PENDING_LAUNCH,
+                    checkmeta={},
+                ).model_dump()
 
-            logging.info(f"Updating state with agent health: \n{agent_health}")
+            logging.info(f"Updating state with agent health: \n{self.agent_health}")
             self.state_manager.update_state(
                 StateUpdateRequest(
                     state_owner=StateOwner.GUILD,
                     guild_id=self.guild_id,
                     agent_id=self.id,
                     update_path="agents.health",
-                    state_update=agent_health,
+                    state_update=self.agent_health,
                 )
             )
 
@@ -206,19 +205,14 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
             topics=[GuildTopics.GUILD_STATUS_TOPIC],
         )
 
-    @processor(
-        SelfReadyNotification,
-        predicate=lambda self, msg: msg.sender == self.get_agent_tag() and msg.topic_published_to == self._self_topic,
-        handle_essential=True,
-    )
-    def launch_guild_agents(self, ctx: ProcessContext[SelfReadyNotification]) -> None:
-        """
-        Launches the guild agents.
-        """
+    def _launch_guild_agents(self, ctx: ProcessContext[SelfReadyNotification]) -> None:
+        if self.launch_triggered:
+            return  # Indicates that the guild is already launching or launched
+
+        self.launch_triggered = True
 
         guild_spec = self.original_guild_spec
         logging.info(f"Launching guild agents from {self.id} - \n{guild_spec.model_dump()}")
-        agent_health: JsonDict = {}  # We don't need stale guild health as we will refresh this once manager is ready
 
         for agent_spec in guild_spec.agents:
             if agent_spec.id == self.id:
@@ -226,21 +220,20 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
 
             # Set all agents to starting, even if they are already running.
             # It will stabilize once the agents send their first heartbeat or respond to the health check.
-            if agent_spec.id not in agent_health:
-                agent_health[agent_spec.id] = Heartbeat(
-                    checktime=datetime.now(),
-                    checkstatus=HeartbeatStatus.STARTING,
-                    checkmeta={},
-                ).model_dump()
+            self.agent_health[agent_spec.id] = Heartbeat(
+                checktime=datetime.now(),
+                checkstatus=HeartbeatStatus.STARTING,
+                checkmeta={},
+            ).model_dump()
 
-        logging.info(f"Updating state with agent health: \n{agent_health}")
+        logging.info(f"Updating state with agent health: \n{self.agent_health}")
         self.state_manager.update_state(
             StateUpdateRequest(
                 state_owner=StateOwner.GUILD,
                 guild_id=self.guild_id,
                 agent_id=self.id,
                 update_path="agents.health",
-                state_update=agent_health,
+                state_update=self.agent_health,
             )
         )
 
@@ -284,16 +277,16 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
 
         healths: List[Heartbeat] = []
 
-        for agent_id, heartbeat in agent_health.items():
+        for agent_id, heartbeat in self.agent_health.items():
             logging.info(f"Agent heartbeat {agent_id}: \n{heartbeat}")
             healths.append(Heartbeat.model_validate(heartbeat))
 
-        if agent_health:
+        if self.agent_health:
             ctx._raw_send(
                 priority=Priority.NORMAL,
                 format=get_qualified_class_name(AgentsHealthReport),
                 payload=AgentsHealthReport.model_validate(
-                    {"agents": {k: Heartbeat.model_validate(v) for k, v in agent_health.items()}}
+                    {"agents": {k: Heartbeat.model_validate(v) for k, v in self.agent_health.items()}}
                 ).model_dump(),
                 topics=[GuildTopics.GUILD_STATUS_TOPIC],
             )
@@ -305,6 +298,17 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
             payload=HealthCheckRequest().model_dump(),
             topics=[HealthConstants.HEARTBEAT_TOPIC],
         )
+
+    @processor(
+        SelfReadyNotification,
+        predicate=lambda self, msg: msg.sender == self.get_agent_tag() and msg.topic_published_to == self._self_topic,
+        handle_essential=True,
+    )
+    def launch_guild_agents(self, ctx: ProcessContext[SelfReadyNotification]) -> None:
+        """
+        Launches the guild agents.
+        """
+        self._launch_guild_agents(ctx)
 
     @processor(AgentLaunchRequest)
     def launch_agent(self, ctx: ProcessContext[AgentLaunchRequest]) -> None:
@@ -686,3 +690,27 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
             self.guild.remove_agent(self.id)
 
             logging.info(f"Guild {self.guild_id} stopped")
+
+    @processor(HealthCheckRequest, handle_essential=True)
+    def send_heartbeat(self, ctx: ProcessContext[HealthCheckRequest]):
+        checkmeta: dict = {}
+        if isinstance(self, Agent):
+            logging.info(f"Healthcheck from Guild Manager -- {self.get_agent_tag()}")
+            status = HeartbeatStatus.OK
+            checkmeta = {}
+            qos_latency = self._agent_spec.qos.latency
+            time_now = datetime.now()
+            checktime = ctx.payload.checktime
+            msg_latency = (time_now - checktime).total_seconds() * 1000  # Convert to milliseconds
+            if qos_latency and msg_latency > qos_latency:
+                status = HeartbeatStatus.BACKLOGGED
+
+            checkmeta["qos_latency"] = qos_latency
+            checkmeta["observed_latency"] = msg_latency
+
+        hr = Heartbeat(checktime=checktime, checkstatus=status, checkmeta=checkmeta)
+        ctx.send(hr)
+
+        # Trigger a guild launch, in case we missed the self ready notification
+        if not self.launch_triggered:
+            self._launch_guild_agents(ctx)
