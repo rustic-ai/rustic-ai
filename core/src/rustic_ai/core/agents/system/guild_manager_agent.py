@@ -691,25 +691,24 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
 
             logging.info(f"Guild {self.guild_id} stopped")
 
-    @agent.processor(HealthCheckRequest, handle_essential=True)
-    def send_heartbeat(self, ctx: agent.ProcessContext[HealthCheckRequest]):
+    @processor(HealthCheckRequest, handle_essential=True)
+    def send_heartbeat(self, ctx: ProcessContext[HealthCheckRequest]):
         checkmeta: dict = {}
-        if isinstance(self, agent.Agent):
+        if isinstance(self, Agent):
             logging.info(f"Healthcheck from Guild Manager -- {self.get_agent_tag()}")
             status = HeartbeatStatus.OK
             checkmeta = {}
-            if isinstance(self, agent.Agent):
-                qos_latency = self._agent_spec.qos.latency
-                time_now = datetime.now()
-                msg_latency = (time_now - ctx.payload.checktime).total_seconds() * 1000  # Convert to milliseconds
-                if qos_latency and msg_latency > qos_latency:
-                    status = HeartbeatStatus.BACKLOGGED
+            qos_latency = self._agent_spec.qos.latency
+            time_now = datetime.now()
+            checktime = ctx.payload.checktime
+            msg_latency = (time_now - checktime).total_seconds() * 1000  # Convert to milliseconds
+            if qos_latency and msg_latency > qos_latency:
+                status = HeartbeatStatus.BACKLOGGED
 
-                checkmeta["qos_latency"] = qos_latency
-
+            checkmeta["qos_latency"] = qos_latency
             checkmeta["observed_latency"] = msg_latency
 
-        hr = Heartbeat(checktime=datetime.now(), checkstatus=status, checkmeta=checkmeta)
+        hr = Heartbeat(checktime=checktime, checkstatus=status, checkmeta=checkmeta)
         ctx.send(hr)
 
         # Trigger a guild launch, in case we missed the self ready notification
