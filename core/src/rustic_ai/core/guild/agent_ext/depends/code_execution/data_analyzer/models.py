@@ -161,6 +161,7 @@ class LoadDatasetRequest(BaseModel):
         options: Format-specific read options (e.g., {'delimiter': ';'}).
         transformations: Optional list of transformations to apply immediately after loading.
         custom_name: Optional custom name override for the dataset.
+        additional_info: Optional additional information to return with dataset summary.
     """
 
     name: str
