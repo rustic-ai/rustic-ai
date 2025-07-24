@@ -226,20 +226,21 @@ class SystemCommunicationManager:
 
                         try:
                             logging.debug(f"Received message: {data}")
-                            message = Message(
-                                idg,
-                                topics=UserProxyAgent.get_user_system_requests_topic(user_id),
-                                sender=user_agent_tag,
-                                format=data["format"],
-                                payload=data["payload"],
-                                thread=[data["id"]],
-                                traceparent=traceparent,
-                            )
+                            if data.get('format') is not None and data.get('payload') is not None:
+                                message = Message(
+                                    idg,
+                                    topics=UserProxyAgent.get_user_system_requests_topic(user_id),
+                                    sender=user_agent_tag,
+                                    format=data["format"],
+                                    payload=data["payload"],
+                                    thread=[data["id"]],
+                                    traceparent=traceparent,
+                                )
 
-                            logging.debug(f"Publishing message: {message.model_dump_json()}")
+                                logging.debug(f"Publishing message: {message.model_dump_json()}")
 
-                            if message:
-                                guild_client.publish(message)
+                                if message:
+                                    guild_client.publish(message)
 
                         except ValueError as e:  # pragma: no cover
                             logging.error(f"Invalid message received: {e}")
