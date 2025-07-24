@@ -2,7 +2,7 @@ import mimetypes
 from typing import Literal, Optional
 import uuid
 
-from google.genai import types
+from google.genai import types, errors
 from google.genai.types import PersonGeneration, SafetyFilterLevel
 from pydantic import BaseModel
 
@@ -52,37 +52,47 @@ class VertexAiImagenAgent(Agent[VertexAiImagenAgentProps], VertexAIBase):
     def generate_image(self, ctx: agent.ProcessContext[VertexAiImageGenerationRequest], guild_fs: FileSystem) -> None:
         image_gen_request = ctx.payload
 
-        output_images = self.genai_client.models.generate_images(
-            model=self.conf.model_id,
-            prompt=image_gen_request.prompt,
-            config=types.GenerateImagesConfig(
-                negative_prompt=image_gen_request.negative_prompt,
-                number_of_images=image_gen_request.number_of_images,
-                aspect_ratio=image_gen_request.aspect_ratio,
-                guidance_scale=image_gen_request.guidance_scale,
-                language=image_gen_request.language,
-                seed=image_gen_request.seed,
-                add_watermark=self.conf.add_watermark,
-                safety_filter_level=self.conf.safety_filter_level,
-                person_generation=self.conf.person_generation,
-            ),
-        ).generated_images
-
         result = ImageGenerationResponse(files=[], errors=[], request=image_gen_request.model_dump_json())
-        for i, generated_image in enumerate(output_images):
-            if generated_image.image is not None:
-                # Note: the result is not a PIL.Image object but a custom Google one
-                image_obj: types.Image = generated_image.image
-                filename = f"{uuid.uuid4()}.{image_gen_request.image_format}"
-                try:
-                    with guild_fs.open(filename, "wb") as f:
-                        f.write(image_obj.image_bytes)
+        try:
+            model_response = self.genai_client.models.generate_images(
+                model=self.conf.model_id,
+                prompt=image_gen_request.prompt,
+                config=types.GenerateImagesConfig(
+                    negative_prompt=image_gen_request.negative_prompt,
+                    number_of_images=image_gen_request.number_of_images,
+                    aspect_ratio=image_gen_request.aspect_ratio,
+                    guidance_scale=image_gen_request.guidance_scale,
+                    language=image_gen_request.language,
+                    seed=image_gen_request.seed,
+                    add_watermark=self.conf.add_watermark,
+                    safety_filter_level=self.conf.safety_filter_level,
+                    person_generation=self.conf.person_generation,
+                ),
+            )
 
-                    # Create a MediaLink object for the image
-                    media_link = MediaLink(
-                        url=filename, name=filename, mimetype=mimetypes.guess_type(filename)[0], on_filesystem=True
-                    )
-                    result.files.append(media_link)
-                except Exception as e:
-                    result.errors.append(f"Failed to write image file {filename}:{e}")
-        ctx.send(result)
+            output_images = model_response.generated_images if model_response.generated_images else []
+            if not output_images:
+                self.logger.info(f"Failed to generate image. Prompt was: {image_gen_request.prompt}")
+                result.errors.append(f"Failed to generate image as the prompt was too complicated or triggered a safety mechanism.")
+            else:
+                for i, generated_image in enumerate(output_images):
+                    if generated_image.image is not None:
+                        # Note: the result is not a PIL.Image object but a custom Google one
+                        image_obj: types.Image = generated_image.image
+                        filename = f"{uuid.uuid4()}.{image_gen_request.image_format}"
+                        try:
+                            with guild_fs.open(filename, "wb") as f:
+                                f.write(image_obj.image_bytes)
+
+                            # Create a MediaLink object for the image
+                            media_link = MediaLink(
+                                url=filename, name=filename, mimetype=mimetypes.guess_type(filename)[0], on_filesystem=True
+                            )
+                            result.files.append(media_link)
+                        except Exception as e:
+                            result.errors.append(f"Failed to write image file {filename}:{e}")
+        except errors.APIError as generation_error:
+            self.logger.error(f"Failed to generate image: {generation_error.message}. Prompt was: {image_gen_request.prompt}")
+            result.errors.append(f"Failed to generate image. {generation_error.message}")
+        finally:
+            ctx.send(result)
