@@ -75,7 +75,7 @@ class DataAnalystToolset(Toolset):
             ),
             ToolSpec(
                 name=FUNC_QUERY_DATASET,
-                description="Run an DuckDB SQL (preferred) to filter, aggregate, or compute metrics such as ‘total sales’ or ‘average by month’.",
+                description="Run an SQL query to filter, aggregate, or compute metrics such as ‘total sales’ or ‘average by month’.",
                 parameter_class=QueryExecutionRequest,
             ),
             ToolSpec(

@@ -1,7 +1,8 @@
+from enum import Enum
 import time
 from typing import Any, Dict, List, Literal, Optional, Union
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from rustic_ai.core.agents.commons.media import MediaLink
 from rustic_ai.core.utils.json_utils import JsonDict
@@ -379,6 +380,11 @@ class CleanDatasetRequest(BaseModel):
         return f"{self.name}_cleaned_{time.time()}"
 
 
+class QueryLanguage(str, Enum):
+    SQL = "sql"
+    PANDAS_QUERY = "pandas_query"
+
+
 class QueryExecutionRequest(BaseModel):
     """Request to execute a query on one or more datasets.
 
@@ -390,7 +396,7 @@ class QueryExecutionRequest(BaseModel):
         explain: If True, return an explanation or query plan.
     """
 
-    query_language: str
+    query_language: QueryLanguage = Field(default=QueryLanguage.SQL)
     query_string: str
     input_datasets: Dict[str, str]
     output_dataset_name: Optional[str] = None

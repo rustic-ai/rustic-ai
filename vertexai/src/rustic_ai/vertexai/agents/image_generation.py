@@ -2,7 +2,7 @@ import mimetypes
 from typing import Literal, Optional
 import uuid
 
-from google.genai import types, errors
+from google.genai import errors, types
 from google.genai.types import PersonGeneration, SafetyFilterLevel
 from pydantic import BaseModel
 
@@ -73,7 +73,9 @@ class VertexAiImagenAgent(Agent[VertexAiImagenAgentProps], VertexAIBase):
             output_images = model_response.generated_images if model_response.generated_images else []
             if not output_images:
                 self.logger.info(f"Failed to generate image. Prompt was: {image_gen_request.prompt}")
-                result.errors.append(f"Failed to generate image as the prompt was too complicated or triggered a safety mechanism.")
+                result.errors.append(
+                    "Failed to generate image as the prompt was too complicated or triggered a safety mechanism."
+                )
             else:
                 for i, generated_image in enumerate(output_images):
                     if generated_image.image is not None:
@@ -86,13 +88,18 @@ class VertexAiImagenAgent(Agent[VertexAiImagenAgentProps], VertexAIBase):
 
                             # Create a MediaLink object for the image
                             media_link = MediaLink(
-                                url=filename, name=filename, mimetype=mimetypes.guess_type(filename)[0], on_filesystem=True
+                                url=filename,
+                                name=filename,
+                                mimetype=mimetypes.guess_type(filename)[0],
+                                on_filesystem=True,
                             )
                             result.files.append(media_link)
                         except Exception as e:
                             result.errors.append(f"Failed to write image file {filename}:{e}")
         except errors.APIError as generation_error:
-            self.logger.error(f"Failed to generate image: {generation_error.message}. Prompt was: {image_gen_request.prompt}")
+            self.logger.error(
+                f"Failed to generate image: {generation_error.message}. Prompt was: {image_gen_request.prompt}"
+            )
             result.errors.append(f"Failed to generate image. {generation_error.message}")
         finally:
             ctx.send(result)

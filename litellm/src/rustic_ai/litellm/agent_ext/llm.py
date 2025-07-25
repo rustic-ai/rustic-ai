@@ -48,7 +48,7 @@ class LiteLLM(LLM):
     def completion(self, prompt: ChatCompletionRequest):
         full_prompt = self._prep_prompt(prompt)
 
-        completion = litellm.completion(**full_prompt)
+        completion = litellm.completion(**full_prompt, verbose=True)
         response: ChatCompletionResponse = ResponseUtils.from_litellm(completion)
         return response
 
