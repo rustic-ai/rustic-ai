@@ -144,7 +144,7 @@ class TestHealthMixin:
         time.sleep(2)
 
         self_messages = msging.get_messages_for_topic_since(
-            GuildTopics.get_self_topic(echo_agent.id),
+            GuildTopics.get_agent_inbox(echo_agent.id),
             0,
         )
 

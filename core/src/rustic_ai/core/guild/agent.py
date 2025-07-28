@@ -94,7 +94,7 @@ class Agent(Generic[APT], metaclass=AgentMetaclass):  # type: ignore
         self.description = agent_spec.description
         self.mode = agent_mode
         self.handled_formats = handled_formats
-        self._self_topic: str = GuildTopics.get_self_topic(self.id)
+        self._self_inbox: str = GuildTopics.get_agent_inbox(self.id)
 
         self.subscribed_topics = agent_spec.subscribed_topics
 
@@ -159,7 +159,7 @@ class Agent(Generic[APT], metaclass=AgentMetaclass):  # type: ignore
             GemstoneID: The ID of the message sent to the agent.
         """
 
-        topics = [self._self_topic]
+        topics = [self._self_inbox]
         msg_id = self._generate_id(priority)
 
         in_response_to: Optional[int] = None
@@ -358,12 +358,12 @@ class Agent(Generic[APT], metaclass=AgentMetaclass):  # type: ignore
         if (
             message.topic_published_to not in GuildTopics.ESSENTIAL_TOPICS
             and message.topic_published_to is not None
-            and not message.topic_published_to.startswith("agent_self:")
+            and not message.topic_published_to.startswith(f"{GuildTopics.AGENT_INBOX_PREFIX}:")
         ):
             format_handlers = fh.get_handlers_for_format(message.format)
             raw_handlers = rh.get_handlers()
         elif message.topic_published_to in GuildTopics.ESSENTIAL_TOPICS or (
-            message.topic_published_to is not None and message.topic_published_to == self._self_topic
+            message.topic_published_to is not None and message.topic_published_to == self._self_inbox
         ):
             format_handlers = fh.get_essential_handlers_for_format(message.format)
             raw_handlers = rh.get_essential_handlers()

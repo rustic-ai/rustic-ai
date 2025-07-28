@@ -288,7 +288,7 @@ class UserProxyAgent(Agent[UserProxyAgentProps], GuildRefreshMixin):
 
     @processor(
         SelfReadyNotification,
-        predicate=lambda self, msg: msg.sender == self.get_agent_tag() and msg.topic_published_to == self._self_topic,
+        predicate=lambda self, msg: msg.sender == self.get_agent_tag() and msg.topic_published_to == self._self_inbox,
         handle_essential=True,
     )
     def send_initial_participants(self, ctx: ProcessContext[SelfReadyNotification]) -> None:

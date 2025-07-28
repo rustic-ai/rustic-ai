@@ -543,6 +543,7 @@ class EmbeddedMessagingBackend(MessagingBackend):
 
         # For owned server
         self.owned_server: Optional[EmbeddedServer] = None
+        self.server_process: Optional[multiprocessing.Process] = None
 
         # Async event loop management
         self.loop: Optional[asyncio.AbstractEventLoop] = None
@@ -593,11 +594,17 @@ class EmbeddedMessagingBackend(MessagingBackend):
             self.owned_server = EmbeddedServer(self.host, self.port)
 
             # Start the server in a separate process with its own event loop
-            server_process = multiprocessing.Process(target=self._run_server_process, daemon=True)
-            server_process.start()
+            self.server_process = multiprocessing.Process(target=self._run_server_process, daemon=True)
+            self.server_process.start()
 
             # Wait for server to be ready
             if not self._server_ready.wait(timeout=5.0):
+                # If server failed to start, clean up the process
+                if self.server_process and self.server_process.is_alive():
+                    self.server_process.terminate()
+                    self.server_process.join(timeout=2.0)
+                    if self.server_process.is_alive():
+                        self.server_process.kill()
                 raise RuntimeError("Server failed to start within timeout")
 
     def _run_server_process(self):
@@ -613,17 +620,21 @@ class EmbeddedMessagingBackend(MessagingBackend):
             # Signal that server is ready
             self._server_ready.set()
 
-            # Run until stop is requested
+            # Run until stop is requested - check more frequently
             while not self._stop_event.is_set():
-                loop.run_until_complete(asyncio.sleep(0.1))
+                loop.run_until_complete(asyncio.sleep(0.05))  # More responsive to stop events
 
         except Exception as e:
             logging.error(f"Server process error: {e}")
             self._server_ready.set()  # Set even on error to avoid hanging
         finally:
-            if self.owned_server and self.owned_server.running:
-                loop.run_until_complete(self.owned_server.stop())
-            loop.close()
+            try:
+                if self.owned_server and self.owned_server.running:
+                    loop.run_until_complete(self.owned_server.stop())
+            except Exception as e:
+                logging.debug(f"Error stopping server in process cleanup: {e}")
+            finally:
+                loop.close()
 
     def _start_async_client(self):
         """Start the async client in its own thread."""
@@ -684,7 +695,7 @@ class EmbeddedMessagingBackend(MessagingBackend):
     async def _run_until_stopped(self):
         """Run the event loop until stop is requested."""
         while not self._stop_event.is_set():
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(0.05)  # More responsive to stop events
 
     async def _message_listener(self):
         """Async message listener - no polling, pure event-driven."""
@@ -914,10 +925,43 @@ class EmbeddedMessagingBackend(MessagingBackend):
         if self.client_thread and self.client_thread.is_alive():
             self.client_thread.join(timeout=2.0)
 
-        # Clean up server if we own it
-        if self.owned_server:
-            # The server process will shut down on its own when the stop event is set
-            pass
+        # Clean up server process if we own it
+        if self.server_process and self.server_process.is_alive():
+            logging.debug("Terminating server process...")
+            # First set the stop event
+            self._stop_event.set()
+            # Give it a brief moment to respond to the stop event
+            self.server_process.join(timeout=0.5)
+            
+            # If still alive, terminate it
+            if self.server_process.is_alive():
+                self.server_process.terminate()
+                self.server_process.join(timeout=1.0)
+            
+            # If still alive, force kill
+            if self.server_process.is_alive():
+                self.server_process.kill()
+                self.server_process.join(timeout=0.5)
+        
+        # Reset process reference
+        self.server_process = None
+
+    def __del__(self):
+        """Destructor to ensure cleanup happens even if not called explicitly."""
+        try:
+            if hasattr(self, 'server_process') and self.server_process and self.server_process.is_alive():
+                logging.warning("EmbeddedMessagingBackend destructor cleaning up server process")
+                self.cleanup()
+        except Exception as e:
+            logging.debug(f"Error in destructor cleanup: {e}")
+
+    def __enter__(self):
+        """Context manager entry."""
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Context manager exit - ensures cleanup."""
+        self.cleanup()
 
     def supports_subscription(self) -> bool:
         """Return True since we support real-time subscriptions."""

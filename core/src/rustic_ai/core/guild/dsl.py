@@ -64,12 +64,14 @@ class GuildTopics:
 
     ESSENTIAL_TOPICS: List[str] = [GUILD_STATUS_TOPIC]
 
+    AGENT_INBOX_PREFIX: str = "agent_inbox"
+
     @staticmethod
-    def get_self_topic(agent_id: str) -> str:
+    def get_agent_inbox(agent_id: str) -> str:
         """
-        Returns the self topic for the guild.
+        Returns the inbox topic for the guild.
         """
-        return f"agent_self:{agent_id}"
+        return f"{GuildTopics.AGENT_INBOX_PREFIX}:{agent_id}"
 
 
 class RuntimePredicate(ABC, BaseModel):
@@ -175,7 +177,7 @@ class AgentSpec(BaseModel, Generic[APT]):
             if self.listen_to_default_topic:
                 topics.update(set(GuildTopics.DEFAULT_TOPICS))
 
-            topics.add(GuildTopics.get_self_topic(self.id))
+            topics.add(GuildTopics.get_agent_inbox(self.id))
 
             topics.update(set(GuildTopics.ESSENTIAL_TOPICS))
             self._subscribed_topics = topics

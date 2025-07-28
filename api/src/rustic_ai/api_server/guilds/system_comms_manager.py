@@ -226,7 +226,7 @@ class SystemCommunicationManager:
 
                         try:
                             logging.debug(f"Received message: {data}")
-                            if data.get('format') is not None and data.get('payload') is not None:
+                            if data.get("format") is not None and data.get("payload") is not None:
                                 message = Message(
                                     idg,
                                     topics=UserProxyAgent.get_user_system_requests_topic(user_id),

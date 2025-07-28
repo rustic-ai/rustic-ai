@@ -1,6 +1,7 @@
 import logging
 from typing import Dict, List, Optional
 
+from rustic_ai.core.guild.dsl import GuildTopics
 from rustic_ai.core.messaging.core.client import Client
 from rustic_ai.core.messaging.core.message import Message
 from rustic_ai.core.messaging.core.messaging_config import MessagingConfig
@@ -141,13 +142,13 @@ class MessagingInterface:
             if (
                 recipient_id in self.clients
                 and recipient_id != message.sender.id
-                and not message.topic_published_to.startswith("agent_self")
+                and not message.topic_published_to.startswith(f"{GuildTopics.AGENT_INBOX_PREFIX}")
             ):  # pragma: no cover
                 self.clients[recipient_id].notify_new_message(message)
             elif (
                 recipient_id in self.clients
                 and recipient_id == message.sender.id
-                and message.topic_published_to.startswith("agent_self")
+                and message.topic_published_to.startswith(f"{GuildTopics.AGENT_INBOX_PREFIX}")
             ):
                 self.clients[recipient_id].notify_new_message(message)
 
