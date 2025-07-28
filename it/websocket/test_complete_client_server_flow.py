@@ -307,7 +307,9 @@ class TestCompleteClientServerFlow:
 
         # Wait a moment for subscription to be established
         await asyncio.sleep(2)
-        logger.info(f"Redis monitoring started, subscribed to {GuildTopics.AGENT_SELF_INBOX_PREFIX} and heartbeat topics")
+        logger.info(
+            f"Redis monitoring started, subscribed to {GuildTopics.AGENT_SELF_INBOX_PREFIX} and heartbeat topics"
+        )
 
         # Step 1.2: Start monitoring task BEFORE guild creation
         monitoring_task = asyncio.create_task(self.monitor_redis_bootstrap_messages(bootstrap_subscriber, timeout=15))
@@ -361,7 +363,9 @@ class TestCompleteClientServerFlow:
         # Validate expected messages received
         # Look for agent startup messages and heartbeat messages
         # Note: agent_inbox messages have channels like "guild_id:agent_inbox:agent_id"
-        agent_inbox_messages = [msg for msg in bootstrap_messages if {GuildTopics.AGENT_SELF_INBOX_PREFIX} in msg["channel"]]
+        agent_inbox_messages = [
+            msg for msg in bootstrap_messages if {GuildTopics.AGENT_SELF_INBOX_PREFIX} in msg["channel"]
+        ]
         heartbeat_messages = [msg for msg in bootstrap_messages if msg["topic"] == "heartbeat"]
 
         logger.info(f"Found {len(agent_inbox_messages)} agent_inbox messages")
