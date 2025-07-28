@@ -395,6 +395,8 @@ class GuildBuilder:
         # Set the properties and agents from the parsed dictionary.
         builder.guild_spec_dict[KeyConstants.PROPERTIES] = spec_dict.get(KeyConstants.PROPERTIES, {})
         builder.guild_spec_dict[KeyConstants.AGENTS] = spec_dict.get(KeyConstants.AGENTS, [])
+        builder.guild_spec_dict[KeyConstants.DEPENDENCY_MAP] = spec_dict.get(KeyConstants.DEPENDENCY_MAP, {})
+        builder.guild_spec_dict[KeyConstants.ROUTES] = spec_dict.get(KeyConstants.ROUTES, RoutingSlip())
 
         return builder
 

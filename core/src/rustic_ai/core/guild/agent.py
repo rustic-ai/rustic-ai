@@ -106,6 +106,8 @@ class Agent(Generic[APT], metaclass=AgentMetaclass):  # type: ignore
         self._state: JsonDict = {}
         self._guild_state: JsonDict = {}
 
+        self._route_to_default_topic: bool = False
+
     def get_spec(self) -> AgentSpec[APT]:
         """
         Converts the agent to a specification.
@@ -645,7 +647,7 @@ class ProcessContext[MDT]:
         guild_state = self.agent.get_guild_state()
 
         routable = MessageRoutable(
-            topics=self._origin_message.topics,
+            topics=GuildTopics.DEFAULT_TOPICS if self._agent._route_to_default_topic else self._origin_message.topics,
             priority=self._origin_message.priority,
             payload=payload,
             format=format,
