@@ -302,7 +302,7 @@ class TestCompleteClientServerFlow:
         # Step 1.1: Start Redis monitoring at the very beginning
         redis_client = infrastructure_clients["redis"]
         bootstrap_subscriber = redis_client.pubsub()
-        bootstrap_subscriber.psubscribe(f"*::{GuildTopics.AGENT_SELF_INBOX_PREFIX}")
+        bootstrap_subscriber.psubscribe(f"*:{GuildTopics.AGENT_SELF_INBOX_PREFIX}:*")
         bootstrap_subscriber.psubscribe("*:heartbeat")
 
         # Wait a moment for subscription to be established
