@@ -77,12 +77,15 @@ class ProcessEntry(BaseModel):
         agent (AgentTag): Identifier or name of the agent.
         origin (int): ID of the previous message.
         result (int): ID of the current message.
+        processor (str): The processor that handled the message.
     """
 
     agent: AgentTag
     origin: int
     result: int
     processor: str
+    from_topic: Optional[str] = Field(default=None)
+    to_topics: List[str] = Field(default_factory=list)
 
 
 class TransformationType(StrEnum):

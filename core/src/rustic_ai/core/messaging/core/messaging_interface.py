@@ -142,13 +142,13 @@ class MessagingInterface:
             if (
                 recipient_id in self.clients
                 and recipient_id != message.sender.id
-                and not message.topic_published_to.startswith(f"{GuildTopics.AGENT_INBOX_PREFIX}")
+                and not message.topic_published_to.startswith(f"{GuildTopics.AGENT_SELF_INBOX_PREFIX}")
             ):  # pragma: no cover
                 self.clients[recipient_id].notify_new_message(message)
             elif (
                 recipient_id in self.clients
                 and recipient_id == message.sender.id
-                and message.topic_published_to.startswith(f"{GuildTopics.AGENT_INBOX_PREFIX}")
+                and message.topic_published_to.startswith(f"{GuildTopics.AGENT_SELF_INBOX_PREFIX}")
             ):
                 self.clients[recipient_id].notify_new_message(message)
 

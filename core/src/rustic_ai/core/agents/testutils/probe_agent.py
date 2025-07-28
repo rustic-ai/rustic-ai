@@ -99,6 +99,58 @@ class ProbeAgent(Agent, PublishMixin):
         super().__init__(agent_spec=agent_spec, agent_type=AgentType.BOT, agent_mode=AgentMode.LOCAL)
         self.received_messages: List[Message] = []
 
+    def publish_with_guild_route(
+        self: Agent,
+        topic: str,
+        payload: BaseModel,
+        priority: Priority = Priority.NORMAL,
+        thread: list[int] = [],
+        in_response_to: Optional[int] = None,
+        recipient_list: list = [],
+        msg_id: Optional[GemstoneID] = None,
+    ) -> GemstoneID:
+        """
+        Publishes a message to the message bus with routing slip.
+        """
+        routing_slip = self.guild_spec.routes
+        return self.publish(
+            topic=topic,
+            payload=payload,
+            priority=priority,
+            thread=thread,
+            in_response_to=in_response_to,
+            recipient_list=recipient_list,
+            routing_slip=routing_slip,
+            msg_id=msg_id,
+        )
+
+    def publish_dict_with_guild_route(
+        self: Agent,
+        topic: str,
+        payload: JsonDict,
+        format: Union[type[BaseModel], str] = MessageConstants.RAW_JSON_FORMAT,
+        priority: Priority = Priority.NORMAL,
+        thread: list[int] = [],
+        in_response_to: Optional[int] = None,
+        recipient_list: list = [],
+        msg_id: Optional[GemstoneID] = None,
+    ) -> GemstoneID:
+        """
+        Publishes a message to the message bus with routing slip.
+        """
+        routing_slip = self.guild_spec.routes
+        return super().publish_dict(
+            topic=topic,
+            payload=payload,
+            format=format,
+            priority=priority,
+            thread=thread,
+            in_response_to=in_response_to,
+            recipient_list=recipient_list,
+            routing_slip=routing_slip,
+            msg_id=msg_id,
+        )
+
     @agent.processor(JsonDict)
     def collect_message(self, ctx: agent.ProcessContext[JsonDict]) -> None:
         self.received_messages.append(ctx.message.model_copy(deep=True))
@@ -109,6 +161,12 @@ class ProbeAgent(Agent, PublishMixin):
 
     def clear_messages(self):
         self.received_messages = []
+
+    def print_messages(self):
+        for msg in self.get_messages():
+            print(f"Message ID: {msg.id}, Content: {msg.payload}, Format: {msg.format}, sender: {msg.sender}")
+            print(f"Complete Message: {msg.model_dump_json(indent=2)}\n")
+            print("------------------------------")
 
 
 class EssentialProbeAgent(Agent, PublishMixin):
