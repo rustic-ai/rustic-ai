@@ -364,7 +364,7 @@ class TestCompleteClientServerFlow:
         # Look for agent startup messages and heartbeat messages
         # Note: agent_inbox messages have channels like "guild_id:agent_inbox:agent_id"
         agent_inbox_messages = [
-            msg for msg in bootstrap_messages if {GuildTopics.AGENT_SELF_INBOX_PREFIX} in msg["channel"]
+            msg for msg in bootstrap_messages if GuildTopics.AGENT_SELF_INBOX_PREFIX in msg["channel"]
         ]
         heartbeat_messages = [msg for msg in bootstrap_messages if msg["topic"] == "heartbeat"]
 
