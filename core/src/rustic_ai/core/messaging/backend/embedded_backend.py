@@ -932,24 +932,24 @@ class EmbeddedMessagingBackend(MessagingBackend):
             self._stop_event.set()
             # Give it a brief moment to respond to the stop event
             self.server_process.join(timeout=0.5)
-            
+
             # If still alive, terminate it
             if self.server_process.is_alive():
                 self.server_process.terminate()
                 self.server_process.join(timeout=1.0)
-            
+
             # If still alive, force kill
             if self.server_process.is_alive():
                 self.server_process.kill()
                 self.server_process.join(timeout=0.5)
-        
+
         # Reset process reference
         self.server_process = None
 
     def __del__(self):
         """Destructor to ensure cleanup happens even if not called explicitly."""
         try:
-            if hasattr(self, 'server_process') and self.server_process and self.server_process.is_alive():
+            if hasattr(self, "server_process") and self.server_process and self.server_process.is_alive():
                 logging.warning("EmbeddedMessagingBackend destructor cleaning up server process")
                 self.cleanup()
         except Exception as e:

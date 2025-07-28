@@ -82,6 +82,7 @@ class ProcessEntry(BaseModel):
     agent: AgentTag
     origin: int
     result: int
+    processor: str
 
 
 class TransformationType(StrEnum):

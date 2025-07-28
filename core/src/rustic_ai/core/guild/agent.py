@@ -178,7 +178,12 @@ class Agent(Generic[APT], metaclass=AgentMetaclass):  # type: ignore
 
             message_history = origin_message.message_history.copy()
             message_history.append(
-                ProcessEntry(agent=self._agent_tag, origin=origin_message.id, result=msg_id.to_int())
+                ProcessEntry(
+                    agent=self._agent_tag,
+                    origin=origin_message.id,
+                    result=msg_id.to_int(),
+                    processor=f"{self.__class__.__name__}:self",
+                )
             )
             traceparent = origin_message.traceparent
 
@@ -698,7 +703,12 @@ class ProcessContext[MDT]:
 
         message_history = self._origin_message.message_history.copy()
         message_history.append(
-            ProcessEntry(agent=self._agent.get_agent_tag(), origin=self._origin_message.id, result=msg_id.to_int())
+            ProcessEntry(
+                agent=self._agent.get_agent_tag(),
+                origin=self._origin_message.id,
+                result=msg_id.to_int(),
+                processor=self.method_name,
+            )
         )
 
         routing_slip = (
