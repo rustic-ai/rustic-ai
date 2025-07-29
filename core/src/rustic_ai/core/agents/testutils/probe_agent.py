@@ -172,14 +172,14 @@ class ProbeAgent(Agent, PublishMixin):
         Prints the message history of the agent.
         If idx is provided, it prints the message at that index.
         """
-        if idx >= -1 and idx < len(self.received_messages):
+        if len(self.received_messages) > 0 and idx >= -1 and idx < len(self.received_messages):
             history = self.received_messages[idx].message_history
             for process in history:
                 print(
                     f"({process.from_topic}) -> [{process.agent.name}/{process.agent.id}:{process.processor}] -> ({", ".join(process.to_topics)})"
                 )
         else:
-            print("Invalid index provided.")
+            print("Message history is empty or index out of range.")
 
 
 class EssentialProbeAgent(Agent, PublishMixin):

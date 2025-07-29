@@ -1,0 +1,19 @@
+id: MessageFilteringGuild
+name: Message Filtering Guild
+description: A guild that filters messages based on their content.
+agents:
+  - id: FilteringAgent
+    name: Filtering Agent
+    description: A content based router that routes messages based on their routing_key.
+    class_name: rustic_ai.core.agents.eip.basic_wiring_agent.BasicWiringAgent
+    predicates:
+      wire_message:
+        expression: "(message.payload.filter)"
+routes:
+  steps:
+    - agent:
+        name: Filtering Agent
+      origin_filter:
+        origin_message_format: __main__.FilteringMessage
+      destination:
+        topics: accepted

@@ -68,6 +68,8 @@ class GuildTopics:
 
     AGENT_INBOX_PREFIX: str = "agent_inbox"
 
+    DEAD_LETTER_QUEUE: str = "dead_letter_queue"
+
     @staticmethod
     def get_self_agent_inbox(agent_id: str) -> str:
         """
@@ -84,6 +86,7 @@ class GuildTopics:
 
 
 class RuntimePredicate(ABC, BaseModel):
+
     @abstractmethod
     def evaluate(self, message: JsonDict, agent_state: JsonDict, guild_state: JsonDict) -> bool:
         pass
