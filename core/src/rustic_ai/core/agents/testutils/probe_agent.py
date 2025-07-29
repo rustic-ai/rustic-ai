@@ -113,7 +113,7 @@ class ProbeAgent(Agent, PublishMixin):
         Publishes a message to the message bus with routing slip.
         """
         routing_slip = self.guild_spec.routes
-        return self.publish(
+        return super().publish(
             topic=topic,
             payload=payload,
             priority=priority,
@@ -121,7 +121,6 @@ class ProbeAgent(Agent, PublishMixin):
             in_response_to=in_response_to,
             recipient_list=recipient_list,
             routing_slip=routing_slip,
-            msg_id=msg_id,
         )
 
     def publish_dict_with_guild_route(

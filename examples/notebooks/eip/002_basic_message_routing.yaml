@@ -1,0 +1,22 @@
+id: MessageRouterGuild
+name: Message Router Guild
+description: A guild that routes messages based on their type.
+agents:
+  - id: RoutingAgent
+    name: Routing Agent
+    description: A simple message router that routes messages based on their type.
+    class_name: rustic_ai.core.agents.eip.basic_wiring_agent.BasicWiringAgent
+routes:
+  steps:
+    - agent:
+        name: Routing Agent
+      origin_filter:
+        origin_message_format: __main__.MessageType1
+      destination:
+        topics: topic_1
+    - agent:
+        name: Routing Agent
+      origin_filter:
+        origin_message_format: __main__.MessageType2
+      destination:
+        topics: topic_2
