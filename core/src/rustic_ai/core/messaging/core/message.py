@@ -558,7 +558,7 @@ class RoutingSlip(BaseModel):
         steps (List[RoutingEntry]): List of routing steps for the message. Each step is an edge in the routing slip.
     """
 
-    steps: List[RoutingRule] = Field(default=[])
+    steps: List[RoutingRule] = Field(default_factory=list)
 
     def add_step(self, routing_entry: RoutingRule):
         """
