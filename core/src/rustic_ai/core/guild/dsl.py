@@ -270,8 +270,6 @@ class GuildSpec(BaseModel):
     # A mapping for guild's dependency to resolver class
     dependency_map: Dict[str, DependencySpec] = {}
 
-    configuration: Dict[str, Any] = Field(default_factory=dict)
-
     routes: RoutingSlip = Field(default_factory=RoutingSlip)
 
     def __init__(self, **data):
