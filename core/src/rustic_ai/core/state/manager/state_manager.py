@@ -51,6 +51,9 @@ class StateManager(ABC):
             The updated state.
         """
         value_at_path = JsonUtils.read_from_path(state, path) if path else state
+        if value_at_path is None:
+            # If the value at the path is None, we need to create the intermediate structure
+            value_at_path = {}
         updated_value = self.updaters[update_format].apply_update(value_at_path, update)
         return JsonUtils.update_at_path(state, path, updated_value) if path else updated_value
 

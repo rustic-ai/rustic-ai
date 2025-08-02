@@ -122,7 +122,21 @@ The `FunctionalTransformer` provides complete control over the entire `MessageRo
 
 The Scatter-Gather pattern involves broadcasting a message to multiple recipients and then aggregating their responses. This is essential for coordinating multiple agents to work on parts of a problem and combining their results.
 
-#### TBD
+**Use Case Example**
+- **Input:** `AnalysisRequest` to start an analysis with the data
+- **Process:** The message is scattered for statistical analysis, trend analysis and anomaly analysis
+- **Output:** Aggregated Comprehensive Report from the the Reporting agent
+
+**Demos**
+- [Scatter Gather in Pyhton](./006_scatter_gather.ipynb)
+- Scatter Gather from YAML
+    - [YAML Spec](./006_scatter_gather.yaml)
+    - [Notebook](./006_scatter_gather_yaml.ipynb)
+
+_Additional Info:_
+- [Message Models](./helpers/scatter_gather_models.py)
+- [Domain Agents](./helpers/scatter_gather_agents.py)
+
 
 ### Recipient List
 

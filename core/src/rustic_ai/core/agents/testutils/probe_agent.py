@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from rustic_ai.core.guild import Agent, AgentMode, AgentSpec, AgentType, agent
 from rustic_ai.core.messaging.core import JsonDict
 from rustic_ai.core.messaging.core.message import Message, MessageConstants, RoutingSlip
+from rustic_ai.core.state.models import StateUpdateResponse
 from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 from rustic_ai.core.utils.gemstone_id import GemstoneID
 from rustic_ai.core.utils.priority import Priority
@@ -172,14 +173,27 @@ class ProbeAgent(Agent, PublishMixin):
         Prints the message history of the agent.
         If idx is provided, it prints the message at that index.
         """
-        if len(self.received_messages) > 0 and idx >= -1 and idx < len(self.received_messages):
-            history = self.received_messages[idx].message_history
+        if (
+            len(self.received_messages) > 0
+            and idx >= -len(self.received_messages)
+            and idx < len(self.received_messages)
+        ):
+            message = self.received_messages[idx]
+            history = message.message_history
+            print(f"\nFor message at index {idx} ({message.id}):")
             for process in history:
                 print(
-                    f"({process.from_topic}) -> [{process.agent.name}/{process.agent.id}:{process.processor}] -> ({", ".join(process.to_topics)})"
+                    f"\t({process.from_topic}) -> [{process.agent.name}/{process.agent.id}:{process.processor}] -> ({", ".join(process.to_topics)})"
                 )
         else:
             print("Message history is empty or index out of range.")
+
+    def print_all_history(self):
+        """
+        Prints the message history of all received messages.
+        """
+        for idx in range(len(self.received_messages)):
+            self.print_message_history(idx)
 
 
 class EssentialProbeAgent(Agent, PublishMixin):
@@ -202,3 +216,19 @@ class EssentialProbeAgent(Agent, PublishMixin):
 
     def clear_messages(self):
         self.received_messages = []
+
+
+class StateProbeAgent(Agent):
+
+    def __init__(
+        self,
+        agent_spec: AgentSpec,
+    ) -> None:
+        super().__init__(agent_spec=agent_spec, agent_type=AgentType.BOT, agent_mode=AgentMode.LOCAL)
+        self.state: JsonDict = {}
+
+    def on_state_updated(self, new_state: JsonDict, ctx: agent.ProcessContext[StateUpdateResponse]):
+        """
+        This method can be overridden to handle state updates.
+        """
+        print(f"State updated: {new_state}")

@@ -647,7 +647,9 @@ class ProcessContext[MDT]:
         guild_state = self.agent.get_guild_state()
 
         routable = MessageRoutable(
-            topics=GuildTopics.DEFAULT_TOPICS if self._agent._route_to_default_topic else self._origin_message.topics,
+            topics=(
+                GuildTopics.DEFAULT_TOPICS[0] if self._agent._route_to_default_topic else self._origin_message.topics
+            ),
             priority=self._origin_message.priority,
             payload=payload,
             format=format,
@@ -678,8 +680,8 @@ class ProcessContext[MDT]:
             )
 
             self._raw_send(
-                priority=Priority.NORMAL,
-                topics=[GuildTopics.GUILD_STATUS_TOPIC],
+                priority=Priority.HIGH,
+                topics=[GuildTopics.STATE_TOPIC],
                 payload=gsu.model_dump(),
                 format=get_qualified_class_name(StateUpdateRequest),
                 in_response_to=self._origin_message.id,
@@ -704,8 +706,8 @@ class ProcessContext[MDT]:
             )
 
             self._raw_send(
-                priority=Priority.NORMAL,
-                topics=[GuildTopics.GUILD_STATUS_TOPIC],
+                priority=Priority.HIGH,
+                topics=[GuildTopics.STATE_TOPIC],
                 payload=asu.model_dump(),
                 format=get_qualified_class_name(StateUpdateRequest),
                 in_response_to=self._origin_message.id,
@@ -797,6 +799,9 @@ class ProcessContext[MDT]:
         logging.debug(
             f"Sending message to topics: {topics} from {self._agent.get_agent_tag()} in response to {in_response_to}"
         )
+
+        if routing_slip is None:
+            routing_slip = self.agent.guild_spec.routes
 
         self._client.publish(
             Message(

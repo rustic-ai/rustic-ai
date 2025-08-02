@@ -60,9 +60,11 @@ class GuildTopics:
 
     SYSTEM_TOPIC: str = "system_topic"
 
+    STATE_TOPIC: str = "state_topic"
+
     GUILD_STATUS_TOPIC: str = "guild_status_topic"
 
-    ESSENTIAL_TOPICS: List[str] = [GUILD_STATUS_TOPIC]
+    ESSENTIAL_TOPICS: List[str] = [GUILD_STATUS_TOPIC, STATE_TOPIC]
 
     AGENT_SELF_INBOX_PREFIX: str = "agent_self_inbox"
 
@@ -267,6 +269,8 @@ class GuildSpec(BaseModel):
 
     # A mapping for guild's dependency to resolver class
     dependency_map: Dict[str, DependencySpec] = {}
+
+    configuration: Dict[str, Any] = Field(default_factory=dict)
 
     routes: RoutingSlip = Field(default_factory=RoutingSlip)
 
