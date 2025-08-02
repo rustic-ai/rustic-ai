@@ -1,0 +1,50 @@
+id: MessageTranslatorFunctionalGuild
+name: Message Translator (Functional) Guild
+description: A guild demonstrating message translation using FunctionalTransformer with dynamic routing.
+agents:
+  - id: TranslatorAgent
+    name: Message Translator
+    description: Translates order requests into inventory checks using FunctionalTransformer with dynamic routing
+    class_name: rustic_ai.core.agents.eip.basic_wiring_agent.BasicWiringAgent
+routes:
+  steps:
+    - agent:
+        name: Message Translator
+      origin_filter:
+        origin_message_format: __main__.OrderRequest
+      transformer:
+        style: content_based_router
+        handler: |
+          (
+            $timestamp := $millis();
+            $random_value := $random();
+            $random_suffix := $substring($string($random_value), 2, 6);
+            $timestamp_str := $string($timestamp);
+            $check_prefix := $substringBefore($timestamp_str, ".");
+            $generated_check_id := "INV-" & $check_prefix & "-" & $random_suffix;
+            
+            $order_total := $sum(payload.items.(quantity * unit_price));
+            $is_high_priority := $order_total > 1000;
+            $priority_level := $is_high_priority ? "high" : "normal";
+            $routing_topic := $is_high_priority ? "inventory_high_priority" : "inventory_normal";
+            
+            $inventory_items := payload.items.{
+              "sku": product_id,
+              "requested_quantity": quantity
+            };
+            
+            $transformed_payload := {
+              "check_id": $generated_check_id,
+              "order_reference": payload.order_id,
+              "customer_reference": payload.customer_id,
+              "items_to_check": $inventory_items,
+              "total_value": $order_total,
+              "priority_level": $priority_level
+            };
+            
+            {
+              "payload": $transformed_payload,
+              "topics": $routing_topic,
+              "format": "__main__.InventoryCheck"
+            }
+          )
