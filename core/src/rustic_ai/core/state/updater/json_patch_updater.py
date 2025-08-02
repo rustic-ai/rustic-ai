@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional, Union
 
 import jsonpatch
 from pydantic import BaseModel, Field, JsonValue
@@ -14,7 +14,7 @@ class JsonPatchOperation(BaseModel):
 
     op: str
     path: str
-    value: JsonValue
+    value: Optional[JsonValue] = None
 
 
 class JsonPatchUpdate(BaseModel):
@@ -27,7 +27,7 @@ class JsonPatchUpdate(BaseModel):
     )
 
     def get_ops(self) -> list:
-        return [op.model_dump() for op in self.operations]
+        return [op.model_dump(exclude_none=True) for op in self.operations]
 
 
 class JsonPatchUpdater(StateUpdater):

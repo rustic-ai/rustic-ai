@@ -416,14 +416,24 @@ class RoutingRule(BaseModel):
             bool: True if the step is applicable, False otherwise.
         """
 
+        logging.debug(f"Agent [{agent}] -- Checking applicability of rule: {self.model_dump_json(indent=2)}")
+        logging.debug(
+            f"On Incoming: {agent_type}/{method_name} -- Origin: {origin.model_dump_json(indent=2)} -- Format: {message_format}"
+        )
+
+        result = True
+
         if self.agent and self.agent != agent:
-            return False  # pragma: no cover
+            logging.debug(f"Agent mismatch: {self.agent} != {agent}")
+            result = False  # pragma: no cover
 
         if self.agent_type and self.agent_type != agent_type:
-            return False  # pragma: no cover
+            logging.debug(f"Agent type mismatch: {self.agent_type} != {agent_type}")
+            result = False  # pragma: no cover
 
         if self.method_name and self.method_name != method_name:
-            return False  # pragma: no cover
+            logging.debug(f"Method name mismatch: {self.method_name} != {method_name}")
+            result = False  # pragma: no cover
 
         assert origin is not None
         assert origin.origin_sender is not None
@@ -433,12 +443,14 @@ class RoutingRule(BaseModel):
         if self.origin_filter and not self.origin_filter.matches(
             origin.origin_sender, origin.origin_topic, origin.origin_message_format
         ):
-            return False  # pragma: no cover
+            logging.debug(f"Origin filter mismatch: {self.origin_filter} != {origin}")
+            result = False  # pragma: no cover
 
         if self.message_format and self.message_format != message_format:
-            return False  # pragma: no cover
+            logging.debug(f"Message format mismatch: {self.message_format} != {message_format}")
+            result = False  # pragma: no cover
 
-        return True
+        return result
 
     def apply(
         self,

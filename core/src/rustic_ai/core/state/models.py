@@ -21,6 +21,11 @@ class StateUpdateFormat(StrEnum):
     Currently we support JSON Patch (https://datatracker.ietf.org/doc/html/rfc6902) and
     JSON Merge Patch (https://datatracker.ietf.org/doc/html/rfc7386) is supported.
     In future we will support crdt and other formats based on requirements.
+    Important Note:
+    JSON Merge Patch (RFC 7386) is a more flexible format that allows for the creation of intermediate structures.
+    JSON Patch (RFC 6902) is a more strict format that requires the target structure to already exist.
+    If using JSON Patch, ensure that the paths provided in operations you are updating already exist in the state.
+    If you are not sure whether a path exists, provide the patch to the State Update Request instead of in the operations.
     """
 
     JSON_PATCH = "json-patch"

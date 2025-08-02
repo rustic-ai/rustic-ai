@@ -1,3 +1,4 @@
+import logging
 from typing import Optional
 
 from rustic_ai.core.guild.agent import ProcessContext, processor
@@ -30,15 +31,20 @@ class StateRefresherMixin:
         """
         Request the state of the agent.
         """
-        ctx.send(
-            StateFetchRequest(
-                state_owner=StateOwner.AGENT,
-                guild_id=self.guild_id,
-                agent_id=self.id,
-                state_path=state_path,
-                version=version,
-                timestamp=timestamp,
-            )
+        asfr = StateFetchRequest(
+            state_owner=StateOwner.AGENT,
+            guild_id=self.guild_id,
+            agent_id=self.id,
+            state_path=state_path,
+            version=version,
+            timestamp=timestamp,
+        )
+
+        ctx._raw_send(
+            priority=Priority.NORMAL,
+            topics=[GuildTopics.STATE_TOPIC],
+            payload=asfr.model_dump(),
+            format=get_qualified_class_name(StateFetchRequest),
         )
 
     def request_guild_state(
@@ -51,14 +57,19 @@ class StateRefresherMixin:
         """
         Request the state of the guild.
         """
-        ctx.send(
-            StateFetchRequest(
-                state_owner=StateOwner.GUILD,
-                guild_id=self.guild_id,
-                state_path=state_path,
-                version=version,
-                timestamp=timestamp,
-            )
+        gsfr = StateFetchRequest(
+            state_owner=StateOwner.GUILD,
+            guild_id=self.guild_id,
+            state_path=state_path,
+            version=version,
+            timestamp=timestamp,
+        )
+
+        ctx._raw_send(
+            priority=Priority.NORMAL,
+            topics=[GuildTopics.STATE_TOPIC],
+            payload=gsfr.model_dump(),
+            format=get_qualified_class_name(StateFetchRequest),
         )
 
     def update_state(
@@ -73,17 +84,22 @@ class StateRefresherMixin:
         """
         Update the state of the agent.
         """
-        ctx.send(
-            StateUpdateRequest(
-                state_owner=StateOwner.AGENT,
-                guild_id=self.guild_id,
-                agent_id=self.id,
-                update_format=update_format,
-                state_update=update,
-                update_path=update_path,
-                update_version=update_version,
-                update_timestamp=update_timestamp,
-            )
+        asu = StateUpdateRequest(
+            state_owner=StateOwner.AGENT,
+            guild_id=self.guild_id,
+            agent_id=self.id,
+            update_format=update_format,
+            state_update=update,
+            update_path=update_path,
+            update_version=update_version,
+            update_timestamp=update_timestamp,
+        )
+
+        ctx._raw_send(
+            priority=Priority.HIGH,
+            topics=[GuildTopics.STATE_TOPIC],
+            payload=asu.model_dump(),
+            format=get_qualified_class_name(StateUpdateRequest),
         )
 
     def update_guild_state(
@@ -108,11 +124,17 @@ class StateRefresherMixin:
             update_timestamp=update_timestamp,
         )
         ctx._raw_send(
-            priority=Priority.NORMAL,
-            topics=[GuildTopics.SYSTEM_TOPIC],
+            priority=Priority.HIGH,
+            topics=[GuildTopics.STATE_TOPIC],
             payload=gsu.model_dump(),
             format=get_qualified_class_name(StateUpdateRequest),
         )
+
+    def on_state_updated(self, new_state: JsonDict, ctx: ProcessContext[StateUpdateResponse]):
+        """
+        This method can be overridden to handle state updates.
+        """
+        pass
 
     @processor(StateFetchResponse, handle_essential=True)
     def update_local_state(self, ctx: ProcessContext[StateFetchResponse]):
@@ -123,11 +145,17 @@ class StateRefresherMixin:
         elif sfr.state_owner == StateOwner.AGENT and sfr.agent_id == self.id:
             self._state = sfr.state
 
+        self.on_state_updated(sfr.state, ctx)
+
     @processor(StateUpdateResponse, handle_essential=True)
     def update_local_state_on_update(self, ctx: ProcessContext[StateUpdateResponse]):
         sur = ctx.payload
+
+        logging.debug(f"State update received: {sur.state_owner} {sur.guild_id} {sur.agent_id}")
 
         if sur.state_owner == StateOwner.GUILD:
             self._guild_state = sur.state
         elif sur.state_owner == StateOwner.AGENT and sur.agent_id == self.id:
             self._state = sur.state
+
+        self.on_state_updated(sur.state, ctx)
