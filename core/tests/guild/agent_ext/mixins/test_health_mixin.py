@@ -237,14 +237,14 @@ class TestHealthMixin:
         assert echo_message.in_response_to == msg_id
         assert echo_message.payload["checktime"] == isotime
         assert echo_message.payload["checkstatus"] == HeartbeatStatus.OK.value
-        assert echo_message.topics == HealthConstants.HEARTBEAT_TOPIC
+        assert echo_message.topic_published_to == HealthConstants.HEARTBEAT_TOPIC
 
         manager_message = mpair[manager_name]
         assert manager_message.format == "rustic_ai.core.guild.agent_ext.mixins.health.Heartbeat"
         assert manager_message.in_response_to == msg_id
         assert manager_message.payload["checktime"] == isotime
         assert manager_message.payload["checkstatus"] == HeartbeatStatus.OK.value
-        assert manager_message.topics == HealthConstants.HEARTBEAT_TOPIC
+        assert manager_message.topic_published_to == HealthConstants.HEARTBEAT_TOPIC
 
         probe_agent.clear_messages()
 
