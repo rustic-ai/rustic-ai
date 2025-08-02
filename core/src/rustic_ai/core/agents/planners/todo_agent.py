@@ -87,6 +87,7 @@ class TODOAgent(Agent):
             update={"tasks": [task.model_dump() for task in tasks]},
         )
 
+    @agent.processor(AddTaskRequest)
     def add_task(self, ctx: ProcessContext[AddTaskRequest]):
         tasks = self.get_tasks()
         task_map = {t.id: t for t in tasks}
