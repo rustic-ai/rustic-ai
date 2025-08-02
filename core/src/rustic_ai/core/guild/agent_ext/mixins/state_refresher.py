@@ -30,15 +30,19 @@ class StateRefresherMixin:
         """
         Request the state of the agent.
         """
-        ctx.send(
-            StateFetchRequest(
-                state_owner=StateOwner.AGENT,
-                guild_id=self.guild_id,
-                agent_id=self.id,
-                state_path=state_path,
-                version=version,
-                timestamp=timestamp,
-            )
+        ras = StateFetchRequest(
+            state_owner=StateOwner.AGENT,
+            guild_id=self.guild_id,
+            agent_id=self.id,
+            state_path=state_path,
+            version=version,
+            timestamp=timestamp,
+        )
+        ctx._raw_send(
+            priority=Priority.NORMAL,
+            topics=[GuildTopics.SYSTEM_TOPIC],
+            payload=ras.model_dump(),
+            format=get_qualified_class_name(StateFetchRequest),
         )
 
     def request_guild_state(
@@ -73,17 +77,21 @@ class StateRefresherMixin:
         """
         Update the state of the agent.
         """
-        ctx.send(
-            StateUpdateRequest(
-                state_owner=StateOwner.AGENT,
-                guild_id=self.guild_id,
-                agent_id=self.id,
-                update_format=update_format,
-                state_update=update,
-                update_path=update_path,
-                update_version=update_version,
-                update_timestamp=update_timestamp,
-            )
+        asu = StateUpdateRequest(
+            state_owner=StateOwner.AGENT,
+            guild_id=self.guild_id,
+            agent_id=self.id,
+            update_format=update_format,
+            state_update=update,
+            update_path=update_path,
+            update_version=update_version,
+            update_timestamp=update_timestamp,
+        )
+        ctx._raw_send(
+            priority=Priority.NORMAL,
+            topics=[GuildTopics.SYSTEM_TOPIC],
+            payload=asu.model_dump(),
+            format=get_qualified_class_name(StateUpdateRequest),
         )
 
     def update_guild_state(
