@@ -94,7 +94,8 @@ class Agent(Generic[APT], metaclass=AgentMetaclass):  # type: ignore
         self.description = agent_spec.description
         self.mode = agent_mode
         self.handled_formats = handled_formats
-        self._self_topic: str = GuildTopics.get_self_topic(self.id)
+        self._self_inbox: str = GuildTopics.get_self_agent_inbox(self.id)
+        self._inbox: str = GuildTopics.get_agent_inbox(self.id)
 
         self.subscribed_topics = agent_spec.subscribed_topics
 
@@ -104,6 +105,8 @@ class Agent(Generic[APT], metaclass=AgentMetaclass):  # type: ignore
 
         self._state: JsonDict = {}
         self._guild_state: JsonDict = {}
+
+        self._route_to_default_topic: bool = False
 
     def get_spec(self) -> AgentSpec[APT]:
         """
@@ -159,7 +162,7 @@ class Agent(Generic[APT], metaclass=AgentMetaclass):  # type: ignore
             GemstoneID: The ID of the message sent to the agent.
         """
 
-        topics = [self._self_topic]
+        topics = [self._self_inbox]
         msg_id = self._generate_id(priority)
 
         in_response_to: Optional[int] = None
@@ -178,9 +181,26 @@ class Agent(Generic[APT], metaclass=AgentMetaclass):  # type: ignore
 
             message_history = origin_message.message_history.copy()
             message_history.append(
-                ProcessEntry(agent=self._agent_tag, origin=origin_message.id, result=msg_id.to_int())
+                ProcessEntry(
+                    agent=self._agent_tag,
+                    origin=origin_message.id,
+                    result=msg_id.to_int(),
+                    processor=f"{self.__class__.__name__}:self",
+                    from_topic=origin_message.topic_published_to,
+                    to_topics=topics if isinstance(topics, list) else [topics],
+                )
             )
             traceparent = origin_message.traceparent
+        else:
+            message_history.append(
+                ProcessEntry(
+                    agent=self._agent_tag,
+                    origin=0,
+                    result=msg_id.to_int(),
+                    processor=f"{self.__class__.__name__}:self",
+                    to_topics=topics if isinstance(topics, list) else [topics],
+                )
+            )
 
         routing_slip = self.guild_spec.routes
 
@@ -358,12 +378,12 @@ class Agent(Generic[APT], metaclass=AgentMetaclass):  # type: ignore
         if (
             message.topic_published_to not in GuildTopics.ESSENTIAL_TOPICS
             and message.topic_published_to is not None
-            and not message.topic_published_to.startswith("agent_self:")
+            and not message.topic_published_to.startswith(f"{GuildTopics.AGENT_SELF_INBOX_PREFIX}:")
         ):
             format_handlers = fh.get_handlers_for_format(message.format)
             raw_handlers = rh.get_handlers()
         elif message.topic_published_to in GuildTopics.ESSENTIAL_TOPICS or (
-            message.topic_published_to is not None and message.topic_published_to == self._self_topic
+            message.topic_published_to is not None and message.topic_published_to == self._self_inbox
         ):
             format_handlers = fh.get_essential_handlers_for_format(message.format)
             raw_handlers = rh.get_essential_handlers()
@@ -627,7 +647,7 @@ class ProcessContext[MDT]:
         guild_state = self.agent.get_guild_state()
 
         routable = MessageRoutable(
-            topics=self._origin_message.topics,
+            topics=GuildTopics.DEFAULT_TOPICS if self._agent._route_to_default_topic else self._origin_message.topics,
             priority=self._origin_message.priority,
             payload=payload,
             format=format,
@@ -698,7 +718,14 @@ class ProcessContext[MDT]:
 
         message_history = self._origin_message.message_history.copy()
         message_history.append(
-            ProcessEntry(agent=self._agent.get_agent_tag(), origin=self._origin_message.id, result=msg_id.to_int())
+            ProcessEntry(
+                agent=self._agent.get_agent_tag(),
+                origin=self._origin_message.id,
+                result=msg_id.to_int(),
+                processor=self.method_name,
+                from_topic=self._origin_message.topic_published_to,
+                to_topics=routed.topics if isinstance(routed.topics, list) else [routed.topics],
+            )
         )
 
         routing_slip = (

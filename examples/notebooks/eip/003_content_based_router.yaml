@@ -1,0 +1,17 @@
+id: MessageRouterGuild
+name: Message Router Guild
+description: A guild that routes messages based on their type.
+agents:
+  - id: RoutingAgent
+    name: Routing Agent
+    description: A content based router that routes messages based on their routing_key.
+    class_name: rustic_ai.core.agents.eip.basic_wiring_agent.BasicWiringAgent
+routes:
+  steps:
+    - agent:
+        name: Routing Agent
+      origin_filter:
+        origin_message_format: __main__.CBRMessage
+      transformer:
+        style: content_based_router
+        handler: '({"topics": payload.routing_key})'

@@ -10,6 +10,8 @@ import pytest
 import redis
 import websockets
 
+from rustic_ai.core.guild.dsl import GuildTopics
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -74,7 +76,7 @@ class TestCompleteClientServerFlow:
             "*:guild_status_topic",
             "*:echo_topic",
             "*:default_topic",
-            "*:agent_self:*",
+            f"*:{GuildTopics.AGENT_SELF_INBOX_PREFIX}:*",
             "*:user:testuser123:*",
         ]
 
@@ -300,12 +302,14 @@ class TestCompleteClientServerFlow:
         # Step 1.1: Start Redis monitoring at the very beginning
         redis_client = infrastructure_clients["redis"]
         bootstrap_subscriber = redis_client.pubsub()
-        bootstrap_subscriber.psubscribe("*:agent_self:*")
+        bootstrap_subscriber.psubscribe(f"*:{GuildTopics.AGENT_SELF_INBOX_PREFIX}:*")
         bootstrap_subscriber.psubscribe("*:heartbeat")
 
         # Wait a moment for subscription to be established
         await asyncio.sleep(2)
-        logger.info("Redis monitoring started, subscribed to agent_self and heartbeat topics")
+        logger.info(
+            f"Redis monitoring started, subscribed to {GuildTopics.AGENT_SELF_INBOX_PREFIX} and heartbeat topics"
+        )
 
         # Step 1.2: Start monitoring task BEFORE guild creation
         monitoring_task = asyncio.create_task(self.monitor_redis_bootstrap_messages(bootstrap_subscriber, timeout=15))
@@ -358,11 +362,13 @@ class TestCompleteClientServerFlow:
 
         # Validate expected messages received
         # Look for agent startup messages and heartbeat messages
-        # Note: agent_self messages have channels like "guild_id:agent_self:agent_id"
-        agent_self_messages = [msg for msg in bootstrap_messages if "agent_self" in msg["channel"]]
+        # Note: agent_inbox messages have channels like "guild_id:agent_inbox:agent_id"
+        agent_inbox_messages = [
+            msg for msg in bootstrap_messages if GuildTopics.AGENT_SELF_INBOX_PREFIX in msg["channel"]
+        ]
         heartbeat_messages = [msg for msg in bootstrap_messages if msg["topic"] == "heartbeat"]
 
-        logger.info(f"Found {len(agent_self_messages)} agent_self messages")
+        logger.info(f"Found {len(agent_inbox_messages)} agent_inbox messages")
         logger.info(f"Found {len(heartbeat_messages)} heartbeat messages")
 
         # Debug: Print all captured messages
@@ -370,8 +376,8 @@ class TestCompleteClientServerFlow:
             logger.info(f"Message: topic={msg['topic']}, channel={msg['channel']}")
 
         # We should have at least agent startup messages
-        assert len(agent_self_messages) >= 2  # GuildManagerAgent + EchoAgent
-        logger.info(f"Received {len(agent_self_messages)} agent startup messages")
+        assert len(agent_inbox_messages) >= 2  # GuildManagerAgent + EchoAgent
+        logger.info(f"Received {len(agent_inbox_messages)} agent startup messages")
 
         health_reports = [msg for msg in bootstrap_messages if msg["topic"] == "guild_status"]
         assert len(health_reports) >= 1  # At least one health report

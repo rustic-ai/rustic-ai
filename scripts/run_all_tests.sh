@@ -18,12 +18,16 @@ DB_FILE="integration_testing_app.db"
 rm -rf "$COVERAGE_DIR"
 mkdir -p "$COVERAGE_DIR"
 pkill -f "uvicorn rustic_ai.api_server.main:app" 2>/dev/null || :
+# Kill any processes using the embedded backend port
+lsof -ti:31134 | xargs -r kill -9 2>/dev/null || :
+lsof -ti:8880 | xargs -r kill -9 2>/dev/null || :
 
 # -------- cleanup on exit --------
 cleanup() {
     printf '🧹  Cleaning up…\n' >&2
 
     if [ -n "${SESSION_PID:-}" ] && kill -0 "$SESSION_PID" 2>/dev/null; then
+        echo "Killing session with PID: $SESSION_PID"
         PGID=$(ps -o pgid= -p "$SESSION_PID" | tr -d ' ')
         if [ -n "$PGID" ] && kill -0 "-$PGID" 2>/dev/null; then
             kill -TERM "-$PGID" 2>/dev/null || :
@@ -33,6 +37,18 @@ cleanup() {
         pkill -9 -P "$SESSION_PID" 2>/dev/null || :   # sweep for strays
         wait "$SESSION_PID" 2>/dev/null || :
     fi
+
+    echo "Killing any remaining processes on the embedded backend port"
+    sleep 0.2   # give processes time to exit
+    # Kill any remaining processes on the embedded backend port
+    lsof -ti:31134 | xargs -r kill -9 2>/dev/null || :
+
+    # Kill any remaining processes on the Uvicorn port
+    sleep 1  # give Uvicorn time to exit
+    echo "Killing any remaining processes on the Uvicorn port"
+    lsof -ti:8880 | xargs -r kill -9 2>/dev/null || :
+    pkill -f "uvicorn rustic_ai.api_server.main:app" 2>/dev/null || :
+
 
     rm -f "$DB_FILE" .test_session_pid 2>/dev/null || :
     printf '🧹  Cleanup complete.\n' >&2

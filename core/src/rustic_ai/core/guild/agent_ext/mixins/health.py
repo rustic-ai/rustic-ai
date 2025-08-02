@@ -116,7 +116,7 @@ class HealthMixin:
 
     @agent.processor(
         agent.SelfReadyNotification,
-        predicate=lambda self, msg: msg.sender == self.get_agent_tag() and msg.topic_published_to == self._self_topic,
+        predicate=lambda self, msg: msg.sender == self.get_agent_tag() and msg.topic_published_to == self._self_inbox,
         handle_essential=True,
     )
     def send_first_heartbeat(self, ctx: agent.ProcessContext[agent.SelfReadyNotification]):

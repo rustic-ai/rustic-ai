@@ -1,0 +1,23 @@
+id: "p2p_guild"
+name: "P2P Messaging Guild"
+description: "A simple guild to demonstrate P2P messaging between agents."
+agents:
+  - id: "agent1"
+    name: "Agent1"
+    description: "The first Agent"
+    class_name: "rustic_ai.core.agents.eip.basic_wiring_agent.BasicWiringAgent"
+  - id: "agent2"
+    name: "Agent2"
+    description: "The second Agent"
+    class_name: "rustic_ai.core.agents.eip.basic_wiring_agent.BasicWiringAgent"
+    listen_to_default_topic: false
+routes:
+  steps:
+    - agent:
+        name: Agent1
+      destination:
+        topics: agent_inbox:agent2
+    - agent:
+        name: Agent2
+      destination:
+        topics: topic_2

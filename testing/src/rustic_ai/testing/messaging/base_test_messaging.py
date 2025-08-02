@@ -442,13 +442,23 @@ class BaseTestMessagingABC(ABC):
 
         message_id2 = generator.get_id(Priority.NORMAL)
         history = [
-            ProcessEntry(agent=AgentTag(name="test-sender"), origin=message_id1.to_int(), result=message_id2.to_int())
+            ProcessEntry(
+                agent=AgentTag(name="test-sender"),
+                origin=message_id1.to_int(),
+                result=message_id2.to_int(),
+                processor="test_processor",
+            )
         ]
         sender.send_message(topic, MessageConstants.RAW_JSON_FORMAT, {"data": "value2"}, message_id2, history)
 
         message_id3 = generator.get_id(Priority.NORMAL)
         history.append(
-            ProcessEntry(agent=AgentTag(name="test-sender"), origin=message_id2.to_int(), result=message_id3.to_int())
+            ProcessEntry(
+                agent=AgentTag(name="test-sender"),
+                origin=message_id2.to_int(),
+                result=message_id3.to_int(),
+                processor="test_processor",
+            )
         )
         sender.send_message(topic, MessageConstants.RAW_JSON_FORMAT, {"data": "value2"}, message_id3, history, 2)
 

@@ -301,7 +301,7 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
 
     @processor(
         SelfReadyNotification,
-        predicate=lambda self, msg: msg.sender == self.get_agent_tag() and msg.topic_published_to == self._self_topic,
+        predicate=lambda self, msg: msg.sender == self.get_agent_tag() and msg.topic_published_to == self._self_inbox,
         handle_essential=True,
     )
     def launch_guild_agents(self, ctx: ProcessContext[SelfReadyNotification]) -> None:
