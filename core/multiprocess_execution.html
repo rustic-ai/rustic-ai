@@ -1,0 +1,3952 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="execution.html">
+      
+      
+        <link rel="next" href="dependencies.html">
+      
+      
+      <link rel="icon" href="../assets/images/favicon.jpg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.16">
+    
+    
+      
+        <title>Multiprocess Execution - Rustic AI Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.7e37652d.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/theme.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#multiprocess-execution-engine" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../index.html" title="Rustic AI Documentation" class="md-header__button md-logo" aria-label="Rustic AI Documentation" data-md-component="logo">
+      
+  <img src="../assets/images/logo.svg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Rustic AI Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Multiprocess Execution
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/rustic-ai/rustic-ai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.0.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path fill="currentColor" d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../index.html" title="Rustic AI Documentation" class="md-nav__button md-logo" aria-label="Rustic AI Documentation" data-md-component="logo">
+      
+  <img src="../assets/images/logo.svg" alt="logo">
+
+    </a>
+    Rustic AI Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/rustic-ai/rustic-ai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.0.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path fill="currentColor" d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Home
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../paper.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Light Paper
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    How-To Guides
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            How-To Guides
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../howto/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../howto/creating_your_first_agent.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Creating Your First Agent
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../howto/creating_a_guild.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Creating a Guild
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../howto/guild_specifications.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Guild Specifications
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../howto/dependency_injection.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Dependency Injection
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../howto/state_management.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    State Management
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../howto/testing_agents.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Testing Agents
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../howto/writing_effective_agent_tests.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Writing Effective Agent Tests
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Core
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            Core
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="architecture.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Architecture
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="agents.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Agents
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="guilds.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Guilds
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="messaging.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Messaging
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="shared_memory_backend.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Shared Memory Backend
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="execution.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Execution
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    Multiprocess Execution
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="multiprocess_execution.html" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    Multiprocess Execution
+    
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      Overview
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#key-features" class="md-nav__link">
+    <span class="md-ellipsis">
+      Key Features
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Key Features">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#core-execution-features" class="md-nav__link">
+    <span class="md-ellipsis">
+      Core Execution Features
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#process-management-features" class="md-nav__link">
+    <span class="md-ellipsis">
+      Process Management Features
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#integration-features" class="md-nav__link">
+    <span class="md-ellipsis">
+      Integration Features
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#basic-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Basic Usage
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Basic Usage">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#simple-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      Simple Setup
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#with-guild" class="md-nav__link">
+    <span class="md-ellipsis">
+      With Guild
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#advanced-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Advanced Usage
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Advanced Usage">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#cpu-intensive-workloads" class="md-nav__link">
+    <span class="md-ellipsis">
+      CPU-Intensive Workloads
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#process-monitoring" class="md-nav__link">
+    <span class="md-ellipsis">
+      Process Monitoring
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fault-tolerance" class="md-nav__link">
+    <span class="md-ellipsis">
+      Fault Tolerance
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configuration Options
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Configuration Options">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#engine-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Engine Configuration
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#messaging-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Messaging Configuration
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#process-start-method" class="md-nav__link">
+    <span class="md-ellipsis">
+      Process Start Method
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#api-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      API Reference
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="API Reference">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#multiprocessexecutionengine" class="md-nav__link">
+    <span class="md-ellipsis">
+      MultiProcessExecutionEngine
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="MultiProcessExecutionEngine">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#constructor" class="md-nav__link">
+    <span class="md-ellipsis">
+      Constructor
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#core-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      Core Methods
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#multiprocessagentwrapper" class="md-nav__link">
+    <span class="md-ellipsis">
+      MultiProcessAgentWrapper
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="MultiProcessAgentWrapper">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#core-methods_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Core Methods
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#multiprocessagenttracker" class="md-nav__link">
+    <span class="md-ellipsis">
+      MultiProcessAgentTracker
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="MultiProcessAgentTracker">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#core-methods_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      Core Methods
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#performance-considerations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Performance Considerations
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Performance Considerations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#advantages" class="md-nav__link">
+    <span class="md-ellipsis">
+      Advantages
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Limitations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#best-use-cases" class="md-nav__link">
+    <span class="md-ellipsis">
+      Best Use Cases
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#best-practices" class="md-nav__link">
+    <span class="md-ellipsis">
+      Best Practices
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Best Practices">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#for-performance" class="md-nav__link">
+    <span class="md-ellipsis">
+      For Performance
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#for-reliability" class="md-nav__link">
+    <span class="md-ellipsis">
+      For Reliability
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#for-development" class="md-nav__link">
+    <span class="md-ellipsis">
+      For Development
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#error-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      Error Handling
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      Examples
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#parallel-data-processing" class="md-nav__link">
+    <span class="md-ellipsis">
+      Parallel Data Processing
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cpu-intensive-monte-carlo-simulation" class="md-nav__link">
+    <span class="md-ellipsis">
+      CPU-Intensive Monte Carlo Simulation
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      Troubleshooting
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Troubleshooting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#fork-deprecation-warning" class="md-nav__link">
+    <span class="md-ellipsis">
+      Fork() Deprecation Warning
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pytest-hanging-issue" class="md-nav__link">
+    <span class="md-ellipsis">
+      Pytest Hanging Issue
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configuration
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#common-issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      Common Issues
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#debugging" class="md-nav__link">
+    <span class="md-ellipsis">
+      Debugging
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#performance-monitoring" class="md-nav__link">
+    <span class="md-ellipsis">
+      Performance Monitoring
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#integration-with-embedded-messaging-backend" class="md-nav__link">
+    <span class="md-ellipsis">
+      Integration with Embedded Messaging Backend
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#conclusion" class="md-nav__link">
+    <span class="md-ellipsis">
+      Conclusion
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="dependencies.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Dependencies
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="state_management.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    State Management
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Agents
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            Agents
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_2" id="__nav_5_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Core
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_2">
+            <span class="md-nav__icon md-icon"></span>
+            Core
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/core/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/core/guild_manager_agent.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Guild Manager Agent
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/core/user_proxy_agent.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    User Proxy Agent
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/core/vector_agent.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Vector Agent
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/core/simple_llm_agent.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Simple LLM Agent
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/core/probe_agent.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Probe Agent
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_3" id="__nav_5_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    LiteLLM
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3">
+            <span class="md-nav__icon md-icon"></span>
+            LiteLLM
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/litellm/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/litellm/litellm_agent.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    LiteLLM Agent
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_4" id="__nav_5_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    HuggingFace
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_4">
+            <span class="md-nav__icon md-icon"></span>
+            HuggingFace
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/huggingface/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/huggingface/llm_phi_agent.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    LLM Phi Agent
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/huggingface/squad_agent.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Squad Agent
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/huggingface/image2image_agent.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Image2Image Agent
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/huggingface/runwayml_stable_diffusion_agent.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Runwayml Stable Diffusion Agent
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/huggingface/speecht5_tts_agent.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    SpeechT5 TTS Agent
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_5" id="__nav_5_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Playwright
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_5">
+            <span class="md-nav__icon md-icon"></span>
+            Playwright
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/playwright/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/playwright/playwright_scraper_agent.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Playwright Scraper Agent
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_6" id="__nav_5_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    SerpAPI
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_6">
+            <span class="md-nav__icon md-icon"></span>
+            SerpAPI
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/serpapi/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/serpapi/serp_agent.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    SERP Agent
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_7" id="__nav_5_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Marvin
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_7">
+            <span class="md-nav__icon md-icon"></span>
+            Marvin
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/marvin/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/marvin/marvin_agent.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Marvin Agent
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Dependencies
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            Dependencies
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dependencies/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_6_2" id="__nav_6_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Core
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6_2">
+            <span class="md-nav__icon md-icon"></span>
+            Core
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dependencies/core/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dependencies/core/env_secret_provider.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Environment Secret Provider
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dependencies/core/filesystem.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    File System Resolver
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dependencies/core/in_memory_kvstore.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    In-Memory KV Store
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dependencies/core/in_process_interpreter.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    In-Process Interpreter
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dependencies/core/python_exec_executor.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Python Exec Executor
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_6_3" id="__nav_6_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Redis
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6_3">
+            <span class="md-nav__icon md-icon"></span>
+            Redis
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dependencies/redis/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dependencies/redis/redis_kvstore.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Redis KV Store
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_6_4" id="__nav_6_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    LiteLLM
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6_4">
+            <span class="md-nav__icon md-icon"></span>
+            LiteLLM
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dependencies/litellm/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dependencies/litellm/litellm_resolver.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    LiteLLM Resolver
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_6_5" id="__nav_6_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Chroma
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6_5">
+            <span class="md-nav__icon md-icon"></span>
+            Chroma
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dependencies/chroma/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dependencies/chroma/chroma_resolver.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Chroma Resolver
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6_6" id="__nav_6_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    LangChain
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6_6">
+            <span class="md-nav__icon md-icon"></span>
+            LangChain
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dependencies/langchain/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dependencies/langchain/character_splitter.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Character Splitter
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dependencies/langchain/openai_embeddings.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    OpenAI Embeddings
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dependencies/langchain/recursive_splitter.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Recursive Splitter
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ray/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Ray
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../showcase/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Showcase
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    API
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../contributing.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Contributing
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      Overview
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#key-features" class="md-nav__link">
+    <span class="md-ellipsis">
+      Key Features
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Key Features">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#core-execution-features" class="md-nav__link">
+    <span class="md-ellipsis">
+      Core Execution Features
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#process-management-features" class="md-nav__link">
+    <span class="md-ellipsis">
+      Process Management Features
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#integration-features" class="md-nav__link">
+    <span class="md-ellipsis">
+      Integration Features
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#basic-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Basic Usage
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Basic Usage">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#simple-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      Simple Setup
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#with-guild" class="md-nav__link">
+    <span class="md-ellipsis">
+      With Guild
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#advanced-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Advanced Usage
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Advanced Usage">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#cpu-intensive-workloads" class="md-nav__link">
+    <span class="md-ellipsis">
+      CPU-Intensive Workloads
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#process-monitoring" class="md-nav__link">
+    <span class="md-ellipsis">
+      Process Monitoring
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fault-tolerance" class="md-nav__link">
+    <span class="md-ellipsis">
+      Fault Tolerance
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configuration Options
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Configuration Options">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#engine-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Engine Configuration
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#messaging-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Messaging Configuration
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#process-start-method" class="md-nav__link">
+    <span class="md-ellipsis">
+      Process Start Method
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#api-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      API Reference
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="API Reference">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#multiprocessexecutionengine" class="md-nav__link">
+    <span class="md-ellipsis">
+      MultiProcessExecutionEngine
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="MultiProcessExecutionEngine">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#constructor" class="md-nav__link">
+    <span class="md-ellipsis">
+      Constructor
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#core-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      Core Methods
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#multiprocessagentwrapper" class="md-nav__link">
+    <span class="md-ellipsis">
+      MultiProcessAgentWrapper
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="MultiProcessAgentWrapper">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#core-methods_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Core Methods
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#multiprocessagenttracker" class="md-nav__link">
+    <span class="md-ellipsis">
+      MultiProcessAgentTracker
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="MultiProcessAgentTracker">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#core-methods_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      Core Methods
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#performance-considerations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Performance Considerations
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Performance Considerations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#advantages" class="md-nav__link">
+    <span class="md-ellipsis">
+      Advantages
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Limitations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#best-use-cases" class="md-nav__link">
+    <span class="md-ellipsis">
+      Best Use Cases
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#best-practices" class="md-nav__link">
+    <span class="md-ellipsis">
+      Best Practices
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Best Practices">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#for-performance" class="md-nav__link">
+    <span class="md-ellipsis">
+      For Performance
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#for-reliability" class="md-nav__link">
+    <span class="md-ellipsis">
+      For Reliability
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#for-development" class="md-nav__link">
+    <span class="md-ellipsis">
+      For Development
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#error-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      Error Handling
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      Examples
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#parallel-data-processing" class="md-nav__link">
+    <span class="md-ellipsis">
+      Parallel Data Processing
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cpu-intensive-monte-carlo-simulation" class="md-nav__link">
+    <span class="md-ellipsis">
+      CPU-Intensive Monte Carlo Simulation
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      Troubleshooting
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Troubleshooting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#fork-deprecation-warning" class="md-nav__link">
+    <span class="md-ellipsis">
+      Fork() Deprecation Warning
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pytest-hanging-issue" class="md-nav__link">
+    <span class="md-ellipsis">
+      Pytest Hanging Issue
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configuration
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#common-issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      Common Issues
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#debugging" class="md-nav__link">
+    <span class="md-ellipsis">
+      Debugging
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#performance-monitoring" class="md-nav__link">
+    <span class="md-ellipsis">
+      Performance Monitoring
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#integration-with-embedded-messaging-backend" class="md-nav__link">
+    <span class="md-ellipsis">
+      Integration with Embedded Messaging Backend
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#conclusion" class="md-nav__link">
+    <span class="md-ellipsis">
+      Conclusion
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="multiprocess-execution-engine">Multiprocess Execution Engine<a class="headerlink" href="#multiprocess-execution-engine" title="Permanent link">&para;</a></h1>
+<p>The Multiprocess Execution Engine provides true parallel execution by running agents in separate processes, completely escaping Python's Global Interpreter Lock (GIL). This enables CPU-intensive tasks to run with genuine parallelism while providing process isolation for enhanced robustness.</p>
+<h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
+<p>The multiprocess execution engine consists of three main components:</p>
+<ol>
+<li><strong>MultiProcessExecutionEngine</strong>: The main execution engine that manages agent processes</li>
+<li><strong>MultiProcessAgentWrapper</strong>: Wraps agents and runs them in separate processes</li>
+<li><strong>MultiProcessAgentTracker</strong>: Tracks and manages agent processes using shared memory</li>
+</ol>
+<h2 id="key-features">Key Features<a class="headerlink" href="#key-features" title="Permanent link">&para;</a></h2>
+<h3 id="core-execution-features">Core Execution Features<a class="headerlink" href="#core-execution-features" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>True Parallelism</strong>: Completely escapes Python's GIL for genuine concurrent execution</li>
+<li><strong>Process Isolation</strong>: Each agent runs in its own process, providing fault tolerance</li>
+<li><strong>Shared Memory Tracking</strong>: Cross-process agent management using multiprocessing.Manager</li>
+<li><strong>Graceful Shutdown</strong>: Proper process termination with timeout handling</li>
+<li><strong>Process Limits</strong>: Configurable maximum number of concurrent processes</li>
+<li><strong>Automatic Cleanup</strong>: Dead process detection and cleanup</li>
+</ul>
+<h3 id="process-management-features">Process Management Features<a class="headerlink" href="#process-management-features" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Process Health Monitoring</strong>: Real-time monitoring of agent process status</li>
+<li><strong>Resource Management</strong>: Proper cleanup of processes and shared memory</li>
+<li><strong>Fault Tolerance</strong>: Automatic detection and handling of crashed processes</li>
+<li><strong>Process Information</strong>: Detailed process info including PID, status, and memory usage</li>
+<li><strong>Cross-platform Support</strong>: Uses 'spawn' start method for compatibility</li>
+</ul>
+<h3 id="integration-features">Integration Features<a class="headerlink" href="#integration-features" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Messaging Support</strong>: Works seamlessly with socket messaging and Redis backends</li>
+<li><strong>Dependency Injection</strong>: Full support for agent dependencies across processes</li>
+<li><strong>Guild Integration</strong>: Complete integration with guild lifecycle management</li>
+<li><strong>Statistics</strong>: Comprehensive engine and process statistics</li>
+</ul>
+<h2 id="basic-usage">Basic Usage<a class="headerlink" href="#basic-usage" title="Permanent link">&para;</a></h2>
+<h3 id="simple-setup">Simple Setup<a class="headerlink" href="#simple-setup" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">rustic_ai.core.guild.execution.multiprocess</span><span class="w"> </span><span class="kn">import</span> <span class="n">MultiProcessExecutionEngine</span>
+
+<span class="c1"># Create engine with default CPU count</span>
+<span class="n">engine</span> <span class="o">=</span> <span class="n">MultiProcessExecutionEngine</span><span class="p">(</span><span class="n">guild_id</span><span class="o">=</span><span class="s2">&quot;my-guild&quot;</span><span class="p">)</span>
+
+<span class="c1"># Create engine with specific process limit</span>
+<span class="n">engine</span> <span class="o">=</span> <span class="n">MultiProcessExecutionEngine</span><span class="p">(</span><span class="n">guild_id</span><span class="o">=</span><span class="s2">&quot;my-guild&quot;</span><span class="p">,</span> <span class="n">max_processes</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span>
+</code></pre></div>
+<h3 id="with-guild">With Guild<a class="headerlink" href="#with-guild" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">rustic_ai.core.guild</span><span class="w"> </span><span class="kn">import</span> <span class="n">Guild</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rustic_ai.core.guild.execution.multiprocess</span><span class="w"> </span><span class="kn">import</span> <span class="n">MultiProcessExecutionEngine</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rustic_ai.core.messaging.backend.embedded_backend</span><span class="w"> </span><span class="kn">import</span> <span class="n">create_embedded_messaging_config</span>
+
+<span class="c1"># Create messaging config that works well with multiprocess</span>
+<span class="n">messaging_config</span> <span class="o">=</span> <span class="n">create_embedded_messaging_config</span><span class="p">()</span>
+
+<span class="c1"># Create guild with multiprocess engine</span>
+<span class="n">guild</span> <span class="o">=</span> <span class="n">Guild</span><span class="p">(</span>
+    <span class="n">guild_id</span><span class="o">=</span><span class="s2">&quot;cpu_intensive_guild&quot;</span><span class="p">,</span>
+    <span class="n">execution_engine</span><span class="o">=</span><span class="n">MultiProcessExecutionEngine</span><span class="p">(</span>
+        <span class="n">guild_id</span><span class="o">=</span><span class="s2">&quot;cpu_intensive_guild&quot;</span><span class="p">,</span>
+        <span class="n">max_processes</span><span class="o">=</span><span class="n">multiprocessing</span><span class="o">.</span><span class="n">cpu_count</span><span class="p">()</span>
+    <span class="p">),</span>
+    <span class="n">messaging_config</span><span class="o">=</span><span class="n">messaging_config</span>
+<span class="p">)</span>
+
+<span class="c1"># Launch CPU-intensive agents</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">4</span><span class="p">):</span>
+    <span class="n">agent_spec</span> <span class="o">=</span> <span class="n">create_cpu_intensive_agent_spec</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;worker_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">guild</span><span class="o">.</span><span class="n">launch_agent</span><span class="p">(</span><span class="n">agent_spec</span><span class="p">)</span>
+</code></pre></div>
+<h2 id="advanced-usage">Advanced Usage<a class="headerlink" href="#advanced-usage" title="Permanent link">&para;</a></h2>
+<h3 id="cpu-intensive-workloads">CPU-Intensive Workloads<a class="headerlink" href="#cpu-intensive-workloads" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">rustic_ai.core.guild</span><span class="w"> </span><span class="kn">import</span> <span class="n">AgentBuilder</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">multiprocessing</span>
+
+<span class="c1"># Create agents for parallel computation</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">create_computation_agents</span><span class="p">(</span><span class="n">guild</span><span class="p">,</span> <span class="n">data_chunks</span><span class="p">):</span>
+    <span class="n">engine</span> <span class="o">=</span> <span class="n">MultiProcessExecutionEngine</span><span class="p">(</span>
+        <span class="n">guild_id</span><span class="o">=</span><span class="n">guild</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
+        <span class="n">max_processes</span><span class="o">=</span><span class="n">multiprocessing</span><span class="o">.</span><span class="n">cpu_count</span><span class="p">()</span>
+    <span class="p">)</span>
+
+    <span class="n">agents</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">data_chunks</span><span class="p">):</span>
+        <span class="n">agent_spec</span> <span class="o">=</span> <span class="p">(</span><span class="n">AgentBuilder</span><span class="p">()</span>
+            <span class="o">.</span><span class="n">set_name</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;compute_worker_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">set_description</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Process data chunk </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">set_class_name</span><span class="p">(</span><span class="s2">&quot;ComputeAgent&quot;</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">add_dependency</span><span class="p">(</span><span class="s2">&quot;data_chunk&quot;</span><span class="p">,</span> <span class="n">chunk</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">build_spec</span><span class="p">())</span>
+
+        <span class="n">guild</span><span class="o">.</span><span class="n">launch_agent</span><span class="p">(</span><span class="n">agent_spec</span><span class="p">,</span> <span class="n">execution_engine</span><span class="o">=</span><span class="n">engine</span><span class="p">)</span>
+        <span class="n">agents</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">agent_spec</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">agents</span>
+</code></pre></div>
+<h3 id="process-monitoring">Process Monitoring<a class="headerlink" href="#process-monitoring" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Monitor agent processes</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">monitor_agents</span><span class="p">(</span><span class="n">engine</span><span class="p">,</span> <span class="n">guild_id</span><span class="p">):</span>
+    <span class="n">agents</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">get_agents_in_guild</span><span class="p">(</span><span class="n">guild_id</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">agent_id</span><span class="p">,</span> <span class="n">agent_spec</span> <span class="ow">in</span> <span class="n">agents</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">process_info</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">get_process_info</span><span class="p">(</span><span class="n">guild_id</span><span class="p">,</span> <span class="n">agent_id</span><span class="p">)</span>
+        <span class="n">is_alive</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">is_agent_running</span><span class="p">(</span><span class="n">guild_id</span><span class="p">,</span> <span class="n">agent_id</span><span class="p">)</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Agent </span><span class="si">{</span><span class="n">agent_id</span><span class="si">}</span><span class="s2">:&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  PID: </span><span class="si">{</span><span class="n">process_info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;pid&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Alive: </span><span class="si">{</span><span class="n">is_alive</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Name: </span><span class="si">{</span><span class="n">agent_spec</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+<span class="c1"># Get engine statistics</span>
+<span class="n">stats</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">get_engine_stats</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Total agents: </span><span class="si">{</span><span class="n">stats</span><span class="p">[</span><span class="s1">&#39;owned_agents_count&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Max processes: </span><span class="si">{</span><span class="n">stats</span><span class="p">[</span><span class="s1">&#39;max_processes&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+<h3 id="fault-tolerance">Fault Tolerance<a class="headerlink" href="#fault-tolerance" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">robust_agent_management</span><span class="p">(</span><span class="n">engine</span><span class="p">,</span> <span class="n">guild_id</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Example of robust agent management with fault tolerance.&quot;&quot;&quot;</span>
+
+    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c1"># Clean up any dead processes</span>
+            <span class="n">engine</span><span class="o">.</span><span class="n">cleanup_dead_processes</span><span class="p">()</span>
+
+            <span class="c1"># Check each agent</span>
+            <span class="n">agents</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">get_agents_in_guild</span><span class="p">(</span><span class="n">guild_id</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">agent_id</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">agents</span><span class="o">.</span><span class="n">keys</span><span class="p">()):</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">engine</span><span class="o">.</span><span class="n">is_agent_running</span><span class="p">(</span><span class="n">guild_id</span><span class="p">,</span> <span class="n">agent_id</span><span class="p">):</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Agent </span><span class="si">{</span><span class="n">agent_id</span><span class="si">}</span><span class="s2"> has died, restarting...&quot;</span><span class="p">)</span>
+
+                    <span class="c1"># Get the agent spec for restarting</span>
+                    <span class="n">agent_spec</span> <span class="o">=</span> <span class="n">agents</span><span class="p">[</span><span class="n">agent_id</span><span class="p">]</span>
+
+                    <span class="c1"># Remove the dead agent</span>
+                    <span class="n">engine</span><span class="o">.</span><span class="n">stop_agent</span><span class="p">(</span><span class="n">guild_id</span><span class="p">,</span> <span class="n">agent_id</span><span class="p">)</span>
+
+                    <span class="c1"># Restart the agent (would need proper guild integration)</span>
+                    <span class="c1"># guild.launch_agent(agent_spec, execution_engine=engine)</span>
+
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>  <span class="c1"># Check every 5 seconds</span>
+
+        <span class="k">except</span> <span class="ne">KeyboardInterrupt</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Shutting down...&quot;</span><span class="p">)</span>
+            <span class="n">engine</span><span class="o">.</span><span class="n">shutdown</span><span class="p">()</span>
+            <span class="k">break</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error in monitoring: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.01</span><span class="p">)</span>
+</code></pre></div>
+<h2 id="configuration-options">Configuration Options<a class="headerlink" href="#configuration-options" title="Permanent link">&para;</a></h2>
+<h3 id="engine-configuration">Engine Configuration<a class="headerlink" href="#engine-configuration" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="n">engine</span> <span class="o">=</span> <span class="n">MultiProcessExecutionEngine</span><span class="p">(</span>
+    <span class="n">guild_id</span><span class="o">=</span><span class="s2">&quot;my-guild&quot;</span><span class="p">,</span>
+    <span class="n">max_processes</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span>  <span class="c1"># Maximum concurrent processes (default: CPU count)</span>
+<span class="p">)</span>
+</code></pre></div>
+<h3 id="messaging-configuration">Messaging Configuration<a class="headerlink" href="#messaging-configuration" title="Permanent link">&para;</a></h3>
+<p>For multiprocess execution, use messaging backends that support cross-process communication:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Option 1: Embedded Messaging Backend (recommended)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rustic_ai.core.messaging.backend.embedded_backend</span><span class="w"> </span><span class="kn">import</span> <span class="n">create_embedded_messaging_config</span>
+
+<span class="n">messaging_config</span> <span class="o">=</span> <span class="n">create_embedded_messaging_config</span><span class="p">()</span>
+
+<span class="c1"># Option 2: Redis Backend</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rustic_ai.core.messaging.core.messaging_config</span><span class="w"> </span><span class="kn">import</span> <span class="n">MessagingConfig</span>
+
+<span class="n">messaging_config</span> <span class="o">=</span> <span class="n">MessagingConfig</span><span class="p">(</span>
+    <span class="n">backend_module</span><span class="o">=</span><span class="s2">&quot;rustic_ai.redis.messaging&quot;</span><span class="p">,</span>
+    <span class="n">backend_class</span><span class="o">=</span><span class="s2">&quot;RedisMessagingBackend&quot;</span><span class="p">,</span>
+    <span class="n">backend_config</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;host&quot;</span><span class="p">:</span> <span class="s2">&quot;localhost&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;port&quot;</span><span class="p">:</span> <span class="mi">6379</span><span class="p">,</span>
+        <span class="s2">&quot;db&quot;</span><span class="p">:</span> <span class="mi">0</span>
+    <span class="p">}</span>
+<span class="p">)</span>
+</code></pre></div>
+<h3 id="process-start-method">Process Start Method<a class="headerlink" href="#process-start-method" title="Permanent link">&para;</a></h3>
+<p>The engine automatically sets the multiprocessing start method to 'spawn' for better cross-platform compatibility:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># This is done automatically by the engine</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">multiprocessing</span>
+<span class="n">multiprocessing</span><span class="o">.</span><span class="n">set_start_method</span><span class="p">(</span><span class="s1">&#39;spawn&#39;</span><span class="p">,</span> <span class="n">force</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</code></pre></div>
+<h2 id="api-reference">API Reference<a class="headerlink" href="#api-reference" title="Permanent link">&para;</a></h2>
+<h3 id="multiprocessexecutionengine">MultiProcessExecutionEngine<a class="headerlink" href="#multiprocessexecutionengine" title="Permanent link">&para;</a></h3>
+<h4 id="constructor">Constructor<a class="headerlink" href="#constructor" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><span class="fm">__init__</span><span class="p">(</span><span class="n">guild_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">max_processes</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span>
+</code></pre></div>
+<ul>
+<li><code>guild_id</code>: ID of the guild this engine manages</li>
+<li><code>max_processes</code>: Maximum number of processes (defaults to CPU count)</li>
+</ul>
+<h4 id="core-methods">Core Methods<a class="headerlink" href="#core-methods" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><span class="c1"># Agent management</span>
+<span class="n">run_agent</span><span class="p">(</span><span class="n">guild_spec</span><span class="p">,</span> <span class="n">agent_spec</span><span class="p">,</span> <span class="n">messaging_config</span><span class="p">,</span> <span class="n">machine_id</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+<span class="n">stop_agent</span><span class="p">(</span><span class="n">guild_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">agent_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span>
+<span class="n">shutdown</span><span class="p">()</span>
+
+<span class="c1"># Agent querying</span>
+<span class="n">get_agents_in_guild</span><span class="p">(</span><span class="n">guild_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">AgentSpec</span><span class="p">]</span>
+<span class="n">is_agent_running</span><span class="p">(</span><span class="n">guild_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">agent_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span>
+<span class="n">find_agents_by_name</span><span class="p">(</span><span class="n">guild_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">agent_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">AgentSpec</span><span class="p">]</span>
+
+<span class="c1"># Process management</span>
+<span class="n">get_process_info</span><span class="p">(</span><span class="n">guild_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">agent_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span>
+<span class="n">get_engine_stats</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Dict</span>
+<span class="n">cleanup_dead_processes</span><span class="p">()</span>
+</code></pre></div>
+<h3 id="multiprocessagentwrapper">MultiProcessAgentWrapper<a class="headerlink" href="#multiprocessagentwrapper" title="Permanent link">&para;</a></h3>
+<h4 id="core-methods_1">Core Methods<a class="headerlink" href="#core-methods_1" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><span class="n">run</span><span class="p">()</span>  <span class="c1"># Start the agent process</span>
+<span class="n">shutdown</span><span class="p">()</span>  <span class="c1"># Stop the agent process</span>
+<span class="n">is_alive</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">bool</span>  <span class="c1"># Check if process is alive</span>
+<span class="n">get_process_id</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span>  <span class="c1"># Get process PID</span>
+</code></pre></div>
+<h3 id="multiprocessagenttracker">MultiProcessAgentTracker<a class="headerlink" href="#multiprocessagenttracker" title="Permanent link">&para;</a></h3>
+<h4 id="core-methods_2">Core Methods<a class="headerlink" href="#core-methods_2" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><span class="c1"># Agent tracking</span>
+<span class="n">add_agent</span><span class="p">(</span><span class="n">guild_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">agent_spec</span><span class="p">:</span> <span class="n">AgentSpec</span><span class="p">,</span> <span class="n">wrapper</span><span class="p">:</span> <span class="n">MultiProcessAgentWrapper</span><span class="p">)</span>
+<span class="n">remove_agent</span><span class="p">(</span><span class="n">guild_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">agent_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span>
+<span class="n">update_process_info</span><span class="p">(</span><span class="n">guild_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">agent_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span>
+
+<span class="c1"># Agent querying</span>
+<span class="n">get_agent_spec</span><span class="p">(</span><span class="n">guild_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">agent_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">AgentSpec</span><span class="p">]</span>
+<span class="n">get_agent_wrapper</span><span class="p">(</span><span class="n">guild_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">agent_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">MultiProcessAgentWrapper</span><span class="p">]</span>
+<span class="n">is_agent_alive</span><span class="p">(</span><span class="n">guild_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">agent_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span>
+
+<span class="c1"># Statistics and management</span>
+<span class="n">get_stats</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Dict</span>
+<span class="n">clear</span><span class="p">()</span>
+</code></pre></div>
+<h2 id="performance-considerations">Performance Considerations<a class="headerlink" href="#performance-considerations" title="Permanent link">&para;</a></h2>
+<h3 id="advantages">Advantages<a class="headerlink" href="#advantages" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>True Parallelism</strong>: Completely escapes Python's GIL</li>
+<li><strong>Fault Isolation</strong>: Process crashes don't affect other agents</li>
+<li><strong>Memory Isolation</strong>: Each process has its own memory space</li>
+<li><strong>CPU Utilization</strong>: Can fully utilize multiple CPU cores</li>
+<li><strong>Scalability</strong>: Can handle CPU-intensive workloads efficiently</li>
+</ul>
+<h3 id="limitations">Limitations<a class="headerlink" href="#limitations" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Memory Overhead</strong>: Each process has its own Python interpreter</li>
+<li><strong>IPC Overhead</strong>: Inter-process communication has serialization costs</li>
+<li><strong>Startup Time</strong>: Process creation is slower than thread creation</li>
+<li><strong>Resource Usage</strong>: More system resources required than threading</li>
+</ul>
+<h3 id="best-use-cases">Best Use Cases<a class="headerlink" href="#best-use-cases" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>CPU-intensive computations</strong>: Mathematical calculations, data processing</li>
+<li><strong>Parallel algorithms</strong>: Monte Carlo simulations, optimization problems</li>
+<li><strong>Fault-tolerant systems</strong>: Systems that need process isolation</li>
+<li><strong>Mixed workloads</strong>: Combination of CPU and IO-bound tasks</li>
+<li><strong>Long-running agents</strong>: Agents that run for extended periods</li>
+</ul>
+<h2 id="best-practices">Best Practices<a class="headerlink" href="#best-practices" title="Permanent link">&para;</a></h2>
+<h3 id="for-performance">For Performance<a class="headerlink" href="#for-performance" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Right-size Process Count</strong>: Use <code>multiprocessing.cpu_count()</code> as a starting point</li>
+<li><strong>Batch Work</strong>: Process larger chunks of work to amortize process overhead</li>
+<li><strong>Efficient Serialization</strong>: Use efficient data structures for inter-process communication</li>
+<li><strong>Monitor Resource Usage</strong>: Track memory and CPU usage to optimize performance</li>
+</ol>
+<h3 id="for-reliability">For Reliability<a class="headerlink" href="#for-reliability" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Health Monitoring</strong>: Regularly check process health with <code>is_agent_running()</code></li>
+<li><strong>Graceful Shutdown</strong>: Always call <code>engine.shutdown()</code> for proper cleanup</li>
+<li><strong>Error Handling</strong>: Implement proper error handling for process failures</li>
+<li><strong>Resource Limits</strong>: Set appropriate <code>max_processes</code> to avoid resource exhaustion</li>
+</ol>
+<h3 id="for-development">For Development<a class="headerlink" href="#for-development" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Start Simple</strong>: Begin with <code>SyncExecutionEngine</code> for development and debugging</li>
+<li><strong>Test Isolation</strong>: Ensure agents work correctly in process isolation</li>
+<li><strong>Logging</strong>: Use proper logging to debug cross-process issues</li>
+<li><strong>Messaging Testing</strong>: Test with the shared memory backend for development</li>
+</ol>
+<h3 id="error-handling">Error Handling<a class="headerlink" href="#error-handling" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">try</span><span class="p">:</span>
+    <span class="n">engine</span> <span class="o">=</span> <span class="n">MultiProcessExecutionEngine</span><span class="p">(</span><span class="n">guild_id</span><span class="o">=</span><span class="s2">&quot;my-guild&quot;</span><span class="p">)</span>
+    <span class="n">guild</span><span class="o">.</span><span class="n">launch_agent</span><span class="p">(</span><span class="n">agent_spec</span><span class="p">,</span> <span class="n">execution_engine</span><span class="o">=</span><span class="n">engine</span><span class="p">)</span>
+<span class="k">except</span> <span class="ne">RuntimeError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+    <span class="k">if</span> <span class="s2">&quot;Maximum number of processes&quot;</span> <span class="ow">in</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">):</span>
+        <span class="c1"># Handle process limit exceeded</span>
+        <span class="n">engine</span><span class="o">.</span><span class="n">cleanup_dead_processes</span><span class="p">()</span>
+        <span class="c1"># Retry or reduce load</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span>
+<span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to start agent: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">engine</span><span class="o">.</span><span class="n">shutdown</span><span class="p">()</span>
+</code></pre></div>
+<h2 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">&para;</a></h2>
+<h3 id="parallel-data-processing">Parallel Data Processing<a class="headerlink" href="#parallel-data-processing" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">multiprocessing</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rustic_ai.core.guild</span><span class="w"> </span><span class="kn">import</span> <span class="n">Guild</span><span class="p">,</span> <span class="n">AgentBuilder</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rustic_ai.core.guild.execution.multiprocess</span><span class="w"> </span><span class="kn">import</span> <span class="n">MultiProcessExecutionEngine</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">parallel_data_processing</span><span class="p">():</span>
+    <span class="c1"># Create embedded messaging for cross-process communication</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">rustic_ai.core.messaging.backend.embedded_backend</span><span class="w"> </span><span class="kn">import</span> <span class="n">create_embedded_messaging_config</span>
+    <span class="n">messaging_config</span> <span class="o">=</span> <span class="n">create_embedded_messaging_config</span><span class="p">()</span>
+
+    <span class="c1"># Create guild with multiprocess engine</span>
+    <span class="n">guild</span> <span class="o">=</span> <span class="n">Guild</span><span class="p">(</span>
+        <span class="n">guild_id</span><span class="o">=</span><span class="s2">&quot;data_processing&quot;</span><span class="p">,</span>
+        <span class="n">messaging_config</span><span class="o">=</span><span class="n">messaging_config</span>
+    <span class="p">)</span>
+
+    <span class="n">engine</span> <span class="o">=</span> <span class="n">MultiProcessExecutionEngine</span><span class="p">(</span>
+        <span class="n">guild_id</span><span class="o">=</span><span class="s2">&quot;data_processing&quot;</span><span class="p">,</span>
+        <span class="n">max_processes</span><span class="o">=</span><span class="n">multiprocessing</span><span class="o">.</span><span class="n">cpu_count</span><span class="p">()</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Create worker agents for parallel processing</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">4</span><span class="p">):</span>
+        <span class="n">worker_spec</span> <span class="o">=</span> <span class="p">(</span><span class="n">AgentBuilder</span><span class="p">()</span>
+            <span class="o">.</span><span class="n">set_name</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;data_worker_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">set_description</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Process data partition </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">set_class_name</span><span class="p">(</span><span class="s2">&quot;DataProcessingAgent&quot;</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">add_dependency</span><span class="p">(</span><span class="s2">&quot;partition_id&quot;</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">build_spec</span><span class="p">())</span>
+
+        <span class="n">guild</span><span class="o">.</span><span class="n">launch_agent</span><span class="p">(</span><span class="n">worker_spec</span><span class="p">,</span> <span class="n">execution_engine</span><span class="o">=</span><span class="n">engine</span><span class="p">)</span>
+
+    <span class="c1"># Create coordinator agent</span>
+    <span class="n">coordinator_spec</span> <span class="o">=</span> <span class="p">(</span><span class="n">AgentBuilder</span><span class="p">()</span>
+        <span class="o">.</span><span class="n">set_name</span><span class="p">(</span><span class="s2">&quot;coordinator&quot;</span><span class="p">)</span>
+        <span class="o">.</span><span class="n">set_description</span><span class="p">(</span><span class="s2">&quot;Coordinate data processing tasks&quot;</span><span class="p">)</span>
+        <span class="o">.</span><span class="n">set_class_name</span><span class="p">(</span><span class="s2">&quot;CoordinatorAgent&quot;</span><span class="p">)</span>
+        <span class="o">.</span><span class="n">build_spec</span><span class="p">())</span>
+
+    <span class="n">guild</span><span class="o">.</span><span class="n">launch_agent</span><span class="p">(</span><span class="n">coordinator_spec</span><span class="p">,</span> <span class="n">execution_engine</span><span class="o">=</span><span class="n">engine</span><span class="p">)</span>
+
+    <span class="c1"># Monitor progress</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="n">stats</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">get_engine_stats</span><span class="p">()</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Running agents: </span><span class="si">{</span><span class="n">stats</span><span class="p">[</span><span class="s1">&#39;owned_agents_count&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.01</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">KeyboardInterrupt</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Shutting down...&quot;</span><span class="p">)</span>
+        <span class="n">guild</span><span class="o">.</span><span class="n">shutdown</span><span class="p">()</span>
+</code></pre></div>
+<h3 id="cpu-intensive-monte-carlo-simulation">CPU-Intensive Monte Carlo Simulation<a class="headerlink" href="#cpu-intensive-monte-carlo-simulation" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">monte_carlo_simulation</span><span class="p">(</span><span class="n">num_workers</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">num_workers</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">num_workers</span> <span class="o">=</span> <span class="n">multiprocessing</span><span class="o">.</span><span class="n">cpu_count</span><span class="p">()</span>
+
+    <span class="c1"># Setup</span>
+    <span class="n">messaging_config</span> <span class="o">=</span> <span class="n">create_embedded_messaging_config</span><span class="p">()</span>
+    <span class="n">guild</span> <span class="o">=</span> <span class="n">Guild</span><span class="p">(</span><span class="n">guild_id</span><span class="o">=</span><span class="s2">&quot;monte_carlo&quot;</span><span class="p">,</span> <span class="n">messaging_config</span><span class="o">=</span><span class="n">messaging_config</span><span class="p">)</span>
+    <span class="n">engine</span> <span class="o">=</span> <span class="n">MultiProcessExecutionEngine</span><span class="p">(</span><span class="n">guild_id</span><span class="o">=</span><span class="s2">&quot;monte_carlo&quot;</span><span class="p">,</span> <span class="n">max_processes</span><span class="o">=</span><span class="n">num_workers</span><span class="p">)</span>
+
+    <span class="c1"># Create simulation workers</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_workers</span><span class="p">):</span>
+        <span class="n">worker_spec</span> <span class="o">=</span> <span class="p">(</span><span class="n">AgentBuilder</span><span class="p">()</span>
+            <span class="o">.</span><span class="n">set_name</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;simulation_worker_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">set_class_name</span><span class="p">(</span><span class="s2">&quot;MonteCarloWorkerAgent&quot;</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">add_dependency</span><span class="p">(</span><span class="s2">&quot;worker_id&quot;</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">add_dependency</span><span class="p">(</span><span class="s2">&quot;num_samples&quot;</span><span class="p">,</span> <span class="mi">1000000</span> <span class="o">//</span> <span class="n">num_workers</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">build_spec</span><span class="p">())</span>
+
+        <span class="n">guild</span><span class="o">.</span><span class="n">launch_agent</span><span class="p">(</span><span class="n">worker_spec</span><span class="p">,</span> <span class="n">execution_engine</span><span class="o">=</span><span class="n">engine</span><span class="p">)</span>
+
+    <span class="c1"># Create results aggregator</span>
+    <span class="n">aggregator_spec</span> <span class="o">=</span> <span class="p">(</span><span class="n">AgentBuilder</span><span class="p">()</span>
+        <span class="o">.</span><span class="n">set_name</span><span class="p">(</span><span class="s2">&quot;results_aggregator&quot;</span><span class="p">)</span>
+        <span class="o">.</span><span class="n">set_class_name</span><span class="p">(</span><span class="s2">&quot;ResultsAggregatorAgent&quot;</span><span class="p">)</span>
+        <span class="o">.</span><span class="n">add_dependency</span><span class="p">(</span><span class="s2">&quot;expected_workers&quot;</span><span class="p">,</span> <span class="n">num_workers</span><span class="p">)</span>
+        <span class="o">.</span><span class="n">build_spec</span><span class="p">())</span>
+
+    <span class="n">guild</span><span class="o">.</span><span class="n">launch_agent</span><span class="p">(</span><span class="n">aggregator_spec</span><span class="p">,</span> <span class="n">execution_engine</span><span class="o">=</span><span class="n">engine</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">guild</span><span class="p">,</span> <span class="n">engine</span>
+</code></pre></div>
+<h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
+<h3 id="fork-deprecation-warning">Fork() Deprecation Warning<a class="headerlink" href="#fork-deprecation-warning" title="Permanent link">&para;</a></h3>
+<p>When running tests, you may encounter warnings like:
+<div class="highlight"><pre><span></span><code>DeprecationWarning: This process (pid=297226) is multi-threaded, use of fork() may lead to deadlocks in the child.
+</code></pre></div></p>
+<p>This warning occurs because Python's multiprocessing module defaults to using the "fork" start method on POSIX systems. In multi-threaded environments (like test suites running with pytest), fork() can cause deadlocks since only the current thread survives in the child process while other threads' locks remain held.</p>
+<p><strong>Solution</strong>: The codebase is configured to use the "spawn" start method instead:</p>
+<div class="highlight"><pre><span></span><code><span class="n">multiprocessing</span><span class="o">.</span><span class="n">set_start_method</span><span class="p">(</span><span class="s1">&#39;spawn&#39;</span><span class="p">,</span> <span class="n">force</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</code></pre></div>
+<p>This creates entirely new Python interpreter processes instead of forking, avoiding the multi-threading issues. This configuration is automatically applied in:</p>
+<ul>
+<li>Core tests via <code>rustic-ai/core/tests/conftest.py</code></li>
+<li>Integration tests via individual test fixtures</li>
+<li>Production code examples in documentation</li>
+</ul>
+<p><strong>Performance Note</strong>: The "spawn" method is slightly slower than "fork" since it needs to create new Python interpreters, but it's much safer and more predictable in multi-threaded environments.</p>
+<h3 id="pytest-hanging-issue">Pytest Hanging Issue<a class="headerlink" href="#pytest-hanging-issue" title="Permanent link">&para;</a></h3>
+<p><strong>Problem</strong>: Tests using multiprocessing were causing pytest to hang and not exit after test completion.</p>
+<p><strong>Root Cause</strong>: The <code>multiprocessing.Manager()</code> creates background processes that weren't being properly cleaned up, preventing pytest from exiting.</p>
+<p><strong>Solution</strong>: Enhanced cleanup mechanisms have been implemented:</p>
+<ol>
+<li>
+<p><strong>Manager Shutdown</strong>: The <code>MultiProcessAgentTracker.clear()</code> method now explicitly shuts down the multiprocessing manager:
+   <div class="highlight"><pre><span></span><code><span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;manager&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">manager</span><span class="p">:</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">manager</span><span class="o">.</span><span class="n">shutdown</span><span class="p">()</span>
+</code></pre></div></p>
+</li>
+<li>
+<p><strong>Process Force Cleanup</strong>: The <code>MultiProcessExecutionEngine.shutdown()</code> method now includes comprehensive process cleanup:</p>
+<ul>
+<li>Terminates and kills remaining processes</li>
+<li>Cleans up process tracking structures</li>
+<li>Forces cleanup of any remaining multiprocessing children</li>
+</ul>
+</li>
+<li>
+<p><strong>Test Fixtures Enhanced</strong>: Test fixtures now include additional cleanup steps:</p>
+<ul>
+<li>Wait for processes to fully terminate</li>
+<li>Double-check multiprocessing cleanup</li>
+<li>Session-level cleanup to ensure no processes remain</li>
+</ul>
+</li>
+<li>
+<p><strong>Session-Level Cleanup</strong>: A session-scoped pytest fixture ensures all multiprocessing resources are cleaned up when the test session ends.</p>
+</li>
+</ol>
+<p>These changes ensure that:
+- ✅ <strong>No fork() warnings</strong> - Tests use "spawn" method
+- ✅ <strong>No pytest hanging</strong> - All processes properly cleaned up
+- ✅ <strong>Fast test execution</strong> - Tests complete quickly without delays
+- ✅ <strong>Reliable cleanup</strong> - Comprehensive process termination</p>
+<h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
+<h3 id="common-issues">Common Issues<a class="headerlink" href="#common-issues" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Process Won't Start</strong>: Check process limits and available memory</li>
+<li><strong>Serialization Errors</strong>: Ensure all data passed to processes is serializable</li>
+<li><strong>Hanging Processes</strong>: Use timeout in shutdown and implement proper cleanup</li>
+<li><strong>Memory Leaks</strong>: Monitor process memory usage and implement cleanup</li>
+</ol>
+<h3 id="debugging">Debugging<a class="headerlink" href="#debugging" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Check process status</span>
+<span class="n">agents</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">get_agents_in_guild</span><span class="p">(</span><span class="n">guild_id</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">agent_id</span><span class="p">,</span> <span class="n">spec</span> <span class="ow">in</span> <span class="n">agents</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="n">process_info</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">get_process_info</span><span class="p">(</span><span class="n">guild_id</span><span class="p">,</span> <span class="n">agent_id</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Agent </span><span class="si">{</span><span class="n">agent_id</span><span class="si">}</span><span class="s2">: PID=</span><span class="si">{</span><span class="n">process_info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;pid&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">, Alive=</span><span class="si">{</span><span class="n">process_info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;is_alive&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+<span class="c1"># Get detailed statistics</span>
+<span class="n">stats</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">get_engine_stats</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Engine stats: </span><span class="si">{</span><span class="n">stats</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+<span class="c1"># Manual cleanup</span>
+<span class="n">engine</span><span class="o">.</span><span class="n">cleanup_dead_processes</span><span class="p">()</span>
+</code></pre></div>
+<h3 id="performance-monitoring">Performance Monitoring<a class="headerlink" href="#performance-monitoring" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">psutil</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">monitor_engine_performance</span><span class="p">(</span><span class="n">engine</span><span class="p">,</span> <span class="n">guild_id</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Monitor engine performance metrics.&quot;&quot;&quot;</span>
+    <span class="n">stats</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">get_engine_stats</span><span class="p">()</span>
+    <span class="n">agents</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">get_agents_in_guild</span><span class="p">(</span><span class="n">guild_id</span><span class="p">)</span>
+
+    <span class="n">total_memory</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">total_cpu</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="k">for</span> <span class="n">agent_id</span> <span class="ow">in</span> <span class="n">agents</span><span class="p">:</span>
+        <span class="n">process_info</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">get_process_info</span><span class="p">(</span><span class="n">guild_id</span><span class="p">,</span> <span class="n">agent_id</span><span class="p">)</span>
+        <span class="n">pid</span> <span class="o">=</span> <span class="n">process_info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;pid&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">pid</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">process</span> <span class="o">=</span> <span class="n">psutil</span><span class="o">.</span><span class="n">Process</span><span class="p">(</span><span class="n">pid</span><span class="p">)</span>
+                <span class="n">memory_mb</span> <span class="o">=</span> <span class="n">process</span><span class="o">.</span><span class="n">memory_info</span><span class="p">()</span><span class="o">.</span><span class="n">rss</span> <span class="o">/</span> <span class="mi">1024</span> <span class="o">/</span> <span class="mi">1024</span>
+                <span class="n">cpu_percent</span> <span class="o">=</span> <span class="n">process</span><span class="o">.</span><span class="n">cpu_percent</span><span class="p">()</span>
+
+                <span class="n">total_memory</span> <span class="o">+=</span> <span class="n">memory_mb</span>
+                <span class="n">total_cpu</span> <span class="o">+=</span> <span class="n">cpu_percent</span>
+
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Agent </span><span class="si">{</span><span class="n">agent_id</span><span class="si">}</span><span class="s2">: Memory=</span><span class="si">{</span><span class="n">memory_mb</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">MB, CPU=</span><span class="si">{</span><span class="n">cpu_percent</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">%&quot;</span><span class="p">)</span>
+            <span class="k">except</span> <span class="n">psutil</span><span class="o">.</span><span class="n">NoSuchProcess</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Agent </span><span class="si">{</span><span class="n">agent_id</span><span class="si">}</span><span class="s2">: Process no longer exists&quot;</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Total: Memory=</span><span class="si">{</span><span class="n">total_memory</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">MB, CPU=</span><span class="si">{</span><span class="n">total_cpu</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">%&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Agents: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">agents</span><span class="p">)</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">stats</span><span class="p">[</span><span class="s1">&#39;max_processes&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+<h2 id="integration-with-embedded-messaging-backend">Integration with Embedded Messaging Backend<a class="headerlink" href="#integration-with-embedded-messaging-backend" title="Permanent link">&para;</a></h2>
+<p>The multiprocess execution engine works particularly well with the <a href="embedded_messaging_backend.html">Embedded Messaging Backend</a>:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">rustic_ai.core.messaging.backend.embedded_backend</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">EmbeddedMessagingBackend</span><span class="p">,</span>
+    <span class="n">EmbeddedServer</span>
+<span class="p">)</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">threading</span>
+
+<span class="c1"># Start socket server for cross-process messaging</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">start_server</span><span class="p">(</span><span class="n">port</span><span class="o">=</span><span class="mi">31134</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">run_server</span><span class="p">():</span>
+        <span class="n">loop</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">new_event_loop</span><span class="p">()</span>
+        <span class="n">asyncio</span><span class="o">.</span><span class="n">set_event_loop</span><span class="p">(</span><span class="n">loop</span><span class="p">)</span>
+        <span class="n">server</span> <span class="o">=</span> <span class="n">EmbeddedServer</span><span class="p">(</span><span class="n">port</span><span class="o">=</span><span class="n">port</span><span class="p">)</span>
+        <span class="n">loop</span><span class="o">.</span><span class="n">run_until_complete</span><span class="p">(</span><span class="n">server</span><span class="o">.</span><span class="n">start</span><span class="p">())</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">loop</span><span class="o">.</span><span class="n">run_forever</span><span class="p">()</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="n">loop</span><span class="o">.</span><span class="n">run_until_complete</span><span class="p">(</span><span class="n">server</span><span class="o">.</span><span class="n">stop</span><span class="p">())</span>
+            <span class="n">loop</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="n">thread</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="n">run_server</span><span class="p">,</span> <span class="n">daemon</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">thread</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">port</span>
+
+<span class="n">port</span> <span class="o">=</span> <span class="n">start_server</span><span class="p">(</span><span class="mi">31134</span><span class="p">)</span>
+
+<span class="c1"># Create multiprocess engine with embedded messaging</span>
+<span class="n">messaging_config</span> <span class="o">=</span> <span class="n">MessagingConfig</span><span class="p">(</span>
+    <span class="n">backend_module</span><span class="o">=</span><span class="s2">&quot;rustic_ai.core.messaging.backend.embedded_backend&quot;</span><span class="p">,</span>
+    <span class="n">backend_class</span><span class="o">=</span><span class="s2">&quot;EmbeddedMessagingBackend&quot;</span><span class="p">,</span>
+    <span class="n">backend_config</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;port&quot;</span><span class="p">:</span> <span class="n">port</span><span class="p">,</span> <span class="s2">&quot;auto_start_server&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">}</span>
+<span class="p">)</span>
+
+<span class="n">engine</span> <span class="o">=</span> <span class="n">MultiProcessExecutionEngine</span><span class="p">(</span><span class="n">guild_id</span><span class="o">=</span><span class="s2">&quot;my-guild&quot;</span><span class="p">)</span>
+<span class="n">guild</span> <span class="o">=</span> <span class="n">Guild</span><span class="p">(</span><span class="n">guild_id</span><span class="o">=</span><span class="s2">&quot;my-guild&quot;</span><span class="p">,</span> <span class="n">messaging_config</span><span class="o">=</span><span class="n">messaging_config</span><span class="p">)</span>
+
+<span class="c1"># Agents can now communicate across processes</span>
+<span class="c1"># without external dependencies</span>
+</code></pre></div>
+<h2 id="conclusion">Conclusion<a class="headerlink" href="#conclusion" title="Permanent link">&para;</a></h2>
+<p>The Multiprocess Execution Engine provides a powerful solution for CPU-intensive and fault-tolerant agent systems. By escaping Python's GIL and providing process isolation, it enables true parallel execution while maintaining the full feature set of the Rustic AI framework. Combined with the embedded messaging backend, it offers a robust platform for building high-performance, distributed agent systems. </p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      <script id="__config" type="application/json">{"base": "..", "features": [], "search": "../assets/javascripts/workers/search.d50fe291.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.50899def.min.js"></script>
+      
+    
+  </body>
+</html>

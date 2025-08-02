@@ -1,0 +1,3651 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+      
+      
+      <link rel="icon" href="../assets/images/favicon.jpg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.16">
+    
+    
+      
+        <title>Complete Client-Server Flow Guide - Rustic AI Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.7e37652d.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/theme.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#complete-client-server-flow-guide" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../index.html" title="Rustic AI Documentation" class="md-header__button md-logo" aria-label="Rustic AI Documentation" data-md-component="logo">
+      
+  <img src="../assets/images/logo.svg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Rustic AI Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Complete Client-Server Flow Guide
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/rustic-ai/rustic-ai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.0.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path fill="currentColor" d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../index.html" title="Rustic AI Documentation" class="md-nav__button md-logo" aria-label="Rustic AI Documentation" data-md-component="logo">
+      
+  <img src="../assets/images/logo.svg" alt="logo">
+
+    </a>
+    Rustic AI Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/rustic-ai/rustic-ai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.0.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path fill="currentColor" d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Home
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../paper.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Light Paper
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    How-To Guides
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            How-To Guides
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="creating_your_first_agent.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Creating Your First Agent
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="creating_a_guild.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Creating a Guild
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="guild_specifications.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Guild Specifications
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="dependency_injection.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Dependency Injection
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="state_management.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    State Management
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="testing_agents.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Testing Agents
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="writing_effective_agent_tests.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Writing Effective Agent Tests
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Core
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            Core
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../core/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../core/architecture.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Architecture
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../core/agents.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Agents
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../core/guilds.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Guilds
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../core/messaging.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Messaging
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../core/shared_memory_backend.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Shared Memory Backend
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../core/execution.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Execution
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../core/multiprocess_execution.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Multiprocess Execution
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../core/dependencies.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Dependencies
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../core/state_management.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    State Management
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Agents
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            Agents
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_2" id="__nav_5_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Core
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_2">
+            <span class="md-nav__icon md-icon"></span>
+            Core
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/core/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/core/guild_manager_agent.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Guild Manager Agent
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/core/user_proxy_agent.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    User Proxy Agent
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/core/vector_agent.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Vector Agent
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/core/simple_llm_agent.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Simple LLM Agent
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/core/probe_agent.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Probe Agent
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_3" id="__nav_5_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    LiteLLM
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3">
+            <span class="md-nav__icon md-icon"></span>
+            LiteLLM
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/litellm/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/litellm/litellm_agent.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    LiteLLM Agent
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_4" id="__nav_5_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    HuggingFace
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_4">
+            <span class="md-nav__icon md-icon"></span>
+            HuggingFace
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/huggingface/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/huggingface/llm_phi_agent.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    LLM Phi Agent
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/huggingface/squad_agent.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Squad Agent
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/huggingface/image2image_agent.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Image2Image Agent
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/huggingface/runwayml_stable_diffusion_agent.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Runwayml Stable Diffusion Agent
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/huggingface/speecht5_tts_agent.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    SpeechT5 TTS Agent
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_5" id="__nav_5_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Playwright
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_5">
+            <span class="md-nav__icon md-icon"></span>
+            Playwright
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/playwright/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/playwright/playwright_scraper_agent.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Playwright Scraper Agent
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_6" id="__nav_5_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    SerpAPI
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_6">
+            <span class="md-nav__icon md-icon"></span>
+            SerpAPI
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/serpapi/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/serpapi/serp_agent.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    SERP Agent
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_7" id="__nav_5_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Marvin
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_7">
+            <span class="md-nav__icon md-icon"></span>
+            Marvin
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/marvin/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/marvin/marvin_agent.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Marvin Agent
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Dependencies
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            Dependencies
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dependencies/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_6_2" id="__nav_6_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Core
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6_2">
+            <span class="md-nav__icon md-icon"></span>
+            Core
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dependencies/core/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dependencies/core/env_secret_provider.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Environment Secret Provider
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dependencies/core/filesystem.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    File System Resolver
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dependencies/core/in_memory_kvstore.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    In-Memory KV Store
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dependencies/core/in_process_interpreter.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    In-Process Interpreter
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dependencies/core/python_exec_executor.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Python Exec Executor
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_6_3" id="__nav_6_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Redis
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6_3">
+            <span class="md-nav__icon md-icon"></span>
+            Redis
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dependencies/redis/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dependencies/redis/redis_kvstore.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Redis KV Store
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_6_4" id="__nav_6_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    LiteLLM
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6_4">
+            <span class="md-nav__icon md-icon"></span>
+            LiteLLM
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dependencies/litellm/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dependencies/litellm/litellm_resolver.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    LiteLLM Resolver
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_6_5" id="__nav_6_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Chroma
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6_5">
+            <span class="md-nav__icon md-icon"></span>
+            Chroma
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dependencies/chroma/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dependencies/chroma/chroma_resolver.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Chroma Resolver
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6_6" id="__nav_6_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    LangChain
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6_6">
+            <span class="md-nav__icon md-icon"></span>
+            LangChain
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dependencies/langchain/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dependencies/langchain/character_splitter.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Character Splitter
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dependencies/langchain/openai_embeddings.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    OpenAI Embeddings
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dependencies/langchain/recursive_splitter.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Recursive Splitter
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ray/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Ray
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../showcase/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Showcase
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    API
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../contributing.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Contributing
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#table-of-contents" class="md-nav__link">
+    <span class="md-ellipsis">
+      Table of Contents
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      Overview
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Overview">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#key-concepts" class="md-nav__link">
+    <span class="md-ellipsis">
+      Key Concepts
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#architecture-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      Architecture Summary
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-1-blueprint-agent-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      Phase 1: Blueprint &amp; Agent Setup
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Phase 1: Blueprint &amp; Agent Setup">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#11-register-agent-in-catalog" class="md-nav__link">
+    <span class="md-ellipsis">
+      1.1 Register Agent in Catalog
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#12-create-category" class="md-nav__link">
+    <span class="md-ellipsis">
+      1.2 Create Category
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#13-create-blueprint" class="md-nav__link">
+    <span class="md-ellipsis">
+      1.3 Create Blueprint
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-2-guild-creation-bootstrap" class="md-nav__link">
+    <span class="md-ellipsis">
+      Phase 2: Guild Creation &amp; Bootstrap
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Phase 2: Guild Creation &amp; Bootstrap">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#21-launch-guild-from-blueprint" class="md-nav__link">
+    <span class="md-ellipsis">
+      2.1 Launch Guild from Blueprint
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#22-backend-bootstrap-process" class="md-nav__link">
+    <span class="md-ellipsis">
+      2.2 Backend Bootstrap Process
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#23-guild-state-transitions" class="md-nav__link">
+    <span class="md-ellipsis">
+      2.3 Guild State Transitions
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-3-system-websocket-connection" class="md-nav__link">
+    <span class="md-ellipsis">
+      Phase 3: System WebSocket Connection
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Phase 3: System WebSocket Connection">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#31-connection-establishment" class="md-nav__link">
+    <span class="md-ellipsis">
+      3.1 Connection Establishment
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#32-expected-system-messages" class="md-nav__link">
+    <span class="md-ellipsis">
+      3.2 Expected System Messages
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3.2 Expected System Messages">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#agentshealthreport" class="md-nav__link">
+    <span class="md-ellipsis">
+      AgentsHealthReport
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#participantlist" class="md-nav__link">
+    <span class="md-ellipsis">
+      ParticipantList
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#33-system-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      3.3 System Commands
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3.3 System Commands">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#request-participants" class="md-nav__link">
+    <span class="md-ellipsis">
+      Request Participants
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stop-guild" class="md-nav__link">
+    <span class="md-ellipsis">
+      Stop Guild
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-4-user-websocket-connection" class="md-nav__link">
+    <span class="md-ellipsis">
+      Phase 4: User WebSocket Connection
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Phase 4: User WebSocket Connection">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#41-connection-establishment" class="md-nav__link">
+    <span class="md-ellipsis">
+      4.1 Connection Establishment
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#42-userproxyagent-auto-creation" class="md-nav__link">
+    <span class="md-ellipsis">
+      4.2 UserProxyAgent Auto-Creation
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#43-user-message-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      4.3 User Message Flow
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-5-real-time-messaging" class="md-nav__link">
+    <span class="md-ellipsis">
+      Phase 5: Real-time Messaging
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Phase 5: Real-time Messaging">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#51-sending-messages" class="md-nav__link">
+    <span class="md-ellipsis">
+      5.1 Sending Messages
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5.1 Sending Messages">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#text-message" class="md-nav__link">
+    <span class="md-ellipsis">
+      Text Message
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#file-message" class="md-nav__link">
+    <span class="md-ellipsis">
+      File Message
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#52-receiving-messages" class="md-nav__link">
+    <span class="md-ellipsis">
+      5.2 Receiving Messages
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5.2 Receiving Messages">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#echo-response" class="md-nav__link">
+    <span class="md-ellipsis">
+      Echo Response
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#message-formats-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      Message Formats Reference
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Message Formats Reference">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#system-websocket-formats" class="md-nav__link">
+    <span class="md-ellipsis">
+      System WebSocket Formats
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#user-websocket-formats" class="md-nav__link">
+    <span class="md-ellipsis">
+      User WebSocket Formats
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#common-message-properties" class="md-nav__link">
+    <span class="md-ellipsis">
+      Common Message Properties
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#synchronization-strategy" class="md-nav__link">
+    <span class="md-ellipsis">
+      Synchronization Strategy
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Synchronization Strategy">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#recommended-connection-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      Recommended Connection Flow
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-this-strategy-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      Why This Strategy Works
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#timeout-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      Timeout Handling
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#error-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      Error Handling
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Error Handling">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#websocket-errors" class="md-nav__link">
+    <span class="md-ellipsis">
+      WebSocket Errors
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#guild-health-errors" class="md-nav__link">
+    <span class="md-ellipsis">
+      Guild Health Errors
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reconnection-strategy" class="md-nav__link">
+    <span class="md-ellipsis">
+      Reconnection Strategy
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#complete-example-implementation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Complete Example Implementation
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="complete-client-server-flow-guide">Complete Client-Server Flow Guide<a class="headerlink" href="#complete-client-server-flow-guide" title="Permanent link">&para;</a></h1>
+<p>This comprehensive guide covers the entire client-server interaction flow in Rustic AI, from blueprint creation through real-time messaging. It combines frontend API calls, backend orchestration, WebSocket communication, and proper synchronization strategies for building robust client applications.</p>
+<h2 id="table-of-contents">Table of Contents<a class="headerlink" href="#table-of-contents" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="#overview">Overview</a></li>
+<li><a href="#architecture-summary">Architecture Summary</a></li>
+<li><a href="#phase-1-blueprint--agent-setup">Phase 1: Blueprint &amp; Agent Setup</a></li>
+<li><a href="#phase-2-guild-creation--bootstrap">Phase 2: Guild Creation &amp; Bootstrap</a></li>
+<li><a href="#phase-3-system-websocket-connection">Phase 3: System WebSocket Connection</a></li>
+<li><a href="#phase-4-user-websocket-connection">Phase 4: User WebSocket Connection</a></li>
+<li><a href="#phase-5-real-time-messaging">Phase 5: Real-time Messaging</a></li>
+<li><a href="#message-formats-reference">Message Formats Reference</a></li>
+<li><a href="#synchronization-strategy">Synchronization Strategy</a></li>
+<li><a href="#error-handling">Error Handling</a></li>
+<li><a href="#complete-example-implementation">Complete Example Implementation</a></li>
+</ul>
+<h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
+<p>The Rustic AI platform provides a sophisticated multi-agent system where clients interact through a combination of REST APIs and WebSocket connections. Understanding the proper flow and synchronization is crucial for building reliable applications.</p>
+<h3 id="key-concepts">Key Concepts<a class="headerlink" href="#key-concepts" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Blueprints</strong>: Templates that define agent configurations and guild specifications</li>
+<li><strong>Guilds</strong>: Runtime instances of agent groups working together</li>
+<li><strong>System WebSocket</strong>: For guild health monitoring and system operations</li>
+<li><strong>User WebSocket</strong>: For real-time chat and user interactions</li>
+<li><strong>Agent Bootstrap</strong>: The process of initializing and launching agents within a guild</li>
+</ul>
+<h2 id="architecture-summary">Architecture Summary<a class="headerlink" href="#architecture-summary" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code>graph TB
+    subgraph &quot;Client Layer&quot;
+        C1[REST API Client]
+        C2[System WebSocket]
+        C3[User WebSocket]
+    end
+
+    subgraph &quot;API Server&quot;
+        A1[Catalog Router]
+        A2[Guild Router]
+        A3[System Comms Manager]
+        A4[User Comms Manager]
+        A5[Guild Service]
+    end
+
+    subgraph &quot;Guild Runtime&quot;
+        G1[GuildManagerAgent]
+        G2[Guild Agents&lt;br/&gt;from GuildSpec]
+        G3[UserProxyAgent]
+    end
+
+    subgraph &quot;Infrastructure&quot;
+        I1[Database&lt;br/&gt;SQLite/PostgreSQL]
+        I2[Messaging&lt;br/&gt;Redis/Embedded]
+        I3[State Management]
+    end
+
+    C1 --&gt; A1
+    C1 --&gt; A2
+    C2 --&gt; A3
+    C3 --&gt; A4
+    A1 --&gt;|&quot;POST /blueprints/id/guilds&quot;| A5
+    A5 --&gt;|&quot;bootstrap()&quot;| G1
+    A3 --&gt; G1
+    A4 --&gt; G3
+    G1 --&gt; G2
+    A5 --&gt; I1
+    G1 --&gt; I1
+    G2 --&gt; I2
+    G3 --&gt; I2
+    G1 --&gt; I3
+</code></pre></div>
+<h2 id="phase-1-blueprint-agent-setup">Phase 1: Blueprint &amp; Agent Setup<a class="headerlink" href="#phase-1-blueprint-agent-setup" title="Permanent link">&para;</a></h2>
+<h3 id="11-register-agent-in-catalog">1.1 Register Agent in Catalog<a class="headerlink" href="#11-register-agent-in-catalog" title="Permanent link">&para;</a></h3>
+<p>Before creating blueprints, agents must be registered in the catalog.</p>
+<p><strong>Endpoint</strong>: <code>POST /catalog/agents</code></p>
+<div class="highlight"><pre><span></span><code><span class="err">POST /catalog/agents</span>
+<span class="err">Content-Type: application/json</span>
+
+<span class="err">{</span>
+<span class="err">  &quot;qualified_class_name&quot;: &quot;rustic_ai.core.agents.testutils.echo_agent.EchoAgent&quot;,</span>
+<span class="err">  &quot;description&quot;: &quot;Agent that echoes messages back to the sender&quot;,</span>
+<span class="err">  &quot;properties_schema&quot;: {},</span>
+<span class="err">  &quot;dependencies&quot;: []</span>
+<span class="err">}</span>
+</code></pre></div>
+<p><strong>Response</strong>:
+- <code>201 Created</code>: Agent registered successfully
+- <code>409 Conflict</code>: Agent already exists</p>
+<h3 id="12-create-category">1.2 Create Category<a class="headerlink" href="#12-create-category" title="Permanent link">&para;</a></h3>
+<p>Organize blueprints into categories for better management.</p>
+<p><strong>Endpoint</strong>: <code>POST /catalog/categories/</code></p>
+<div class="highlight"><pre><span></span><code><span class="err">POST /catalog/categories/</span>
+<span class="err">Content-Type: application/json</span>
+
+<span class="err">{</span>
+<span class="err">  &quot;name&quot;: &quot;Testing&quot;,</span>
+<span class="err">  &quot;description&quot;: &quot;Category for integration testing blueprints&quot;</span>
+<span class="err">}</span>
+</code></pre></div>
+<p><strong>Response</strong>: <code>{"id": "category_id"}</code></p>
+<h3 id="13-create-blueprint">1.3 Create Blueprint<a class="headerlink" href="#13-create-blueprint" title="Permanent link">&para;</a></h3>
+<p>Blueprints define the guild specification and agent configurations.</p>
+<p><strong>Endpoint</strong>: <code>POST /catalog/blueprints/</code></p>
+<div class="highlight"><pre><span></span><code><span class="err">POST /catalog/blueprints/</span>
+<span class="err">Content-Type: application/json</span>
+
+<span class="err">{</span>
+<span class="err">  &quot;name&quot;: &quot;EchoTestBlueprint&quot;,</span>
+<span class="err">  &quot;description&quot;: &quot;Echo agent for integration testing&quot;,</span>
+<span class="err">  &quot;version&quot;: &quot;v1&quot;,</span>
+<span class="err">  &quot;author_id&quot;: &quot;test_author&quot;,</span>
+<span class="err">  &quot;organization_id&quot;: &quot;testorg456&quot;,</span>
+<span class="err">  &quot;exposure&quot;: &quot;private&quot;,</span>
+<span class="err">  &quot;category_id&quot;: &quot;{category_id}&quot;,</span>
+<span class="err">  &quot;spec&quot;: {</span>
+<span class="err">    &quot;name&quot;: &quot;EchoTestBlueprint&quot;,</span>
+<span class="err">    &quot;description&quot;: &quot;Echo agent for integration testing&quot;,</span>
+<span class="err">    &quot;agents&quot;: [</span>
+<span class="err">      {</span>
+<span class="err">        &quot;name&quot;: &quot;EchoAgent&quot;,</span>
+<span class="err">        &quot;description&quot;: &quot;Agent that echoes messages&quot;,</span>
+<span class="err">        &quot;class_name&quot;: &quot;rustic_ai.core.agents.testutils.echo_agent.EchoAgent&quot;,</span>
+<span class="err">        &quot;additional_topics&quot;: [&quot;echo_topic&quot;],</span>
+<span class="err">        &quot;listen_to_default_topic&quot;: false</span>
+<span class="err">      }</span>
+<span class="err">    ],</span>
+<span class="err">    &quot;properties&quot;: {</span>
+<span class="err">      &quot;messaging&quot;: {</span>
+<span class="err">        &quot;backend_module&quot;: &quot;rustic_ai.redis.messaging.backend&quot;,</span>
+<span class="err">        &quot;backend_class&quot;: &quot;RedisMessagingBackend&quot;,</span>
+<span class="err">        &quot;backend_config&quot;: {</span>
+<span class="err">          &quot;redis_client&quot;: {&quot;host&quot;: &quot;localhost&quot;, &quot;port&quot;: 6379}</span>
+<span class="err">        }</span>
+<span class="err">      },</span>
+<span class="err">      &quot;execution_engine&quot;: &quot;rustic_ai.core.guild.execution.sync.sync_exec_engine.SyncExecutionEngine&quot;</span>
+<span class="err">    }</span>
+<span class="err">  }</span>
+<span class="err">}</span>
+</code></pre></div>
+<p><strong>Response</strong>: <code>{"id": "blueprint_id"}</code></p>
+<h2 id="phase-2-guild-creation-bootstrap">Phase 2: Guild Creation &amp; Bootstrap<a class="headerlink" href="#phase-2-guild-creation-bootstrap" title="Permanent link">&para;</a></h2>
+<h3 id="21-launch-guild-from-blueprint">2.1 Launch Guild from Blueprint<a class="headerlink" href="#21-launch-guild-from-blueprint" title="Permanent link">&para;</a></h3>
+<p><strong>Endpoint</strong>: <code>POST /catalog/blueprints/{blueprint_id}/guilds</code></p>
+<div class="highlight"><pre><span></span><code><span class="err">POST /catalog/blueprints/{blueprint_id}/guilds</span>
+<span class="err">Content-Type: application/json</span>
+
+<span class="err">{</span>
+<span class="err">  &quot;guild_name&quot;: &quot;EchoTestGuild&quot;,</span>
+<span class="err">  &quot;user_id&quot;: &quot;testuser123&quot;,</span>
+<span class="err">  &quot;org_id&quot;: &quot;testorg456&quot;,</span>
+<span class="err">  &quot;description&quot;: &quot;My test guild&quot;</span>
+<span class="err">}</span>
+</code></pre></div>
+<p><strong>Response</strong>: <code>{"id": "guild_id"}</code></p>
+<h3 id="22-backend-bootstrap-process">2.2 Backend Bootstrap Process<a class="headerlink" href="#22-backend-bootstrap-process" title="Permanent link">&para;</a></h3>
+<p>When a guild is launched, the following sequence occurs:</p>
+<div class="highlight"><pre><span></span><code>sequenceDiagram
+    participant API as API Server
+    participant DB as Database
+    participant GM as GuildManagerAgent
+    participant GA as Guild Agents (from GuildSpec)
+    participant MS as Messaging System
+
+    API-&gt;&gt;DB: 1. Store guild spec (status: REQUESTED)
+    API-&gt;&gt;GM: 2. Bootstrap GuildManagerAgent
+    GM-&gt;&gt;DB: 3. Update status (PENDING_LAUNCH)
+    GM-&gt;&gt;GM: 4. Initialize state management
+    GM-&gt;&gt;MS: 5. Connect to messaging
+    GM-&gt;&gt;GM: 6. Send SelfReadyNotification
+    GM-&gt;&gt;GA: 7. Launch agents from GuildSpec
+    GA-&gt;&gt;MS: 8. Connect to messaging
+    GA-&gt;&gt;GA: 9. Send SelfReadyNotification
+    GA-&gt;&gt;MS: 10. Send first heartbeat
+    GM-&gt;&gt;MS: 11. Health check request
+    GA-&gt;&gt;MS: 12. Heartbeat responses
+    GM-&gt;&gt;DB: 13. Update status (RUNNING)
+    GM-&gt;&gt;MS: 14. Publish AgentsHealthReport
+</code></pre></div>
+<h3 id="23-guild-state-transitions">2.3 Guild State Transitions<a class="headerlink" href="#23-guild-state-transitions" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Description</th>
+<th>Next States</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>REQUESTED</code></td>
+<td>Guild creation requested</td>
+<td><code>PENDING_LAUNCH</code>, <code>ERROR</code></td>
+</tr>
+<tr>
+<td><code>PENDING_LAUNCH</code></td>
+<td>GuildManagerAgent created</td>
+<td><code>STARTING</code>, <code>ERROR</code></td>
+</tr>
+<tr>
+<td><code>STARTING</code></td>
+<td>Agents initializing</td>
+<td><code>RUNNING</code>, <code>ERROR</code></td>
+</tr>
+<tr>
+<td><code>RUNNING</code></td>
+<td>All agents healthy</td>
+<td><code>WARNING</code>, <code>STOPPED</code></td>
+</tr>
+<tr>
+<td><code>WARNING</code></td>
+<td>Some agents unhealthy</td>
+<td><code>RUNNING</code>, <code>ERROR</code></td>
+</tr>
+<tr>
+<td><code>ERROR</code></td>
+<td>Critical failure</td>
+<td><code>STOPPED</code></td>
+</tr>
+<tr>
+<td><code>STOPPED</code></td>
+<td>Guild shut down</td>
+<td>-</td>
+</tr>
+</tbody>
+</table>
+<h2 id="phase-3-system-websocket-connection">Phase 3: System WebSocket Connection<a class="headerlink" href="#phase-3-system-websocket-connection" title="Permanent link">&para;</a></h2>
+<h3 id="31-connection-establishment">3.1 Connection Establishment<a class="headerlink" href="#31-connection-establishment" title="Permanent link">&para;</a></h3>
+<p><strong>WebSocket URL</strong>: <code>ws://host:port/ws/guilds/{guild_id}/syscomms/{user_id}</code></p>
+<div class="highlight"><pre><span></span><code><span class="kd">const</span><span class="w"> </span><span class="nx">systemWS</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">WebSocket</span><span class="p">(</span><span class="sb">`ws://localhost:8880/ws/guilds/</span><span class="si">${</span><span class="nx">guild_id</span><span class="si">}</span><span class="sb">/syscomms/</span><span class="si">${</span><span class="nx">user_id</span><span class="si">}</span><span class="sb">`</span><span class="p">);</span>
+
+<span class="nx">systemWS</span><span class="p">.</span><span class="nx">onopen</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">&quot;System WebSocket connected&quot;</span><span class="p">);</span>
+<span class="p">};</span>
+</code></pre></div>
+<h3 id="32-expected-system-messages">3.2 Expected System Messages<a class="headerlink" href="#32-expected-system-messages" title="Permanent link">&para;</a></h3>
+<h4 id="agentshealthreport">AgentsHealthReport<a class="headerlink" href="#agentshealthreport" title="Permanent link">&para;</a></h4>
+<p>Provides real-time guild and agent health status.</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;format&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;rustic_ai.core.guild.agent_ext.mixins.health.AgentsHealthReport&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;payload&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;agents&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;agent_id_1&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;checktime&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2025-01-15T10:00:00.000Z&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;checkstatus&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ok&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;responsetime&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2025-01-15T10:00:00.005Z&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;checkmeta&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">          </span><span class="nt">&quot;qos_latency&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">&quot;observed_latency&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">5.2</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">      </span><span class="p">}</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;guild_health&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ok&quot;</span>
+<span class="w">  </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;sender&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;guild_manager_id&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;GuildManagerAgent&quot;</span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;timestamp&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1642234567890</span>
+<span class="p">}</span>
+</code></pre></div>
+<h4 id="participantlist">ParticipantList<a class="headerlink" href="#participantlist" title="Permanent link">&para;</a></h4>
+<p>List of all agents/participants in the guild.</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;format&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Participants&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;payload&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;participants&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">      </span><span class="p">{</span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;agent_id&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;EchoAgent&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;bot&quot;</span><span class="p">},</span>
+<span class="w">      </span><span class="p">{</span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;user_agent_id&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Test User&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;human&quot;</span><span class="p">}</span>
+<span class="w">    </span><span class="p">]</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<h3 id="33-system-commands">3.3 System Commands<a class="headerlink" href="#33-system-commands" title="Permanent link">&para;</a></h3>
+<h4 id="request-participants">Request Participants<a class="headerlink" href="#request-participants" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><span class="nx">systemWS</span><span class="p">.</span><span class="nx">send</span><span class="p">(</span><span class="nb">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">({</span>
+<span class="w">  </span><span class="s2">&quot;format&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;participantsRequest&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="s2">&quot;payload&quot;</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="s2">&quot;guild_id&quot;</span><span class="o">:</span><span class="w"> </span><span class="nx">guild_id</span><span class="p">},</span>
+<span class="w">  </span><span class="s2">&quot;sender&quot;</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="s2">&quot;id&quot;</span><span class="o">:</span><span class="w"> </span><span class="nx">user_id</span><span class="p">},</span>
+<span class="w">  </span><span class="s2">&quot;timestamp&quot;</span><span class="o">:</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nb">Date</span><span class="p">().</span><span class="nx">toISOString</span><span class="p">(),</span>
+<span class="w">  </span><span class="s2">&quot;conversationId&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;conv_123&quot;</span>
+<span class="p">}));</span>
+</code></pre></div>
+<h4 id="stop-guild">Stop Guild<a class="headerlink" href="#stop-guild" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><span class="nx">systemWS</span><span class="p">.</span><span class="nx">send</span><span class="p">(</span><span class="nb">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">({</span>
+<span class="w">  </span><span class="s2">&quot;format&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;stopGuildRequest&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="s2">&quot;payload&quot;</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="s2">&quot;guild_id&quot;</span><span class="o">:</span><span class="w"> </span><span class="nx">guild_id</span><span class="p">},</span>
+<span class="w">  </span><span class="s2">&quot;sender&quot;</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="s2">&quot;id&quot;</span><span class="o">:</span><span class="w"> </span><span class="nx">user_id</span><span class="p">}</span>
+<span class="p">}));</span>
+</code></pre></div>
+<h2 id="phase-4-user-websocket-connection">Phase 4: User WebSocket Connection<a class="headerlink" href="#phase-4-user-websocket-connection" title="Permanent link">&para;</a></h2>
+<h3 id="41-connection-establishment">4.1 Connection Establishment<a class="headerlink" href="#41-connection-establishment" title="Permanent link">&para;</a></h3>
+<p><strong>WebSocket URL</strong>: <code>ws://host:port/ws/guilds/{guild_id}/usercomms/{user_id}/{user_name}</code></p>
+<div class="highlight"><pre><span></span><code><span class="kd">const</span><span class="w"> </span><span class="nx">userName</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">encodeURIComponent</span><span class="p">(</span><span class="s2">&quot;Test User&quot;</span><span class="p">);</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">userWS</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">WebSocket</span><span class="p">(</span><span class="sb">`ws://localhost:8880/ws/guilds/</span><span class="si">${</span><span class="nx">guild_id</span><span class="si">}</span><span class="sb">/usercomms/</span><span class="si">${</span><span class="nx">user_id</span><span class="si">}</span><span class="sb">/</span><span class="si">${</span><span class="nx">userName</span><span class="si">}</span><span class="sb">`</span><span class="p">);</span>
+</code></pre></div>
+<h3 id="42-userproxyagent-auto-creation">4.2 UserProxyAgent Auto-Creation<a class="headerlink" href="#42-userproxyagent-auto-creation" title="Permanent link">&para;</a></h3>
+<p>When a user WebSocket connects:</p>
+<ol>
+<li><strong>UserAgentCreationRequest</strong> is sent to the system</li>
+<li><strong>GuildManagerAgent</strong> creates a <strong>UserProxyAgent</strong></li>
+<li><strong>Updated AgentsHealthReport</strong> includes the new agent</li>
+<li>User can now send/receive messages</li>
+</ol>
+<h3 id="43-user-message-flow">4.3 User Message Flow<a class="headerlink" href="#43-user-message-flow" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>graph LR
+    User[User WebSocket] --&gt; UPA[UserProxyAgent]
+    UPA --&gt; Inbox[user:user_id:inbox]
+    Inbox --&gt; Routes[Guild Routes]
+    Routes --&gt; Topic[agent_topic]
+    Topic --&gt; Agent[Target Agent]
+    Agent --&gt; Notif[user:user_id:notifications]
+    Notif --&gt; UPA
+    UPA --&gt; User
+</code></pre></div>
+<h2 id="phase-5-real-time-messaging">Phase 5: Real-time Messaging<a class="headerlink" href="#phase-5-real-time-messaging" title="Permanent link">&para;</a></h2>
+<h3 id="51-sending-messages">5.1 Sending Messages<a class="headerlink" href="#51-sending-messages" title="Permanent link">&para;</a></h3>
+<h4 id="text-message">Text Message<a class="headerlink" href="#text-message" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><span class="nx">userWS</span><span class="p">.</span><span class="nx">send</span><span class="p">(</span><span class="nb">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">({</span>
+<span class="w">  </span><span class="s2">&quot;id&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;msg123&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="s2">&quot;format&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;text&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="s2">&quot;payload&quot;</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="s2">&quot;text&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;Hello Echo!&quot;</span><span class="p">},</span>
+<span class="w">  </span><span class="s2">&quot;sender&quot;</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="s2">&quot;id&quot;</span><span class="o">:</span><span class="w"> </span><span class="nx">user_id</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;name&quot;</span><span class="o">:</span><span class="w"> </span><span class="nx">user_name</span><span class="p">},</span>
+<span class="w">  </span><span class="s2">&quot;conversationId&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;conv_789&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="s2">&quot;timestamp&quot;</span><span class="o">:</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nb">Date</span><span class="p">().</span><span class="nx">toISOString</span><span class="p">()</span>
+<span class="p">}));</span>
+</code></pre></div>
+<h4 id="file-message">File Message<a class="headerlink" href="#file-message" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><span class="nx">userWS</span><span class="p">.</span><span class="nx">send</span><span class="p">(</span><span class="nb">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">({</span>
+<span class="w">  </span><span class="s2">&quot;format&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;rustic_ai.core.ui_protocol.types.FilesWithTextFormat&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="s2">&quot;payload&quot;</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="s2">&quot;files&quot;</span><span class="o">:</span><span class="w"> </span><span class="p">[{</span><span class="s2">&quot;name&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;document.pdf&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;url&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;/files/document.pdf&quot;</span><span class="p">}],</span>
+<span class="w">    </span><span class="s2">&quot;text&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;Here&#39;s the document you requested&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;tagged_users&quot;</span><span class="o">:</span><span class="w"> </span><span class="p">[]</span>
+<span class="w">  </span><span class="p">},</span>
+<span class="w">  </span><span class="s2">&quot;sender&quot;</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="s2">&quot;id&quot;</span><span class="o">:</span><span class="w"> </span><span class="nx">user_id</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;name&quot;</span><span class="o">:</span><span class="w"> </span><span class="nx">user_name</span><span class="p">}</span>
+<span class="p">}));</span>
+</code></pre></div>
+<h3 id="52-receiving-messages">5.2 Receiving Messages<a class="headerlink" href="#52-receiving-messages" title="Permanent link">&para;</a></h3>
+<h4 id="echo-response">Echo Response<a class="headerlink" href="#echo-response" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">456789123</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;format&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;text&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;payload&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;text&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Echo: Hello Echo!&quot;</span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;sender&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;echo_agent_id&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;EchoAgent&quot;</span><span class="p">},</span>
+<span class="w">  </span><span class="nt">&quot;topics&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;user:testuser123:notifications&quot;</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;timestamp&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1642234567890</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;thread&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">123456789</span><span class="p">,</span><span class="w"> </span><span class="mi">456789123</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;in_response_to&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">123456789</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;priority&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span>
+<span class="p">}</span>
+</code></pre></div>
+<h2 id="message-formats-reference">Message Formats Reference<a class="headerlink" href="#message-formats-reference" title="Permanent link">&para;</a></h2>
+<h3 id="system-websocket-formats">System WebSocket Formats<a class="headerlink" href="#system-websocket-formats" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Format</th>
+<th>Purpose</th>
+<th>Direction</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>rustic_ai.core.guild.agent_ext.mixins.health.AgentsHealthReport</code></td>
+<td>Guild health status</td>
+<td>Server → Client</td>
+</tr>
+<tr>
+<td><code>rustic_ai.core.guild.agent_ext.mixins.health.Heartbeat</code></td>
+<td>Individual agent heartbeat</td>
+<td>Server → Client</td>
+</tr>
+<tr>
+<td><code>Participants</code></td>
+<td>Agent/participant list</td>
+<td>Server → Client</td>
+</tr>
+<tr>
+<td><code>participantsRequest</code></td>
+<td>Request participant list</td>
+<td>Client → Server</td>
+</tr>
+<tr>
+<td><code>stopGuildRequest</code></td>
+<td>Stop guild operation</td>
+<td>Client → Server</td>
+</tr>
+</tbody>
+</table>
+<h3 id="user-websocket-formats">User WebSocket Formats<a class="headerlink" href="#user-websocket-formats" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Format</th>
+<th>Purpose</th>
+<th>Direction</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>text</code></td>
+<td>Simple text messages</td>
+<td>Bidirectional</td>
+</tr>
+<tr>
+<td><code>rustic_ai.core.ui_protocol.types.TextFormat</code></td>
+<td>Structured text</td>
+<td>Bidirectional</td>
+</tr>
+<tr>
+<td><code>rustic_ai.core.ui_protocol.types.FilesWithTextFormat</code></td>
+<td>Files with text</td>
+<td>Bidirectional</td>
+</tr>
+<tr>
+<td><code>rustic_ai.core.agents.commons.message_formats.ErrorMessage</code></td>
+<td>Error messages</td>
+<td>Server → Client</td>
+</tr>
+</tbody>
+</table>
+<h3 id="common-message-properties">Common Message Properties<a class="headerlink" href="#common-message-properties" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kd">interface</span><span class="w"> </span><span class="nx">Message</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nx">id</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="p">;</span><span class="w">                    </span><span class="c1">// Unique message ID</span>
+<span class="w">  </span><span class="nx">format</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">;</span><span class="w">                </span><span class="c1">// Message format/type</span>
+<span class="w">  </span><span class="nx">payload</span><span class="o">:</span><span class="w"> </span><span class="kt">object</span><span class="p">;</span><span class="w">               </span><span class="c1">// Message content</span>
+<span class="w">  </span><span class="nx">sender</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w">                      </span><span class="c1">// Sender information</span>
+<span class="w">    </span><span class="nx">id</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">;</span>
+<span class="w">    </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">;</span>
+<span class="w">  </span><span class="p">};</span>
+<span class="w">  </span><span class="nx">topics?</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">[];</span><span class="w">             </span><span class="c1">// Routing topics</span>
+<span class="w">  </span><span class="nx">timestamp?</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="p">;</span><span class="w">            </span><span class="c1">// Unix timestamp</span>
+<span class="w">  </span><span class="nx">thread?</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="p">[];</span><span class="w">             </span><span class="c1">// Message thread chain</span>
+<span class="w">  </span><span class="nx">in_response_to?</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="p">;</span><span class="w">       </span><span class="c1">// Reply-to message ID</span>
+<span class="w">  </span><span class="nx">traceparent?</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">;</span><span class="w">          </span><span class="c1">// Distributed tracing</span>
+<span class="w">  </span><span class="nx">priority?</span><span class="o">:</span><span class="w"> </span><span class="kt">number</span><span class="p">;</span><span class="w">             </span><span class="c1">// Priority (1-5)</span>
+<span class="w">  </span><span class="nx">conversation_id?</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">;</span><span class="w">      </span><span class="c1">// Conversation grouping</span>
+<span class="p">}</span>
+</code></pre></div>
+<h2 id="synchronization-strategy">Synchronization Strategy<a class="headerlink" href="#synchronization-strategy" title="Permanent link">&para;</a></h2>
+<h3 id="recommended-connection-flow">Recommended Connection Flow<a class="headerlink" href="#recommended-connection-flow" title="Permanent link">&para;</a></h3>
+<p>The proper synchronization strategy ensures reliable initialization:</p>
+<div class="highlight"><pre><span></span><code><span class="c1">// State management</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">ConnectionState</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nx">DISCONNECTED</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;disconnected&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">SYSTEM_CONNECTED</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;system_connected&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">GUILD_INITIALIZING</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;guild_initializing&#39;</span><span class="p">,</span><span class="w"> </span>
+<span class="w">  </span><span class="nx">USER_CONNECTING</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;user_connecting&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">AGENTS_READY</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;agents_ready&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">FULLY_READY</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;fully_ready&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="nx">ERROR</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;error&#39;</span>
+<span class="p">};</span>
+
+<span class="kd">let</span><span class="w"> </span><span class="nx">currentState</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">ConnectionState</span><span class="p">.</span><span class="nx">DISCONNECTED</span><span class="p">;</span>
+<span class="kd">let</span><span class="w"> </span><span class="nx">firstHealthReportReceived</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span><span class="p">;</span>
+<span class="kd">let</span><span class="w"> </span><span class="nx">fullyReady</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span><span class="p">;</span>
+
+<span class="c1">// Step 1: Connect System WebSocket</span>
+<span class="kd">function</span><span class="w"> </span><span class="nx">connectSystemWebSocket</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">systemWS</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">WebSocket</span><span class="p">(</span><span class="sb">`ws://host/ws/guilds/</span><span class="si">${</span><span class="nx">guild_id</span><span class="si">}</span><span class="sb">/syscomms/</span><span class="si">${</span><span class="nx">user_id</span><span class="si">}</span><span class="sb">`</span><span class="p">);</span>
+
+<span class="w">  </span><span class="nx">systemWS</span><span class="p">.</span><span class="nx">onopen</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">currentState</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">ConnectionState</span><span class="p">.</span><span class="nx">SYSTEM_CONNECTED</span><span class="p">;</span>
+<span class="w">    </span><span class="nx">showStatus</span><span class="p">(</span><span class="s2">&quot;Connected to guild system...&quot;</span><span class="p">);</span>
+<span class="w">  </span><span class="p">};</span>
+
+<span class="w">  </span><span class="nx">systemWS</span><span class="p">.</span><span class="nx">onmessage</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="nx">event</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">message</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">JSON</span><span class="p">.</span><span class="nx">parse</span><span class="p">(</span><span class="nx">event</span><span class="p">.</span><span class="nx">data</span><span class="p">);</span>
+
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nx">message</span><span class="p">.</span><span class="nx">format</span><span class="w"> </span><span class="o">===</span><span class="w"> </span><span class="s2">&quot;rustic_ai.core.guild.agent_ext.mixins.health.AgentsHealthReport&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="c1">// Step 2: First health report received - guild is initializing</span>
+<span class="w">      </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="nx">firstHealthReportReceived</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nx">firstHealthReportReceived</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span><span class="p">;</span>
+<span class="w">        </span><span class="nx">currentState</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">ConnectionState</span><span class="p">.</span><span class="nx">GUILD_INITIALIZING</span><span class="p">;</span>
+<span class="w">        </span><span class="nx">showStatus</span><span class="p">(</span><span class="s2">&quot;Guild initializing, connecting user session...&quot;</span><span class="p">);</span>
+
+<span class="w">        </span><span class="c1">// NOW safe to connect User WebSocket</span>
+<span class="w">        </span><span class="nx">connectUserWebSocket</span><span class="p">();</span>
+<span class="w">      </span><span class="p">}</span>
+
+<span class="w">      </span><span class="c1">// Step 3: Guild health is &quot;ok&quot; - ready for messaging</span>
+<span class="w">      </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nx">message</span><span class="p">.</span><span class="nx">payload</span><span class="p">.</span><span class="nx">guild_health</span><span class="w"> </span><span class="o">===</span><span class="w"> </span><span class="s2">&quot;ok&quot;</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="o">!</span><span class="nx">fullyReady</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nx">fullyReady</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span><span class="p">;</span>
+<span class="w">        </span><span class="nx">currentState</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">ConnectionState</span><span class="p">.</span><span class="nx">FULLY_READY</span><span class="p">;</span>
+<span class="w">        </span><span class="nx">showStatus</span><span class="p">(</span><span class="s2">&quot;Ready! Starting with participants request...&quot;</span><span class="p">);</span>
+
+<span class="w">        </span><span class="c1">// NOW safe to start messaging</span>
+<span class="w">        </span><span class="nx">sendParticipantsRequest</span><span class="p">();</span>
+<span class="w">      </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">};</span>
+<span class="p">}</span>
+
+<span class="c1">// Step 2: Connect User WebSocket (only after first health report)</span>
+<span class="kd">function</span><span class="w"> </span><span class="nx">connectUserWebSocket</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">userWS</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">WebSocket</span><span class="p">(</span><span class="sb">`ws://host/ws/guilds/</span><span class="si">${</span><span class="nx">guild_id</span><span class="si">}</span><span class="sb">/usercomms/</span><span class="si">${</span><span class="nx">user_id</span><span class="si">}</span><span class="sb">/</span><span class="si">${</span><span class="nx">userName</span><span class="si">}</span><span class="sb">`</span><span class="p">);</span>
+
+<span class="w">  </span><span class="nx">userWS</span><span class="p">.</span><span class="nx">onopen</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">currentState</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">ConnectionState</span><span class="p">.</span><span class="nx">USER_CONNECTING</span><span class="p">;</span>
+<span class="w">    </span><span class="nx">showStatus</span><span class="p">(</span><span class="s2">&quot;User session connected, waiting for agents...&quot;</span><span class="p">);</span>
+<span class="w">  </span><span class="p">};</span>
+<span class="p">}</span>
+
+<span class="c1">// Step 3: Start messaging (only after guild_health = &quot;ok&quot;)</span>
+<span class="kd">function</span><span class="w"> </span><span class="nx">sendParticipantsRequest</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nx">systemWS</span><span class="p">.</span><span class="nx">send</span><span class="p">(</span><span class="nb">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">({</span>
+<span class="w">    </span><span class="s2">&quot;format&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;participantsRequest&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;payload&quot;</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="s2">&quot;guild_id&quot;</span><span class="o">:</span><span class="w"> </span><span class="nx">guild_id</span><span class="p">},</span>
+<span class="w">    </span><span class="s2">&quot;sender&quot;</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="s2">&quot;id&quot;</span><span class="o">:</span><span class="w"> </span><span class="nx">user_id</span><span class="p">}</span>
+<span class="w">  </span><span class="p">}));</span>
+<span class="p">}</span>
+</code></pre></div>
+<h3 id="why-this-strategy-works">Why This Strategy Works<a class="headerlink" href="#why-this-strategy-works" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Eliminates Race Conditions</strong>: No guessing when guild is ready</li>
+<li><strong>Optimal Performance</strong>: UserProxyAgent creation happens in parallel</li>
+<li><strong>Clear Readiness Signals</strong>: Each phase has explicit confirmation</li>
+<li><strong>Better Error Handling</strong>: Can detect initialization failures early</li>
+<li><strong>Improved UX</strong>: Clear progression feedback for users</li>
+</ol>
+<h3 id="timeout-handling">Timeout Handling<a class="headerlink" href="#timeout-handling" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kd">const</span><span class="w"> </span><span class="nx">TIMEOUTS</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nx">HEALTH_REPORT</span><span class="o">:</span><span class="w"> </span><span class="mf">10000</span><span class="p">,</span><span class="w">  </span><span class="c1">// 10 seconds for first health report</span>
+<span class="w">  </span><span class="nx">READY_STATUS</span><span class="o">:</span><span class="w"> </span><span class="mf">15000</span><span class="p">,</span><span class="w">   </span><span class="c1">// 15 seconds for &quot;ok&quot; status</span>
+<span class="w">  </span><span class="nx">CONNECTION</span><span class="o">:</span><span class="w"> </span><span class="mf">5000</span><span class="w">       </span><span class="c1">// 5 seconds for WebSocket connections</span>
+<span class="p">};</span>
+
+<span class="c1">// Timeout for first health report</span>
+<span class="nx">setTimeout</span><span class="p">(()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="nx">firstHealthReportReceived</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">currentState</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">ConnectionState</span><span class="p">.</span><span class="nx">ERROR</span><span class="p">;</span>
+<span class="w">    </span><span class="nx">showError</span><span class="p">(</span><span class="s2">&quot;Guild initialization timed out&quot;</span><span class="p">);</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">},</span><span class="w"> </span><span class="nx">TIMEOUTS</span><span class="p">.</span><span class="nx">HEALTH_REPORT</span><span class="p">);</span>
+
+<span class="c1">// Timeout for ready status</span>
+<span class="nx">setTimeout</span><span class="p">(()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="nx">fullyReady</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">currentState</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">ConnectionState</span><span class="p">.</span><span class="nx">ERROR</span><span class="p">;</span>
+<span class="w">    </span><span class="nx">showError</span><span class="p">(</span><span class="s2">&quot;Guild failed to reach ready state&quot;</span><span class="p">);</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">},</span><span class="w"> </span><span class="nx">TIMEOUTS</span><span class="p">.</span><span class="nx">READY_STATUS</span><span class="p">);</span>
+</code></pre></div>
+<h2 id="error-handling">Error Handling<a class="headerlink" href="#error-handling" title="Permanent link">&para;</a></h2>
+<h3 id="websocket-errors">WebSocket Errors<a class="headerlink" href="#websocket-errors" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="nx">systemWS</span><span class="p">.</span><span class="nx">onerror</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="nx">error</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nx">console</span><span class="p">.</span><span class="nx">error</span><span class="p">(</span><span class="s2">&quot;System WebSocket error:&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">error</span><span class="p">);</span>
+<span class="w">  </span><span class="nx">currentState</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">ConnectionState</span><span class="p">.</span><span class="nx">ERROR</span><span class="p">;</span>
+<span class="w">  </span><span class="nx">showError</span><span class="p">(</span><span class="s2">&quot;Connection to guild system failed&quot;</span><span class="p">);</span>
+<span class="p">};</span>
+
+<span class="nx">systemWS</span><span class="p">.</span><span class="nx">onclose</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="nx">event</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nx">currentState</span><span class="w"> </span><span class="o">!==</span><span class="w"> </span><span class="nx">ConnectionState</span><span class="p">.</span><span class="nx">FULLY_READY</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">showError</span><span class="p">(</span><span class="s2">&quot;Connection lost during initialization&quot;</span><span class="p">);</span>
+<span class="w">  </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// Attempt reconnection</span>
+<span class="w">    </span><span class="nx">reconnectWithBackoff</span><span class="p">();</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">};</span>
+</code></pre></div>
+<h3 id="guild-health-errors">Guild Health Errors<a class="headerlink" href="#guild-health-errors" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nx">message</span><span class="p">.</span><span class="nx">payload</span><span class="p">.</span><span class="nx">guild_health</span><span class="w"> </span><span class="o">===</span><span class="w"> </span><span class="s2">&quot;error&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nx">currentState</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">ConnectionState</span><span class="p">.</span><span class="nx">ERROR</span><span class="p">;</span>
+<span class="w">  </span><span class="nx">showError</span><span class="p">(</span><span class="s2">&quot;Guild failed to initialize properly&quot;</span><span class="p">);</span>
+<span class="w">  </span><span class="k">return</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nx">message</span><span class="p">.</span><span class="nx">payload</span><span class="p">.</span><span class="nx">guild_health</span><span class="w"> </span><span class="o">===</span><span class="w"> </span><span class="s2">&quot;warning&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nx">showWarning</span><span class="p">(</span><span class="s2">&quot;Some agents are experiencing issues&quot;</span><span class="p">);</span>
+<span class="w">  </span><span class="c1">// Continue operation but monitor</span>
+<span class="p">}</span>
+</code></pre></div>
+<h3 id="reconnection-strategy">Reconnection Strategy<a class="headerlink" href="#reconnection-strategy" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kd">let</span><span class="w"> </span><span class="nx">reconnectAttempts</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">0</span><span class="p">;</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">MAX_RECONNECT_ATTEMPTS</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">5</span><span class="p">;</span>
+<span class="kd">const</span><span class="w"> </span><span class="nx">BACKOFF_BASE</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">1000</span><span class="p">;</span><span class="w"> </span><span class="c1">// 1 second</span>
+
+<span class="kd">function</span><span class="w"> </span><span class="nx">reconnectWithBackoff</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nx">reconnectAttempts</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="nx">MAX_RECONNECT_ATTEMPTS</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">showError</span><span class="p">(</span><span class="s2">&quot;Maximum reconnection attempts reached&quot;</span><span class="p">);</span>
+<span class="w">    </span><span class="k">return</span><span class="p">;</span>
+<span class="w">  </span><span class="p">}</span>
+
+<span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">delay</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">BACKOFF_BASE</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nb">Math</span><span class="p">.</span><span class="nx">pow</span><span class="p">(</span><span class="mf">2</span><span class="p">,</span><span class="w"> </span><span class="nx">reconnectAttempts</span><span class="p">);</span>
+<span class="w">  </span><span class="nx">reconnectAttempts</span><span class="o">++</span><span class="p">;</span>
+
+<span class="w">  </span><span class="nx">setTimeout</span><span class="p">(()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="sb">`Reconnection attempt </span><span class="si">${</span><span class="nx">reconnectAttempts</span><span class="si">}</span><span class="sb">`</span><span class="p">);</span>
+<span class="w">    </span><span class="nx">connectSystemWebSocket</span><span class="p">();</span>
+<span class="w">  </span><span class="p">},</span><span class="w"> </span><span class="nx">delay</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div>
+<h2 id="complete-example-implementation">Complete Example Implementation<a class="headerlink" href="#complete-example-implementation" title="Permanent link">&para;</a></h2>
+<p>Here's a complete client implementation that demonstrates the proper flow:</p>
+<div class="highlight"><pre><span></span><code><span class="kd">class</span><span class="w"> </span><span class="nx">RusticAIClient</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="kr">constructor</span><span class="p">(</span><span class="nx">baseUrl</span><span class="p">,</span><span class="w"> </span><span class="nx">guildId</span><span class="p">,</span><span class="w"> </span><span class="nx">userId</span><span class="p">,</span><span class="w"> </span><span class="nx">userName</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">this</span><span class="p">.</span><span class="nx">baseUrl</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">baseUrl</span><span class="p">;</span>
+<span class="w">    </span><span class="k">this</span><span class="p">.</span><span class="nx">guildId</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">guildId</span><span class="p">;</span>
+<span class="w">    </span><span class="k">this</span><span class="p">.</span><span class="nx">userId</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">userId</span><span class="p">;</span>
+<span class="w">    </span><span class="k">this</span><span class="p">.</span><span class="nx">userName</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">userName</span><span class="p">;</span>
+
+<span class="w">    </span><span class="k">this</span><span class="p">.</span><span class="nx">systemWS</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">null</span><span class="p">;</span>
+<span class="w">    </span><span class="k">this</span><span class="p">.</span><span class="nx">userWS</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">null</span><span class="p">;</span>
+<span class="w">    </span><span class="k">this</span><span class="p">.</span><span class="nx">state</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;disconnected&#39;</span><span class="p">;</span>
+<span class="w">    </span><span class="k">this</span><span class="p">.</span><span class="nx">callbacks</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{};</span>
+<span class="w">  </span><span class="p">}</span>
+
+<span class="w">  </span><span class="c1">// Event handling</span>
+<span class="w">  </span><span class="nx">on</span><span class="p">(</span><span class="nx">event</span><span class="p">,</span><span class="w"> </span><span class="nx">callback</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">this</span><span class="p">.</span><span class="nx">callbacks</span><span class="p">[</span><span class="nx">event</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">this</span><span class="p">.</span><span class="nx">callbacks</span><span class="p">[</span><span class="nx">event</span><span class="p">]</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="p">[];</span>
+<span class="w">    </span><span class="k">this</span><span class="p">.</span><span class="nx">callbacks</span><span class="p">[</span><span class="nx">event</span><span class="p">].</span><span class="nx">push</span><span class="p">(</span><span class="nx">callback</span><span class="p">);</span>
+<span class="w">  </span><span class="p">}</span>
+
+<span class="w">  </span><span class="nx">emit</span><span class="p">(</span><span class="nx">event</span><span class="p">,</span><span class="w"> </span><span class="nx">data</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">callbacks</span><span class="p">[</span><span class="nx">event</span><span class="p">]</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="p">[]).</span><span class="nx">forEach</span><span class="p">(</span><span class="nx">cb</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">cb</span><span class="p">(</span><span class="nx">data</span><span class="p">));</span>
+<span class="w">  </span><span class="p">}</span>
+
+<span class="w">  </span><span class="c1">// Main connection flow</span>
+<span class="w">  </span><span class="k">async</span><span class="w"> </span><span class="nx">connect</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">try</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="k">this</span><span class="p">.</span><span class="nx">emit</span><span class="p">(</span><span class="s1">&#39;status&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Connecting to guild system...&#39;</span><span class="p">);</span>
+<span class="w">      </span><span class="k">await</span><span class="w"> </span><span class="k">this</span><span class="p">.</span><span class="nx">connectSystemWebSocket</span><span class="p">();</span>
+<span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">catch</span><span class="w"> </span><span class="p">(</span><span class="nx">error</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="k">this</span><span class="p">.</span><span class="nx">emit</span><span class="p">(</span><span class="s1">&#39;error&#39;</span><span class="p">,</span><span class="w"> </span><span class="sb">`Connection failed: </span><span class="si">${</span><span class="nx">error</span><span class="p">.</span><span class="nx">message</span><span class="si">}</span><span class="sb">`</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
+
+<span class="w">  </span><span class="nx">connectSystemWebSocket</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nb">Promise</span><span class="p">((</span><span class="nx">resolve</span><span class="p">,</span><span class="w"> </span><span class="nx">reject</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="kd">const</span><span class="w"> </span><span class="nx">wsUrl</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="sb">`ws://</span><span class="si">${</span><span class="k">this</span><span class="p">.</span><span class="nx">baseUrl</span><span class="si">}</span><span class="sb">/ws/guilds/</span><span class="si">${</span><span class="k">this</span><span class="p">.</span><span class="nx">guildId</span><span class="si">}</span><span class="sb">/syscomms/</span><span class="si">${</span><span class="k">this</span><span class="p">.</span><span class="nx">userId</span><span class="si">}</span><span class="sb">`</span><span class="p">;</span>
+<span class="w">      </span><span class="k">this</span><span class="p">.</span><span class="nx">systemWS</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">WebSocket</span><span class="p">(</span><span class="nx">wsUrl</span><span class="p">);</span>
+
+<span class="w">      </span><span class="kd">const</span><span class="w"> </span><span class="nx">healthTimeout</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">setTimeout</span><span class="p">(()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nx">reject</span><span class="p">(</span><span class="ow">new</span><span class="w"> </span><span class="ne">Error</span><span class="p">(</span><span class="s1">&#39;Guild initialization timeout&#39;</span><span class="p">));</span>
+<span class="w">      </span><span class="p">},</span><span class="w"> </span><span class="mf">10000</span><span class="p">);</span>
+
+<span class="w">      </span><span class="k">this</span><span class="p">.</span><span class="nx">systemWS</span><span class="p">.</span><span class="nx">onopen</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">this</span><span class="p">.</span><span class="nx">state</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;system_connected&#39;</span><span class="p">;</span>
+<span class="w">        </span><span class="k">this</span><span class="p">.</span><span class="nx">emit</span><span class="p">(</span><span class="s1">&#39;status&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Connected, waiting for guild initialization...&#39;</span><span class="p">);</span>
+<span class="w">      </span><span class="p">};</span>
+
+<span class="w">      </span><span class="k">this</span><span class="p">.</span><span class="nx">systemWS</span><span class="p">.</span><span class="nx">onmessage</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="nx">event</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="kd">const</span><span class="w"> </span><span class="nx">message</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">JSON</span><span class="p">.</span><span class="nx">parse</span><span class="p">(</span><span class="nx">event</span><span class="p">.</span><span class="nx">data</span><span class="p">);</span>
+<span class="w">        </span><span class="k">this</span><span class="p">.</span><span class="nx">handleSystemMessage</span><span class="p">(</span><span class="nx">message</span><span class="p">,</span><span class="w"> </span><span class="nx">resolve</span><span class="p">,</span><span class="w"> </span><span class="nx">healthTimeout</span><span class="p">);</span>
+<span class="w">      </span><span class="p">};</span>
+
+<span class="w">      </span><span class="k">this</span><span class="p">.</span><span class="nx">systemWS</span><span class="p">.</span><span class="nx">onerror</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="nx">error</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nx">clearTimeout</span><span class="p">(</span><span class="nx">healthTimeout</span><span class="p">);</span>
+<span class="w">        </span><span class="nx">reject</span><span class="p">(</span><span class="nx">error</span><span class="p">);</span>
+<span class="w">      </span><span class="p">};</span>
+<span class="w">    </span><span class="p">});</span>
+<span class="w">  </span><span class="p">}</span>
+
+<span class="w">  </span><span class="nx">handleSystemMessage</span><span class="p">(</span><span class="nx">message</span><span class="p">,</span><span class="w"> </span><span class="nx">resolve</span><span class="p">,</span><span class="w"> </span><span class="nx">healthTimeout</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nx">message</span><span class="p">.</span><span class="nx">format</span><span class="w"> </span><span class="o">===</span><span class="w"> </span><span class="s2">&quot;rustic_ai.core.guild.agent_ext.mixins.health.AgentsHealthReport&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+
+<span class="w">      </span><span class="c1">// First health report - connect user WebSocket</span>
+<span class="w">      </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">state</span><span class="w"> </span><span class="o">===</span><span class="w"> </span><span class="s1">&#39;system_connected&#39;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">this</span><span class="p">.</span><span class="nx">state</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;guild_initializing&#39;</span><span class="p">;</span>
+<span class="w">        </span><span class="k">this</span><span class="p">.</span><span class="nx">emit</span><span class="p">(</span><span class="s1">&#39;status&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Guild initializing, connecting user session...&#39;</span><span class="p">);</span>
+<span class="w">        </span><span class="k">this</span><span class="p">.</span><span class="nx">connectUserWebSocket</span><span class="p">();</span>
+<span class="w">      </span><span class="p">}</span>
+
+<span class="w">      </span><span class="c1">// Guild ready - start messaging</span>
+<span class="w">      </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nx">message</span><span class="p">.</span><span class="nx">payload</span><span class="p">.</span><span class="nx">guild_health</span><span class="w"> </span><span class="o">===</span><span class="w"> </span><span class="s2">&quot;ok&quot;</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="k">this</span><span class="p">.</span><span class="nx">state</span><span class="w"> </span><span class="o">!==</span><span class="w"> </span><span class="s1">&#39;ready&#39;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">this</span><span class="p">.</span><span class="nx">state</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;ready&#39;</span><span class="p">;</span>
+<span class="w">        </span><span class="nx">clearTimeout</span><span class="p">(</span><span class="nx">healthTimeout</span><span class="p">);</span>
+<span class="w">        </span><span class="k">this</span><span class="p">.</span><span class="nx">emit</span><span class="p">(</span><span class="s1">&#39;status&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Ready!&#39;</span><span class="p">);</span>
+<span class="w">        </span><span class="k">this</span><span class="p">.</span><span class="nx">requestParticipants</span><span class="p">();</span>
+<span class="w">        </span><span class="nx">resolve</span><span class="p">();</span>
+<span class="w">      </span><span class="p">}</span>
+
+<span class="w">      </span><span class="c1">// Handle error states</span>
+<span class="w">      </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nx">message</span><span class="p">.</span><span class="nx">payload</span><span class="p">.</span><span class="nx">guild_health</span><span class="w"> </span><span class="o">===</span><span class="w"> </span><span class="s2">&quot;error&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nx">clearTimeout</span><span class="p">(</span><span class="nx">healthTimeout</span><span class="p">);</span>
+<span class="w">        </span><span class="k">this</span><span class="p">.</span><span class="nx">emit</span><span class="p">(</span><span class="s1">&#39;error&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Guild initialization failed&#39;</span><span class="p">);</span>
+<span class="w">      </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="c1">// Forward other system messages</span>
+<span class="w">    </span><span class="k">this</span><span class="p">.</span><span class="nx">emit</span><span class="p">(</span><span class="s1">&#39;system_message&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">message</span><span class="p">);</span>
+<span class="w">  </span><span class="p">}</span>
+
+<span class="w">  </span><span class="nx">connectUserWebSocket</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">wsUrl</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="sb">`ws://</span><span class="si">${</span><span class="k">this</span><span class="p">.</span><span class="nx">baseUrl</span><span class="si">}</span><span class="sb">/ws/guilds/</span><span class="si">${</span><span class="k">this</span><span class="p">.</span><span class="nx">guildId</span><span class="si">}</span><span class="sb">/usercomms/</span><span class="si">${</span><span class="k">this</span><span class="p">.</span><span class="nx">userId</span><span class="si">}</span><span class="sb">/</span><span class="si">${</span><span class="nb">encodeURIComponent</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">userName</span><span class="p">)</span><span class="si">}</span><span class="sb">`</span><span class="p">;</span>
+<span class="w">    </span><span class="k">this</span><span class="p">.</span><span class="nx">userWS</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">WebSocket</span><span class="p">(</span><span class="nx">wsUrl</span><span class="p">);</span>
+
+<span class="w">    </span><span class="k">this</span><span class="p">.</span><span class="nx">userWS</span><span class="p">.</span><span class="nx">onopen</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="k">this</span><span class="p">.</span><span class="nx">emit</span><span class="p">(</span><span class="s1">&#39;status&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;User session connected...&#39;</span><span class="p">);</span>
+<span class="w">    </span><span class="p">};</span>
+
+<span class="w">    </span><span class="k">this</span><span class="p">.</span><span class="nx">userWS</span><span class="p">.</span><span class="nx">onmessage</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="nx">event</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="kd">const</span><span class="w"> </span><span class="nx">message</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">JSON</span><span class="p">.</span><span class="nx">parse</span><span class="p">(</span><span class="nx">event</span><span class="p">.</span><span class="nx">data</span><span class="p">);</span>
+<span class="w">      </span><span class="k">this</span><span class="p">.</span><span class="nx">emit</span><span class="p">(</span><span class="s1">&#39;user_message&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">message</span><span class="p">);</span>
+<span class="w">    </span><span class="p">};</span>
+
+<span class="w">    </span><span class="k">this</span><span class="p">.</span><span class="nx">userWS</span><span class="p">.</span><span class="nx">onerror</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="nx">error</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="k">this</span><span class="p">.</span><span class="nx">emit</span><span class="p">(</span><span class="s1">&#39;error&#39;</span><span class="p">,</span><span class="w"> </span><span class="sb">`User connection error: </span><span class="si">${</span><span class="nx">error</span><span class="p">.</span><span class="nx">message</span><span class="si">}</span><span class="sb">`</span><span class="p">);</span>
+<span class="w">    </span><span class="p">};</span>
+<span class="w">  </span><span class="p">}</span>
+
+<span class="w">  </span><span class="c1">// Messaging methods</span>
+<span class="w">  </span><span class="nx">requestParticipants</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">this</span><span class="p">.</span><span class="nx">sendSystemMessage</span><span class="p">({</span>
+<span class="w">      </span><span class="nx">format</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;participantsRequest&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nx">payload</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="nx">guild_id</span><span class="o">:</span><span class="w"> </span><span class="k">this</span><span class="p">.</span><span class="nx">guildId</span><span class="p">},</span>
+<span class="w">      </span><span class="nx">sender</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="nx">id</span><span class="o">:</span><span class="w"> </span><span class="k">this</span><span class="p">.</span><span class="nx">userId</span><span class="p">}</span>
+<span class="w">    </span><span class="p">});</span>
+<span class="w">  </span><span class="p">}</span>
+
+<span class="w">  </span><span class="nx">sendChatMessage</span><span class="p">(</span><span class="nx">text</span><span class="p">,</span><span class="w"> </span><span class="nx">conversationId</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">null</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">state</span><span class="w"> </span><span class="o">!==</span><span class="w"> </span><span class="s1">&#39;ready&#39;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="k">throw</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="ne">Error</span><span class="p">(</span><span class="s1">&#39;Client not ready for messaging&#39;</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="k">this</span><span class="p">.</span><span class="nx">sendUserMessage</span><span class="p">({</span>
+<span class="w">      </span><span class="nx">format</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;text&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nx">payload</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="nx">text</span><span class="p">},</span>
+<span class="w">      </span><span class="nx">sender</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="nx">id</span><span class="o">:</span><span class="w"> </span><span class="k">this</span><span class="p">.</span><span class="nx">userId</span><span class="p">,</span><span class="w"> </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="k">this</span><span class="p">.</span><span class="nx">userName</span><span class="p">},</span>
+<span class="w">      </span><span class="nx">conversationId</span><span class="p">,</span>
+<span class="w">      </span><span class="nx">timestamp</span><span class="o">:</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nb">Date</span><span class="p">().</span><span class="nx">toISOString</span><span class="p">()</span>
+<span class="w">    </span><span class="p">});</span>
+<span class="w">  </span><span class="p">}</span>
+
+<span class="w">  </span><span class="nx">sendSystemMessage</span><span class="p">(</span><span class="nx">message</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">systemWS</span><span class="o">?</span><span class="p">.</span><span class="nx">readyState</span><span class="w"> </span><span class="o">===</span><span class="w"> </span><span class="nx">WebSocket</span><span class="p">.</span><span class="nx">OPEN</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="k">this</span><span class="p">.</span><span class="nx">systemWS</span><span class="p">.</span><span class="nx">send</span><span class="p">(</span><span class="nb">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">(</span><span class="nx">message</span><span class="p">));</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
+
+<span class="w">  </span><span class="nx">sendUserMessage</span><span class="p">(</span><span class="nx">message</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">userWS</span><span class="o">?</span><span class="p">.</span><span class="nx">readyState</span><span class="w"> </span><span class="o">===</span><span class="w"> </span><span class="nx">WebSocket</span><span class="p">.</span><span class="nx">OPEN</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="k">this</span><span class="p">.</span><span class="nx">userWS</span><span class="p">.</span><span class="nx">send</span><span class="p">(</span><span class="nb">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">(</span><span class="nx">message</span><span class="p">));</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
+
+<span class="w">  </span><span class="nx">stopGuild</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">this</span><span class="p">.</span><span class="nx">sendSystemMessage</span><span class="p">({</span>
+<span class="w">      </span><span class="nx">format</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;stopGuildRequest&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nx">payload</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="nx">guild_id</span><span class="o">:</span><span class="w"> </span><span class="k">this</span><span class="p">.</span><span class="nx">guildId</span><span class="p">},</span>
+<span class="w">      </span><span class="nx">sender</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="nx">id</span><span class="o">:</span><span class="w"> </span><span class="k">this</span><span class="p">.</span><span class="nx">userId</span><span class="p">}</span>
+<span class="w">    </span><span class="p">});</span>
+<span class="w">  </span><span class="p">}</span>
+
+<span class="w">  </span><span class="nx">disconnect</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">this</span><span class="p">.</span><span class="nx">systemWS</span><span class="o">?</span><span class="p">.</span><span class="nx">close</span><span class="p">();</span>
+<span class="w">    </span><span class="k">this</span><span class="p">.</span><span class="nx">userWS</span><span class="o">?</span><span class="p">.</span><span class="nx">close</span><span class="p">();</span>
+<span class="w">    </span><span class="k">this</span><span class="p">.</span><span class="nx">state</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;disconnected&#39;</span><span class="p">;</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+
+<span class="c1">// Usage example</span>
+<span class="k">async</span><span class="w"> </span><span class="kd">function</span><span class="w"> </span><span class="nx">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">client</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">RusticAIClient</span><span class="p">(</span><span class="s1">&#39;localhost:8880&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;guild_123&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;user_456&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Test User&#39;</span><span class="p">);</span>
+
+<span class="w">  </span><span class="c1">// Set up event handlers</span>
+<span class="w">  </span><span class="nx">client</span><span class="p">.</span><span class="nx">on</span><span class="p">(</span><span class="s1">&#39;status&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="nx">message</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s1">&#39;Status:&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">message</span><span class="p">));</span>
+<span class="w">  </span><span class="nx">client</span><span class="p">.</span><span class="nx">on</span><span class="p">(</span><span class="s1">&#39;error&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="nx">error</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">console</span><span class="p">.</span><span class="nx">error</span><span class="p">(</span><span class="s1">&#39;Error:&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">error</span><span class="p">));</span>
+<span class="w">  </span><span class="nx">client</span><span class="p">.</span><span class="nx">on</span><span class="p">(</span><span class="s1">&#39;system_message&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="nx">msg</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s1">&#39;System:&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">msg</span><span class="p">));</span>
+<span class="w">  </span><span class="nx">client</span><span class="p">.</span><span class="nx">on</span><span class="p">(</span><span class="s1">&#39;user_message&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="nx">msg</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s1">&#39;Message:&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">msg</span><span class="p">));</span>
+
+<span class="w">  </span><span class="c1">// Connect and start chatting</span>
+<span class="w">  </span><span class="k">await</span><span class="w"> </span><span class="nx">client</span><span class="p">.</span><span class="nx">connect</span><span class="p">();</span>
+
+<span class="w">  </span><span class="c1">// Send a test message</span>
+<span class="w">  </span><span class="nx">client</span><span class="p">.</span><span class="nx">sendChatMessage</span><span class="p">(</span><span class="s1">&#39;Hello Echo!&#39;</span><span class="p">);</span>
+
+<span class="w">  </span><span class="c1">// Stop guild after 30 seconds</span>
+<span class="w">  </span><span class="nx">setTimeout</span><span class="p">(()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">client</span><span class="p">.</span><span class="nx">stopGuild</span><span class="p">();</span>
+<span class="w">    </span><span class="nx">client</span><span class="p">.</span><span class="nx">disconnect</span><span class="p">();</span>
+<span class="w">  </span><span class="p">},</span><span class="w"> </span><span class="mf">30000</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>This guide provides a complete foundation for building robust client applications that interact with the Rustic AI platform. The key is following the proper synchronization strategy and handling all the various message types and error conditions appropriately. </p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      <script id="__config" type="application/json">{"base": "..", "features": [], "search": "../assets/javascripts/workers/search.d50fe291.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.50899def.min.js"></script>
+      
+    
+  </body>
+</html>
