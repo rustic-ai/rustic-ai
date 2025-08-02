@@ -1,0 +1,45 @@
+id: MessageTranslatorPayloadGuild
+name: Message Translator (Payload) Guild
+description: A guild demonstrating message translation using PayloadTransformer.
+agents:
+  - id: TranslatorAgent
+    name: Message Translator
+    description: Translates customer requests into internal ticket format using PayloadTransformer
+    class_name: rustic_ai.core.agents.eip.basic_wiring_agent.BasicWiringAgent
+routes:
+  steps:
+    - agent:
+        name: Message Translator
+      origin_filter:
+        origin_message_format: __main__.CustomerRequest
+      transformer:
+        style: simple
+        output_format: __main__.InternalTicket
+        expression: |
+          (
+            $timestamp := $millis();
+            $random_value := $random();
+            $random_suffix := $substring($string($random_value), 2, 6);
+            $timestamp_str := $string($timestamp);
+            $ticket_prefix := $substringBefore($timestamp_str, ".");
+            $generated_ticket_id := "TKT-" & $ticket_prefix & "-" & $random_suffix;
+            
+            $severity_level := (priority = "high") ? 1 : ((priority = "medium") ? 2 : 3);
+            
+            $customer_details := {
+              "name": customer_name,
+              "email": email
+            };
+            
+            {
+              "ticket_id": $generated_ticket_id,
+              "customer_info": $customer_details,
+              "title": subject,
+              "details": description,
+              "severity": $severity_level,
+              "created_at": $now(),
+              "status": "open"
+            }
+          )
+      destination:
+        topics: internal_tickets
