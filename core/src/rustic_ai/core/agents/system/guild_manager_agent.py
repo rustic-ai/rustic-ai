@@ -632,7 +632,7 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
                 priority=Priority.NORMAL,
                 format=get_qualified_class_name(StateFetchResponse),
                 payload=state.model_dump(),
-                topics=[GuildTopics.GUILD_STATUS_TOPIC],
+                topics=[GuildTopics.STATE_TOPIC],
             )
         except Exception as e:
             ctx.send_error(StateFetchError(state_fetch_request=sfr, error=str(e)))
@@ -653,7 +653,7 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
                 priority=Priority.NORMAL,
                 format=get_qualified_class_name(StateUpdateResponse),
                 payload=state_update.model_dump(),
-                topics=[GuildTopics.GUILD_STATUS_TOPIC],
+                topics=[GuildTopics.STATE_TOPIC],
             )
         except Exception as e:
             ctx.send_error(StateUpdateError(state_update_request=sur, error=str(e)))

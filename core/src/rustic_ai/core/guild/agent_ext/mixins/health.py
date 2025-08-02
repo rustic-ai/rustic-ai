@@ -92,7 +92,14 @@ class HealthMixin:
     @agent.processor(HealthCheckRequest, handle_essential=True)
     def send_heartbeat(self, ctx: agent.ProcessContext[HealthCheckRequest]):
         hr = self.healthcheck(ctx.payload.checktime)
-        ctx.send(hr)
+        ctx._raw_send(
+            priority=Priority.HIGH,
+            topics=[HealthConstants.HEARTBEAT_TOPIC],
+            payload=hr.model_dump(),
+            format=get_qualified_class_name(Heartbeat),
+            recipient_list=[],
+            in_response_to=ctx.message.id,
+        )
 
     def healthcheck(self, checktime: datetime) -> Heartbeat:
 

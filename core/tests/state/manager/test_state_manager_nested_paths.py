@@ -123,3 +123,33 @@ class TestStateManagerNestedPaths:
 
         assert result.state == expected_state
         assert result.version == 2  # Should be version 2 after second update
+
+    # Tests to verify that JsonUtils.update_at_path can handle empty states with JSON_PATCH
+    def test_update_empty_state(self, state_manager: InMemoryStateManager):
+        """Test updating an empty state with a JSON Patch operation."""
+        guild_id = "TEST_GUILD"
+        agent_id = "TEST_AGENT"
+
+        request = StateUpdateRequest(
+            state_owner=StateOwner.AGENT,
+            guild_id=guild_id,
+            agent_id=agent_id,
+            update_path="metrics",
+            update_format=StateUpdateFormat.JSON_PATCH,
+            state_update={
+                "operations": [
+                    {
+                        "op": "add",
+                        "path": "/performance",
+                        "value": {"cpu_usage": 0.75, "memory_usage": 0.60},
+                    }
+                ]
+            },
+        )
+
+        result = state_manager.update_state(request)
+
+        expected_state = {"metrics": {"performance": {"cpu_usage": 0.75, "memory_usage": 0.60}}}
+
+        assert result.state == expected_state
+        assert result.version == 1

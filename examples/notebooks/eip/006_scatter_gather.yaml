@@ -1,0 +1,126 @@
+id: ScatterGatherGuild
+name: Scatter-Gather Pattern Demo
+description: Complete scatter-gather EIP demonstration with aggregation
+agents:
+  - id: ScatterAgent
+    name: Scatter Agent
+    description: Routes requests to multiple analysis agents
+    class_name: rustic_ai.core.agents.eip.basic_wiring_agent.BasicWiringAgent
+    additional_topics: [analysis_requests]
+    predicates:
+      wire_message:
+        expression: '(message.format = "helpers.scatter_gather_models.AnalysisRequest")'
+
+  - id: StatisticsAgent
+    name: Statistics Analysis Agent
+    description: Analyzes statistical properties of datasets
+    class_name: helpers.scatter_gather_agents.StatisticsAgent
+    additional_topics: [statistics_analysis]
+    properties: {}
+    listen_to_default_topic: false
+
+  - id: TrendAgent
+    name: Trend Analysis Agent
+    description: Analyzes trends in datasets
+    class_name: helpers.scatter_gather_agents.TrendAgent
+    additional_topics: [trend_analysis]
+    properties: {}
+    listen_to_default_topic: false
+
+  - id: AnomalyAgent
+    name: Anomaly Detection Agent
+    description: Detects anomalies in datasets
+    class_name: helpers.scatter_gather_agents.AnomalyAgent
+    additional_topics: [anomaly_analysis]
+    properties: {}
+    listen_to_default_topic: false
+
+  - id: ResultAggregator
+    name: Result Aggregator
+    description: Aggregates results from multiple analysis agents
+    class_name: rustic_ai.core.agents.eip.aggregating_agent.AggregatingAgent
+    additional_topics: [analysis_results]
+    properties:
+      correlation_location: payload
+      correlation_id_path: correlation_id
+      collector:
+        collector_type: dict
+        key_field: analysis_type
+      aggregator:
+        aggregation_check: count
+        count: 3
+    listen_to_default_topic: false
+
+  - id: ReportAgent
+    name: Report Generator Agent
+    description: Generates comprehensive reports from aggregated analysis results
+    class_name: helpers.scatter_gather_agents.ReportAgent
+    additional_topics: [aggregated_results]
+    listen_to_default_topic: false
+
+routes:
+  steps:
+    - agent: { name: Scatter Agent }
+      origin_filter:
+        { origin_message_format: helpers.scatter_gather_models.AnalysisRequest }
+      destination:
+        { topics: statistics_analysis, recipient_list: [], priority: null }
+      transformer:
+        style: simple
+        output_format: helpers.scatter_gather_models.StatisticsRequest
+        expression: |
+          ({
+            "correlation_id": request_id,
+            "data": dataset,
+            "analysis_type": "statistics"
+          })
+
+    - agent: { name: Scatter Agent }
+      origin_filter:
+        { origin_message_format: helpers.scatter_gather_models.AnalysisRequest }
+      destination:
+        { topics: trend_analysis, recipient_list: [], priority: null }
+      transformer:
+        style: simple
+        output_format: helpers.scatter_gather_models.TrendRequest
+        expression: |
+          ({
+            "correlation_id": request_id,
+            "data": dataset,
+            "analysis_type": "trends"
+          })
+
+    - agent: { name: Scatter Agent }
+      origin_filter:
+        { origin_message_format: helpers.scatter_gather_models.AnalysisRequest }
+      destination:
+        { topics: anomaly_analysis, recipient_list: [], priority: null }
+      transformer:
+        style: simple
+        output_format: helpers.scatter_gather_models.AnomalyRequest
+        expression: |
+          ({
+            "correlation_id": request_id,
+            "data": dataset,
+            "analysis_type": "anomalies"
+          })
+
+    - agent: { name: Statistics Analysis Agent }
+      message_format: helpers.scatter_gather_models.StatisticsResult
+      destination:
+        { topics: analysis_results, recipient_list: [], priority: null }
+
+    - agent: { name: Trend Analysis Agent }
+      message_format: helpers.scatter_gather_models.TrendResult
+      destination:
+        { topics: analysis_results, recipient_list: [], priority: null }
+
+    - agent: { name: Anomaly Detection Agent }
+      message_format: helpers.scatter_gather_models.AnomalyResult
+      destination:
+        { topics: analysis_results, recipient_list: [], priority: null }
+
+    - agent: { name: Result Aggregator }
+      message_format: rustic_ai.core.agents.eip.aggregating_agent.AggregatedMessages
+      destination:
+        { topics: aggregated_results, recipient_list: [], priority: null }
