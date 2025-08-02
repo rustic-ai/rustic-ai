@@ -11,10 +11,10 @@ from rustic_ai.core.agents.planners.todo_agent import (
     DeleteTaskRequest,
     GetTaskRequest,
     NextTaskRequest,
-    TODOAgent,
+    TodoListAgent,
     UpdateTaskRequest,
     ListTasksRequest,
-    ListTasksResponse
+    TaskStatus
 )
 from rustic_ai.core.agents.system.models import UserAgentCreationRequest
 from rustic_ai.core.agents.testutils import ProbeAgent
@@ -26,7 +26,7 @@ from rustic_ai.core.utils import GemstoneGenerator, Priority
 from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 
 
-class TestTodoGuild:
+class TestTodoListGuild:
 
     @pytest.fixture
     def rgdatabase(self):
@@ -50,7 +50,7 @@ class TestTodoGuild:
         )
 
         todo_agent = (
-            AgentBuilder(TODOAgent)
+            AgentBuilder(TodoListAgent)
             .set_id("todo_agent")
             .set_name("TODO Agent")
             .set_description("An agent for managing TODO tasks")
@@ -196,7 +196,7 @@ class TestTodoGuild:
         await asyncio.sleep(10)
 
         # Step 6: List task
-        list_request = ListTasksRequest(status="pending")
+        list_request = ListTasksRequest(status=TaskStatus.PENDING)
         probe_agent.publish(
             topic=UserProxyAgent.get_user_inbox_topic("test_user"),
             payload=Message(

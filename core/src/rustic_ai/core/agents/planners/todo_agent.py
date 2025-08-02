@@ -1,3 +1,4 @@
+from enum import StrEnum
 from datetime import datetime
 from typing import List, Optional
 from uuid import uuid4
@@ -10,6 +11,14 @@ from rustic_ai.core.guild.agent import ProcessContext
 from rustic_ai.core.guild.dsl import AgentSpec
 from rustic_ai.core.state.models import StateUpdateFormat
 
+class TaskStatus(StrEnum):
+    PENDING = "pending"
+    IN_PROGRESS = "in_progress"
+    BLOCKED = "blocked"
+    DONE = "done"
+    OVERDUE = "overdue"
+    ALL = "all"
+
 
 class Task(BaseModel):
     id: str = Field(default=str(uuid4()))
@@ -17,7 +26,7 @@ class Task(BaseModel):
     start_time: str = Field(default=datetime.now().isoformat())
     deadline: Optional[str] = None
     depends_on: List[str] = []
-    status: str = "pending"  # pending | in_progress | blocked | done | overdue
+    status: TaskStatus = TaskStatus.PENDING  # pending | in_progress | blocked | done | overdue
 
     @field_validator("deadline")
     @classmethod
@@ -57,7 +66,7 @@ class GetTaskRequest(BaseModel):
 
 
 class ListTasksRequest(BaseModel):
-    status: Optional[str] = Field(default=None)  # all, pending, done, etc.
+    status: Optional[TaskStatus] = Field(default=None)  # all, pending, done, etc.
 
 
 class ListTasksResponse(BaseModel):
@@ -70,14 +79,14 @@ class GetTaskResponse(BaseModel):
 
 class UpdateStatusRequest(BaseModel):
     id: str
-    status: str  # "done", "pending", "in_progress", "blocked", "overdue"
+    status: TaskStatus  # "done", "pending", "in_progress", "blocked", "overdue"
 
 
 class NextTaskRequest(BaseModel):
     sort_by: Optional[str] = Field(default='start_time') # can be start_time or deadline
 
 
-class TODOAgent(Agent):
+class TodoListAgent(Agent):
     def __init__(self, agent_spec: AgentSpec):
         super().__init__(
             agent_spec,
@@ -102,11 +111,11 @@ class TODOAgent(Agent):
         task_map = {t.id: t for t in tasks}
 
         # Determine initial status based on dependencies
-        status = "pending"
+        status = TaskStatus.PENDING
         if ctx.payload.depends_on:
             for dep_id in ctx.payload.depends_on:
-                if dep_id not in task_map or task_map[dep_id].status != "done":
-                    status = "blocked"
+                if dep_id not in task_map or task_map[dep_id].status != TaskStatus.DONE:
+                    status = TaskStatus.BLOCKED
                     break
 
         # Create the task with computed status
@@ -154,8 +163,8 @@ class TODOAgent(Agent):
                 task.depends_on = [dep for dep in task.depends_on if dep != deleted_id]
 
                 # Check if all remaining dependencies are done
-                if all(dep_id in task_map and task_map[dep_id].status == "done" for dep_id in task.depends_on):
-                    task.status = "pending"
+                if all(dep_id in task_map and task_map[dep_id].status == TaskStatus.DONE for dep_id in task.depends_on):
+                    task.status = TaskStatus.PENDING
 
                 tasks[i] = task
 
@@ -195,15 +204,15 @@ class TODOAgent(Agent):
             raise ValueError("Task not found")
 
         # If task is marked as done, try unblocking other tasks
-        if ctx.payload.status == "done":
+        if ctx.payload.status == TaskStatus.DONE:
             for i, task in enumerate(tasks):
-                if ctx.payload.id in task.depends_on and task.status == "blocked":
+                if ctx.payload.id in task.depends_on and task.status == TaskStatus.BLOCKED:
                     # Check if all dependencies are done
                     all_done = all(
-                        task_map.get(dep_id) and task_map[dep_id].status == "done" for dep_id in task.depends_on
+                        task_map.get(dep_id) and task_map[dep_id].status == TaskStatus.DONE for dep_id in task.depends_on
                     )
                     if all_done:
-                        task.status = "pending"
+                        task.status = TaskStatus.PENDING
                         tasks[i] = task
 
         self.save_tasks(tasks, ctx)
@@ -211,7 +220,7 @@ class TODOAgent(Agent):
     @agent.processor(NextTaskRequest)
     def get_next_task(self, ctx: ProcessContext[NextTaskRequest]):
         tasks = self.get_tasks()
-        pending_tasks = [t for t in tasks if t.status == "pending"]
+        pending_tasks = [t for t in tasks if t.status == TaskStatus.PENDING]
 
         if not pending_tasks:
             return None
