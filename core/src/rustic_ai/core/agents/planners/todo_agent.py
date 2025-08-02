@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import List, Optional
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -12,47 +12,52 @@ from rustic_ai.core.state.models import StateUpdateFormat
 
 
 class Task(BaseModel):
-    id: UUID = Field(default_factory=uuid4)
+    id: str = Field(default=str(uuid4()))
     todo: str
-    start_time: datetime = Field(default_factory=datetime.now)
-    deadline: Optional[datetime] = None
-    depends_on: List[UUID] = []
+    start_time: str = Field(default=datetime.now().isoformat())
+    deadline: Optional[str] = None
+    depends_on: List[str] = []
     status: str = "pending"  # pending | in_progress | blocked | done | overdue
 
     @field_validator("deadline")
     @classmethod
     def deadline_after_start(cls, deadline_value, info):
         start_time = info.data.get("start_time")
-        if start_time and deadline_value and deadline_value < start_time:
+        if (
+            start_time
+            and deadline_value
+            and datetime.fromisoformat(deadline_value) < datetime.fromisoformat(start_time)
+        ):
             raise ValueError("Deadline must be after start time.")
         return deadline_value
 
 
 class AddTaskRequest(BaseModel):
+    id: str
     todo: str
-    start_time: datetime
-    deadline: Optional[datetime]
-    depends_on: List[UUID]
+    start_time: str
+    deadline: Optional[str] = Field(default=None)
+    depends_on: List[str]
 
 
 class UpdateTaskRequest(BaseModel):
-    id: UUID
+    id: str
     todo: Optional[str]
-    start_time: Optional[datetime]
-    deadline: Optional[datetime]
-    depends_on: Optional[List[UUID]]
+    start_time: Optional[str] = Field(default=None)
+    deadline: Optional[str] = Field(default=None)
+    depends_on: Optional[List[str]] = Field(default=None)
 
 
 class DeleteTaskRequest(BaseModel):
-    id: UUID
+    id: str
 
 
 class GetTaskRequest(BaseModel):
-    id: UUID
+    id: str
 
 
 class ListTasksRequest(BaseModel):
-    status: Optional[str] = None  # pending, done, etc.
+    status: Optional[str] = Field(default=None)  # all, pending, done, etc.
 
 
 class ListTasksResponse(BaseModel):
@@ -64,8 +69,12 @@ class GetTaskResponse(BaseModel):
 
 
 class UpdateStatusRequest(BaseModel):
-    id: UUID
+    id: str
     status: str  # "done", "pending", "in_progress", "blocked", "overdue"
+
+
+class NextTaskRequest(BaseModel):
+    sort_by: Optional[str] = Field(default='start_time') # can be start_time or deadline
 
 
 class TODOAgent(Agent):
@@ -102,6 +111,7 @@ class TODOAgent(Agent):
 
         # Create the task with computed status
         task = Task(
+            id=ctx.payload.id,
             todo=ctx.payload.todo,
             start_time=ctx.payload.start_time,
             deadline=ctx.payload.deadline,
@@ -117,11 +127,15 @@ class TODOAgent(Agent):
         tasks = self.get_tasks()
         for i, task in enumerate(tasks):
             if task.id == ctx.payload.id:
-                updated_data = ctx.payload.model_dump(exclude_unset=True)
-                updated_data.pop("id", None)
+                # Only include fields that were provided AND not None
+                updated_data = {
+                    k: v for k, v in ctx.payload.model_dump(exclude_unset=True).items()
+                    if k != "id" and v is not None
+                }
                 updated_task = task.model_copy(update=updated_data)
                 tasks[i] = updated_task
                 self.save_tasks(tasks, ctx)
+                return  # Exit once updated
 
         raise ValueError("Task not found")
 
@@ -152,14 +166,14 @@ class TODOAgent(Agent):
         tasks = self.get_tasks()
         for task in tasks:
             if task.id == ctx.payload.id:
-                ctx.send(task=task)
+                ctx.send(GetTaskResponse(task=task))
                 break
 
     @agent.processor(ListTasksRequest)
     def list_tasks(self, ctx: ProcessContext[ListTasksRequest]):
         tasks = self.get_tasks()
         status = ctx.payload.status
-        if status:
+        if status != 'all':
             tasks = [t for t in tasks if t.status == status]
 
         ctx.send(ListTasksResponse(tasks=tasks))
@@ -193,3 +207,21 @@ class TODOAgent(Agent):
                         tasks[i] = task
 
         self.save_tasks(tasks, ctx)
+
+    @agent.processor(NextTaskRequest)
+    def get_next_task(self, ctx: ProcessContext[NextTaskRequest]):
+        tasks = self.get_tasks()
+        pending_tasks = [t for t in tasks if t.status == "pending"]
+
+        if not pending_tasks:
+            return None
+
+        # Return the one with the earliest start_time
+        if ctx.payload.sort_by == 'start_time':
+            next_task = min(pending_tasks, key=lambda t: datetime.fromisoformat(t.start_time))
+        elif ctx.payload.sort_by == 'deadline':
+            next_task = min(pending_tasks, key=lambda t: datetime.fromisoformat(t.deadline))
+        else:
+            raise KeyError("Sortby can be start_time or deadline only.")
+        
+        ctx.send(GetTaskResponse(task=next_task))
