@@ -2,6 +2,7 @@ import asyncio
 from datetime import datetime, timedelta
 import os
 import time
+
 import pytest
 import shortuuid
 
@@ -10,11 +11,11 @@ from rustic_ai.core.agents.planners.todo_agent import (
     AddTaskRequest,
     DeleteTaskRequest,
     GetTaskRequest,
+    ListTasksRequest,
     NextTaskRequest,
+    TaskStatus,
     TodoListAgent,
     UpdateTaskRequest,
-    ListTasksRequest,
-    TaskStatus
 )
 from rustic_ai.core.agents.system.models import UserAgentCreationRequest
 from rustic_ai.core.agents.testutils import ProbeAgent
@@ -96,7 +97,7 @@ class TestTodoListGuild:
             todo="Write unit tests",
             start_time=datetime.now().isoformat(),
             deadline=(datetime.now() + timedelta(days=1)).isoformat(),
-            depends_on=[]
+            depends_on=[],
         )
 
         probe_agent.publish(
@@ -135,7 +136,7 @@ class TestTodoListGuild:
             loop += 1
 
         get_task_response = probe_agent.get_messages()[-1]
-        assert get_task_response.payload['task']['todo'] == 'Write unit tests'
+        assert get_task_response.payload["task"]["todo"] == "Write unit tests"
 
         # Step 3: Update task
         update_request = UpdateTaskRequest(
@@ -178,7 +179,7 @@ class TestTodoListGuild:
             loop += 1
 
         next_task_messages = probe_agent.get_messages()[-1]
-        assert next_task_messages.payload['task']['todo'] == 'Write better unit tests'
+        assert next_task_messages.payload["task"]["todo"] == "Write better unit tests"
 
         # Step 5: Delete task
         delete_request = DeleteTaskRequest(id=task_id)

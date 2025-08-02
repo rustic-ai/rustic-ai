@@ -1,5 +1,5 @@
-from enum import StrEnum
 from datetime import datetime
+from enum import StrEnum
 from typing import List, Optional
 from uuid import uuid4
 
@@ -10,6 +10,7 @@ from rustic_ai.core.guild import agent
 from rustic_ai.core.guild.agent import ProcessContext
 from rustic_ai.core.guild.dsl import AgentSpec
 from rustic_ai.core.state.models import StateUpdateFormat
+
 
 class TaskStatus(StrEnum):
     PENDING = "pending"
@@ -83,7 +84,7 @@ class UpdateStatusRequest(BaseModel):
 
 
 class NextTaskRequest(BaseModel):
-    sort_by: Optional[str] = Field(default='start_time') # can be start_time or deadline
+    sort_by: Optional[str] = Field(default="start_time")  # can be start_time or deadline
 
 
 class TodoListAgent(Agent):
@@ -138,8 +139,7 @@ class TodoListAgent(Agent):
             if task.id == ctx.payload.id:
                 # Only include fields that were provided AND not None
                 updated_data = {
-                    k: v for k, v in ctx.payload.model_dump(exclude_unset=True).items()
-                    if k != "id" and v is not None
+                    k: v for k, v in ctx.payload.model_dump(exclude_unset=True).items() if k != "id" and v is not None
                 }
                 updated_task = task.model_copy(update=updated_data)
                 tasks[i] = updated_task
@@ -182,7 +182,7 @@ class TodoListAgent(Agent):
     def list_tasks(self, ctx: ProcessContext[ListTasksRequest]):
         tasks = self.get_tasks()
         status = ctx.payload.status
-        if status != 'all':
+        if status != "all":
             tasks = [t for t in tasks if t.status == status]
 
         ctx.send(ListTasksResponse(tasks=tasks))
@@ -209,7 +209,8 @@ class TodoListAgent(Agent):
                 if ctx.payload.id in task.depends_on and task.status == TaskStatus.BLOCKED:
                     # Check if all dependencies are done
                     all_done = all(
-                        task_map.get(dep_id) and task_map[dep_id].status == TaskStatus.DONE for dep_id in task.depends_on
+                        task_map.get(dep_id) and task_map[dep_id].status == TaskStatus.DONE
+                        for dep_id in task.depends_on
                     )
                     if all_done:
                         task.status = TaskStatus.PENDING
@@ -226,11 +227,11 @@ class TodoListAgent(Agent):
             return None
 
         # Return the one with the earliest start_time
-        if ctx.payload.sort_by == 'start_time':
+        if ctx.payload.sort_by == "start_time":
             next_task = min(pending_tasks, key=lambda t: datetime.fromisoformat(t.start_time))
-        elif ctx.payload.sort_by == 'deadline':
+        elif ctx.payload.sort_by == "deadline":
             next_task = min(pending_tasks, key=lambda t: datetime.fromisoformat(t.deadline))
         else:
             raise KeyError("Sortby can be start_time or deadline only.")
-        
+
         ctx.send(GetTaskResponse(task=next_task))
