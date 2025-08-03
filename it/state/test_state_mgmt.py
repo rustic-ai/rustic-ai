@@ -13,6 +13,7 @@ from rustic_ai.core.guild.agent import (
 )
 from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder
 from rustic_ai.core.guild.dsl import AgentSpec, GuildTopics, JSONataPredicate
+from rustic_ai.core.guild.dsl import KeyConstants as GSKC
 from rustic_ai.core.guild.metastore.database import Metastore
 from rustic_ai.core.messaging.core.message import (
     AgentTag,
@@ -94,8 +95,22 @@ class TestStateMgmt:
         yield db
         Metastore.drop_db()
 
-    @pytest.mark.xfail
-    def test_state_mgmt(self, state_aware_agent: AgentSpec, state_free_agent: AgentSpec, database, org_id):
+    @pytest.mark.parametrize(
+        "state_manager_class,state_manager_config",
+        [
+            ("rustic_ai.core.state.manager.in_memory_state_manager.InMemoryStateManager", {}),
+            ("rustic_ai.redis.state.manager.RedisStateManager", {"host": "localhost", "port": 6379}),
+        ],
+    )
+    def test_state_mgmt(
+        self,
+        state_aware_agent: AgentSpec,
+        state_free_agent: AgentSpec,
+        database,
+        org_id,
+        state_manager_class: str,
+        state_manager_config: dict,
+    ):
         builder = (
             GuildBuilder(f"state_guild_{time.time()}", "State Guild", "Guild to test state management")
             .add_agent_spec(state_aware_agent)
@@ -105,6 +120,8 @@ class TestStateMgmt:
                 backend_class="RedisMessagingBackend",
                 backend_config={"redis_client": {"host": "localhost", "port": 6379}},
             )
+            .set_property(GSKC.STATE_MANAGER, state_manager_class)
+            .set_property(GSKC.STATE_MANAGER_CONFIG, state_manager_config)
         )
 
         engine = Metastore.get_engine(database)  # noqa: F841

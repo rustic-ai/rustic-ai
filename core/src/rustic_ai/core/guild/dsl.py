@@ -51,6 +51,7 @@ class KeyConstants:
     CLIENT_TYPE = "client_type"
     CLIENT_PROPERTIES = "client_properties"
     STATE_MANAGER = "state_manager"
+    STATE_MANAGER_CONFIG = "state_manager_config"
 
 
 class GuildTopics:

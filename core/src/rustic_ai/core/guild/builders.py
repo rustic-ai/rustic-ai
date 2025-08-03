@@ -86,6 +86,7 @@ class EnvConstants:
     RUSTIC_AI_CLIENT_PROPERTIES = "RUSTIC_AI_CLIENT_PROPERTIES"
     RUSTIC_AI_DEPENDENCY_CONFIG = "RUSTIC_AI_DEPENDENCY_CONFIG"
     RUSTIC_AI_STATE_MANAGER = "RUSTIC_AI_STATE_MANAGER"
+    RUSTIC_AI_STATE_MANAGER_CONFIG = "RUSTIC_AI_STATE_MANAGER_CONFIG"
 
 
 AT = TypeVar("AT", bound=Agent, covariant=True)
@@ -871,6 +872,37 @@ class GuildHelper:
         )
 
         return guild
+
+    @staticmethod
+    def get_default_state_mgr_config() -> dict:
+        """
+        Get the default StateManagerConfig.
+
+        Returns:
+            dict: The default StateManager configuration.
+        """
+        return json.loads(os.environ.get(EnvConstants.RUSTIC_AI_STATE_MANAGER_CONFIG, "{}"))
+
+    @staticmethod
+    def get_state_mgr_config(guild_spec: GuildSpec) -> dict:
+        """
+        Get the MessagingConfig from the GuildSpec.
+
+        Args:
+            guild_spec: The GuildSpec to get the messaging configuration from.
+
+        Returns:
+            dict: The state manager configuration.
+        """
+        state_manager_config: dict = GuildHelper.get_default_state_mgr_config()
+
+        if guild_spec.properties and GSKC.STATE_MANAGER_CONFIG in guild_spec.properties:
+            logging.debug(f"GuildSpec properties: {guild_spec.properties}")
+            state_manager_config = guild_spec.properties.get(GSKC.STATE_MANAGER_CONFIG, {})
+        else:
+            logging.debug(f"Using default state manager config: {state_manager_config}")
+
+        return state_manager_config
 
     @staticmethod
     def get_default_state_manager() -> str:
