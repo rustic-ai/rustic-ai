@@ -96,10 +96,8 @@ class SplitterAgent(Agent[SplitterConf]):
 
     @agent.processor(JsonDict)
     def split_and_send(self, ctx: ProcessContext[JsonDict]) -> None:
-        payload = ctx.message.payload
-
         # Split the message
-        items = self.splitter.split(payload, delimiter=self.delimiter)
+        items = self.splitter.split(ctx.payload, delimiter=self.delimiter)
 
         # Determine formats
         formats = self.format_selector.resolve_formats(items)
@@ -108,7 +106,7 @@ class SplitterAgent(Agent[SplitterConf]):
             raise ValueError("Mismatch between split items and format mappings.")
 
         for item, fmt in zip(items, formats):
-            self._raw_send(
+            ctx._raw_send(
                 priority=ctx.message.priority,
                 topics=self.topics,
                 payload=item,
