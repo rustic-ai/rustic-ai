@@ -15,6 +15,7 @@ from typing import (
     Union,
 )
 
+import chevron
 from pydantic import BaseModel
 import shortuuid
 import yaml
@@ -70,6 +71,7 @@ class KeyConstants:
     ROUTES = "routes"
     ACT_ONLY_WHEN_TAGGED = "act_only_when_tagged"
     PREDICATES = "predicates"
+    CONFIGURATION = "configuration"
 
 
 class EnvConstants:
@@ -266,6 +268,7 @@ class GuildBuilder:
             KeyConstants.AGENTS: [],
             KeyConstants.DEPENDENCY_MAP: {},
             KeyConstants.ROUTES: RoutingSlip(),
+            KeyConstants.CONFIGURATION: {},
         }
 
         self.required_fields_set = {
@@ -394,10 +397,28 @@ class GuildBuilder:
 
         # Set the properties and agents from the parsed dictionary.
         builder.guild_spec_dict[KeyConstants.PROPERTIES] = spec_dict.get(KeyConstants.PROPERTIES, {})
-        builder.guild_spec_dict[KeyConstants.AGENTS] = spec_dict.get(KeyConstants.AGENTS, [])
         builder.guild_spec_dict[KeyConstants.DEPENDENCY_MAP] = spec_dict.get(KeyConstants.DEPENDENCY_MAP, {})
-        builder.guild_spec_dict[KeyConstants.ROUTES] = spec_dict.get(KeyConstants.ROUTES, RoutingSlip())
+        configuration = spec_dict.get(KeyConstants.CONFIGURATION, {})
 
+        if configuration:
+            updated_agents = []
+            updated_routes = []
+            for agent_spec in spec_dict.get(KeyConstants.AGENTS, []):
+                transformed_agent_json = chevron.render(json.dumps(agent_spec), configuration)
+                agent_spec_with_config = AgentSpec.model_validate(json.loads(transformed_agent_json))
+                updated_agents.append(agent_spec_with_config)
+            routing_slip_dict = spec_dict.get(KeyConstants.ROUTES, {})
+            if routing_slip_dict:
+                for routing_rule in routing_slip_dict.get("steps"):
+                    transformed_rule_json = chevron.render(json.dumps(routing_rule), configuration)
+                    routing_rule_with_spec = RoutingRule.model_validate(json.loads(transformed_rule_json))
+                    updated_routes.append(routing_rule_with_spec)
+
+            builder.guild_spec_dict[KeyConstants.AGENTS] = updated_agents
+            builder.guild_spec_dict[KeyConstants.ROUTES] = RoutingSlip(steps=updated_routes)
+        else:
+            builder.guild_spec_dict[KeyConstants.AGENTS] = spec_dict.get(KeyConstants.AGENTS, [])
+            builder.guild_spec_dict[KeyConstants.ROUTES] = spec_dict.get(KeyConstants.ROUTES, RoutingSlip())
         return builder
 
     @classmethod
