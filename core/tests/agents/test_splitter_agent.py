@@ -170,7 +170,7 @@ class TestSplitterGuild:
             payload=wrapped_message,
         )
 
-        await asyncio.sleep(10)
+        await asyncio.sleep(2)
 
         messages = probe_agent.get_messages()[-2:]
 
