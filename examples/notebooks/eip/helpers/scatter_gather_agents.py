@@ -14,12 +14,12 @@ from rustic_ai.core.guild.dsl import BaseAgentProps
 
 from .scatter_gather_models import (
     AnomalyRequest,
-    StatisticsRequest,
-    TrendRequest,
-    StatisticsResult,
-    TrendResult,
     AnomalyResult,
     ComprehensiveAnalysisReport,
+    StatisticsRequest,
+    StatisticsResult,
+    TrendRequest,
+    TrendResult,
 )
 
 

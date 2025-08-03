@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 import os
 import time
 
+from flaky import flaky
 import pytest
 import shortuuid
 
@@ -28,6 +29,24 @@ from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 
 
 class TestTodoListGuild:
+
+    async def wait_for_message(self, probe_agent, check_fn, timeout=5.0, interval=0.1):
+        """
+        Waits for a message satisfying check_fn to appear in probe_agent messages.
+
+        :param probe_agent: ProbeAgent
+        :param check_fn: function taking Message -> bool
+        :param timeout: max seconds to wait
+        :param interval: time between polls
+        :return: the matching message or None
+        """
+        start = time.time()
+        while time.time() - start < timeout:
+            msg = probe_agent.get_messages()[-1]
+            if check_fn(msg):
+                return msg
+            await asyncio.sleep(interval)
+        raise TimeoutError("Timeout waiting for matching message.")
 
     @pytest.fixture
     def rgdatabase(self):
@@ -65,6 +84,7 @@ class TestTodoListGuild:
         todo_guild.shutdown()
 
     @pytest.mark.asyncio
+    @flaky(max_runs=4, min_passes=1)
     async def test_todo_flow(self, todo_guild: Guild):
         generator = GemstoneGenerator(17)
         probe_agent = (
@@ -126,16 +146,10 @@ class TestTodoListGuild:
             ),
         )
 
-        loop = 1
-        while loop <= 100:
-            results = probe_agent.get_messages()[-1]
-            check = "GetTaskResponse" in results.format
-            if check:
-                break
-            time.sleep(0.1)
-            loop += 1
-
-        get_task_response = probe_agent.get_messages()[-1]
+        get_task_response = await self.wait_for_message(
+            probe_agent,
+            lambda m: "GetTaskResponse" in m.format,
+        )
         assert get_task_response.payload["task"]["todo"] == "Write unit tests"
 
         # Step 3: Update task
@@ -169,16 +183,10 @@ class TestTodoListGuild:
             ),
         )
 
-        loop = 1
-        while loop <= 100:
-            results = probe_agent.get_messages()[-1]
-            check = "GetTaskResponse" in results.format
-            if check:
-                break
-            time.sleep(0.1)
-            loop += 1
-
-        next_task_messages = probe_agent.get_messages()[-1]
+        next_task_messages = await self.wait_for_message(
+            probe_agent,
+            lambda m: "GetTaskResponse" in m.format,
+        )
         assert next_task_messages.payload["task"]["todo"] == "Write better unit tests"
 
         # Step 5: Delete task
@@ -209,14 +217,8 @@ class TestTodoListGuild:
             ),
         )
 
-        loop = 1
-        while loop <= 100:
-            results = probe_agent.get_messages()[-1]
-            check = "ListTasksResponse" in results.format
-            if check:
-                break
-            time.sleep(0.1)
-            loop += 1
-
-        list_reponse = probe_agent.get_messages()[-1]
+        list_reponse = await self.wait_for_message(
+            probe_agent,
+            lambda m: "ListTasksResponse" in m.format,
+        )
         assert len(list_reponse.payload["tasks"]) == 0

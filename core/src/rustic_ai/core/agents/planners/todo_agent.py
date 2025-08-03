@@ -151,7 +151,6 @@ class TodoListAgent(Agent):
     @agent.processor(DeleteTaskRequest)
     def delete_task(self, ctx: ProcessContext[DeleteTaskRequest]):
         tasks = self.get_tasks()
-        task_map = {t.id: t for t in tasks}
         deleted_id = ctx.payload.id
 
         # Step 1: Delete the task
@@ -162,8 +161,7 @@ class TodoListAgent(Agent):
             if deleted_id in task.depends_on:
                 task.depends_on = [dep for dep in task.depends_on if dep != deleted_id]
 
-                # Check if all remaining dependencies are done
-                if all(dep_id in task_map and task_map[dep_id].status == TaskStatus.DONE for dep_id in task.depends_on):
+                if not task.depends_on:
                     task.status = TaskStatus.PENDING
 
                 tasks[i] = task
@@ -190,7 +188,6 @@ class TodoListAgent(Agent):
     @agent.processor(UpdateStatusRequest)
     def update_status(self, ctx: ProcessContext[UpdateStatusRequest]):
         tasks = self.get_tasks()
-        task_map = {t.id: t for t in tasks}
         updated = None
 
         for i, task in enumerate(tasks):
@@ -203,18 +200,14 @@ class TodoListAgent(Agent):
         if not updated:
             raise ValueError("Task not found")
 
-        # If task is marked as done, try unblocking other tasks
         if ctx.payload.status == TaskStatus.DONE:
-            for i, task in enumerate(tasks):
+            for task in tasks:
                 if ctx.payload.id in task.depends_on and task.status == TaskStatus.BLOCKED:
-                    # Check if all dependencies are done
-                    all_done = all(
-                        task_map.get(dep_id) and task_map[dep_id].status == TaskStatus.DONE
-                        for dep_id in task.depends_on
-                    )
-                    if all_done:
+                    task.depends_on.remove(ctx.payload.id)
+
+                    # If no more dependencies left, mark as pending
+                    if not task.depends_on:
                         task.status = TaskStatus.PENDING
-                        tasks[i] = task
 
         self.save_tasks(tasks, ctx)
 
@@ -230,7 +223,10 @@ class TodoListAgent(Agent):
         if ctx.payload.sort_by == "start_time":
             next_task = min(pending_tasks, key=lambda t: datetime.fromisoformat(t.start_time))
         elif ctx.payload.sort_by == "deadline":
-            next_task = min(pending_tasks, key=lambda t: datetime.fromisoformat(t.deadline))
+            next_task = min(
+                pending_tasks,
+                key=lambda t: datetime.fromisoformat(t.deadline) if t.deadline else datetime.max
+            )
         else:
             raise KeyError("Sortby can be start_time or deadline only.")
 
