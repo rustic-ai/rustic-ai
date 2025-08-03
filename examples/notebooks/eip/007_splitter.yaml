@@ -1,0 +1,59 @@
+id: SplitterGuild
+name: Purchase Order Split Demo
+description: Demonstrates splitting of messages using SplitterAgent
+configuration: {}
+dependency_map: {}
+properties: {}
+agents:
+- id: SplitterAgent
+  name: Purchase Order Splitter
+  description: Splits a PurchaseOrderRequest into multiple ItemRequest messages
+  class_name: rustic_ai.core.agents.eip.splitter_agent.SplitterAgent
+  listen_to_default_topic: false
+  act_only_when_tagged: false
+  additional_topics:
+  - purchase_orders
+  dependency_map: {}
+  predicates: {}
+  properties:
+    delimiter: ','
+    format_selector:
+      fixed_format: __main__.ItemProcessingResult
+      format_list: null
+      jsonata_expr: null
+      strategy: !!python/object/apply:rustic_ai.core.agents.eip.splitter_agent.FormatSelectorStrategies
+      - fixed
+    splitter:
+      expression: '$map(payload.items, function($v) {$merge([$v, {"order_id": payload.order_id},
+        {"customer": payload.customer}] ) } )'
+      split_type: jsonata
+    topics:
+    - purchase_orders
+  qos:
+    latency: null
+    retry_count: null
+    timeout: null
+  resources:
+    custom_resources: {}
+    num_cpus: null
+    num_gpus: null
+routes:
+  steps:
+  - agent:
+      id: null
+      name: Purchase Order Splitter
+    agent_state_update: null
+    agent_type: null
+    destination:
+      priority: null
+      recipient_list: []
+      topics: purchase_orders
+    guild_state_update: null
+    mark_forwarded: false
+    message_format: __main__.PurchaseOrderRequest
+    method_name: null
+    origin_filter: null
+    route_times: 1
+    transformer:
+      handler: '({"format": "typing.Dict", "payload": payload})'
+      style: content_based_router
