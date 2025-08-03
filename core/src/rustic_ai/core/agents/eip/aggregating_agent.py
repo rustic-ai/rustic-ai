@@ -227,7 +227,7 @@ class AggregatorConf(BaseAgentProps):
     """The location of the correlation ID in the message."""
 
     correlation_id_path: Optional[str] = Field(default=None)
-    """Path to the correlation ID in the message payload. 
+    """Path to the correlation ID in the message payload.
     If it is none, the thread_id from the message will be used."""
 
     collector: Union[ListCollector, DictCollector, TypeCollector] = Field(
@@ -271,7 +271,7 @@ class AggregatingAgent(Agent[AggregatorConf]):
     def collect_message(self, ctx: ProcessContext[JsonDict]) -> None:
         """Collects a message using the configured collection strategy."""
 
-        logging.debug(f"Collecting message ---")
+        logging.debug("Collecting message ---")
 
         correlation_id = str(ctx.message.thread[-1])
 

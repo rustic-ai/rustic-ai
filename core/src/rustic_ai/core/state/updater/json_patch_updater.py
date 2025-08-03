@@ -1,4 +1,4 @@
-from typing import List, Optional, Union
+from typing import List, Optional
 
 import jsonpatch
 from pydantic import BaseModel, Field, JsonValue
