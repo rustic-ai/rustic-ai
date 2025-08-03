@@ -1,13 +1,13 @@
 from abc import ABC, abstractmethod
 from enum import StrEnum
-from typing import List, Optional, Union, Literal
+from typing import List, Literal, Optional, Union
+
 from jsonata import Jsonata
 from pydantic import BaseModel, Field
 
 from rustic_ai.core.guild import agent
 from rustic_ai.core.guild.agent import Agent, ProcessContext
 from rustic_ai.core.guild.dsl import AgentSpec, BaseAgentProps
-from rustic_ai.core.messaging.core.message import Priority
 from rustic_ai.core.utils.json_utils import JsonDict
 
 
@@ -25,9 +25,12 @@ class FormatSelector(BaseModel):
 
     def resolve_formats(self, items: List[JsonDict]) -> List[str]:
         if self.strategy == FormatSelectorStrategies.FIXED:
-            return [self.fixed_format] * len(items)
+            if self.fixed_format:
+                return [self.fixed_format] * len(items)
+            else:
+                raise ValueError("fixed format must be specified for FormatSelectorStrategies.Fixed")
         elif self.strategy == FormatSelectorStrategies.LIST:
-            if len(self.format_list) != len(items):
+            if not self.format_list or len(self.format_list) != len(items):
                 raise ValueError("Format list length must match split items length.")
             return self.format_list
         elif self.strategy == FormatSelectorStrategies.JSONATA:
@@ -80,7 +83,9 @@ class JsonataSplitter(BaseSplitter):
 
 
 class SplitterConf(BaseAgentProps):
-    splitter: Union[AsIsSplitter, TokenizerSplitter, JsonataSplitter] = Field(default_factory=lambda: AsIsSplitter(), discriminator="split_type")
+    splitter: Union[AsIsSplitter, TokenizerSplitter, JsonataSplitter] = Field(
+        default_factory=lambda: AsIsSplitter(), discriminator="split_type"
+    )
     format_selector: FormatSelector
     delimiter: Optional[str] = ","
     topics: Optional[List[str]] = Field(default_factory=list)

@@ -1,13 +1,19 @@
 import asyncio
 import os
-from pydantic import BaseModel
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
+from pydantic import BaseModel
 import pytest
 import shortuuid
 
 from rustic_ai.core import Guild, GuildTopics, Priority
-from rustic_ai.core.agents.eip.splitter_agent import SplitterConf, SplitterAgent, JsonataSplitter, FormatSelector, FormatSelectorStrategies
+from rustic_ai.core.agents.eip.splitter_agent import (
+    FormatSelector,
+    FormatSelectorStrategies,
+    JsonataSplitter,
+    SplitterAgent,
+    SplitterConf,
+)
 from rustic_ai.core.agents.system.models import (
     UserAgentCreationRequest,
     UserAgentCreationResponse,
@@ -25,10 +31,12 @@ from rustic_ai.core.utils import GemstoneGenerator
 from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 from rustic_ai.core.utils.jexpr import JExpr
 
+
 class PurchaseOrderRequest(BaseModel):
     order_id: str
     items: List[Dict[str, Any]]
     customer: str
+
 
 class ItemProcessingResult(BaseModel):
     order_id: str
@@ -51,9 +59,7 @@ class TestSplitterGuild:
         )
 
         slip = RoutingSlip(
-            steps=[
-                splitter_results_route
-            ],
+            steps=[splitter_results_route],
         )
 
         return slip
@@ -81,13 +87,14 @@ class TestSplitterGuild:
 
         splitter_conf = SplitterConf(
             splitter=JsonataSplitter(
-                expression= JExpr('$map(items, function($v) {$merge([$v, {"order_id": order_id}, {"customer": customer}] ) } )').serialize()
+                expression=JExpr(
+                    '$map(items, function($v) {$merge([$v, {"order_id": order_id}, {"customer": customer}] ) } )'
+                ).serialize()
             ),
             format_selector=FormatSelector(
-                strategy=FormatSelectorStrategies.FIXED,
-                fixed_format=get_qualified_class_name(ItemProcessingResult)
+                strategy=FormatSelectorStrategies.FIXED, fixed_format=get_qualified_class_name(ItemProcessingResult)
             ),
-            topics=["item_processing_results"]
+            topics=["item_processing_results"],
         )
 
         splitter_agent = (
@@ -103,13 +110,11 @@ class TestSplitterGuild:
 
         splitter_guild_builder.add_agent_spec(splitter_agent)
 
-
         splitter_guild = splitter_guild_builder.set_routes(routing_slip).bootstrap(rgdatabase, "dummy_ord")
 
         yield splitter_guild
         splitter_guild.shutdown()
 
-    
     @pytest.mark.asyncio
     async def test_splitter_guild(self, splitter_guild: Guild, routing_slip: RoutingSlip, generator: GemstoneGenerator):
 
@@ -149,10 +154,7 @@ class TestSplitterGuild:
         test_order = PurchaseOrderRequest(
             order_id="PO-12345",
             customer="ACME Corp",
-            items=[
-                {"id": "item-001", "quantity": 2},
-                {"id": "item-002", "quantity": 1}
-            ]
+            items=[{"id": "item-001", "quantity": 2}, {"id": "item-002", "quantity": 1}],
         )
 
         id_obj = generator.get_id(Priority.NORMAL)
@@ -172,9 +174,9 @@ class TestSplitterGuild:
 
         messages = probe_agent.get_messages()[-2:]
 
-        assert messages[0].payload['order_id'] == "PO-12345"
-        assert messages[1].payload['order_id'] == "PO-12345"
-        assert messages[0].payload['id'] == "item-001"
-        assert messages[0].payload['quantity'] == 2
-        assert messages[1].payload['id'] == "item-002"
-        assert messages[1].payload['quantity'] == 1
+        assert messages[0].payload["order_id"] == "PO-12345"
+        assert messages[1].payload["order_id"] == "PO-12345"
+        assert messages[0].payload["id"] == "item-001"
+        assert messages[0].payload["quantity"] == 2
+        assert messages[1].payload["id"] == "item-002"
+        assert messages[1].payload["quantity"] == 1
