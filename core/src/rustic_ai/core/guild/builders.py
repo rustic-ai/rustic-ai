@@ -400,7 +400,7 @@ class GuildBuilder:
         builder.guild_spec_dict[KeyConstants.DEPENDENCY_MAP] = spec_dict.get(KeyConstants.DEPENDENCY_MAP, {})
         configuration = spec_dict.get(KeyConstants.CONFIGURATION, {})
 
-        if configuration is not None and configuration:
+        if configuration:
             updated_agents = []
             updated_routes = []
             for agent_spec in spec_dict.get(KeyConstants.AGENTS, []):
