@@ -35,6 +35,12 @@ class MessageConstants(StrEnum):
     RAW_JSON_FORMAT = "generic_json"
 
 
+class ProcessStatus(StrEnum):
+    RUNNING = "running"
+    ERROR = "error"
+    COMPLETED = "completed"
+
+
 class AgentTag(BaseModel):
     """
     Represents a tag that can be assigned to an agent.
@@ -351,6 +357,7 @@ class RoutingRule(BaseModel):
         transformer (Optional[Transformation]): The transformer to be applied to the message.
         agent_state_update (Optional[StateTransformer]): The state update request to be applied to the agent.
         guild_state_update (Optional[StateTransformer]): The state update request to be applied to the guild.
+        process_status (Optional[ProcessStatus]): The status of message processing.
     """
 
     agent: Optional[AgentTag] = None
@@ -366,6 +373,7 @@ class RoutingRule(BaseModel):
 
     agent_state_update: Optional[StateTransformer] = None
     guild_state_update: Optional[StateTransformer] = None
+    process_status: Optional[ProcessStatus] = None
 
     @model_validator(mode="before")
     @classmethod
@@ -641,6 +649,7 @@ class MessageRoutable(BaseModel):
         forward_header (Optional[ForwardHeader]): The header for a forwarded message.
         context (Optional[JsonDict]): The context of the message.
         enrich_with_history (Optional[int]): The number of previous messages to include in the context.
+        process_status (Optional[str]): The status of message processing.
     """
 
     topics: Union[str, List[str]]
@@ -654,6 +663,7 @@ class MessageRoutable(BaseModel):
     forward_header: Optional[ForwardHeader] = None
     context: Optional[JsonDict] = Field(default=None)
     enrich_with_history: Optional[int] = 0
+    process_status: Annotated[Optional[ProcessStatus], Field(default=None)]
 
 
 class Message(BaseModel):
@@ -673,6 +683,9 @@ class Message(BaseModel):
         routing_slip (Optional[RoutingSlip]): The routing slip for the message.
         message_history (List[ProcessEntry]): The history of the message.
         ttl (Optional[int]): The time to live for the message.
+        topic_published_to (Optional[str]): The topic to which the message was published.
+        enrich_with_history (Optional[int]): The number of previous messages to include in the context.
+        process_status (Optional[str]): The status of message processing.
 
     Raises:
         ValueError: If the provided payload is not JSON-serializable or if any of the attributes are not valid.
@@ -706,12 +719,14 @@ class Message(BaseModel):
 
     session_state: Annotated[Optional[JsonDict], Field(default=None)]
 
+    topic_published_to: Optional[str] = None
+    enrich_with_history: Optional[int] = 0
+
+    process_status: Annotated[Optional[ProcessStatus], Field(default=None)]
+
     _id: int  # Internal backend for id
     _priority: Priority  # Internal backend for priority
     _timestamp: float  # Internal backend for timestamp
-
-    topic_published_to: Optional[str] = None
-    enrich_with_history: Optional[int] = 0
 
     def __init__(self, id_obj: GemstoneID, **data: Any):
         """

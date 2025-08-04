@@ -41,6 +41,7 @@ from rustic_ai.core.messaging.core.message import (
     AgentTag,
     FunctionalTransformer,
     PayloadTransformer,
+    ProcessStatus,
     RoutingRule,
     RoutingSlip,
     StateTransformer,
@@ -1047,6 +1048,10 @@ class RouteBuilder:
             )
         )
         self.rule_dict[StateUpdateActions.GUILD_STATE_UPDATE] = state_transformer
+        return self
+
+    def set_process_status(self, process_status: ProcessStatus) -> "RouteBuilder":
+        self.rule_dict["process_status"] = process_status
         return self
 
     def build(self) -> RoutingRule:

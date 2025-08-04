@@ -40,6 +40,7 @@ from rustic_ai.core.messaging.client.message_tracking_client import (
 from rustic_ai.core.messaging.core.message import (
     AgentTag,
     MessageConstants,
+    ProcessStatus,
     RoutingDestination,
     RoutingRule,
     RoutingSlip,
@@ -523,7 +524,10 @@ class TestGuildBuilder:
         )
 
         rule1 = (
-            RouteBuilder(echo_agent).set_destination_topics(UserProxyAgent.get_user_outbox_topic("test_user")).build()
+            RouteBuilder(echo_agent)
+            .set_destination_topics(UserProxyAgent.get_user_outbox_topic("test_user"))
+            .set_process_status(ProcessStatus.COMPLETED)
+            .build()
         )
 
         routing_slip = RoutingSlip(steps=[rule1])
@@ -703,6 +707,7 @@ class TestGuildBuilder:
         assert echo_response.payload["message"] == "Hello, world! @EchoAgent"
         assert echo_response.sender.name == "EchoAgent"
         assert echo_response.in_response_to == forwarded_message.id
+        assert echo_response.process_status == "completed"
 
         # Assert User Proxy Agent forwards the response to the User
         user_notifications = [message for message in probe_agent_messages if message.topics == user_message_topic]
@@ -717,6 +722,7 @@ class TestGuildBuilder:
         assert user_response.forward_header
         assert user_response.forward_header.origin_message_id == echo_response.id
         assert user_response.forward_header.on_behalf_of.name == "EchoAgent"
+        assert user_response.process_status == "completed"
 
         probe_agent.clear_messages()
 
