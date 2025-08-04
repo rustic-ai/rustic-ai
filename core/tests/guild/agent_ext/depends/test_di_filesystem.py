@@ -4,9 +4,8 @@ from fsspec import filesystem
 from pydantic import BaseModel
 import pytest
 
-from rustic_ai.core.agents.testutils.probe_agent import ProbeAgent
 from rustic_ai.core.guild import agent
-from rustic_ai.core.guild.agent import Agent, AgentMode, AgentType, ProcessContext
+from rustic_ai.core.guild.agent import Agent, ProcessContext
 from rustic_ai.core.guild.agent_ext.depends.filesystem import FileSystem
 from rustic_ai.core.guild.agent_ext.depends.filesystem.filesystem import (
     FileSystemResolver,
@@ -43,13 +42,6 @@ class FileManagerAgent(Agent):
     """
     The File Manager Reads/Writes/Deletes files
     """
-
-    def __init__(self, agent_spec: AgentSpec):
-        super().__init__(
-            agent_spec,
-            agent_type=AgentType.BOT,
-            agent_mode=AgentMode.LOCAL,
-        )
 
     @agent.processor(WriteToFile, depends_on=["filesystem:agent_fs", "filesystem:guild_fs:True"])
     def write_file(
@@ -148,7 +140,7 @@ class TestFileSystem:
             ),
         ],
     )
-    def test_filesystem(self, probe_agent: ProbeAgent, dep_map: Dict[str, DependencySpec], org_id):
+    def test_filesystem(self, probe_spec, dep_map: Dict[str, DependencySpec], org_id):
         import time
         import uuid
 
@@ -177,7 +169,7 @@ class TestFileSystem:
         dfs = FileSystem(path=f"/tmp/{guild_id}/file_manager", fs=fs)
         guild = guild_builder.launch(organization_id=org_id)
 
-        guild._add_local_agent(probe_agent)
+        probe_agent = guild._add_local_agent(probe_spec)
 
         probe_agent.publish_dict(
             topic="default_topic",

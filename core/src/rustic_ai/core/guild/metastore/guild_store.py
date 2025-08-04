@@ -21,8 +21,8 @@ class GuildStore:
         Get a guild by its ID.
         """
         with Session(self.engine) as session:
-            guild_query = select(GuildModel).where(GuildModel.id == guild_id)
-            guild_model = session.exec(guild_query).unique().one_or_none()
+            session.expire_all()  # Ensure we get fresh data
+            guild_model = GuildModel.get_by_id(session, guild_id)
             session.close()
         return guild_model
 

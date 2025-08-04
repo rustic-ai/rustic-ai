@@ -5,7 +5,6 @@ from fsspec import filesystem
 import pytest
 
 from rustic_ai.core.agents.commons.image_generation import ImageGenerationResponse
-from rustic_ai.core.agents.testutils.probe_agent import ProbeAgent
 from rustic_ai.core.guild.agent_ext.depends.filesystem import (
     FileSystem,
     FileSystemResolver,
@@ -21,7 +20,7 @@ from rustic_ai.vertexai.agents.image_generation import (
 
 class TestImagenAgent:
     @pytest.mark.skipif(os.getenv("SKIP_EXPENSIVE_TESTS") == "true", reason="Skipping expensive tests")
-    def test_response_is_generated(self, probe_agent: ProbeAgent, org_id):
+    def test_response_is_generated(self, probe_spec, org_id):
         """
         Test that the agent responds to a message with a message.
         """
@@ -61,7 +60,7 @@ class TestImagenAgent:
         dfs = FileSystem(path="/tmp/imagen_guild/GUILD_GLOBAL", fs=fs)
 
         guild = guild_builder.launch(organization_id=org_id)
-        guild._add_local_agent(probe_agent)
+        probe_agent = guild._add_local_agent(probe_spec)
 
         probe_agent.publish_dict(
             guild.DEFAULT_TOPIC,

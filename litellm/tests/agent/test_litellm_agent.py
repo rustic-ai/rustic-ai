@@ -3,7 +3,6 @@ import time
 
 import pytest
 
-from rustic_ai.core.agents.testutils.probe_agent import ProbeAgent
 from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     ChatCompletionRequest,
     ChatCompletionResponse,
@@ -23,6 +22,8 @@ from rustic_ai.core.utils.jexpr import JObj, JxScript
 from rustic_ai.litellm.agent import LiteLLMAgent
 from rustic_ai.litellm.conf import LiteLLMConf
 
+from rustic_ai.testing.helpers import wrap_agent_for_testing
+
 
 @pytest.fixture
 def setup_default_env(monkeypatch):
@@ -33,19 +34,25 @@ def setup_default_env(monkeypatch):
 class TestLiteLLMAgent:
     def test_agent_initialization(self):
         with pytest.raises(RuntimeError, match=".*GEMINI_API_KEY not set"):
-            AgentBuilder(LiteLLMAgent).set_name("Test Agent").set_description("A test agent").set_id(
-                "lite_llm_agent"
-            ).set_properties(
-                LiteLLMConf(
-                    model=Models.gemini_2_5_flash,
-                    messages=[
-                        SystemMessage(content="You are a helpful assistant."),
-                    ],
+            spec = (
+                AgentBuilder(LiteLLMAgent)
+                .set_name("Test Agent")
+                .set_description("A test agent")
+                .set_id("lite_llm_agent")
+                .set_properties(
+                    LiteLLMConf(
+                        model=Models.gemini_2_5_flash,
+                        messages=[
+                            SystemMessage(content="You are a helpful assistant."),
+                        ],
+                    )
                 )
-            ).build()
+                .build_spec()
+            )
+            wrap_agent_for_testing(spec)
 
-    def test_response_is_generated(self, setup_default_env, probe_agent: ProbeAgent, guild: Guild):
-        agent = (
+    def test_response_is_generated(self, setup_default_env, probe_spec, guild: Guild):
+        agent_spec = (
             AgentBuilder(LiteLLMAgent)
             .set_name("Test Agent")
             .set_description("A test agent")
@@ -58,11 +65,11 @@ class TestLiteLLMAgent:
                     ],
                 )
             )
-            .build()
+            .build_spec()
         )
 
-        guild._add_local_agent(agent)
-        guild._add_local_agent(probe_agent)
+        agent = guild._add_local_agent(agent_spec)
+        probe_agent = guild._add_local_agent(probe_spec)
 
         chat_completion_request = ChatCompletionRequest(
             messages=[UserMessage(content="What is the capital of India?")],

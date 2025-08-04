@@ -5,13 +5,10 @@ import uuid
 from pydantic import BaseModel, JsonValue
 import pytest
 
-from rustic_ai.core.agents.testutils.probe_agent import ProbeAgent
 from rustic_ai.core.guild import agent
 from rustic_ai.core.guild.agent import (
     Agent,
     AgentDependency,
-    AgentMode,
-    AgentType,
     ProcessContext,
 )
 from rustic_ai.core.guild.agent_ext.depends.kvstore.base import BaseKVStore
@@ -54,13 +51,6 @@ class KVStoreAgent(Agent):
     """
     Agent for testing KVStore dependencies
     """
-
-    def __init__(self, agent_spec: AgentSpec):
-        super().__init__(
-            agent_spec,
-            agent_type=AgentType.BOT,
-            agent_mode=AgentMode.LOCAL,
-        )
 
     @agent.processor(
         KVPut,
@@ -182,7 +172,7 @@ class BaseTestKVStore(ABC):
         """
         raise NotImplementedError("This fixture should be overridden in subclasses.")
 
-    def test_kvstore(self, probe_agent: ProbeAgent, dep_map: dict, org_id):
+    def test_kvstore(self, probe_spec, dep_map: dict, org_id):
         # Use unique guild name to avoid interference between tests
         guild_id = f"test_kvstore_guild_{int(time.time() * 1000)}_{uuid.uuid4().hex[:8]}"
 
@@ -202,7 +192,7 @@ class BaseTestKVStore(ABC):
         else:
             guild.dependency_map["kvstore"].class_name = InMemoryKVStoreResolver.get_qualified_class_name()
 
-        guild._add_local_agent(probe_agent)
+        probe_agent = guild._add_local_agent(probe_spec)
 
         probe_agent.publish_dict(
             topic="default_topic",

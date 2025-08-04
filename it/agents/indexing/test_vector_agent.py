@@ -11,7 +11,6 @@ from rustic_ai.core.agents.indexing.vector_agent import (
     VectorAgent,
     VectorSearchQuery,
 )
-from rustic_ai.core.agents.testutils import ProbeAgent
 from rustic_ai.core.guild.agent_ext.depends.filesystem import (
     FileSystem,
     FileSystemResolver,
@@ -26,7 +25,7 @@ from rustic_ai.langchain.agent_ext.text_splitter.character_splitter import (
 
 @pytest.mark.skipif(os.getenv("OPENAI_API_KEY") is None, reason="OPENAI_API_KEY environment variable not set")
 class TestVectorAgent:
-    def test_vector_agent(self, probe_agent: ProbeAgent, org_id):
+    def test_vector_agent(self, probe_spec, org_id):
         guild_id = "test_vector_guild"
         dep_map = {
             "vectorstore": DependencySpec(
@@ -67,7 +66,7 @@ class TestVectorAgent:
         dfs = FileSystem(path=f"/tmp/{guild_id}/GUILD_GLOBAL", fs=fs)
 
         guild = guild_builder.launch(org_id)
-        guild._add_local_agent(probe_agent)
+        probe_agent = guild._add_local_agent(probe_spec)
 
         # Upsert documents
         probe_agent.publish_dict(

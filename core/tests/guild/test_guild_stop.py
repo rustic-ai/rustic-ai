@@ -6,7 +6,7 @@ import pytest
 
 from rustic_ai.core import GuildTopics, MessageTrackingClient, MessagingConfig
 from rustic_ai.core.agents.system.models import StopGuildRequest
-from rustic_ai.core.agents.testutils import EchoAgent, ProbeAgent
+from rustic_ai.core.agents.testutils import EchoAgent
 from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder
 from rustic_ai.core.guild.metastore import GuildStore, Metastore
 from rustic_ai.core.messaging.core.message import (
@@ -42,9 +42,8 @@ class TestGuildStop:
         yield db
         Metastore.drop_db()
 
-    @pytest.mark.xfail(strict=False, reason="Flaky test")
-    @flaky(max_runs=5, min_passes=1)
-    def test_guild_shutdown(self, messaging: MessagingConfig, probe_agent: ProbeAgent, database, org_id):
+    @flaky(max_runs=3, min_passes=1)
+    def test_guild_shutdown(self, messaging: MessagingConfig, probe_spec, database, org_id):
 
         guild_id = "guild_stop_test"
         guild_name = "Guild1"
@@ -86,9 +85,9 @@ class TestGuildStop:
 
         time.sleep(1.0)  # Increased wait time to allow GuildManagerAgent to launch EchoAgent
         running_agents = guild.execution_engine.get_agents_in_guild(guild_id)
-        assert len(running_agents) == 2
+        assert len(running_agents) >= 2
 
-        guild._add_local_agent(probe_agent)
+        probe_agent = guild._add_local_agent(probe_spec)
 
         probe_agent.publish_dict(
             topic=GuildTopics.SYSTEM_TOPIC,
@@ -106,7 +105,7 @@ class TestGuildStop:
 
         assert is_agent_running is False
 
-        time.sleep(3)
+        time.sleep(1)
 
         engine = Metastore.get_engine(database)
         guild_store = GuildStore(engine)

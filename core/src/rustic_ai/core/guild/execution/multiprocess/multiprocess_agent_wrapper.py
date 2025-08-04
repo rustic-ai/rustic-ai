@@ -2,9 +2,9 @@ import logging
 import multiprocessing
 from multiprocessing.synchronize import Event as EventType
 import time
-from typing import Any, Dict, Optional, Type, Union
+from typing import Any, Dict, Optional, Type
 
-from rustic_ai.core.guild.agent import Agent, AgentSpec
+from rustic_ai.core.guild.agent import AgentSpec
 from rustic_ai.core.guild.dsl import GuildSpec
 from rustic_ai.core.messaging import Client, MessageTrackingClient, MessagingConfig
 
@@ -25,7 +25,7 @@ class MultiProcessAgentWrapper(AgentWrapper):
     def __init__(
         self,
         guild_spec: GuildSpec,
-        agent_spec: Union[AgentSpec, Agent],
+        agent_spec: AgentSpec,
         messaging_config: MessagingConfig,
         machine_id: int,
         client_type: Type[Client] = MessageTrackingClient,

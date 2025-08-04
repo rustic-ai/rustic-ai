@@ -29,6 +29,7 @@ from rustic_ai.core.messaging.core.message import (
     RoutingRule,
     RoutingSlip,
 )
+from rustic_ai.core.messaging.core.messaging_config import MessagingConfig
 from rustic_ai.core.ui_protocol.types import TextFormat
 from rustic_ai.core.utils import GemstoneGenerator
 from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
@@ -105,11 +106,23 @@ class TestResearchGuild:
 
     @pytest.fixture
     def research_guild(self, routing_slip, rgdatabase, dep_map_config, org_id):
+
+        mconfig = MessagingConfig(
+            backend_module="rustic_ai.core.messaging.backend",
+            backend_class="InMemoryMessagingBackend",
+            backend_config={},
+        )
+
         research_guild_builder = GuildBuilder(
             guild_id=f"research_guild_{shortuuid.uuid()}",
             guild_name="Research Guild",
             guild_description="A guild to research stuff",
+        ).set_messaging(
+            mconfig.backend_module,
+            mconfig.backend_class,
+            mconfig.backend_config,
         )
+
         research_guild_builder.load_dependency_map_from_yaml(dep_map_config)
 
         research_agent = (
@@ -159,17 +172,17 @@ class TestResearchGuild:
     @pytest.mark.asyncio
     async def test_research_guild(self, research_guild: Guild, routing_slip: RoutingSlip, generator: GemstoneGenerator):
 
-        probe_agent: ProbeAgent = (
+        probe_spec = (
             AgentBuilder(ProbeAgent)
             .set_id("test_agent")
             .set_name("Test Agent")
             .set_description("A test agent")
             .add_additional_topic(UserProxyAgent.BROADCAST_TOPIC)
             .add_additional_topic(GuildTopics.SYSTEM_TOPIC)
-            .build()
+            .build_spec()
         )
 
-        research_guild._add_local_agent(probe_agent)
+        probe_agent = research_guild._add_local_agent(probe_spec)
 
         probe_agent.publish_dict(
             topic=GuildTopics.SYSTEM_TOPIC,

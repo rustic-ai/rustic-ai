@@ -285,7 +285,7 @@ class TestEmbeddedMessagingBackend:
         return GemstoneGenerator(1)
 
     @pytest.fixture
-    def backend(self, shared_server_for_backend_tests) -> MessagingBackend:
+    def backend(self, shared_server_for_backend_tests):
         """Backend fixture that matches the base class signature."""
         # Use the port from the shared server fixture
         server, port = shared_server_for_backend_tests

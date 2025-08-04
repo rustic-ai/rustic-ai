@@ -8,7 +8,7 @@ import serpapi
 import shortuuid
 
 from rustic_ai.core.agents.commons.media import MediaLink
-from rustic_ai.core.guild import Agent, AgentMode, AgentSpec, AgentType, agent
+from rustic_ai.core.guild import Agent, agent
 from rustic_ai.core.messaging.core import JsonDict
 
 
@@ -63,9 +63,7 @@ class SearchError(BaseModel):
 
 
 class SERPAgent(Agent):
-    def __init__(self, agent_spec: AgentSpec):
-        super().__init__(agent_spec=agent_spec, agent_type=AgentType.BOT, agent_mode=AgentMode.LOCAL)
-
+    def __init__(self):
         self.serp_api_key = os.getenv("SERP_API_KEY", "")
         assert self.serp_api_key, "SERP_API_KEY environment variable not set"
         self.client = serpapi.Client(api_key=self.serp_api_key)  # type: ignore

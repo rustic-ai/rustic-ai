@@ -14,7 +14,7 @@ import shortuuid
 
 from rustic_ai.core.agents.commons.media import MediaLink
 from rustic_ai.core.agents.commons.message_formats import ErrorMessage
-from rustic_ai.core.guild import Agent, AgentSpec, agent
+from rustic_ai.core.guild import Agent, agent
 from rustic_ai.core.guild.agent_ext.depends.filesystem.filesystem import FileSystem
 from rustic_ai.core.utils.json_utils import JsonDict
 
@@ -64,8 +64,7 @@ class WebScrapingCompleted(BaseModel):
 
 
 class PlaywrightScraperAgent(Agent):
-    def __init__(self, agent_spec: AgentSpec):
-        super().__init__(agent_spec=agent_spec)
+    def __init__(self):
         self.scraped_urls: Set[str] = set()
 
     async def _extract_links(self, page, base_url: str, request: WebScrapingRequest) -> List[str]:

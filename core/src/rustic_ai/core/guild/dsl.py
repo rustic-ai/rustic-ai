@@ -5,10 +5,12 @@ from typing import (
     Dict,
     Generic,
     List,
+    Literal,
     Optional,
     Set,
     Type,
     TypeVar,
+    Union,
     cast,
 )
 
@@ -88,13 +90,15 @@ class GuildTopics:
 
 
 class RuntimePredicate(ABC, BaseModel):
+    predicate_type: str
 
     @abstractmethod
     def evaluate(self, message: JsonDict, agent_state: JsonDict, guild_state: JsonDict) -> bool:
         pass
 
 
-class SimpleRuntimePredicate(RuntimePredicate):
+class JSONataPredicate(RuntimePredicate):
+    predicate_type: Literal["jsonata_fn"] = "jsonata_fn"
     expression: str
 
     def evaluate(self, message: JsonDict, agent_state: JsonDict, guild_state: JsonDict) -> bool:
@@ -106,6 +110,18 @@ class SimpleRuntimePredicate(RuntimePredicate):
             return True
         else:
             return False
+
+
+class TypeEqualsPredicate(RuntimePredicate):
+    predicate_type: Literal["type_equals"] = "type_equals"
+    expected_type: str
+
+    def evaluate(self, message: JsonDict, agent_state: JsonDict, guild_state: JsonDict) -> bool:
+        actual_type = message.get("type")
+        return actual_type == self.expected_type
+
+
+RuntimePredicateType = Annotated[Union[JSONataPredicate, TypeEqualsPredicate], Field(discriminator="predicate_type")]
 
 
 class ResourceSpec(BaseModel):
@@ -163,7 +179,7 @@ class AgentSpec(BaseModel, Generic[APT]):
 
     act_only_when_tagged: bool = False
 
-    predicates: Dict[str, SimpleRuntimePredicate] = Field(
+    predicates: Dict[str, RuntimePredicateType] = Field(
         default_factory=dict,
         description="A mapping of functions to their runtime predicates.",
     )
