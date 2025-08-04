@@ -53,10 +53,17 @@ class MarvinAgent(Agent):
             instructions=request.extraction_spec.extraction_instructions,
         )
 
-        response = ExtractResponse(
+        response = ExtractResponse[request.extraction_spec.extraction_class](
             source_text=request.source_text,
-            extracted_data=extracted_entities,
-        )  # type: ignore
+            extracted_data=[
+                (
+                    request.extraction_spec.extraction_class.model_validate(e)
+                    if not isinstance(e, request.extraction_spec.extraction_class)
+                    else e
+                )
+                for e in extracted_entities
+            ],
+        )
 
         ctx.send(response)
 

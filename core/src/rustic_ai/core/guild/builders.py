@@ -1019,7 +1019,7 @@ class RouteBuilder:
                 update_agent_state.serialize() if isinstance(update_agent_state, JxScript) else update_agent_state
             )
         )
-        self.rule_dict[StateUpdateActions.AGENT_STATE_UPDATE] = state_transformer
+        self.rule_dict[StateUpdateActions.AGENT_STATE_UPDATE.value] = state_transformer
         return self
 
     def set_guild_state_update(self, update_guild_state: Union[JxScript, str]) -> "RouteBuilder":
@@ -1028,7 +1028,7 @@ class RouteBuilder:
                 update_guild_state.serialize() if isinstance(update_guild_state, JxScript) else update_guild_state
             )
         )
-        self.rule_dict[StateUpdateActions.GUILD_STATE_UPDATE] = state_transformer
+        self.rule_dict[StateUpdateActions.GUILD_STATE_UPDATE.value] = state_transformer
         return self
 
     def build(self) -> RoutingRule:
