@@ -42,7 +42,7 @@ def build_agent_from_spec(
         id_generator=GemstoneGenerator(machine_id),
     )
 
-    if "__init__" in agent_class.__dict__:  # i.e. not inherited
+    if "__init__" in agent_class.__dict__:  # Only call custom __init__ if defined in this class
         agent_class.__init__(self=new_agent)
 
     return new_agent
