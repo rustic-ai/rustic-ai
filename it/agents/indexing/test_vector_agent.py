@@ -11,6 +11,7 @@ from rustic_ai.core.agents.indexing.vector_agent import (
     VectorAgent,
     VectorSearchQuery,
 )
+from rustic_ai.core.agents.testutils.probe_agent import ProbeAgent
 from rustic_ai.core.guild.agent_ext.depends.filesystem import (
     FileSystem,
     FileSystemResolver,
@@ -66,7 +67,7 @@ class TestVectorAgent:
         dfs = FileSystem(path=f"/tmp/{guild_id}/GUILD_GLOBAL", fs=fs)
 
         guild = guild_builder.launch(org_id)
-        probe_agent = guild._add_local_agent(probe_spec)
+        probe_agent: ProbeAgent = guild._add_local_agent(probe_spec)  # type: ignore
 
         # Upsert documents
         probe_agent.publish_dict(

@@ -212,7 +212,7 @@ async def main():
         .launch(organization_id="myawesomeorgid", add_probe=True)
 
     # Get the probe agent
-    probe_agent = guild.get_agent_of_type(ProbeAgent)
+    probe_agent: ProbeAgent = guild._add_local_agent(probe_spec)  # type: ignore
 
     # Create and launch the counter agent
     counter_agent_spec = AgentBuilder(CounterAgent) \

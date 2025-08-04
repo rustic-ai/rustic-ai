@@ -4,6 +4,7 @@ import time
 import pytest
 
 from rustic_ai.core.agents.commons import GenerationPromptRequest
+from rustic_ai.core.agents.testutils.probe_agent import ProbeAgent
 from rustic_ai.core.guild.builders import AgentBuilder
 from rustic_ai.core.guild.guild import Guild
 from rustic_ai.huggingface.agents.llm.phi_agent import LLMPhiAgent
@@ -21,7 +22,7 @@ class TestPhiAgent:
         )
 
         guild._add_local_agent(agent_spec)
-        probe_agent = guild._add_local_agent(probe_spec)
+        probe_agent: ProbeAgent = guild._add_local_agent(probe_spec)  # type: ignore
 
         generation_prompt = "Hello, my name is"
         probe_agent.publish_dict(

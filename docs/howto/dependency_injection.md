@@ -214,7 +214,7 @@ def test_database_agent():
     # Create the agent
     agent = AgentBuilder(DatabaseAgent) \
         .set_name("TestDBAgent") \
-        .build()
+        .build_spec()
 
     # Configure mock dependencies
     mock_dependencies = {
@@ -227,7 +227,6 @@ def test_database_agent():
     # Wrap the agent for testing with mock dependencies
     test_agent, results = wrap_agent_for_testing(
         agent,
-        GemstoneGenerator(machine_id=1),
         dependencies=mock_dependencies
     )
 

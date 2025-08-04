@@ -2,6 +2,7 @@ import time
 from typing import Optional
 import uuid
 
+from rustic_ai.core.agents.testutils.probe_agent import ProbeAgent
 from rustic_ai.core.guild.agent import Agent, ProcessContext, processor
 from rustic_ai.core.guild.agent_ext.depends.dependency_resolver import (
     DependencyResolver,
@@ -79,7 +80,7 @@ class TestAgentDependencyInjection:
 
         guild = guild_builder.launch(organization_id=org_id)
 
-        probe_agent = guild._add_local_agent(probe_spec)
+        probe_agent: ProbeAgent = guild._add_local_agent(probe_spec)  # type: ignore
 
         probe_agent.publish_dict(
             topic="default_topic",

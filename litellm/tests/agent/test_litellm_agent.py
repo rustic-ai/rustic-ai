@@ -3,6 +3,7 @@ import time
 
 import pytest
 
+from rustic_ai.core.agents.testutils.probe_agent import ProbeAgent
 from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     ChatCompletionRequest,
     ChatCompletionResponse,
@@ -69,7 +70,7 @@ class TestLiteLLMAgent:
         )
 
         agent = guild._add_local_agent(agent_spec)
-        probe_agent = guild._add_local_agent(probe_spec)
+        probe_agent: ProbeAgent = guild._add_local_agent(probe_spec)  # type: ignore
 
         chat_completion_request = ChatCompletionRequest(
             messages=[UserMessage(content="What is the capital of India?")],

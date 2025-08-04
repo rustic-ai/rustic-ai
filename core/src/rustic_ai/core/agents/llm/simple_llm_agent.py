@@ -37,8 +37,6 @@ class SimpleLLMAgent(Agent[SimpleLLMAgentConf]):
     """
 
     def __init__(self):
-        super().__init__()
-
         self.memory: deque = deque(maxlen=self.config.chat_memory)
         self.system_messages = [SystemMessage(content=message) for message in self.config.system_messages]
 

@@ -7,6 +7,7 @@ import pytest
 from rustic_ai.core import GuildTopics, MessageTrackingClient, MessagingConfig
 from rustic_ai.core.agents.system.models import StopGuildRequest
 from rustic_ai.core.agents.testutils import EchoAgent
+from rustic_ai.core.agents.testutils.probe_agent import ProbeAgent
 from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder
 from rustic_ai.core.guild.metastore import GuildStore, Metastore
 from rustic_ai.core.messaging.core.message import (
@@ -87,7 +88,7 @@ class TestGuildStop:
         running_agents = guild.execution_engine.get_agents_in_guild(guild_id)
         assert len(running_agents) >= 2
 
-        probe_agent = guild._add_local_agent(probe_spec)
+        probe_agent: ProbeAgent = guild._add_local_agent(probe_spec)  # type: ignore
 
         probe_agent.publish_dict(
             topic=GuildTopics.SYSTEM_TOPIC,

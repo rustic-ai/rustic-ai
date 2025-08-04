@@ -6,7 +6,7 @@ import pytest
 import shortuuid
 
 from rustic_ai.core.agents.testutils.echo_agent import EchoAgent
-from rustic_ai.core.agents.testutils.probe_agent import EssentialProbeAgent
+from rustic_ai.core.agents.testutils.probe_agent import EssentialProbeAgent, ProbeAgent
 from rustic_ai.core.guild.agent_ext.mixins.health import (
     HealthCheckRequest,
     HealthConstants,
@@ -125,7 +125,7 @@ class TestHealthMixin:
             .build_spec()
         )
 
-        probe_agent = guild._add_local_agent(probe_spec)
+        probe_agent: ProbeAgent = guild._add_local_agent(probe_spec)  # type: ignore
 
         assert probe_agent._client is not None
         assert probe_agent._client._messaging is not None

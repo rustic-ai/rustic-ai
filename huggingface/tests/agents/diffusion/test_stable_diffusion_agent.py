@@ -5,6 +5,7 @@ from fsspec import filesystem
 import pytest
 
 from rustic_ai.core.agents.commons.image_generation import ImageGenerationResponse
+from rustic_ai.core.agents.testutils.probe_agent import ProbeAgent
 from rustic_ai.core.guild.agent_ext.depends.filesystem import (
     FileSystem,
     FileSystemResolver,
@@ -61,7 +62,7 @@ class TestRunwaymlStableDiffusionAgent:
         dfs = FileSystem(path="/tmp/stable_diff_guild/GUILD_GLOBAL", fs=fs)
 
         guild = guild_builder.launch(organization_id=org_id)
-        probe_agent = guild._add_local_agent(probe_spec)
+        probe_agent: ProbeAgent = guild._add_local_agent(probe_spec)  # type: ignore
 
         generation_prompt = "Canopy of trees"
         probe_agent.publish_dict(

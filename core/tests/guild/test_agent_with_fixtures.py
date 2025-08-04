@@ -2,6 +2,7 @@ import time
 
 from pydantic import BaseModel
 
+from rustic_ai.core.agents.testutils.probe_agent import ProbeAgent
 from rustic_ai.core.guild import agent
 from rustic_ai.core.guild.agent import (
     Agent,
@@ -102,7 +103,7 @@ class TestAgentFixtures:
 
         agent_spec = AgentBuilder(FixtureTestAgent).set_name("test_agent").set_description("test agent").build_spec()
         agent = guild._add_local_agent(agent_spec)
-        probe_agent = guild._add_local_agent(probe_spec)
+        probe_agent: ProbeAgent = guild._add_local_agent(probe_spec)  # type: ignore
 
         probe_agent.publish_dict(guild.DEFAULT_TOPIC, {"key1": "value1"})
 

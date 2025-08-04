@@ -3,6 +3,7 @@ import time
 
 import pytest
 
+from rustic_ai.core.agents.testutils.probe_agent import ProbeAgent
 from rustic_ai.core.guild import Guild
 from rustic_ai.core.guild.builders import AgentBuilder
 from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
@@ -25,7 +26,7 @@ class TestSquadAgent:
             .build_spec()
         )
         guild._add_local_agent(squad_agent_spec)
-        probe_agent = guild._add_local_agent(probe_spec)
+        probe_agent: ProbeAgent = guild._add_local_agent(probe_spec)  # type: ignore
 
         context = (
             "The Taj Mahal, found in the Indian state of Uttar Pradesh, is one of the Seven Wonders of the "

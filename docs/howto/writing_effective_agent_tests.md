@@ -35,15 +35,14 @@ class TestYourServiceAgent:
         os.getenv("YOUR_API_KEY") is None, 
         reason="YOUR_API_KEY environment variable not set"
     )
-    def test_with_real_api(self, generator):
+    def test_with_real_api(self):
         # Create and wrap the agent
         agent, results = wrap_agent_for_testing(
             AgentBuilder(YourServiceAgent)
             .set_name("TestServiceAgent")
             .set_id("test_agent")
             .set_description("Test Service Agent")
-            .build(),
-            generator,
+            .build_spec(),
         )
         
         # Create a test request message
@@ -68,7 +67,7 @@ class TestYourServiceAgent:
         assert response.data is not None
     
     # Test with mocked API
-    def test_with_mocked_api(self, generator):
+    def test_with_mocked_api(self):
         # Mock the external service
         with patch("your_module.service.Client.call_api") as mock_api:
             # Configure the mock
@@ -80,8 +79,7 @@ class TestYourServiceAgent:
                 .set_name("TestServiceAgent")
                 .set_id("test_agent")
                 .set_description("Test Service Agent")
-                .build(),
-                generator,
+                .build_spec(),
             )
             
             # Create a test request message
@@ -125,8 +123,7 @@ class TestAsyncAgent:
             AgentBuilder(AsyncAgent)
             .set_name("TestAsyncAgent")
             .set_id("test_agent")
-            .build(),
-            generator,
+            .build_spec(),
         )
         
         # Create and send a test message
@@ -172,8 +169,7 @@ def test_agent_with_dependencies(generator):
         AgentBuilder(YourAgent)
         .set_id("test_agent")
         .set_name("TestAgent")
-        .build(),
-        generator,
+        .build_spec(),
         {"filesystem": filesystem},  # Inject dependencies here
     )
     
@@ -190,14 +186,13 @@ def test_agent_with_dependencies(generator):
 Good agent tests not only verify correct behavior but also proper error handling:
 
 ```python
-def test_error_handling(generator):
+def test_error_handling():
     # Create and wrap the agent
     agent, results = wrap_agent_for_testing(
         AgentBuilder(YourAgent)
         .set_name("TestAgent")
         .set_id("test_agent")
-        .build(),
-        generator,
+        .build_spec(),
     )
     
     # 1. Test with invalid input
@@ -247,7 +242,7 @@ def test_guild():
     guild.launch_agent(agent2_spec)
     
     # Get the probe agent
-    probe_agent = guild.get_agent_of_type(ProbeAgent)
+    probe_agent: ProbeAgent = guild._add_local_agent(probe_spec)  # type: ignore
     
     # Return guild and probe agent
     try:
@@ -289,7 +284,7 @@ def test_llm_agent(probe_agent, guild):
     agent = AgentBuilder(LLMAgent) \
         .set_name("Test LLM Agent") \
         .set_id("llm_agent") \
-        .build()
+        .build_spec()
     
     guild._add_local_agent(agent)
     
