@@ -14,7 +14,7 @@ from rustic_ai.core.guild.agent import (
     processor,
 )
 from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder
-from rustic_ai.core.guild.dsl import AgentSpec, GuildTopics, SimpleRuntimePredicate
+from rustic_ai.core.guild.dsl import AgentSpec, GuildTopics, JSONataPredicate
 from rustic_ai.core.guild.metastore.database import Metastore
 from rustic_ai.core.messaging.core.message import (
     AgentTag,
@@ -45,9 +45,6 @@ class ReceivedData(BaseModel):
 
 
 class StateAwareAgent(Agent):
-    def __init__(self, agent_spec: AgentSpec):
-        super().__init__(agent_spec=agent_spec, agent_type=AgentType.BOT, agent_mode=AgentMode.LOCAL)
-
     @processor(EchoGuildState)
     def echo_guild_state(self, ctx: ProcessContext[EchoGuildState]) -> None:
         ctx.send(PublishedData(data=self.get_guild_state()))
@@ -58,9 +55,6 @@ class StateAwareAgent(Agent):
 
 
 class StateFreeAgent(Agent):
-    def __init__(self, agent_spec: AgentSpec):
-        super().__init__(agent_spec=agent_spec, agent_type=AgentType.BOT, agent_mode=AgentMode.LOCAL)
-
     @processor(PublishedData)
     def echo_data(self, ctx: ProcessContext[PublishedData]) -> None:
         ctx.send(ReceivedData(data=ctx.payload.data))
@@ -85,7 +79,7 @@ class TestStateMgmt:
             .set_name("state_free_agent")
             .set_id("state_free_agent")
             .set_description("State Free Agent")
-            .add_predicate("echo_data", SimpleRuntimePredicate(expression="$count($keys(message.payload.data)) != 0"))
+            .add_predicate("echo_data", JSONataPredicate(expression="$count($keys(message.payload.data)) != 0"))
             .build_spec()
         )
 
@@ -118,7 +112,7 @@ class TestStateMgmt:
         engine = Metastore.get_engine(database)  # noqa: F841
         guild = builder.bootstrap(database, org_id)
 
-        probe_agent: ProbeAgent = (
+        probe_spec = (
             AgentBuilder(ProbeAgent)
             .set_id("probe_agent")
             .set_name("ProbeAgent")
@@ -126,10 +120,10 @@ class TestStateMgmt:
             .add_additional_topic(GuildTopics.SYSTEM_TOPIC)
             .add_additional_topic(GuildTopics.GUILD_STATUS_TOPIC)
             .add_additional_topic("echo_topic")
-            .build()
+            .build_spec()
         )
 
-        guild._add_local_agent(probe_agent)
+        probe_agent = guild._add_local_agent(probe_spec)
 
         guild_update_routing_rule = RoutingRule(
             agent=AgentTag(id=state_aware_agent.id),

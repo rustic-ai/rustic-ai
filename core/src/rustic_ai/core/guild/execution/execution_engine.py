@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Type, Union
+from typing import Any, Dict, List, Optional, Type, Union
 
 from rustic_ai.core.guild.agent import Agent, AgentSpec
 from rustic_ai.core.guild.dsl import GuildSpec
@@ -21,13 +21,13 @@ class ExecutionEngine(ABC):
     def run_agent(
         self,
         guild_spec: GuildSpec,
-        agent_spec: Union[AgentSpec, Agent],
+        agent_spec: AgentSpec,
         messaging_config: MessagingConfig,
         machine_id: int,
         client_type: Type[Client] = MessageTrackingClient,
         client_properties: Dict[str, Any] = {},
         default_topic: str = "default_topic",
-    ) -> None:
+    ) -> Optional[Agent]:
         """
         Runs an agent by handling its initialization with the message bus.
 

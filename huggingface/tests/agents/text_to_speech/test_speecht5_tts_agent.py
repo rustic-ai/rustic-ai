@@ -21,7 +21,7 @@ from rustic_ai.huggingface.agents.text_to_speech.speecht5_tts_agent import (
 
 class TestSpeechT5TtsAgent:
     @pytest.mark.skipif(os.getenv("HF_TOKEN") is None, reason="HF_TOKEN environment variable not set")
-    def test_response_is_generated(self, probe_agent: ProbeAgent, org_id):
+    def test_response_is_generated(self, probe_spec, org_id):
         """
         Test that the agent responds to a message with a message containing the filepath of the generated audio.
         """
@@ -61,7 +61,7 @@ class TestSpeechT5TtsAgent:
         dfs = FileSystem(path="/tmp/speecht5_tts_guild/GUILD_GLOBAL", fs=fs)
 
         guild = guild_builder.launch(organization_id=org_id)
-        guild._add_local_agent(probe_agent)
+        probe_agent = guild._add_local_agent(probe_spec)
 
         probe_agent.publish_dict(
             guild.DEFAULT_TOPIC, {"generation_prompt": "Long live the dragons"}, GenerationPromptRequest

@@ -233,14 +233,6 @@ class AgentBuilder(Generic[AT, APT]):  # type: ignore
         dict_copy[KeyConstants.ADDITIONAL_TOPICS] = list(dict_copy[KeyConstants.ADDITIONAL_TOPICS])
         return AgentSpec[APT].model_validate(dict_copy)
 
-    def build(self) -> AT:
-        """
-        Build and return an Agent instance with the set properties.
-        """
-
-        agent_spec = self.build_spec()
-        return class_utils.get_agent_from_spec_with_type(agent_spec, self.agent_type)
-
 
 class GuildBuilder:
     """
@@ -573,7 +565,7 @@ class GuildBuilder:
 
         return builder
 
-    def launch(self, organization_id: str, add_probe: bool = False) -> Guild:
+    def launch(self, organization_id: str) -> Guild:
         """
         Build and return a Guild instance with the set properties.
         This will launch all the agents in the guild.
@@ -598,11 +590,6 @@ class GuildBuilder:
 
         is_running = guild.is_guild_running()
         logging.info(f"Guild {guild.id} is running: {is_running}")
-
-        if add_probe:
-            probe_agent = AgentBuilder(ProbeAgent).set_name("ProbeAgent").set_description("Probe Agent").build()
-            guild._add_local_agent(probe_agent)
-            setattr(guild, "probe", probe_agent)
 
         return guild
 

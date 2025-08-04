@@ -65,10 +65,10 @@ class IntegrationTestABC(ABC):
         )
 
     @pytest.fixture
-    def local_test_agent(self) -> LocalTestAgent:
+    def local_test_agent_spec(self) -> AgentSpec:
         # Instantiate the local test agent with the same message bus
-        return LocalTestAgent(
-            agent_spec=AgentBuilder(LocalTestAgent)
+        return (
+            AgentBuilder(LocalTestAgent)
             .set_id("local_test")
             .set_name("LocalTestAgent")
             .set_description("Local test agent for integration testing")
@@ -79,7 +79,7 @@ class IntegrationTestABC(ABC):
         self,
         wait_time: float,
         guild: Guild,
-        local_test_agent: LocalTestAgent,
+        local_test_agent_spec: AgentSpec,
         initiator_agent: AgentSpec,
         responder_agent: AgentSpec,
     ):
@@ -105,7 +105,7 @@ class IntegrationTestABC(ABC):
         assert rair is True
 
         local_exec_engine = SyncExecutionEngine(guild_id=guild.id, organization_id=guild.organization_id)
-        guild._add_local_agent(local_test_agent, local_exec_engine)
+        local_test_agent = guild._add_local_agent(local_test_agent_spec, local_exec_engine)
 
         # Give more time for all agents to initialize fully, especially for Ray/distributed execution
         time.sleep(max(wait_time * 10, 1.0))

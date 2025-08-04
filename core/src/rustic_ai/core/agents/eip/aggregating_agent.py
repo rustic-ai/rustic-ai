@@ -251,20 +251,18 @@ class AggregatedMessages(BaseModel):
 class AggregatingAgent(Agent[AggregatorConf]):
     """An agent that aggregates messages based on a correlation ID."""
 
-    def __init__(self, agent_spec: AgentSpec[AggregatorConf]):
-        super().__init__(agent_spec)
-
+    def __init__(self):
         self.handled_formats = [MessageConstants.RAW_JSON_FORMAT]
 
-        self.correlation_location = agent_spec.props.correlation_location
+        self.correlation_location = self.config.correlation_location
 
         # Set the correlation ID path if provided
         self.path: Optional[str] = None
-        if agent_spec.props.correlation_id_path:
-            self.path = agent_spec.props.correlation_id_path
+        if self.config.correlation_id_path:
+            self.path = self.config.correlation_id_path
 
-        self.collector = agent_spec.props.collector
-        self.aggregator = agent_spec.props.aggregator
+        self.collector = self.config.collector
+        self.aggregator = self.config.aggregator
         self._route_to_default_topic = True  # Route messages to default topic if no specific routing is defined
 
     @agent.processor(JsonDict)

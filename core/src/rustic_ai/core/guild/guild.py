@@ -88,35 +88,35 @@ class Guild:
             logging.info(f"Registering agent {agent_spec.name} in guild {self.name}")
             self.register_agent(agent_spec)
 
-    def _add_local_agent(self, agent: Agent, execution_engine: Optional[ExecutionEngine] = None):
+    def _add_local_agent(self, agent_spec: AgentSpec, execution_engine: Optional[ExecutionEngine] = None) -> Agent:
         """
         Adds a local agent to the guild and uses the execution engine to run it.
         NOTE: This method is only to facilitate testing. Should never be used in production.
         Hence, this method is intentionally marked as private.
 
         Parameters:
-            agent: The agent to add and run.
+            agent_spec: The agent_spec to instantiate the agent from.
             execution_engine: The execution engine to run the agent with.
         """
-        assert isinstance(agent, Agent), "agent must be an instance of Agent"
+        assert isinstance(agent_spec, AgentSpec), "agent_spec must be an instance of AgentSpec"
         if execution_engine is None:
             execution_engine = SyncExecutionEngine(guild_id=self.id, organization_id=self.organization_id)
-        self._internal_add_agent(agent, execution_engine)
+        return self._internal_add_agent(agent_spec, execution_engine)
 
     def _internal_add_agent(
-        self, agent_spec: Union[AgentSpec, Agent], execution_engine: Optional[ExecutionEngine] = None
-    ):
-        agent_spec_obj = agent_spec if isinstance(agent_spec, AgentSpec) else agent_spec.get_spec()
-        self.register_agent(agent_spec_obj)
+        self, agent_spec: AgentSpec, execution_engine: Optional[ExecutionEngine] = None
+    ) -> Optional[Agent]:
+        self.register_agent(agent_spec)
         # Increment the machine ID for unique ID generation
         self.last_machine_id += 1
 
+        agent: Optional[Agent] = None
         if execution_engine is None:
             execution_engine = self.execution_engine
         else:
             self.agent_exec_engines[agent_spec.id] = execution_engine
 
-        logging.info(f"Running agent {agent_spec_obj.name} in guild {self.name}")
+        logging.info(f"Running agent {agent_spec.name} in guild {self.name}")
 
         logging.info(
             dedent(
@@ -133,7 +133,7 @@ class Guild:
         # Check if the agent is already running before running it
         if not execution_engine.is_agent_running(guild_id=self.id, agent_id=agent_spec.id):
             try:
-                execution_engine.run_agent(
+                agent = execution_engine.run_agent(
                     agent_spec=agent_spec,
                     guild_spec=self.to_spec(),
                     messaging_config=self.messaging,
@@ -142,13 +142,16 @@ class Guild:
                     client_properties=self.client_properties,
                     default_topic=self.DEFAULT_TOPIC,
                 )
-                logging.info(f"Agent {agent_spec_obj.name} started successfully")
+                logging.info(f"Agent {agent_spec.name} started successfully")
+
             except Exception as e:
-                logging.error(f"Error running agent {agent_spec_obj.name}: {e}")
+                logging.error(f"Error running agent {agent_spec.name}: {e}")
                 raise e
 
         else:
-            logging.warning(f"Agent {agent_spec_obj.name} is already running")
+            logging.warning(f"Agent {agent_spec.name} is already running")
+
+        return agent
 
     def get_agent_count(self) -> int:
         """

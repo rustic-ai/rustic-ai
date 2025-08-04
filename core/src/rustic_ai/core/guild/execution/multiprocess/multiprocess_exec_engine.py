@@ -107,13 +107,13 @@ class MultiProcessExecutionEngine(ExecutionEngine):
     def run_agent(
         self,
         guild_spec: GuildSpec,
-        agent_spec: Union[AgentSpec, Agent],
+        agent_spec: AgentSpec,
         messaging_config: MessagingConfig,
         machine_id: int,
         client_type: Type[Client] = MessageTrackingClient,
         client_properties: Dict[str, Any] = {},
         default_topic: str = "default_topic",
-    ) -> None:
+    ) -> Optional[Agent]:
         """
         Creates and runs an agent in a separate process.
         This follows the proper pattern where the execution engine handles process creation
@@ -212,6 +212,8 @@ class MultiProcessExecutionEngine(ExecutionEngine):
                     if agent_spec.id in self.process_events:
                         del self.process_events[agent_spec.id]
             raise
+
+        return None  # We don't haave access to the agent here
 
     def stop_agent(self, guild_id: str, agent_id: str) -> None:
         """

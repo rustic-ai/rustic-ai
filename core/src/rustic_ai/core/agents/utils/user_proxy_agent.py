@@ -81,27 +81,14 @@ class UserProxyAgent(Agent[UserProxyAgentProps], GuildRefreshMixin):
     # Create a regular expression pattern from the list of usernames
     _tag_pattern = re.compile(r"(@\w+)")
 
-    def __init__(self, agent_spec: AgentSpec[UserProxyAgentProps]):
-        self.user_id = agent_spec.props.user_id
+    def __init__(self):
+        self.user_id = self.config.user_id
         self.user_topic = UserProxyAgent.get_user_inbox_topic(self.user_id)
         self.user_outbox_topic = UserProxyAgent.get_user_outbox_topic(self.user_id)
         self.user_notifications_topic = UserProxyAgent.get_user_notifications_topic(self.user_id)
         self.user_system_notification_topic = UserProxyAgent.get_user_system_notifications_topic(self.user_id)
         self.guild_requests_topic = UserProxyAgent.get_user_system_requests_topic(self.user_id)
-        agent_spec.id = UserProxyAgent.get_user_agent_id(self.user_id)
-        agent_spec.additional_topics = [
-            self.user_topic,
-            self.user_outbox_topic,
-            UserProxyAgent.BROADCAST_TOPIC,
-            self.user_system_notification_topic,
-            self.guild_requests_topic,
-            GuildTopics.GUILD_STATUS_TOPIC,
-        ]
-        super().__init__(
-            agent_spec=agent_spec,
-            agent_type=AgentType.HUMAN,
-            agent_mode=AgentMode.LOCAL,
-        )
+
         self.guilds_agents_ats: Dict[str, AgentTag] = {}
 
     @processor(Message, user_topic_filter)

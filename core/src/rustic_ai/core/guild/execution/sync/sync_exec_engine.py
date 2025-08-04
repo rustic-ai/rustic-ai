@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Type, Union
+from typing import Any, Dict, List, Optional, Type, Union
 
 from rustic_ai.core.guild.agent import Agent, AgentSpec
 from rustic_ai.core.guild.dsl import GuildSpec
@@ -21,13 +21,13 @@ class SyncExecutionEngine(ExecutionEngine):
     def run_agent(
         self,
         guild_spec: GuildSpec,
-        agent_spec: Union[AgentSpec, Agent],
+        agent_spec: AgentSpec,
         messaging_config: MessagingConfig,
         machine_id: int,
         client_type: Type[Client] = MessageTrackingClient,
         client_properties: Dict[str, Any] = {},
         default_topic: str = "default_topic",
-    ) -> None:
+    ) -> Optional[Agent]:
         """
         Instantiates a SynchronousAgentWrapper to handle the agent's initialization with the message bus, then runs the agent synchronously.
 
@@ -60,7 +60,7 @@ class SyncExecutionEngine(ExecutionEngine):
         self.owned_agents.append((guild_id, agent_spec.id))
 
         # Execute the agent using the wrapper
-        agent_wrapper.run()
+        return agent_wrapper.run()
 
     def get_agents_in_guild(self, guild_id: str) -> Dict[str, AgentSpec]:
         """
@@ -114,7 +114,8 @@ class SyncExecutionEngine(ExecutionEngine):
             self.agent_tracker.remove_agent(guild_id, agent_id)
             del agent_wrapper
             # Remove the agent from the owned agents list
-            self.owned_agents.remove((guild_id, agent_id))
+            if (guild_id, agent_id) in self.owned_agents:
+                self.owned_agents.remove((guild_id, agent_id))
 
     def shutdown(self) -> None:
         for guild_id, agent_id in self.owned_agents:

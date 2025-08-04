@@ -7,13 +7,17 @@ from rustic_ai.core.guild.agent_ext.depends.dependency_resolver import (
     DependencyResolver,
 )
 from rustic_ai.core.guild.dsl import GuildSpec
+from rustic_ai.core.guild.execution.utils import (
+    build_agent_from_spec,
+    subscribe_agent_with_messaging,
+)
 from rustic_ai.core.messaging import (
     Client,
     MessageTrackingClient,
     MessagingConfig,
     MessagingInterface,
 )
-from rustic_ai.core.utils.class_utils import create_agent_from_spec
+from rustic_ai.core.utils.class_utils import get_agent_class
 from rustic_ai.core.utils.gemstone_id import GemstoneGenerator
 
 
@@ -25,7 +29,7 @@ class AgentWrapper(ABC):
     def __init__(
         self,
         guild_spec: GuildSpec,
-        agent_spec: Union[AgentSpec, Agent],
+        agent_spec: AgentSpec,
         messaging_config: MessagingConfig,
         machine_id: int,
         client_type: Type[Client] = MessageTrackingClient,
@@ -49,11 +53,7 @@ class AgentWrapper(ABC):
 
         self.agent: Optional[Agent] = None
 
-        if isinstance(agent_spec, Agent):
-            self.agent = agent_spec
-            self.agent_spec = agent_spec.get_spec()
-        else:
-            self.agent_spec = agent_spec
+        self.agent_spec = agent_spec
 
         self.guild_spec = guild_spec
         self.messaging_config = messaging_config
@@ -65,61 +65,48 @@ class AgentWrapper(ABC):
         self.dependencies = guild_spec.dependency_map | self.agent_spec.dependency_map
         self.only_agent_class_name = self.agent_spec.class_name.split(".")[-1]
 
-    def initialize_agent(self) -> None:
+    def initialize_agent(self) -> Agent:
         """
         Common logic for initializing the agent with the Messaging and its client.
         """
         self.logger.info(
             f"Starting initialization of agent {self.agent_spec.name} from class {self.agent_spec.class_name}"
         )
-        if self.agent is None:
-            self.agent = create_agent_from_spec(self.agent_spec)
 
-        self.logger.debug("Agent object instance created")
-        # Set the guild_spec on the agent
-        self.agent._set_guild_spec(self.guild_spec)
+        agent_class = get_agent_class(self.agent_spec.class_name)
 
         # Initialize the agent's dependencies
         self.logger.debug(f"Loading dependencies for agent {self.agent_spec.name}")
-        agent_deps = self.agent.list_all_dependencies()
+        agent_deps = agent_class.list_all_dependencies()
 
         self.logger.debug(f"Agent dependencies: {agent_deps}")
 
         dependency_resolvers = {
             dep.dependency_key: self._load_dependency_resolver(dep.dependency_key) for dep in agent_deps
         }
-        self.agent._set_dependency_resolvers(dependency_resolvers)
-        self.logger.info("Dependencies loaded")
 
         # Initialize the Messaging
         self.logger.info(f"Initializing messaging from config: {self.messaging_config}")
-        self.messaging = MessagingInterface(self.agent.guild_id, self.messaging_config)
+        self.messaging = MessagingInterface(self.guild_spec.id, self.messaging_config)
         self.logger.debug(f"Messaging initialized: {self.messaging}")
         self.messaging_owned = True
 
-        client_properties = self.client_properties.copy()
-
-        # Logic to initialize the client based on client_class and client_properties
-        client_properties.update(
-            {"id": self.agent.id, "name": self.agent.name, "message_handler": self.agent._on_message}
+        self.agent = build_agent_from_spec(
+            agent_spec=self.agent_spec,
+            guild_spec=self.guild_spec,
+            dependencies=self.dependencies,
+            client_class=self.client_type,
+            client_props=self.client_properties.copy(),
+            machine_id=self.machine_id,
         )
 
-        client = self.client_type(**client_properties)
-        self.agent._set_client(client)
-        self.logger.debug(f"Client initialized: {client}")
-
-        generator = GemstoneGenerator(self.machine_id)
-        self.agent._set_generator(generator)
-
-        # Register the client with the Messaging and subscribe to the default topic
-        self.messaging.register_client(client)
-        for topic in self.agent.subscribed_topics:
-            self.messaging.subscribe(topic, client)
-            self.logger.debug(f"Client [{self.agent.name}:{self.agent.id}] registered and subscribed to topic: {topic}")
+        subscribe_agent_with_messaging(self.agent, self.messaging)
 
         # Notify the agent that it is ready to process messages
         self.logger.info(f"Agent {self.agent_spec.name} is ready to process messages")
         self.agent._notify_ready()
+
+        return self.agent
 
     def _load_dependency_resolver(self, name: str) -> DependencyResolver:
         """
@@ -139,7 +126,7 @@ class AgentWrapper(ABC):
             raise ValueError(f"Dependency {name} not found in agent dependencies.")
 
     @abstractmethod
-    def run(self) -> None:
+    def run(self) -> Optional[Agent]:
         """
         Runs the agent. This method should be implemented by concrete subclasses to define specific execution logic.
         """

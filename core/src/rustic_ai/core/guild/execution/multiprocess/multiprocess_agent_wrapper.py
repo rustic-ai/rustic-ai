@@ -25,7 +25,7 @@ class MultiProcessAgentWrapper(AgentWrapper):
     def __init__(
         self,
         guild_spec: GuildSpec,
-        agent_spec: Union[AgentSpec, Agent],
+        agent_spec: AgentSpec,
         messaging_config: MessagingConfig,
         machine_id: int,
         client_type: Type[Client] = MessageTrackingClient,
@@ -56,7 +56,7 @@ class MultiProcessAgentWrapper(AgentWrapper):
             # Perform common initialization tasks - this is the key method!
             # This is the same pattern as sync and Ray implementations
             logging.info(f"Initializing agent {self.agent_spec.name} in multiprocess wrapper")
-            self.initialize_agent()
+            agent = self.initialize_agent()
             logging.info(f"Agent {self.agent_spec.name} initialized successfully")
 
             # Keep the agent running until shutdown is signaled

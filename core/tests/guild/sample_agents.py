@@ -26,45 +26,30 @@ class MessageDataType(BaseModel):
 
 
 class DemoAgentSimple(Agent):
-    def __init__(self, agent_spec: AgentSpec):
-        super().__init__(agent_spec=agent_spec, agent_type=AgentType.BOT, agent_mode=AgentMode.LOCAL)
-
     @agent.processor(MessageDataType)
     def handle_message(self, ctx: agent.ProcessContext[MessageDataType]):
         print(f"Received message: {ctx.payload.data}")
 
 
 class DemoAgentGeneric(Agent[DemoAgentProps]):
-    def __init__(self, agent_spec: AgentSpec[DemoAgentProps]):
-        super().__init__(agent_spec=agent_spec, agent_type=AgentType.BOT, agent_mode=AgentMode.LOCAL)
-
     @agent.processor(MessageDataType)
     def handle_message(self, ctx: agent.ProcessContext[MessageDataType]):
         print(f"Received message: {ctx.payload.data}")
 
 
 class DemoAgentGenericWithoutTypedSpec(Agent[DemoAgentProps]):
-    def __init__(self, agent_spec: AgentSpec):
-        super().__init__(agent_spec=agent_spec, agent_type=AgentType.BOT, agent_mode=AgentMode.LOCAL)
-
     @agent.processor(MessageDataType)
     def handle_message(self, ctx: agent.ProcessContext[MessageDataType]):
         print(f"Received message: {ctx.payload.data}")
 
 
 class DemoAgentGenericWithoutTypedParams(Agent[DemoAgentProps]):
-    def __init__(self, agent_spec):
-        super().__init__(agent_spec=agent_spec, agent_type=AgentType.BOT, agent_mode=AgentMode.LOCAL)
-
     @agent.processor(MessageDataType)
     def handle_message(self, ctx: agent.ProcessContext[MessageDataType]):
         print(f"Received message: {ctx.payload.data}")
 
 
 class DemoAgentWithMissingGenericAnnotation(Agent):
-    def __init__(self, agent_spec: AgentSpec[DemoAgentProps]):
-        super().__init__(agent_spec=agent_spec, agent_type=AgentType.BOT, agent_mode=AgentMode.LOCAL)
-
     @agent.processor(MessageDataType)
     def handle_message(self, ctx: agent.ProcessContext[MessageDataType]):
         print(f"Received message: {ctx.payload.data}")

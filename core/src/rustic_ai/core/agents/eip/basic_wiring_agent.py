@@ -7,12 +7,7 @@ from rustic_ai.core.messaging.core import JsonDict
 class BasicWiringAgent(Agent):
     """An Agent that wires the received message out to the destination."""
 
-    def __init__(self, agent_spec: AgentSpec) -> None:
-        super().__init__(
-            agent_spec=agent_spec,
-            agent_type=AgentType.BOT,
-            agent_mode=AgentMode.LOCAL,
-        )
+    def __init__(self) -> None:
         self.handled_formats = [MessageConstants.RAW_JSON_FORMAT]
 
         # Route messages to default topic if no specific routing is defined instead of the topic original message was read from

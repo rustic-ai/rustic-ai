@@ -12,8 +12,7 @@ from rustic_ai.core.messaging.core.message import Message
 
 
 class LocalTestAgent(Agent, PublishMixin):
-    def __init__(self, agent_spec: AgentSpec):
-        super().__init__(agent_spec=agent_spec, agent_type=AgentType.BOT, agent_mode=AgentMode.LOCAL)
+    def __init__(self):
         self.captured_messages: List[Message] = []
 
     @agent.processor(JsonDict)
@@ -33,9 +32,6 @@ class InitiatorProbeAgent(Agent):
     An agent that initiates communication.
     """
 
-    def __init__(self, agent_spec: AgentSpec) -> None:
-        super().__init__(agent_spec=agent_spec, agent_type=AgentType.BOT, agent_mode=AgentMode.LOCAL)
-
     @agent.processor(JsonDict, lambda me, message: message.topics == "default_topic")
     def initiate_flow(self, ctx: ProcessContext[JsonDict]) -> None:
         payload = ctx.payload
@@ -47,9 +43,6 @@ class ResponderProbeAgent(Agent):
     """
     An agent that responds to received messages.
     """
-
-    def __init__(self, agent_spec: AgentSpec) -> None:
-        super().__init__(agent_spec=agent_spec, agent_type=AgentType.BOT, agent_mode=AgentMode.LOCAL)
 
     @agent.processor(JsonDict, lambda me, message: message.topics == "default_topic")
     def ack_response(self, ctx: ProcessContext) -> None:

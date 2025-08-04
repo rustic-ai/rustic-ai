@@ -93,11 +93,7 @@ class PublishMixin:
 class ProbeAgent(Agent, PublishMixin):
     """An agent used as probe in writing Agent test cases"""
 
-    def __init__(
-        self,
-        agent_spec: AgentSpec,
-    ) -> None:
-        super().__init__(agent_spec=agent_spec, agent_type=AgentType.BOT, agent_mode=AgentMode.LOCAL)
+    def __init__(self) -> None:
         self.received_messages: List[Message] = []
 
     def publish_with_guild_route(
@@ -199,11 +195,7 @@ class ProbeAgent(Agent, PublishMixin):
 class EssentialProbeAgent(Agent, PublishMixin):
     """An agent used as probe in writing Agent test cases"""
 
-    def __init__(
-        self,
-        agent_spec: AgentSpec,
-    ) -> None:
-        super().__init__(agent_spec=agent_spec, agent_type=AgentType.BOT, agent_mode=AgentMode.LOCAL)
+    def __init__(self) -> None:
         self.received_messages: List[Message] = []
 
     @agent.processor(JsonDict, handle_essential=True)
@@ -216,19 +208,3 @@ class EssentialProbeAgent(Agent, PublishMixin):
 
     def clear_messages(self):
         self.received_messages = []
-
-
-class StateProbeAgent(Agent):
-
-    def __init__(
-        self,
-        agent_spec: AgentSpec,
-    ) -> None:
-        super().__init__(agent_spec=agent_spec, agent_type=AgentType.BOT, agent_mode=AgentMode.LOCAL)
-        self.state: JsonDict = {}
-
-    def on_state_updated(self, new_state: JsonDict, ctx: agent.ProcessContext[StateUpdateResponse]):
-        """
-        This method can be overridden to handle state updates.
-        """
-        print(f"State updated: {new_state}")

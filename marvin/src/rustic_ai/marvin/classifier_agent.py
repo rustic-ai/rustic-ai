@@ -1,5 +1,4 @@
 import marvin
-
 from rustic_ai.core.agents.commons import (
     ClassifyAndExtractRequest,
     ClassifyAndExtractResponse,
@@ -18,9 +17,6 @@ class MarvinAgent(Agent):
     An agent that uses prefect's marvin to classify the message into requested categories and extracts the requested data from
     the message into the response.
     """
-
-    def __init__(self, agent_spec: AgentSpec):
-        super().__init__(agent_spec)
 
     @agent.processor(ClassifyRequest)
     async def classifier(self, ctx: ProcessContext[ClassifyRequest]):

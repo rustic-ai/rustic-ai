@@ -36,12 +36,11 @@ class SimpleLLMAgent(Agent[SimpleLLMAgentConf]):
     This is a simple LLM agent, that will call and LLM and return the response.
     """
 
-    def __init__(self, agent_spec: AgentSpec[SimpleLLMAgentConf]):
-        super().__init__(agent_spec)
-        conf = agent_spec.props
+    def __init__(self):
+        super().__init__()
 
-        self.memory: deque = deque(maxlen=conf.chat_memory)
-        self.system_messages = [SystemMessage(content=message) for message in conf.system_messages]
+        self.memory: deque = deque(maxlen=self.config.chat_memory)
+        self.system_messages = [SystemMessage(content=message) for message in self.config.system_messages]
 
     @agent.processor(SimpleChatMessage, depends_on=["llm"])
     def some_message_handler(self, ctx: ProcessContext[SimpleChatMessage], llm: LLM):

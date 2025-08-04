@@ -26,10 +26,7 @@ class RunwaymlStableDiffusionProps(PyTorchAgentProps):
 
 
 class RunwaymlStableDiffusionAgent(Agent[RunwaymlStableDiffusionProps]):
-    def __init__(
-        self,
-        agent_spec: AgentSpec[RunwaymlStableDiffusionProps],
-    ) -> None:
+    def __init__(self) -> None:
         """
         Initializes the RunwaymlStableDiffusionAgent with the specified agent specification and sets up the Stable Diffusion pipeline.
 
@@ -40,16 +37,8 @@ class RunwaymlStableDiffusionAgent(Agent[RunwaymlStableDiffusionProps]):
         Args:
             agent_spec (AgentSpec[RunwaymlStableDiffusionProps]): The agent specification containing the properties for the Stable Diffusion agent.
         """
-        super().__init__(
-            agent_spec=agent_spec,
-            agent_type=AgentType.BOT,
-            agent_mode=AgentMode.LOCAL,
-        )
-
-        if agent_spec.properties is None:
-            agent_spec.properties = RunwaymlStableDiffusionProps()
-        self.torch_device = agent_spec.properties.torch_device
-        model_id = agent_spec.properties.model_id
+        self.torch_device = self.config.torch_device
+        model_id = self.config.model_id
 
         self._pipeline = StableDiffusion3Pipeline.from_pretrained(
             model_id, torch_dtype=torch.float32, use_safetensors=True

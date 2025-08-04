@@ -399,17 +399,17 @@ class TestGuildBuilder:
         assert guild_manager_agent_spec.listen_to_default_topic is False
         assert guild_manager_agent_spec.act_only_when_tagged is False
 
-        probe_agent = (
+        probe_spec = (
             AgentBuilder(ProbeAgent)
             .set_id("probe_agent")
             .set_name("ProbeAgent")
             .set_description("A probe agent")
             .add_additional_topic(GuildTopics.SYSTEM_TOPIC)
             .add_additional_topic("echo_topic")
-            .build()
+            .build_spec()
         )
 
-        guild._add_local_agent(probe_agent)
+        probe_agent = guild._add_local_agent(probe_spec)
 
         # Test the GuildManagerAgent was launched correctly and has launched the EchoAgent
         probe_agent.publish_dict(
@@ -582,7 +582,7 @@ class TestGuildBuilder:
         user_outbox_topic = UserProxyAgent.get_user_outbox_topic("test_user")
         user_system_notification_topic = UserProxyAgent.get_user_system_notifications_topic("test_user")
 
-        probe_agent = (
+        probe_spec = (
             AgentBuilder(ProbeAgent)
             .set_id("probe_agent")
             .set_name("ProbeAgent")
@@ -595,10 +595,10 @@ class TestGuildBuilder:
             .add_additional_topic(user_system_notification_topic)
             .add_additional_topic("echo_topic")
             .add_additional_topic("default_topic")
-            .build()
+            .build_spec()
         )
 
-        guild._add_local_agent(probe_agent)
+        probe_agent = guild._add_local_agent(probe_spec)
 
         probe_agent.publish_dict(
             topic=GuildTopics.SYSTEM_TOPIC,
@@ -822,7 +822,7 @@ class TestGuildBuilder:
         user3_message_topic = UserProxyAgent.get_user_notifications_topic(user3)
         user3_outbox_topic = UserProxyAgent.get_user_outbox_topic(user3)
 
-        probe_agent = (
+        probe_spec = (
             AgentBuilder(ProbeAgent)
             .set_id("probe_agent")
             .set_name("ProbeAgent")
@@ -839,10 +839,10 @@ class TestGuildBuilder:
             .add_additional_topic(user3_message_topic)
             .add_additional_topic(user3_outbox_topic)
             .add_additional_topic("default_topic")
-            .build()
+            .build_spec()
         )
 
-        guild._add_local_agent(probe_agent)
+        probe_agent = guild._add_local_agent(probe_spec)
 
         probe_agent.publish_dict(
             topic=GuildTopics.SYSTEM_TOPIC,

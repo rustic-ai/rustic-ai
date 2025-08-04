@@ -38,8 +38,7 @@ class TestPlaywrightAgent:
             .set_id("001")
             .set_name("WebScrapper")
             .set_description("A web scraping agent using Playwright")
-            .build(),
-            generator,
+            .build_spec(),
             {"filesystem": filesystem},
         )
 
@@ -163,8 +162,7 @@ class TestPlaywrightAgent:
             .set_id("002")
             .set_name("WebScrapperDepth")
             .set_description("A web scraping agent testing depth")
-            .build(),
-            generator,
+            .build_spec(),
             {"filesystem": filesystem},
         )
 

@@ -54,13 +54,6 @@ class KVStoreAgent(Agent):
     Agent for testing KVStore dependencies
     """
 
-    def __init__(self, agent_spec: AgentSpec):
-        super().__init__(
-            agent_spec,
-            agent_type=AgentType.BOT,
-            agent_mode=AgentMode.LOCAL,
-        )
-
     @agent.processor(
         KVPut,
         depends_on=[
@@ -181,7 +174,7 @@ class BaseTestKVStore(ABC):
         """
         raise NotImplementedError("This fixture should be overridden in subclasses.")
 
-    def test_kvstore(self, probe_agent: ProbeAgent, dep_map: dict, org_id):
+    def test_kvstore(self, probe_spec, dep_map: dict, org_id):
         agent_spec: AgentSpec = (
             AgentBuilder(KVStoreAgent).set_description("KV Store Agent").set_name("KVStoreAgent").build_spec()
         )
@@ -198,7 +191,7 @@ class BaseTestKVStore(ABC):
         else:
             guild.dependency_map["kvstore"].class_name = InMemoryKVStoreResolver.get_qualified_class_name()
 
-        guild._add_local_agent(probe_agent)
+        probe_agent = guild._add_local_agent(probe_spec)
 
         probe_agent.publish_dict(
             topic="default_topic",

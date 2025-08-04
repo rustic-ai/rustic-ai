@@ -12,13 +12,17 @@ from rustic_ai.huggingface.agents.llm.phi_agent import LLMPhiAgent
 
 class TestPhiAgent:
     @pytest.mark.skipif(os.getenv("SKIP_EXPENSIVE_TESTS") == "true", reason="Skipping expensive tests")
-    def test_response_is_generated(self, probe_agent: ProbeAgent, guild: Guild):
-        agent = (
-            AgentBuilder(LLMPhiAgent).set_name("Test Agent").set_description("A test agent").set_id("phi_agent").build()
+    def test_response_is_generated(self, probe_spec, guild: Guild):
+        agent_spec = (
+            AgentBuilder(LLMPhiAgent)
+            .set_name("Test Agent")
+            .set_description("A test agent")
+            .set_id("phi_agent")
+            .build_spec()
         )
 
-        guild._add_local_agent(agent)
-        guild._add_local_agent(probe_agent)
+        agent = guild._add_local_agent(agent_spec)
+        probe_agent = guild._add_local_agent(probe_spec)
 
         generation_prompt = "Hello, my name is"
         probe_agent.publish_dict(

@@ -3,7 +3,6 @@ from typing import Any, Dict, List, Optional, Type, Union
 
 import ray
 from ray.actor import ActorHandle
-
 from rustic_ai.core.guild.agent import Agent, AgentSpec
 from rustic_ai.core.guild.dsl import GuildSpec
 from rustic_ai.core.guild.execution.execution_engine import ExecutionEngine
@@ -27,13 +26,13 @@ class RayExecutionEngine(ExecutionEngine):
     def run_agent(
         self,
         guild_spec: GuildSpec,
-        agent_spec: Union[AgentSpec, Agent],
+        agent_spec: AgentSpec,
         messaging_config: MessagingConfig,
         machine_id: int,
         client_type: Type[Client] = MessageTrackingClient,
         client_properties: Dict[str, Any] = {},
         default_topic: str = "default_topic",
-    ) -> None:
+    ) -> Optional[Agent]:
         """
         Wraps the agent in a RayAgentWrapper and runs it asynchronously using Ray.
         """
@@ -70,6 +69,8 @@ class RayExecutionEngine(ExecutionEngine):
 
         self.agent_wrappers[guild_id][agent_spec.id] = agent_wrapper
         self.agent_actors[guild_id][agent_spec.id] = actor
+
+        return None
 
     def get_agents_in_guild(self, guild_id: str) -> Dict[str, AgentSpec]:
         actor_refs = ray.util.list_named_actors(all_namespaces=True)

@@ -9,12 +9,7 @@ from rustic_ai.core.messaging.core import JsonDict
 class EchoAgent(Agent):
     """An Agent that echoes the received message back to the sender."""
 
-    def __init__(self, agent_spec: AgentSpec) -> None:
-        super().__init__(
-            agent_spec=agent_spec,
-            agent_type=AgentType.BOT,
-            agent_mode=AgentMode.LOCAL,
-        )
+    def __init__(self) -> None:
         self.handled_formats = [MessageConstants.RAW_JSON_FORMAT]
 
     @agent.processor(JsonDict)

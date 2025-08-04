@@ -19,15 +19,7 @@ from rustic_ai.core.guild.dsl import AgentSpec
 
 class SpeechT5TTSAgent(Agent):
 
-    def __init__(
-        self,
-        agent_spec: AgentSpec,
-    ) -> None:
-        super().__init__(
-            agent_spec,
-            AgentType.BOT,
-            AgentMode.LOCAL,
-        )
+    def __init__(self) -> None:
         self._synthesiser = pipeline("text-to-speech", "microsoft/speecht5_tts")  # type: ignore[call-overload]
 
         embeddings_dataset = load_dataset("Matthijs/cmu-arctic-xvectors", split="validation")

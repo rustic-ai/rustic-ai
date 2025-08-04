@@ -34,18 +34,8 @@ class VertexAiImageGenerationRequest(BaseModel):
 
 
 class VertexAiImagenAgent(Agent[VertexAiImagenAgentProps], VertexAIBase):
-    def __init__(self, agent_spec: AgentSpec[VertexAiImagenAgentProps]):
-        if agent_spec.properties is None:
-            agent_spec.properties = VertexAiImagenAgentProps()
-        Agent.__init__(
-            self,
-            agent_spec=agent_spec,
-            agent_type=AgentType.BOT,
-            agent_mode=AgentMode.REMOTE,
-        )
-
-        self.conf = agent_spec.properties
-        VertexAIBase.__init__(self, self.conf.project_id, self.conf.location)
+    def __init__(self):
+        VertexAIBase.__init__(self, self.config.project_id, self.config.location)
         print("initialized vertexai")
 
     @agent.processor(VertexAiImageGenerationRequest, depends_on=["filesystem:guild_fs:True"])
@@ -55,7 +45,7 @@ class VertexAiImagenAgent(Agent[VertexAiImagenAgentProps], VertexAIBase):
         result = ImageGenerationResponse(files=[], errors=[], request=image_gen_request.model_dump_json())
         try:
             model_response = self.genai_client.models.generate_images(
-                model=self.conf.model_id,
+                model=self.config.model_id,
                 prompt=image_gen_request.prompt,
                 config=types.GenerateImagesConfig(
                     negative_prompt=image_gen_request.negative_prompt,
@@ -64,9 +54,9 @@ class VertexAiImagenAgent(Agent[VertexAiImagenAgentProps], VertexAIBase):
                     guidance_scale=image_gen_request.guidance_scale,
                     language=image_gen_request.language,
                     seed=image_gen_request.seed,
-                    add_watermark=self.conf.add_watermark,
-                    safety_filter_level=self.conf.safety_filter_level,
-                    person_generation=self.conf.person_generation,
+                    add_watermark=self.config.add_watermark,
+                    safety_filter_level=self.config.safety_filter_level,
+                    person_generation=self.config.person_generation,
                 ),
             )
 

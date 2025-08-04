@@ -32,7 +32,7 @@ class TestSyncRedisIntegration(IntegrationTestABC):
         self,
         wait_time: float,
         guild,
-        local_test_agent,
+        local_test_agent_spec,
         initiator_agent,
         responder_agent,
     ):
@@ -67,7 +67,7 @@ class TestSyncRedisIntegration(IntegrationTestABC):
         assert rair is True
 
         local_exec_engine = SyncExecutionEngine(guild_id=guild.id, organization_id=guild.organization_id)
-        guild._add_local_agent(local_test_agent, local_exec_engine)
+        local_test_agent = guild._add_local_agent(local_test_agent_spec, local_exec_engine)
 
         # Allow time for Redis subscriptions to be established
         time.sleep(wait_time * 5)

@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Type, Union
+from typing import Any, Dict, List, Optional, Type, Union
 
 from rustic_ai.core.guild.agent import Agent, AgentSpec
 from rustic_ai.core.guild.dsl import GuildSpec
@@ -30,13 +30,13 @@ class MultiThreadedEngine(ExecutionEngine):
     def run_agent(
         self,
         guild_spec: GuildSpec,
-        agent_spec: Union[AgentSpec, Agent],
+        agent_spec: AgentSpec,
         messaging_config: MessagingConfig,
         machine_id: int,
         client_type: Type[Client] = MessageTrackingClient,
         client_properties: Dict[str, Any] = {},
         default_topic: str = "default_topic",
-    ) -> None:
+    ) -> Optional[Agent]:
         """
         Creates a MultiThreadedAgentWrapper for the agent and runs it in a separate thread.
 
@@ -60,6 +60,8 @@ class MultiThreadedEngine(ExecutionEngine):
 
         # Execute the agent using the wrapper
         agent_wrapper.run()
+
+        return None
 
     def get_agents_in_guild(self, guild_id: str) -> Dict[str, AgentSpec]:
         """

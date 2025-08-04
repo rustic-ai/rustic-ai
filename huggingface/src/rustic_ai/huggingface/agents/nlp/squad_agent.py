@@ -18,16 +18,6 @@ class SquadAnswer(BaseModel):
 
 
 class SquadAgent(Agent, HuggingfaceInferenceMixin):
-    def __init__(
-        self,
-        agent_spec: AgentSpec,
-    ) -> None:
-        super().__init__(
-            agent_spec,
-            AgentType.BOT,
-            AgentMode.REMOTE,
-        )
-
     @agent.processor(QuestionWithContext)
     async def find_answer(self, ctx: agent.ProcessContext[QuestionWithContext]):
         """

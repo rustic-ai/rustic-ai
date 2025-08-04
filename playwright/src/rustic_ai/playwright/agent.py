@@ -8,10 +8,10 @@ from urllib.parse import urljoin, urlparse, urlsplit
 
 from install_playwright import install
 from markdownify import markdownify as md
-from playwright.async_api import async_playwright
 from pydantic import BaseModel, Field
 import shortuuid
 
+from playwright.async_api import async_playwright
 from rustic_ai.core.agents.commons.media import MediaLink
 from rustic_ai.core.agents.commons.message_formats import ErrorMessage
 from rustic_ai.core.guild import Agent, AgentSpec, agent
@@ -64,8 +64,7 @@ class WebScrapingCompleted(BaseModel):
 
 
 class PlaywrightScraperAgent(Agent):
-    def __init__(self, agent_spec: AgentSpec):
-        super().__init__(agent_spec=agent_spec)
+    def __init__(self):
         self.scraped_urls: Set[str] = set()
 
     async def _extract_links(self, page, base_url: str, request: WebScrapingRequest) -> List[str]:

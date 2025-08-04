@@ -2,6 +2,8 @@ import textwrap
 from typing import Dict
 
 from pydantic import BaseModel, Field
+from rustic_ai.playwright.agent import WebScrapingCompleted
+from rustic_ai.serpapi.agent import SERPQuery
 import shortuuid
 
 from rustic_ai.core import Agent, AgentSpec, AgentTag
@@ -19,8 +21,6 @@ from rustic_ai.core.guild.agent_ext.depends.llm.models import (
 from rustic_ai.core.guild.agent_ext.depends.vectorstore import VectorSearchResults
 from rustic_ai.core.guild.metaprog.agent_registry import AgentDependency
 from rustic_ai.core.ui_protocol.types import TextFormat
-from rustic_ai.playwright.agent import WebScrapingCompleted
-from rustic_ai.serpapi.agent import SERPQuery
 
 
 class UserQuery(BaseModel):
@@ -46,12 +46,11 @@ class ResearchManager(Agent[ResearchManagerConf]):
     Agent that manages the research process.
     """
 
-    def __init__(self, agent_spec: AgentSpec[ResearchManagerConf]):
-        super().__init__(agent_spec)
-        self.serp_results = agent_spec.props.serp_results
-        self.vector_results = agent_spec.props.vector_results
-        self.max_serp_attempts = agent_spec.props.max_serp_attempts
-        self.context_max = agent_spec.props.context_max
+    def __init__(self):
+        self.serp_results = self.config.serp_results
+        self.vector_results = self.config.vector_results
+        self.max_serp_attempts = self.config.max_serp_attempts
+        self.context_max = self.config.context_max
 
         self.queries: Dict[str, str] = {}
         self.query_status: Dict[str, str] = {}

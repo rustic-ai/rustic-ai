@@ -115,17 +115,17 @@ class TestHealthMixin:
 
         time.sleep(1)
 
-        probe_agent = (
+        probe_spec = (
             AgentBuilder(EssentialProbeAgent)
             .set_id("probe_agent")
             .set_name("ProbeAgent")
             .set_description("A probe agent")
             .add_additional_topic(GuildTopics.SYSTEM_TOPIC)
             .add_additional_topic("default_topic")
-            .build()
+            .build_spec()
         )
 
-        guild._add_local_agent(probe_agent)
+        probe_agent = guild._add_local_agent(probe_spec)
 
         assert probe_agent._client is not None
         assert probe_agent._client._messaging is not None
