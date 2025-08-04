@@ -40,7 +40,7 @@ class RedisStateManager(StateManager):
         # Convert to StateDetails
         return {
             "state": json.loads(state_data.get("state") or '{}'),
-            "version": int(state_data.get("version")),
+            "version": int(state_data.get("version", 0)),
             "timestamp": int(state_data.get("timestamp")),
         }
 
