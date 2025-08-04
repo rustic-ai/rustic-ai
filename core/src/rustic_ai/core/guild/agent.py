@@ -296,15 +296,6 @@ class Agent(Generic[APT], metaclass=AgentMetaclass):  # type: ignore
     def guild_id(self) -> str:
         return self.guild_spec.id
 
-    def _set_dependency_resolvers(self, dependency_resolvers: Dict[str, DependencyResolver]):
-        """
-        Sets the dependency resolvers for the agent.
-
-        Args:
-            dependency_resolvers (Dict[str, DependencyResolver]): The dependency resolvers for the agent.
-        """
-        self._dependency_resolvers = dependency_resolvers
-
     def _generate_id(self, priority: Priority) -> GemstoneID:
         """
         Generates a unique identifier for the agent.
@@ -914,9 +905,7 @@ def processor(
                 f"and Predicate: {predicate}: {predicate_result}"
             )
 
-            if (predicate_result) and (
-                not self.agent_spec.act_only_when_tagged or msg.is_tagged(self.get_agent_tag())
-            ):
+            if (predicate_result) and (not self.agent_spec.act_only_when_tagged or msg.is_tagged(self.get_agent_tag())):
                 runtime_predicate = self.agent_spec.predicates.get(func.__name__)
 
                 should_process = True

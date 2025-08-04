@@ -30,9 +30,7 @@ from rustic_ai.core.agents.utils.user_proxy_agent import (
 )
 from rustic_ai.core.guild import (
     Agent,
-    AgentMode,
     AgentSpec,
-    AgentType,
     GuildTopics,
     agent,
 )

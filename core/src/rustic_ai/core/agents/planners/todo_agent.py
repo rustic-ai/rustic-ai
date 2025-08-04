@@ -5,10 +5,8 @@ from uuid import uuid4
 
 from pydantic import BaseModel, Field, field_validator
 
-from rustic_ai.core import Agent, AgentMode, AgentType
 from rustic_ai.core.guild import agent
-from rustic_ai.core.guild.agent import ProcessContext
-from rustic_ai.core.guild.dsl import AgentSpec
+from rustic_ai.core.guild.agent import Agent, ProcessContext
 from rustic_ai.core.state.models import StateUpdateFormat
 
 
@@ -88,19 +86,15 @@ class NextTaskRequest(BaseModel):
 
 
 class TodoListAgent(Agent):
-    def __init__(self, agent_spec: AgentSpec):
-        super().__init__(
-            agent_spec,
-            agent_type=AgentType.BOT,
-            agent_mode=AgentMode.LOCAL,
-        )
-
     def get_tasks(self) -> List[Task]:
         agent_state = self.get_agent_state()
-        return [Task(**t) for t in agent_state.get("tasks", [])]
+        if not agent_state:
+            return []
+        tasks: list = agent_state.get("tasks", [])  # type: ignore
+        return [Task.model_validate(t) for t in tasks]
 
     def save_tasks(self, tasks: List[Task], ctx):
-        self.update_state(
+        self.update_state(  # type: ignore
             ctx=ctx,
             update_format=StateUpdateFormat.JSON_MERGE_PATCH,
             update={"tasks": [task.model_dump() for task in tasks]},
@@ -224,8 +218,7 @@ class TodoListAgent(Agent):
             next_task = min(pending_tasks, key=lambda t: datetime.fromisoformat(t.start_time))
         elif ctx.payload.sort_by == "deadline":
             next_task = min(
-                pending_tasks,
-                key=lambda t: datetime.fromisoformat(t.deadline) if t.deadline else datetime.max
+                pending_tasks, key=lambda t: datetime.fromisoformat(t.deadline) if t.deadline else datetime.max
             )
         else:
             raise KeyError("Sortby can be start_time or deadline only.")

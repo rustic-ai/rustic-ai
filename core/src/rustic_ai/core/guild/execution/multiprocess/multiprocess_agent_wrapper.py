@@ -2,9 +2,9 @@ import logging
 import multiprocessing
 from multiprocessing.synchronize import Event as EventType
 import time
-from typing import Any, Dict, Optional, Type, Union
+from typing import Any, Dict, Optional, Type
 
-from rustic_ai.core.guild.agent import Agent, AgentSpec
+from rustic_ai.core.guild.agent import AgentSpec
 from rustic_ai.core.guild.dsl import GuildSpec
 from rustic_ai.core.messaging import Client, MessageTrackingClient, MessagingConfig
 
@@ -56,7 +56,7 @@ class MultiProcessAgentWrapper(AgentWrapper):
             # Perform common initialization tasks - this is the key method!
             # This is the same pattern as sync and Ray implementations
             logging.info(f"Initializing agent {self.agent_spec.name} in multiprocess wrapper")
-            agent = self.initialize_agent()
+            self.initialize_agent()
             logging.info(f"Agent {self.agent_spec.name} initialized successfully")
 
             # Keep the agent running until shutdown is signaled

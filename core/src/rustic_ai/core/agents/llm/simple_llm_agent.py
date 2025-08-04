@@ -15,7 +15,7 @@ from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     SystemMessage,
     UserMessage,
 )
-from rustic_ai.core.guild.dsl import AgentSpec, BaseAgentProps
+from rustic_ai.core.guild.dsl import BaseAgentProps
 
 
 class SimpleChatMessage(BaseModel):

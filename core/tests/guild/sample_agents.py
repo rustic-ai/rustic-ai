@@ -2,7 +2,7 @@ from typing import Generic, TypeVar
 
 from pydantic import BaseModel, Field
 
-from rustic_ai.core.guild import Agent, AgentMode, AgentSpec, AgentType, agent
+from rustic_ai.core.guild import Agent, agent
 from rustic_ai.core.guild.dsl import BaseAgentProps
 
 T = TypeVar("T")

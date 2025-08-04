@@ -1,25 +1,25 @@
+from functools import partial
 from typing import Dict, List, Tuple, TypeVar
 from unittest.mock import MagicMock
 
 from pydantic import BaseModel
 
 from rustic_ai.core.guild.agent import Agent, ProcessContext
-from rustic_ai.core.guild.agent_ext.depends.dependency_resolver import (
-    DependencyResolver,
-    DependencySpec,
-)
+from rustic_ai.core.guild.agent_ext.depends.dependency_resolver import DependencySpec
 from rustic_ai.core.guild.builders import GuildBuilder
+from rustic_ai.core.guild.dsl import AgentSpec
+from rustic_ai.core.guild.execution.utils import build_agent_from_spec
 from rustic_ai.core.messaging.core import JsonDict
 from rustic_ai.core.messaging.core.message import Message, MessageConstants
 from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
-from rustic_ai.core.utils.gemstone_id import GemstoneGenerator, GemstoneID
+from rustic_ai.core.utils.gemstone_id import GemstoneID
 
 T = TypeVar("T", bound=Agent)
 
 
 def wrap_agent_for_testing(
-    agent: T, generator: GemstoneGenerator, dependency_map: Dict[str, DependencySpec] = {}
-) -> Tuple[T, List[Message]]:
+    agent_spec: AgentSpec, dependency_map: Dict[str, DependencySpec] = {}
+) -> Tuple[Agent, List[Message]]:
     """
     Wrap agent for testing.
     """
@@ -78,22 +78,30 @@ def wrap_agent_for_testing(
 
             return [id_obj]
 
+    guild_spec = GuildBuilder(f"{agent_spec.id}_test_guild", "Test Guild", "Test Guild").build_spec()
+    client_class = MagicMock()
+    client_props: JsonDict = {}
+
+    agent = build_agent_from_spec(
+        agent_spec,
+        guild_spec,
+        dependency_map,
+        client_class,
+        client_props,
+        1,
+    )
+
     agent._make_process_context = MagicMock()  # type: ignore
     agent._make_process_context.side_effect = lambda message, mname, payload_type, sf, ef, omf: MockProcessContext(
         agent, message, mname, payload_type
     )
 
-    agent._set_generator(generator)
+    def process_message(self, message: Message):
+        message.topic_published_to = message.topics[0]
+        self._original_on_message(message)
 
-    resolvers: Dict[str, DependencyResolver] = {}
-    for dep_name, dep_spec in dependency_map.items():
-        resolver = dep_spec.to_resolver()
-        resolver.set_dependency_specs(dependency_map)
-        resolvers[dep_name] = resolver
+    agent._original_on_message = agent._on_message  # type: ignore
 
-    agent._set_dependency_resolvers(resolvers)
-
-    guild_spec = GuildBuilder(f"{agent.id}_test_guild", "Test Guild", "Test Guild").build_spec()
-    agent._set_guild_spec(guild_spec)
+    agent._on_message = partial(process_message, agent)  # type: ignore
 
     return agent, results

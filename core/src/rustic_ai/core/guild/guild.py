@@ -1,6 +1,6 @@
 import logging
 from textwrap import dedent
-from typing import Any, Dict, List, Optional, Type, Union
+from typing import Any, Dict, List, Optional, Type
 
 from rustic_ai.core.guild import GSKC, Agent, AgentSpec, GuildSpec
 from rustic_ai.core.guild.dsl import DependencySpec

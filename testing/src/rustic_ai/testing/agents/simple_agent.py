@@ -1,7 +1,6 @@
 from typing import List
 
-from rustic_ai.core.guild import Agent, AgentMode, AgentType, BaseAgentProps, agent
-from rustic_ai.core.guild.dsl import AgentSpec
+from rustic_ai.core.guild import Agent, BaseAgentProps, agent
 from rustic_ai.core.messaging.core import JsonDict
 from rustic_ai.core.messaging.core.message import Message
 

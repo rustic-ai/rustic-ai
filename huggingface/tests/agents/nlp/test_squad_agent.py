@@ -3,7 +3,6 @@ import time
 
 import pytest
 
-from rustic_ai.core.agents.testutils.probe_agent import ProbeAgent
 from rustic_ai.core.guild import Guild
 from rustic_ai.core.guild.builders import AgentBuilder
 from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
@@ -25,7 +24,7 @@ class TestSquadAgent:
             .set_description("Test for SquadAgent")
             .build_spec()
         )
-        squad_agent = guild._add_local_agent(squad_agent_spec)
+        guild._add_local_agent(squad_agent_spec)
         probe_agent = guild._add_local_agent(probe_spec)
 
         context = (

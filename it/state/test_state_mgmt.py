@@ -8,8 +8,6 @@ import pytest
 from rustic_ai.core.agents.testutils import ProbeAgent
 from rustic_ai.core.guild.agent import (
     Agent,
-    AgentMode,
-    AgentType,
     ProcessContext,
     processor,
 )

@@ -2,7 +2,7 @@ from pydantic import BaseModel
 
 from rustic_ai.core.agents.commons.message_formats import ErrorMessage
 from rustic_ai.core.guild import agent
-from rustic_ai.core.guild.agent import Agent, AgentMode, AgentSpec, AgentType
+from rustic_ai.core.guild.agent import Agent
 from rustic_ai.huggingface.inference_mixin import (
     HuggingfaceInferenceMixin,
 )

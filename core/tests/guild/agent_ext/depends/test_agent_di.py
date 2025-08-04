@@ -2,8 +2,6 @@ import time
 from typing import Optional
 import uuid
 
-from rustic_ai.core.agents.testutils.probe_agent import ProbeAgent
-from rustic_ai.core.guild import agent
 from rustic_ai.core.guild.agent import Agent, ProcessContext, processor
 from rustic_ai.core.guild.agent_ext.depends.dependency_resolver import (
     DependencyResolver,

@@ -5,8 +5,7 @@ from pydantic import JsonValue
 
 from rustic_ai.core.agents.testutils.probe_agent import PublishMixin
 from rustic_ai.core.guild import agent
-from rustic_ai.core.guild.agent import Agent, AgentMode, AgentType, ProcessContext
-from rustic_ai.core.guild.dsl import AgentSpec
+from rustic_ai.core.guild.agent import Agent, ProcessContext
 from rustic_ai.core.messaging.core import JsonDict
 from rustic_ai.core.messaging.core.message import Message
 

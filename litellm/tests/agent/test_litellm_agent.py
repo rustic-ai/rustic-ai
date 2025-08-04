@@ -2,9 +2,7 @@ import os
 import time
 
 import pytest
-from rustic_ai.testing.helpers import wrap_agent_for_testing
 
-from rustic_ai.core.agents.testutils.probe_agent import ProbeAgent
 from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     ChatCompletionRequest,
     ChatCompletionResponse,
@@ -23,6 +21,8 @@ from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 from rustic_ai.core.utils.jexpr import JObj, JxScript
 from rustic_ai.litellm.agent import LiteLLMAgent
 from rustic_ai.litellm.conf import LiteLLMConf
+
+from rustic_ai.testing.helpers import wrap_agent_for_testing
 
 
 @pytest.fixture
@@ -49,7 +49,7 @@ class TestLiteLLMAgent:
                 )
                 .build_spec()
             )
-            agent = wrap_agent_for_testing(spec)
+            wrap_agent_for_testing(spec)
 
     def test_response_is_generated(self, setup_default_env, probe_spec, guild: Guild):
         agent_spec = (

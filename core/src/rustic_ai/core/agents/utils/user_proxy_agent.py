@@ -7,7 +7,7 @@ from typing import Dict, List
 from pydantic import BaseModel
 import pydantic_core
 
-from rustic_ai.core import AgentSpec, Message, Priority
+from rustic_ai.core import Message, Priority
 from rustic_ai.core.agents.system.models import (
     GuildUpdatedAnnouncement,
     StopGuildRequest,
@@ -15,7 +15,6 @@ from rustic_ai.core.agents.system.models import (
 from rustic_ai.core.guild import BaseAgentProps
 from rustic_ai.core.guild.agent import (
     Agent,
-    AgentMode,
     AgentType,
     ProcessContext,
     SelfReadyNotification,

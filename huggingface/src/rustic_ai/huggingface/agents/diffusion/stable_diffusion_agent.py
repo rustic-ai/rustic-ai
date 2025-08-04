@@ -9,9 +9,6 @@ from rustic_ai.core.agents.commons.media import MediaLink
 from rustic_ai.core.agents.commons.message_formats import ErrorMessage
 from rustic_ai.core.guild import (
     Agent,
-    AgentMode,
-    AgentSpec,
-    AgentType,
     agent,
 )
 from rustic_ai.core.guild.agent_ext.depends.filesystem import FileSystem

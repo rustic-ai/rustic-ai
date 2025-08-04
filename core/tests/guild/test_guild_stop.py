@@ -6,7 +6,7 @@ import pytest
 
 from rustic_ai.core import GuildTopics, MessageTrackingClient, MessagingConfig
 from rustic_ai.core.agents.system.models import StopGuildRequest
-from rustic_ai.core.agents.testutils import EchoAgent, ProbeAgent
+from rustic_ai.core.agents.testutils import EchoAgent
 from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder
 from rustic_ai.core.guild.metastore import GuildStore, Metastore
 from rustic_ai.core.messaging.core.message import (

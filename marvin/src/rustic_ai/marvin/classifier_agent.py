@@ -1,4 +1,5 @@
 import marvin
+
 from rustic_ai.core.agents.commons import (
     ClassifyAndExtractRequest,
     ClassifyAndExtractResponse,
@@ -9,7 +10,6 @@ from rustic_ai.core.agents.commons import (
 )
 from rustic_ai.core.guild import agent
 from rustic_ai.core.guild.agent import Agent, ProcessContext
-from rustic_ai.core.guild.dsl import AgentSpec
 
 
 class MarvinAgent(Agent):

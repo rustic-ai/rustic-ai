@@ -2,17 +2,13 @@ import time
 
 from pydantic import BaseModel
 
-from rustic_ai.core.agents.testutils.probe_agent import ProbeAgent
 from rustic_ai.core.guild import agent
 from rustic_ai.core.guild.agent import (
     Agent,
     AgentFixtures,
-    AgentMode,
-    AgentType,
     ProcessContext,
 )
 from rustic_ai.core.guild.builders import AgentBuilder
-from rustic_ai.core.guild.dsl import AgentSpec
 from rustic_ai.core.guild.guild import Guild
 from rustic_ai.core.messaging.core.message import JsonDict, Message, MessageConstants
 

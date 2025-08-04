@@ -5,13 +5,10 @@ import uuid
 from pydantic import BaseModel, JsonValue
 import pytest
 
-from rustic_ai.core.agents.testutils.probe_agent import ProbeAgent
 from rustic_ai.core.guild import agent
 from rustic_ai.core.guild.agent import (
     Agent,
     AgentDependency,
-    AgentMode,
-    AgentType,
     ProcessContext,
 )
 from rustic_ai.core.guild.agent_ext.depends.kvstore.base import BaseKVStore

@@ -14,7 +14,6 @@ from rustic_ai.core.agents.commons.message_formats import ErrorMessage
 from rustic_ai.core.guild import agent
 from rustic_ai.core.guild.agent import Agent, ProcessContext
 from rustic_ai.core.guild.agent_ext.depends.filesystem import FileSystem
-from rustic_ai.core.guild.dsl import AgentSpec
 from rustic_ai.huggingface.agents.models import (
     ImageGenerationRequest,
     PyTorchAgentProps,

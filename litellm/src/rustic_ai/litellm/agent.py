@@ -4,14 +4,12 @@ import logging
 from typing import Deque, List, Optional, Union
 
 from dotenv import load_dotenv
-import openai
-
 import litellm
 from litellm import validate_environment
+import openai
+
 from rustic_ai.core.guild.agent import (
     Agent,
-    AgentMode,
-    AgentType,
     ProcessContext,
     processor,
 )
@@ -32,7 +30,6 @@ from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     UserMessage,
 )
 from rustic_ai.core.guild.agent_ext.depends.llm.tools_manager import ToolsManager
-from rustic_ai.core.guild.dsl import AgentSpec
 from rustic_ai.litellm.utils import ResponseUtils
 
 from .conf import LiteLLMConf

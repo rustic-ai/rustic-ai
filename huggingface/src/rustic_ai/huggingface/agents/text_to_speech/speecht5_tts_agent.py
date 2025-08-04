@@ -12,9 +12,8 @@ from rustic_ai.core.agents.commons.message_formats import (
     GenerationPromptRequest,
 )
 from rustic_ai.core.guild import agent
-from rustic_ai.core.guild.agent import Agent, AgentMode, AgentType
+from rustic_ai.core.guild.agent import Agent
 from rustic_ai.core.guild.agent_ext.depends.filesystem import FileSystem
-from rustic_ai.core.guild.dsl import AgentSpec
 
 
 class SpeechT5TTSAgent(Agent):

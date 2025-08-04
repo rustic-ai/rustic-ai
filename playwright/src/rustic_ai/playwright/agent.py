@@ -8,13 +8,13 @@ from urllib.parse import urljoin, urlparse, urlsplit
 
 from install_playwright import install
 from markdownify import markdownify as md
+from playwright.async_api import async_playwright
 from pydantic import BaseModel, Field
 import shortuuid
 
-from playwright.async_api import async_playwright
 from rustic_ai.core.agents.commons.media import MediaLink
 from rustic_ai.core.agents.commons.message_formats import ErrorMessage
-from rustic_ai.core.guild import Agent, AgentSpec, agent
+from rustic_ai.core.guild import Agent, agent
 from rustic_ai.core.guild.agent_ext.depends.filesystem.filesystem import FileSystem
 from rustic_ai.core.utils.json_utils import JsonDict
 

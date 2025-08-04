@@ -1,15 +1,9 @@
 import time
 
-from rustic_ai.core.agents.testutils.probe_agent import ProbeAgent
-from rustic_ai.core.guild.agent import Agent
 from rustic_ai.core.guild.builders import AgentBuilder
 from rustic_ai.core.guild.dsl import AgentSpec
 from rustic_ai.core.guild.guild import Guild
 
-from .sample_agents import (
-    DemoAgentGenericWithoutTypedSpec,
-    DemoAgentProps,
-)
 from .simple_agent import SimpleAgent
 
 

@@ -11,7 +11,6 @@ from rustic_ai.core.agents.indexing.vector_agent import (
     VectorAgent,
     VectorSearchQuery,
 )
-from rustic_ai.core.agents.testutils import ProbeAgent
 from rustic_ai.core.guild.agent_ext.depends.filesystem import (
     FileSystem,
     FileSystemResolver,

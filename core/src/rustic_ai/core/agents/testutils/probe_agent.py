@@ -2,10 +2,9 @@ from typing import List, Optional, Union
 
 from pydantic import BaseModel
 
-from rustic_ai.core.guild import Agent, AgentMode, AgentSpec, AgentType, agent
+from rustic_ai.core.guild import Agent, agent
 from rustic_ai.core.messaging.core import JsonDict
 from rustic_ai.core.messaging.core.message import Message, MessageConstants, RoutingSlip
-from rustic_ai.core.state.models import StateUpdateResponse
 from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 from rustic_ai.core.utils.gemstone_id import GemstoneID
 from rustic_ai.core.utils.priority import Priority

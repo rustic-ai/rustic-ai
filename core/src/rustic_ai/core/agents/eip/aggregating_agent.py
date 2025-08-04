@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 
 from rustic_ai.core.guild import agent
 from rustic_ai.core.guild.agent import Agent, ProcessContext
-from rustic_ai.core.guild.dsl import AgentSpec, BaseAgentProps
+from rustic_ai.core.guild.dsl import BaseAgentProps
 from rustic_ai.core.messaging.core.message import MessageConstants
 from rustic_ai.core.state import StateUpdateFormat
 from rustic_ai.core.state.models import StateUpdateResponse
@@ -91,7 +91,7 @@ class DictCollector(BaseCollector):
     def get_messages(self, state: JsonDict) -> list[JsonDict]:
         # For DictCollector, state is directly the dictionary of messages
         if isinstance(state, dict):
-            return list(state.values())
+            return list(state.values())  # type: ignore
         return []
 
 
@@ -291,7 +291,7 @@ class AggregatingAgent(Agent[AggregatorConf]):
         # Use collector to generate state operations
         operations = self.collector.get_state_operations(correlation_id, payload_with_format)
 
-        self.update_state(
+        self.update_state(  # type: ignore[no-untyped-call]
             ctx,
             update_format=StateUpdateFormat.JSON_PATCH,
             update={"operations": operations},
@@ -306,7 +306,7 @@ class AggregatingAgent(Agent[AggregatorConf]):
 
         logging.debug(f"Aggregation State updated: {state}")
 
-        aggregations = state.get("aggregations", {})
+        aggregations: Dict[str, JsonDict] = state.get("aggregations", {})  # type: ignore
         for correlation_id, correlation_state in aggregations.items():
             # Use collector to extract messages for evaluation (handles both list and dict states)
             messages = self.collector.get_messages(correlation_state)
@@ -320,6 +320,8 @@ class AggregatingAgent(Agent[AggregatorConf]):
                 aggregated_messages = AggregatedMessages(correlation_id=correlation_id, messages=payloads)
 
                 if self.correlation_location == CorrelationLocation.SESSION:
+                    if not self.path:
+                        self.path = "correlation_id"
                     context: JsonDict = {}
                     JsonUtils.update_at_path(context, self.path, correlation_id)
                     ctx.update_context(context)
@@ -331,7 +333,7 @@ class AggregatingAgent(Agent[AggregatorConf]):
                 )
 
                 # Clean up completed aggregation
-                self.update_state(
+                self.update_state(  # type: ignore[no-untyped-call]
                     ctx,
                     update_format=StateUpdateFormat.JSON_PATCH,
                     update={"operations": [{"op": "remove", "path": "/"}]},

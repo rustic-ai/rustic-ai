@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 import logging
-from typing import Any, Dict, Optional, Type, Union
+from typing import Any, Dict, Optional, Type
 
 from rustic_ai.core.guild.agent import Agent, AgentSpec
 from rustic_ai.core.guild.agent_ext.depends.dependency_resolver import (
@@ -18,7 +18,6 @@ from rustic_ai.core.messaging import (
     MessagingInterface,
 )
 from rustic_ai.core.utils.class_utils import get_agent_class
-from rustic_ai.core.utils.gemstone_id import GemstoneGenerator
 
 
 class AgentWrapper(ABC):
@@ -80,10 +79,6 @@ class AgentWrapper(ABC):
         agent_deps = agent_class.list_all_dependencies()
 
         self.logger.debug(f"Agent dependencies: {agent_deps}")
-
-        dependency_resolvers = {
-            dep.dependency_key: self._load_dependency_resolver(dep.dependency_key) for dep in agent_deps
-        }
 
         # Initialize the Messaging
         self.logger.info(f"Initializing messaging from config: {self.messaging_config}")

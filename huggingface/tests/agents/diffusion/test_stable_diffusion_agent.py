@@ -5,7 +5,6 @@ from fsspec import filesystem
 import pytest
 
 from rustic_ai.core.agents.commons.image_generation import ImageGenerationResponse
-from rustic_ai.core.agents.testutils.probe_agent import ProbeAgent
 from rustic_ai.core.guild.agent_ext.depends.filesystem import (
     FileSystem,
     FileSystemResolver,
