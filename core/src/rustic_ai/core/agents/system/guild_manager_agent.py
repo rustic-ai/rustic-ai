@@ -74,8 +74,10 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
 
         guild_id = guild_spec.id
         # Local guild_id in bootstrap because it set by Guild.run_agent after object is created
-
-        self.state_manager: StateManager = get_state_manager(GuildHelper.get_state_manager(guild_spec))
+        state_manager_config = GuildHelper.get_state_mgr_config(guild_spec)
+        self.state_manager: StateManager = get_state_manager(
+            GuildHelper.get_state_manager(guild_spec), state_manager_config
+        )
 
         logging.info(f"Guild Manager is initializing guild {guild_id} - \n{self.original_guild_spec.model_dump()}")
 
