@@ -1,5 +1,6 @@
 import time
 
+from rustic_ai.core.agents.testutils.probe_agent import ProbeAgent
 from rustic_ai.core.guild.builders import AgentBuilder
 from rustic_ai.core.guild.dsl import AgentSpec
 from rustic_ai.core.guild.guild import Guild
@@ -19,7 +20,7 @@ class TestAgent:
         )
 
         agent = guild._add_local_agent(agent_spec)
-        probe_agent = guild._add_local_agent(probe_spec)
+        probe_agent: ProbeAgent = guild._add_local_agent(probe_spec)  # type: ignore
 
         probe_agent.publish_dict(guild.DEFAULT_TOPIC, {"key1": "value1"})
 

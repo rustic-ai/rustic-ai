@@ -409,7 +409,7 @@ class TestGuildBuilder:
             .build_spec()
         )
 
-        probe_agent = guild._add_local_agent(probe_spec)
+        probe_agent: ProbeAgent = guild._add_local_agent(probe_spec)  # type: ignore
 
         # Test the GuildManagerAgent was launched correctly and has launched the EchoAgent
         probe_agent.publish_dict(
@@ -598,7 +598,7 @@ class TestGuildBuilder:
             .build_spec()
         )
 
-        probe_agent = guild._add_local_agent(probe_spec)
+        probe_agent: ProbeAgent = guild._add_local_agent(probe_spec)  # type: ignore
 
         probe_agent.publish_dict(
             topic=GuildTopics.SYSTEM_TOPIC,
@@ -842,7 +842,7 @@ class TestGuildBuilder:
             .build_spec()
         )
 
-        probe_agent = guild._add_local_agent(probe_spec)
+        probe_agent: ProbeAgent = guild._add_local_agent(probe_spec)  # type: ignore
 
         probe_agent.publish_dict(
             topic=GuildTopics.SYSTEM_TOPIC,

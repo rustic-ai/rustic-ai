@@ -87,17 +87,17 @@ class TestTodoListGuild:
     @flaky(max_runs=4, min_passes=1)
     async def test_todo_flow(self, todo_guild: Guild):
         generator = GemstoneGenerator(17)
-        probe_agent = (
+        probe_spec = (
             AgentBuilder(ProbeAgent)
             .set_id("test_agent")
             .set_name("Test Agent")
             .set_description("A test probe agent")
             .add_additional_topic(GuildTopics.SYSTEM_TOPIC)
             .add_additional_topic(UserProxyAgent.BROADCAST_TOPIC)
-            .build()
+            .build_spec()
         )
 
-        todo_guild._add_local_agent(probe_agent)
+        probe_agent: ProbeAgent = todo_guild._add_local_agent(probe_spec)  # type: ignore
 
         # Create user
         probe_agent.publish_dict(

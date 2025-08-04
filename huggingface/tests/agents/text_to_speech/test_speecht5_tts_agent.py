@@ -6,6 +6,7 @@ import pytest
 
 from rustic_ai.core.agents.commons.media import MediaLink
 from rustic_ai.core.agents.commons.message_formats import GenerationPromptRequest
+from rustic_ai.core.agents.testutils.probe_agent import ProbeAgent
 from rustic_ai.core.guild.agent_ext.depends.filesystem import (
     FileSystem,
     FileSystemResolver,
@@ -60,7 +61,7 @@ class TestSpeechT5TtsAgent:
         dfs = FileSystem(path="/tmp/speecht5_tts_guild/GUILD_GLOBAL", fs=fs)
 
         guild = guild_builder.launch(organization_id=org_id)
-        probe_agent = guild._add_local_agent(probe_spec)
+        probe_agent: ProbeAgent = guild._add_local_agent(probe_spec)  # type: ignore
 
         probe_agent.publish_dict(
             guild.DEFAULT_TOPIC, {"generation_prompt": "Long live the dragons"}, GenerationPromptRequest

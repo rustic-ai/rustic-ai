@@ -138,7 +138,7 @@ class TestStateMgmt:
             .build_spec()
         )
 
-        probe_agent = guild._add_local_agent(probe_spec)
+        probe_agent: ProbeAgent = guild._add_local_agent(probe_spec)  # type: ignore
 
         guild_update_routing_rule = RoutingRule(
             agent=AgentTag(id=state_aware_agent.id),

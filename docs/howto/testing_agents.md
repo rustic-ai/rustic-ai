@@ -65,13 +65,12 @@ class GreeterAgent(Agent[BaseAgentProps]):
 @pytest.fixture
 def greeter_agent():
     # Create the agent instance
-    agent = AgentBuilder(GreeterAgent)\
+    agent_spec = AgentBuilder(GreeterAgent)\
         .set_name("TestGreeter")\
-        .build()
+        .build_spec()
     
     # Set up for testing
-    id_generator = GemstoneGenerator(machine_id=1)
-    test_agent, results = wrap_agent_for_testing(agent, id_generator)
+    test_agent, results = wrap_agent_for_testing(agent_spec)
     
     return test_agent, results, id_generator
 
@@ -127,10 +126,9 @@ def test_agent_with_database():
     # Create the agent instance
     agent = AgentBuilder(DatabaseAgent)\
         .set_name("TestDatabaseAgent")\
-        .build()
+        .build_spec()
     
     # Set up testing with mock dependencies
-    id_generator = GemstoneGenerator(machine_id=1)
     dependencies = {
         "database": DependencySpec(
             class_name="__main__.MockDatabaseResolver",
@@ -140,7 +138,6 @@ def test_agent_with_database():
     
     test_agent, results = wrap_agent_for_testing(
         agent,
-        id_generator,
         dependencies=dependencies
     )
     
@@ -157,10 +154,9 @@ def test_stateful_counter_agent():
     # Create and wrap the agent for testing
     agent = AgentBuilder(CounterAgent)\
         .set_name("TestCounter")\
-        .build()
+        .build_spec()
     
-    id_generator = GemstoneGenerator(machine_id=1)
-    test_agent, results = wrap_agent_for_testing(agent, id_generator)
+    test_agent, results = wrap_agent_for_testing(agent)
     
     # The agent's _state is directly accessible in tests
     assert test_agent._state.get("count", 0) == 0
@@ -236,7 +232,7 @@ def test_guild():
     guild.launch_agent(agent2_spec)
     
     # Return the guild and its probe agent
-    probe_agent = guild.get_agent_of_type(ProbeAgent)
+    probe_agent: ProbeAgent = guild._add_local_agent(probe_spec)  # type: ignore
     yield guild, probe_agent
     
     # Cleanup after tests
@@ -432,11 +428,10 @@ def calculator_setup():
     # Create agent
     agent = AgentBuilder(CalculatorAgent)\
         .set_name("TestCalculator")\
-        .build()
+        .build_spec()
     
     # Wrap for testing
-    id_generator = GemstoneGenerator(machine_id=1)
-    test_agent, results = wrap_agent_for_testing(agent, id_generator)
+    test_agent, results = wrap_agent_for_testing(agent)
     
     return test_agent, results, id_generator
 

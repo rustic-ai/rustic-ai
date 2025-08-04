@@ -4,6 +4,7 @@ from fsspec import filesystem
 from pydantic import BaseModel
 import pytest
 
+from rustic_ai.core.agents.testutils.probe_agent import ProbeAgent
 from rustic_ai.core.guild import agent
 from rustic_ai.core.guild.agent import Agent, ProcessContext
 from rustic_ai.core.guild.agent_ext.depends.filesystem import FileSystem
@@ -169,7 +170,7 @@ class TestFileSystem:
         dfs = FileSystem(path=f"/tmp/{guild_id}/file_manager", fs=fs)
         guild = guild_builder.launch(organization_id=org_id)
 
-        probe_agent = guild._add_local_agent(probe_spec)
+        probe_agent: ProbeAgent = guild._add_local_agent(probe_spec)  # type: ignore
 
         probe_agent.publish_dict(
             topic="default_topic",

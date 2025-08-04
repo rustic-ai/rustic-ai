@@ -5,6 +5,7 @@ import uuid
 from pydantic import BaseModel, JsonValue
 import pytest
 
+from rustic_ai.core.agents.testutils.probe_agent import ProbeAgent
 from rustic_ai.core.guild import agent
 from rustic_ai.core.guild.agent import (
     Agent,
@@ -192,7 +193,7 @@ class BaseTestKVStore(ABC):
         else:
             guild.dependency_map["kvstore"].class_name = InMemoryKVStoreResolver.get_qualified_class_name()
 
-        probe_agent = guild._add_local_agent(probe_spec)
+        probe_agent: ProbeAgent = guild._add_local_agent(probe_spec)  # type: ignore
 
         probe_agent.publish_dict(
             topic="default_topic",
