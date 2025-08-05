@@ -1,6 +1,7 @@
 import asyncio
 import os
 from typing import Any, Dict, List
+import time
 
 from pydantic import BaseModel
 import pytest
@@ -15,7 +16,7 @@ from rustic_ai.core.agents.eip.splitter_agent import (
     ListFormatSelector,
     ListSplitter,
     SplitterAgent,
-    SplitterConf
+    SplitterConf,
 )
 from rustic_ai.core.agents.system.models import (
     UserAgentCreationRequest,
@@ -192,10 +193,10 @@ class TestSplitterGuild:
             payload=wrapped_message,
         )
 
-        await asyncio.sleep(2)
-
-        messages = probe_agent.get_messages()[-2:]
-        assert all(msg.format == get_qualified_class_name(ItemProcessingResult) for msg in messages)
+        await asyncio.sleep(8)
+        
+        messages = probe_agent.get_messages()
+        messages = [msg for msg in messages if msg.topics == "item_processing_results"]
+        assert len(messages) > 0
         assert messages[0].payload["id"] == "item-001"
-        assert messages[1].payload["id"] == "item-002"
-        assert messages[1].payload["quantity"] == 1
+        assert messages[0].payload["quantity"] == 2

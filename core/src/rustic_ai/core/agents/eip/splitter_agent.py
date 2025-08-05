@@ -120,18 +120,27 @@ class SplitterAgent(Agent[SplitterConf]):
 
     @agent.processor(JsonDict)
     def split_and_send(self, ctx: ProcessContext[JsonDict]) -> None:
-        items = self.splitter.split(ctx.payload)
-        formats = self.format_selector.get_formats(items)
+        try:
+            items = self.splitter.split(ctx.payload)
+            formats = self.format_selector.get_formats(items)
 
-        if len(formats) != len(items):
+            if len(formats) != len(items):
+                ctx.send_error(
+                    ErrorMessage(
+                        agent_type=self.get_qualified_class_name(),
+                        error_type="LengthMismatch",
+                        error_message=f"Number of formats: {len(formats)} is not same as number of items {len(items)}",
+                    )
+                )
+                return
+
+            for item, fmt in zip(items, formats):
+                ctx.send_dict(payload=item, format=fmt)
+        except Exception as e:
             ctx.send_error(
                 ErrorMessage(
                     agent_type=self.get_qualified_class_name(),
-                    error_type="LengthMismatch",
-                    error_message=f"Number of formats: {len(formats)} is not same as number of items {len(items)}",
+                    error_type="SplitterError",
+                    error_message=str(e),
                 )
             )
-            return
-
-        for item, fmt in zip(items, formats):
-            ctx.send_dict(payload=item, format=fmt)
