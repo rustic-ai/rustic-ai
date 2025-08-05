@@ -65,7 +65,7 @@ class WebScrapingCompleted(BaseModel):
     links: List[MediaLink] = Field(..., title="URL to scrape")
 
 
-class PlaywrightScrapperConfig(BaseAgentProps):
+class PlaywrightScraperConfig(BaseAgentProps):
     headless: bool = Field(
         default=True,
         title="Run browser in headless mode",
@@ -78,7 +78,7 @@ class PlaywrightScrapperConfig(BaseAgentProps):
     )
 
 
-class PlaywrightScraperAgent(Agent[PlaywrightScrapperConfig]):
+class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
     def __init__(self):
         self._playwright: Optional[Playwright] = None
         self._browser: Optional[Browser] = None
