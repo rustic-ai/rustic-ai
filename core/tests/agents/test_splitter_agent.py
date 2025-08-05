@@ -1,7 +1,6 @@
 import asyncio
 import os
 from typing import Any, Dict, List
-import time
 
 from pydantic import BaseModel
 import pytest
@@ -194,7 +193,7 @@ class TestSplitterGuild:
         )
 
         await asyncio.sleep(8)
-        
+
         messages = probe_agent.get_messages()
         messages = [msg for msg in messages if msg.topics == "item_processing_results"]
         assert len(messages) > 0
