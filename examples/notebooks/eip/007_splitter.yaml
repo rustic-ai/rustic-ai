@@ -1,33 +1,24 @@
-id: splitter_guild
-name: SplitterGuild
+name: SplitterGuild 
 description: Demonstrates splitting of messages using SplitterAgent
 agents:
 - id: SplitterAgent
   name: Purchase Order Splitter
-  description: Splits a PurchaseOrderRequest into multiple ItemRequest messages
+  description: Splits a PurchaseOrderRequest into multiple ItemRequest messages using fixed_format and list splitter
   class_name: rustic_ai.core.agents.eip.splitter_agent.SplitterAgent
   additional_topics:
   - purchase_orders
   properties:
-    delimiter: ','
     format_selector:
       fixed_format: test_splitter_agent.ItemProcessingResult
-      format_list: null
-      jsonata_expr: null
-      strategy: !!python/object/apply:rustic_ai.core.agents.eip.splitter_agent.FormatSelectorStrategies
-      - fixed
+      strategy: fixed
     splitter:
-      expression: '$map(items, function($v) {$merge([$v, {"order_id": order_id}, {"customer":
-        customer}] ) } )'
-      split_type: jsonata
-    topics:
-    - item_processing_results
-
+      field_name: items
+      split_type: list
 routes:
   steps:
-  - agent:
-      name: Purchase Order Splitter
-    destination:
-      topics: item_processing_results
-    message_format: test_splitter_agent.ItemProcessingResult
-    route_times: -1
+    - agent: 
+        name: Purchase Order Splitter
+      message_format: test_splitter_agent.ItemProcessingResult
+      destination:
+        { topics: item_processing_results, recipient_list: [], priority: null }
+      route_times: -1
