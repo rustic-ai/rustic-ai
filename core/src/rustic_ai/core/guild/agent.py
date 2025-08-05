@@ -27,6 +27,7 @@ from rustic_ai.core.messaging.core.message import (
     MessageConstants,
     MessageRoutable,
     ProcessEntry,
+    ProcessStatus,
     RoutingOrigin,
     RoutingRule,
     RoutingSlip,
@@ -646,6 +647,7 @@ class ProcessContext[MDT]:
             format=format,
             forward_header=self._origin_message.forward_header,
             context=self.get_context(),
+            process_status=step.process_status if step.process_status else self._origin_message.process_status,
         )
 
         routed = step.apply(self._origin_message, agent_state, guild_state, routable, forwarding)
@@ -744,6 +746,7 @@ class ProcessContext[MDT]:
             traceparent=self._origin_message.traceparent,
             session_state=self.get_context() | routed_context,
             enrich_with_history=routed.enrich_with_history,
+            process_status=routed.process_status,
         )
 
         for modifier in self._outgoing_message_modifiers:
@@ -783,6 +786,7 @@ class ProcessContext[MDT]:
         traceparent: Optional[str] = None,
         session_state: Optional[JsonDict] = None,
         enrich_with_history: Optional[int] = 0,
+        process_status: Optional[ProcessStatus] = None,
     ) -> None:
         msg_id = self._get_id(priority)
         thread = self._origin_message.thread.copy()
@@ -812,6 +816,7 @@ class ProcessContext[MDT]:
                 traceparent=traceparent,
                 session_state=session_state,
                 enrich_with_history=enrich_with_history,
+                process_status=process_status,
             )
         )
 

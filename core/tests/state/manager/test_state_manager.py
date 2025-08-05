@@ -115,7 +115,7 @@ class TestStateManager(ABC):
 
     @pytest.mark.parametrize("sfr, expected_response", state_fetch_data)
     def test_get_state(self, state_manager: StateManager, base_state: JsonDict, sfr, expected_response):
-        state_manager.init_from_state(base_state)
+        state_manager.load(base_state)
         assert state_manager.get_state(sfr).state == expected_response
 
     state_update_data = [
@@ -221,7 +221,7 @@ class TestStateManager(ABC):
         sur: StateUpdateRequest,
         expected_state,
     ):
-        state_manager.init_from_state(base_state)
+        state_manager.load(base_state)
         updated_state = state_manager.update_state(sur)
 
         assert updated_state.state == expected_state
