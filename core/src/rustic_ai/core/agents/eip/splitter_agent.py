@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import List, Literal, Union
 
 from jsonata import Jsonata
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from rustic_ai.core.agents.commons.message_formats import ErrorMessage
 from rustic_ai.core.guild import agent
@@ -82,17 +82,6 @@ class DictSplitter(BaseSplitter):
         return [value for key, value in sorted(payload.items())]
 
 
-class StringSplitter(BaseSplitter):
-    split_type: Literal["string"] = "string"
-    field_name: str
-    delimiter: str = Field(default=",")
-
-    def split(self, payload: JsonDict) -> List[JsonDict]:
-        if not isinstance(payload[self.field_name], str):
-            raise ValueError("StringSplitter expects a string payload.")
-        return payload[self.field_name].split(self.delimiter)
-
-
 class JsonataSplitter(BaseSplitter):
     split_type: Literal["jsonata"] = "jsonata"
     expression: str
@@ -108,7 +97,7 @@ class JsonataSplitter(BaseSplitter):
 
 
 class SplitterConf(BaseAgentProps):
-    splitter: Union[ListSplitter, StringSplitter, JsonataSplitter, DictSplitter]
+    splitter: Union[ListSplitter, JsonataSplitter, DictSplitter]
     format_selector: Union[FixedFormatSelector, ListFormatSelector, DictFormatSelector, JsonataFormatSelector]
 
 

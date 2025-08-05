@@ -1,6 +1,6 @@
 import asyncio
 import os
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel
 import pytest
@@ -9,6 +9,7 @@ import shortuuid
 from rustic_ai.core import Guild, GuildTopics, Priority
 from rustic_ai.core.agents.eip.splitter_agent import (
     DictFormatSelector,
+    DictSplitter,
     FixedFormatSelector,
     JsonataFormatSelector,
     JsonataSplitter,
@@ -40,9 +41,14 @@ class PurchaseOrderRequest(BaseModel):
     customer: str
 
 
+class ItemOrderList(BaseModel):
+    item1: Dict
+    item2: Dict
+
+
 class ItemProcessingResult(BaseModel):
-    id: str
-    quantity: int
+    id: Optional[str]
+    quantity: Optional[int]
 
 
 class TestSplitterGuild:
@@ -98,6 +104,16 @@ class TestSplitterGuild:
                 ListSplitter(field_name="items"),
                 FixedFormatSelector(strategy="fixed", fixed_format=get_qualified_class_name(ItemProcessingResult)),
             ),
+            (
+                DictSplitter(),
+                DictFormatSelector(
+                    strategy="dict",
+                    format_dict={
+                        "id": get_qualified_class_name(ItemProcessingResult),
+                        "quantity": get_qualified_class_name(ItemProcessingResult),
+                    },
+                ),
+            ),
         ]
     )
     def splitter_and_format(self, request):
@@ -138,9 +154,7 @@ class TestSplitterGuild:
         splitter_guild.shutdown()
 
     @pytest.mark.asyncio
-    async def test_splitter_variants(
-        self, splitter_guild: Guild, routing_slip: RoutingSlip, generator: GemstoneGenerator
-    ):
+    async def test_splitter_variants(self, splitter_guild: Guild, splitter_and_format, generator: GemstoneGenerator):
 
         probe_agent: ProbeAgent = (
             AgentBuilder(ProbeAgent)
@@ -179,12 +193,24 @@ class TestSplitterGuild:
             items=[{"id": "item-001", "quantity": 2}, {"id": "item-002", "quantity": 1}],
         )
 
+        splitter_object, _ = splitter_and_format
+
+        payload: str | dict = {}
+        message_format: str = ""
+        if isinstance(splitter_object, DictSplitter):
+            dict_payload = {"item1": {"id": "item-001", "quantity": 2}, "item2": {"id": "item-002", "quantity": 1}}
+            payload = dict_payload
+            message_format = get_qualified_class_name(ItemOrderList)
+        else:
+            payload = test_order.model_dump()
+            message_format = get_qualified_class_name(PurchaseOrderRequest)
+
         id_obj = generator.get_id(Priority.NORMAL)
         wrapped_message = Message(
             id_obj=id_obj,
             topics="purchase_orders",
-            payload=test_order.model_dump(),
-            format=get_qualified_class_name(PurchaseOrderRequest),
+            payload=payload,
+            format=message_format,
             sender=AgentTag(id="test_agent", name="TestAgent"),
         )
         probe_agent.publish(
