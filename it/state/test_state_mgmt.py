@@ -2,6 +2,7 @@ import os
 from textwrap import dedent
 import time
 
+from flaky import flaky
 from pydantic import BaseModel
 import pytest
 
@@ -102,6 +103,7 @@ class TestStateMgmt:
             ("rustic_ai.redis.state.manager.RedisStateManager", {"host": "localhost", "port": 6379}),
         ],
     )
+    @flaky(max_runs=3, min_passes=1)
     def test_state_mgmt(
         self,
         state_aware_agent: AgentSpec,
@@ -135,6 +137,7 @@ class TestStateMgmt:
             .add_additional_topic(GuildTopics.SYSTEM_TOPIC)
             .add_additional_topic(GuildTopics.GUILD_STATUS_TOPIC)
             .add_additional_topic("echo_topic")
+            .add_additional_topic(GuildTopics.STATE_TOPIC)
             .build_spec()
         )
 

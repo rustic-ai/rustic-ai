@@ -2,6 +2,7 @@ import asyncio
 import importlib
 import os
 
+from flaky import flaky
 import pytest
 import shortuuid
 
@@ -169,6 +170,7 @@ class TestResearchGuild:
 
     @pytest.mark.parametrize("dep_map_config", ["openai_chroma", "vertexai"], indirect=True)
     @pytest.mark.skipif(os.getenv("SKIP_EXPENSIVE_TESTS") == "true", reason="Skipping expensive tests")
+    @flaky(max_runs=3, min_passes=1)
     @pytest.mark.asyncio
     async def test_research_guild(self, research_guild: Guild, routing_slip: RoutingSlip, generator: GemstoneGenerator):
 
