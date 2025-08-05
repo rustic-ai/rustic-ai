@@ -114,7 +114,7 @@ class TestStateMgmt:
         state_manager_config: dict,
     ):
         builder = (
-            GuildBuilder(f"state_guild_{time.time()}", "State Guild", "Guild to test state management")
+            GuildBuilder(f"state_guild_{int(time.time())}", "State Guild", "Guild to test state management")
             .add_agent_spec(state_aware_agent)
             .add_agent_spec(state_free_agent)
             .set_messaging(
@@ -165,9 +165,17 @@ class TestStateMgmt:
             routing_slip=RoutingSlip(steps=[guild_update_routing_rule]),
         )
 
-        time.sleep(0.1)
+        time.sleep(1)
 
-        messages = probe_agent.get_messages()
+        loop_count = 0
+        while loop_count < 10:
+            time.sleep(0.5)
+            # Check if the agent has processed the request and sent the state
+            messages = probe_agent.get_messages()
+            if len(messages) > 0:
+                break
+            loop_count += 1
+
         assert len(messages) == 1  # Second agent should not publish as data is empty
 
         assert messages[0].format == get_qualified_class_name(PublishedData)
@@ -243,7 +251,7 @@ class TestStateMgmt:
             routing_slip=RoutingSlip(steps=[agent_update_routing_rule]),
         )
 
-        time.sleep(0.5)
+        time.sleep(1)
 
         messages = probe_agent.get_messages()
 
