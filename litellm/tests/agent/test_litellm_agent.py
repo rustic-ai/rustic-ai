@@ -34,6 +34,15 @@ def setup_default_env(monkeypatch):
 
 class TestLiteLLMAgent:
     def test_agent_initialization(self):
+        GEMINI_API_KEY = None
+        GOOGLE_API_KEY = None
+        if "GEMINI_API_KEY" in os.environ:
+            GEMINI_API_KEY = os.environ["GEMINI_API_KEY"]
+            del os.environ["GEMINI_API_KEY"]
+
+        if "GOOGLE_API_KEY" in os.environ:
+            GOOGLE_API_KEY = os.environ["GOOGLE_API_KEY"]
+            del os.environ["GOOGLE_API_KEY"]
         with pytest.raises(RuntimeError, match=".*GEMINI_API_KEY not set"):
             spec = (
                 AgentBuilder(LiteLLMAgent)
@@ -51,6 +60,10 @@ class TestLiteLLMAgent:
                 .build_spec()
             )
             wrap_agent_for_testing(spec)
+        if GEMINI_API_KEY:
+            os.environ["GEMINI_API_KEY"] = GEMINI_API_KEY
+        if GOOGLE_API_KEY:
+            os.environ["GOOGLE_API_KEY"] = GOOGLE_API_KEY
 
     def test_response_is_generated(self, setup_default_env, probe_spec, guild: Guild):
         agent_spec = (

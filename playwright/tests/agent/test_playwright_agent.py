@@ -1,6 +1,7 @@
 import asyncio
 
 from flaky import flaky
+import pytest
 import shortuuid
 
 from rustic_ai.core.agents.commons.media import MediaLink
@@ -19,28 +20,37 @@ from rustic_ai.playwright.agent import (
 from rustic_ai.testing.helpers import wrap_agent_for_testing
 
 
+@pytest.fixture
+def filesystem():
+    return DependencySpec(
+        class_name="rustic_ai.core.guild.agent_ext.depends.filesystem.FileSystemResolver",
+        properties={
+            "path_base": "/tmp",
+            "protocol": "file",
+            "storage_options": {
+                "auto_mkdir": True,
+            },
+        },
+    )
+
+
+@pytest.fixture
+def agent_and_results(filesystem):
+    # Create a new agent for each test to avoid state pollution
+    return wrap_agent_for_testing(
+        AgentBuilder(PlaywrightScraperAgent)
+        .set_id("001")
+        .set_name("WebScrapper")
+        .set_description("A web scraping agent using Playwright")
+        .build_spec(),
+        {"filesystem": filesystem},
+    )
+
+
 class TestPlaywrightAgent:
     @flaky(max_runs=3, min_passes=1)
-    async def test_scraping(self, generator):
-
-        filesystem = DependencySpec(
-            class_name="rustic_ai.core.guild.agent_ext.depends.filesystem.FileSystemResolver",
-            properties={
-                "path_base": "/tmp",
-                "protocol": "file",
-                "storage_options": {
-                    "auto_mkdir": True,
-                },
-            },
-        )
-        agent, results = wrap_agent_for_testing(
-            AgentBuilder(PlaywrightScraperAgent)
-            .set_id("001")
-            .set_name("WebScrapper")
-            .set_description("A web scraping agent using Playwright")
-            .build_spec(),
-            {"filesystem": filesystem},
-        )
+    async def test_scraping(self, generator, agent_and_results, filesystem):
+        agent, results = agent_and_results
 
         request_id = shortuuid.uuid()
 
@@ -73,23 +83,32 @@ class TestPlaywrightAgent:
                 break
 
         assert len(results) == 5
-        assert results[0].priority == Priority.NORMAL
-        assert results[0].in_response_to == message.id
-        assert results[0].current_thread_id == message.id
-        assert results[0].recipient_list == []
 
-        assert results[0].payload["id"] is not None
-        assert results[0].payload["mimetype"] == "text/html"
-        assert results[0].payload["encoding"] == "utf-8"
-        assert results[0].payload["name"] is not None
+        selected_result = [
+            r
+            for r in results
+            if isinstance(r.payload, dict)
+            and "metadata" in r.payload
+            and r.payload["metadata"]["scraped_url"] == "https://example.com/index.html"
+        ]
 
-        assert results[0].payload["metadata"] is not None
-        assert results[0].payload["metadata"]["scraped_url"] == "https://example.com/index.html"  # type: ignore
-        assert results[0].payload["metadata"]["title"] == "Example Domain"  # type: ignore
-        assert results[0].payload["metadata"]["request_id"] == request_id  # type: ignore
+        assert selected_result[0].priority == Priority.NORMAL
+        assert selected_result[0].in_response_to == message.id
+        assert selected_result[0].current_thread_id == message.id
+        assert selected_result[0].recipient_list == []
 
-        assert results[0].payload["url"] is not None
-        assert results[0].payload["on_filesystem"] is True
+        assert selected_result[0].payload["id"] is not None
+        assert selected_result[0].payload["mimetype"] == "text/html"
+        assert selected_result[0].payload["encoding"] == "utf-8"
+        assert selected_result[0].payload["name"] is not None
+
+        assert selected_result[0].payload["metadata"] is not None
+        assert selected_result[0].payload["metadata"]["scraped_url"] == "https://example.com/index.html"  # type: ignore
+        assert selected_result[0].payload["metadata"]["title"] == "Example Domain"  # type: ignore
+        assert selected_result[0].payload["metadata"]["request_id"] == request_id  # type: ignore
+
+        assert selected_result[0].payload["url"] is not None
+        assert selected_result[0].payload["on_filesystem"] is True
 
         fs = filesystem.to_resolver().resolve(agent.guild_id, "GUILD_GLOBAL")
 
@@ -99,6 +118,13 @@ class TestPlaywrightAgent:
 
         assert completed.id == request_id
         assert len(completed.links) == 2  # 2 links are duplicates
+
+    # Test markdown output
+    @flaky(max_runs=3, min_passes=1)
+    async def test_markdown_output(self, agent_and_results, generator):
+        agent, results = agent_and_results
+
+        request_id = shortuuid.uuid()
 
         message = Message(
             id_obj=generator.get_id(Priority.NORMAL),
@@ -146,25 +172,8 @@ class TestPlaywrightAgent:
                 task.cancel()
 
     @flaky(max_runs=3, min_passes=1)
-    async def test_recursive_scraping_with_depth(self, generator):
-        filesystem = DependencySpec(
-            class_name="rustic_ai.core.guild.agent_ext.depends.filesystem.FileSystemResolver",
-            properties={
-                "path_base": "/tmp",
-                "protocol": "file",
-                "storage_options": {
-                    "auto_mkdir": True,
-                },
-            },
-        )
-        agent, results = wrap_agent_for_testing(
-            AgentBuilder(PlaywrightScraperAgent)
-            .set_id("002")
-            .set_name("WebScrapperDepth")
-            .set_description("A web scraping agent testing depth")
-            .build_spec(),
-            {"filesystem": filesystem},
-        )
+    async def test_recursive_scraping_with_depth(self, agent_and_results, filesystem, generator):
+        agent, results = agent_and_results
 
         request_id = shortuuid.uuid()
 

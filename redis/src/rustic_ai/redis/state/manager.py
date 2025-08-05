@@ -17,9 +17,11 @@ class RedisStateManager(StateManager):
     - timestamp: The timestamp in milliseconds
 
     Keys are structured as:
-    - For guild state: state:guild:{guild_id}
-    - For agent state: state:agent:{guild_id}:{agent_id}
+    - For guild state: managed_state:guild:{guild_id}
+    - For agent state: managed_state:agent:{guild_id}:{agent_id}
     """
+
+    REDIS_KEY_PREFIX = "managed_state"
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -31,7 +33,7 @@ class RedisStateManager(StateManager):
 
     def _get_state_details(self, state_key: str) -> StateDetails:
         # Get state details from Redis
-        state_data = self.client.hgetall(f"state:{state_key}")
+        state_data = self.client.hgetall(f"{self.REDIS_KEY_PREFIX}:{state_key}")
 
         # If no data found, return empty state
         if not state_data:
@@ -46,7 +48,7 @@ class RedisStateManager(StateManager):
 
     def _set_state_details(self, state_key: str, state_details: StateDetails):
         self.client.hset(
-            f"state:{state_key}",
+            f"{self.REDIS_KEY_PREFIX}:{state_key}",
             mapping={
                 "state": json.dumps(state_details["state"]),
                 "version": str(state_details["version"]),
