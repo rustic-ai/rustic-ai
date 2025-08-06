@@ -48,7 +48,10 @@ from rustic_ai.core.messaging.core.message import (
     TransformationType,
 )
 from rustic_ai.core.state.manager.in_memory_state_manager import InMemoryStateManager
-from rustic_ai.core.state.manager.state_manager import StateUpdateActions
+from rustic_ai.core.state.manager.state_manager import (
+    StateUpdateActions,
+    StateUpdateFormat,
+)
 from rustic_ai.core.utils import class_utils
 from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 from rustic_ai.core.utils.jexpr import JxScript
@@ -948,7 +951,7 @@ class RouteBuilder:
             raise ValueError("Invalid from_agent type")
 
     def from_method(self, method_name: Union[Callable, str]) -> "RouteBuilder":
-        self.rule_dict["method"] = method_name.__name__ if callable(method_name) else method_name
+        self.rule_dict["method_name"] = method_name.__name__ if callable(method_name) else method_name
         return self
 
     def on_message_format(self, message_format: Union[Type[BaseModel], str]) -> "RouteBuilder":
@@ -1032,20 +1035,30 @@ class RouteBuilder:
         )
         return self
 
-    def set_agent_state_update(self, update_agent_state: Union[JxScript, str]) -> "RouteBuilder":
+    def set_agent_state_update(
+        self,
+        update_agent_state: Union[JxScript, str],
+        update_format: StateUpdateFormat = StateUpdateFormat.JSON_MERGE_PATCH,
+    ) -> "RouteBuilder":
         state_transformer = StateTransformer(
+            update_format=update_format,
             state_update=(
                 update_agent_state.serialize() if isinstance(update_agent_state, JxScript) else update_agent_state
-            )
+            ),
         )
         self.rule_dict[StateUpdateActions.AGENT_STATE_UPDATE.value] = state_transformer
         return self
 
-    def set_guild_state_update(self, update_guild_state: Union[JxScript, str]) -> "RouteBuilder":
+    def set_guild_state_update(
+        self,
+        update_guild_state: Union[JxScript, str],
+        update_format: StateUpdateFormat = StateUpdateFormat.JSON_MERGE_PATCH,
+    ) -> "RouteBuilder":
         state_transformer = StateTransformer(
+            update_format=update_format,
             state_update=(
                 update_guild_state.serialize() if isinstance(update_guild_state, JxScript) else update_guild_state
-            )
+            ),
         )
         self.rule_dict[StateUpdateActions.GUILD_STATE_UPDATE.value] = state_transformer
         return self
