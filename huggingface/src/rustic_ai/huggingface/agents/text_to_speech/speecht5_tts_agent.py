@@ -12,22 +12,13 @@ from rustic_ai.core.agents.commons.message_formats import (
     GenerationPromptRequest,
 )
 from rustic_ai.core.guild import agent
-from rustic_ai.core.guild.agent import Agent, AgentMode, AgentType
+from rustic_ai.core.guild.agent import Agent
 from rustic_ai.core.guild.agent_ext.depends.filesystem import FileSystem
-from rustic_ai.core.guild.dsl import AgentSpec
 
 
 class SpeechT5TTSAgent(Agent):
 
-    def __init__(
-        self,
-        agent_spec: AgentSpec,
-    ) -> None:
-        super().__init__(
-            agent_spec,
-            AgentType.BOT,
-            AgentMode.LOCAL,
-        )
+    def __init__(self) -> None:
         self._synthesiser = pipeline("text-to-speech", "microsoft/speecht5_tts")  # type: ignore[call-overload]
 
         embeddings_dataset = load_dataset("Matthijs/cmu-arctic-xvectors", split="validation")

@@ -10,7 +10,6 @@ from rustic_ai.core.agents.commons import (
 )
 from rustic_ai.core.guild import agent
 from rustic_ai.core.guild.agent import Agent, ProcessContext
-from rustic_ai.core.guild.dsl import AgentSpec
 
 
 class MarvinAgent(Agent):
@@ -18,9 +17,6 @@ class MarvinAgent(Agent):
     An agent that uses prefect's marvin to classify the message into requested categories and extracts the requested data from
     the message into the response.
     """
-
-    def __init__(self, agent_spec: AgentSpec):
-        super().__init__(agent_spec)
 
     @agent.processor(ClassifyRequest)
     async def classifier(self, ctx: ProcessContext[ClassifyRequest]):

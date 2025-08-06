@@ -19,7 +19,7 @@ from rustic_ai.huggingface.agents.diffusion.pix2pix import Image2ImageAgent, Ima
 
 class TestPix2PixAgent:
     @pytest.mark.skipif(os.getenv("SKIP_EXPENSIVE_TESTS") == "true", reason="Skipping expensive tests")
-    def test_response_is_generated(self, probe_agent: ProbeAgent, org_id):
+    def test_response_is_generated(self, probe_spec, org_id):
         """
         Test that the agent responds to a message with a message containing the filepath of the generated image.
         """
@@ -66,7 +66,7 @@ class TestPix2PixAgent:
         assert fs.exists(data_file_in_fs_path)
 
         guild = guild_builder.launch(organization_id=org_id)
-        guild._add_local_agent(probe_agent)
+        probe_agent: ProbeAgent = guild._add_local_agent(probe_spec)  # type: ignore
 
         probe_agent.publish_dict(
             guild.DEFAULT_TOPIC,

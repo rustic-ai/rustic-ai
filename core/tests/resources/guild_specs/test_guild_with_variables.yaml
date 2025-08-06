@@ -1,0 +1,25 @@
+id: test_guild_id_GkqzUPSmVg
+name: test_guild_name
+description: description for test_guild_name
+properties: {}
+configuration:
+  agent1: asdf
+  model_id: custom/model_1
+  model_version: 2
+agents:
+- additional_topics: []
+  class_name: guild.simple_agent.SimpleAgentWithProps
+  description: '{{ agent1 }} - A simple agent with variable properties'
+  id: Lz6GTKQBdBSUcSeSpLdH4g
+  name: '{{ agent1 }}'
+  properties:
+    prop1: '{{ model_id }}'
+    prop2: '{{ model_version }}'
+routes:
+  steps:
+    - agent:
+        name: '{{ agent1 }}'
+      origin_filter:
+        origin_message_format: __main__.FilteringMessage
+      destination:
+        topics: accepted

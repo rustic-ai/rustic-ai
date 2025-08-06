@@ -51,9 +51,7 @@ class TestMultiThreadedRedisIntegration(IntegrationTestABC):
 
     def test_multithreaded_thread_safety_with_redis(
         self,
-        wait_time: float,
         guild,
-        local_test_agent,
         initiator_agent,
         responder_agent,
     ):
@@ -97,7 +95,7 @@ class TestMultiThreadedRedisIntegration(IntegrationTestABC):
         self,
         wait_time: float,
         guild,
-        local_test_agent,
+        local_test_agent_spec,
         initiator_agent,
         responder_agent,
     ):
@@ -115,7 +113,7 @@ class TestMultiThreadedRedisIntegration(IntegrationTestABC):
 
         # Add local test agent
         local_exec_engine = SyncExecutionEngine(guild_id=guild.id, organization_id=guild.organization_id)
-        guild._add_local_agent(local_test_agent, local_exec_engine)
+        local_test_agent = guild._add_local_agent(local_test_agent_spec, local_exec_engine)
 
         # Measure messaging performance
         start_time = time.time()
@@ -149,7 +147,6 @@ class TestMultiThreadedRedisIntegration(IntegrationTestABC):
         self,
         wait_time: float,
         guild,
-        local_test_agent,
         initiator_agent,
         responder_agent,
     ):
@@ -282,7 +279,7 @@ class TestMultiThreadedRedisIntegration(IntegrationTestABC):
         self,
         wait_time: float,
         guild,
-        local_test_agent,
+        local_test_agent_spec,
         initiator_agent,
         responder_agent,
     ):
@@ -300,7 +297,7 @@ class TestMultiThreadedRedisIntegration(IntegrationTestABC):
 
         # Add local test agent
         local_exec_engine = SyncExecutionEngine(guild_id=guild.id, organization_id=guild.organization_id)
-        guild._add_local_agent(local_test_agent, local_exec_engine)
+        local_test_agent = guild._add_local_agent(local_test_agent_spec, local_exec_engine)
 
         # Wait for initialization
         time.sleep(wait_time * 10)

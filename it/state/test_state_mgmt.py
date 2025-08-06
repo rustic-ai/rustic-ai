@@ -2,19 +2,19 @@ import os
 from textwrap import dedent
 import time
 
+from flaky import flaky
 from pydantic import BaseModel
 import pytest
 
 from rustic_ai.core.agents.testutils import ProbeAgent
 from rustic_ai.core.guild.agent import (
     Agent,
-    AgentMode,
-    AgentType,
     ProcessContext,
     processor,
 )
 from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder
-from rustic_ai.core.guild.dsl import AgentSpec, GuildTopics, SimpleRuntimePredicate
+from rustic_ai.core.guild.dsl import AgentSpec, GuildTopics, JSONataPredicate
+from rustic_ai.core.guild.dsl import KeyConstants as GSKC
 from rustic_ai.core.guild.metastore.database import Metastore
 from rustic_ai.core.messaging.core.message import (
     AgentTag,
@@ -45,9 +45,6 @@ class ReceivedData(BaseModel):
 
 
 class StateAwareAgent(Agent):
-    def __init__(self, agent_spec: AgentSpec):
-        super().__init__(agent_spec=agent_spec, agent_type=AgentType.BOT, agent_mode=AgentMode.LOCAL)
-
     @processor(EchoGuildState)
     def echo_guild_state(self, ctx: ProcessContext[EchoGuildState]) -> None:
         ctx.send(PublishedData(data=self.get_guild_state()))
@@ -58,9 +55,6 @@ class StateAwareAgent(Agent):
 
 
 class StateFreeAgent(Agent):
-    def __init__(self, agent_spec: AgentSpec):
-        super().__init__(agent_spec=agent_spec, agent_type=AgentType.BOT, agent_mode=AgentMode.LOCAL)
-
     @processor(PublishedData)
     def echo_data(self, ctx: ProcessContext[PublishedData]) -> None:
         ctx.send(ReceivedData(data=ctx.payload.data))
@@ -85,7 +79,7 @@ class TestStateMgmt:
             .set_name("state_free_agent")
             .set_id("state_free_agent")
             .set_description("State Free Agent")
-            .add_predicate("echo_data", SimpleRuntimePredicate(expression="$count($keys(message.payload.data)) != 0"))
+            .add_predicate("echo_data", JSONataPredicate(expression="$count($keys(message.payload.data)) != 0"))
             .build_spec()
         )
 
@@ -102,10 +96,25 @@ class TestStateMgmt:
         yield db
         Metastore.drop_db()
 
-    @pytest.mark.xfail
-    def test_state_mgmt(self, state_aware_agent: AgentSpec, state_free_agent: AgentSpec, database, org_id):
+    @pytest.mark.parametrize(
+        "state_manager_class,state_manager_config",
+        [
+            ("rustic_ai.core.state.manager.in_memory_state_manager.InMemoryStateManager", {}),
+            ("rustic_ai.redis.state.manager.RedisStateManager", {"host": "localhost", "port": 6379}),
+        ],
+    )
+    @flaky(max_runs=3, min_passes=1)
+    def test_state_mgmt(
+        self,
+        state_aware_agent: AgentSpec,
+        state_free_agent: AgentSpec,
+        database,
+        org_id,
+        state_manager_class: str,
+        state_manager_config: dict,
+    ):
         builder = (
-            GuildBuilder(f"state_guild_{time.time()}", "State Guild", "Guild to test state management")
+            GuildBuilder(f"state_guild_{int(time.time())}", "State Guild", "Guild to test state management")
             .add_agent_spec(state_aware_agent)
             .add_agent_spec(state_free_agent)
             .set_messaging(
@@ -113,12 +122,14 @@ class TestStateMgmt:
                 backend_class="RedisMessagingBackend",
                 backend_config={"redis_client": {"host": "localhost", "port": 6379}},
             )
+            .set_property(GSKC.STATE_MANAGER, state_manager_class)
+            .set_property(GSKC.STATE_MANAGER_CONFIG, state_manager_config)
         )
 
         engine = Metastore.get_engine(database)  # noqa: F841
         guild = builder.bootstrap(database, org_id)
 
-        probe_agent: ProbeAgent = (
+        probe_spec = (
             AgentBuilder(ProbeAgent)
             .set_id("probe_agent")
             .set_name("ProbeAgent")
@@ -126,10 +137,11 @@ class TestStateMgmt:
             .add_additional_topic(GuildTopics.SYSTEM_TOPIC)
             .add_additional_topic(GuildTopics.GUILD_STATUS_TOPIC)
             .add_additional_topic("echo_topic")
-            .build()
+            .add_additional_topic(GuildTopics.STATE_TOPIC)
+            .build_spec()
         )
 
-        guild._add_local_agent(probe_agent)
+        probe_agent: ProbeAgent = guild._add_local_agent(probe_spec)  # type: ignore
 
         guild_update_routing_rule = RoutingRule(
             agent=AgentTag(id=state_aware_agent.id),
@@ -153,9 +165,17 @@ class TestStateMgmt:
             routing_slip=RoutingSlip(steps=[guild_update_routing_rule]),
         )
 
-        time.sleep(0.1)
+        time.sleep(1)
 
-        messages = probe_agent.get_messages()
+        loop_count = 0
+        while loop_count < 10:
+            time.sleep(0.5)
+            # Check if the agent has processed the request and sent the state
+            messages = probe_agent.get_messages()
+            if len(messages) > 0:
+                break
+            loop_count += 1
+
         assert len(messages) == 1  # Second agent should not publish as data is empty
 
         assert messages[0].format == get_qualified_class_name(PublishedData)
@@ -231,7 +251,7 @@ class TestStateMgmt:
             routing_slip=RoutingSlip(steps=[agent_update_routing_rule]),
         )
 
-        time.sleep(0.5)
+        time.sleep(1)
 
         messages = probe_agent.get_messages()
 

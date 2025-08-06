@@ -10,8 +10,6 @@ import openai
 
 from rustic_ai.core.guild.agent import (
     Agent,
-    AgentMode,
-    AgentType,
     ProcessContext,
     processor,
 )
@@ -32,7 +30,6 @@ from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     UserMessage,
 )
 from rustic_ai.core.guild.agent_ext.depends.llm.tools_manager import ToolsManager
-from rustic_ai.core.guild.dsl import AgentSpec
 from rustic_ai.litellm.utils import ResponseUtils
 
 from .conf import LiteLLMConf
@@ -47,17 +44,16 @@ class LiteLLMAgent(Agent[LiteLLMConf]):
 
     litellm.drop_params = True
 
-    def __init__(self, agent_spec: AgentSpec[LiteLLMConf]):
-        validation_result = validate_environment(agent_spec.props.model)
+    def __init__(self):
+        validation_result = validate_environment(self.config.model)
         if not validation_result.get("keys_in_environment"):
             missing_keys = validation_result.get("missing_keys", [])
             raise RuntimeError(f"Required environment variable(s) {'{}'.join(missing_keys)} not set")
 
-        super().__init__(agent_spec, agent_type=AgentType.BOT, agent_mode=AgentMode.LOCAL)
-        self.pre_messages = agent_spec.props.messages
+        self.pre_messages = self.config.messages
 
-        self.model = agent_spec.props.model
-        self.client_props = agent_spec.props.model_dump(
+        self.model = self.config.model
+        self.client_props = self.config.model_dump(
             mode="json",
             exclude_unset=True,
             exclude_none=True,
@@ -70,16 +66,16 @@ class LiteLLMAgent(Agent[LiteLLMConf]):
                 "retries_on_tool_parse_error",
             },
         )
-        self.message_memory_size = agent_spec.props.message_memory or 0
+        self.message_memory_size = self.config.message_memory or 0
         self.message_queue: Deque[SystemMessage | UserMessage | AssistantMessage | ToolMessage | FunctionMessage] = (
             deque(maxlen=self.message_memory_size)
         )
-        self.filter_attachments = agent_spec.props.filter_attachments
-        self.tools_manager: Optional[ToolsManager] = agent_spec.props.get_tools_manager()
+        self.filter_attachments = self.config.filter_attachments
+        self.tools_manager: Optional[ToolsManager] = self.config.get_tools_manager()
 
-        self.extract_tool_calls = agent_spec.props.extract_tool_calls
-        self.skip_chat_response_on_tool_call = agent_spec.props.skip_chat_response_on_tool_call
-        self.retries_on_tool_parse_error = agent_spec.props.retries_on_tool_parse_error
+        self.extract_tool_calls = self.config.extract_tool_calls
+        self.skip_chat_response_on_tool_call = self.config.skip_chat_response_on_tool_call
+        self.retries_on_tool_parse_error = self.config.retries_on_tool_parse_error
 
     @processor(ChatCompletionRequest)
     def llm_completion(self, ctx: ProcessContext[ChatCompletionRequest]):

@@ -27,6 +27,7 @@ from rustic_ai.core.messaging.core.message import (
     MessageConstants,
     MessageRoutable,
     ProcessEntry,
+    ProcessStatus,
     RoutingOrigin,
     RoutingRule,
     RoutingSlip,
@@ -72,6 +73,11 @@ class Agent(Generic[APT], metaclass=AgentMetaclass):  # type: ignore
     def __init__(
         self,
         agent_spec: AgentSpec[APT],
+        guild_spec: GuildSpec,
+        dependency_resolvers: Dict[str, DependencyResolver],
+        client_class: Type[Client],
+        client_props: Dict[str, Any],
+        id_generator: GemstoneGenerator,
         agent_type: AgentType = AgentType.BOT,
         agent_mode: AgentMode = AgentMode.LOCAL,
         handled_formats: list = [],
@@ -81,12 +87,25 @@ class Agent(Generic[APT], metaclass=AgentMetaclass):  # type: ignore
 
         Args:
             agent_spec (AgentSpec): The specification for the agent.
+            guild_spec (GuildSpec): The specification for the guild.
+            dependency_resolvers (Dict[str, DependencyResolver]): The dependency resolvers for the agent.
+            client_class (Type[Client]): The class of the client to use for communication.
+            client_props (Dict[str, Any]): The properties for the client.
+            id_generator (GemstoneGenerator): The generator for unique IDs.
             agent_type (AgentType): The type of the agent.
             agent_mode (AgentMode): The mode of the agent.
             handled_formats (list): The formats of messages handled by the agent.
         """
+        self.logger = logging.getLogger(f"Agent[{agent_spec.name}:{agent_spec.id}]")
 
-        self._agent_spec = agent_spec
+        if getattr(self, "_initialized", False):
+            self.logger.warning(f"Agent[{agent_spec.name}:{agent_spec.id}] is already initialized.")
+            return
+
+        self.agent_spec = agent_spec
+        self.guild_spec = guild_spec
+
+        self.config = agent_spec.props
 
         self.id = agent_spec.id
         self.name = agent_spec.name
@@ -98,15 +117,18 @@ class Agent(Generic[APT], metaclass=AgentMetaclass):  # type: ignore
         self._inbox: str = GuildTopics.get_agent_inbox(self.id)
 
         self.subscribed_topics = agent_spec.subscribed_topics
-
         self._dependency_resolvers: Dict[str, DependencyResolver] = {}
-
         self._agent_tag = AgentTag(id=self.id, name=self.name)
+        self._dependency_resolvers = dependency_resolvers or {}
 
         self._state: JsonDict = {}
         self._guild_state: JsonDict = {}
-
         self._route_to_default_topic: bool = False
+
+        self._client = self._init_client(client_class, client_props)
+        self._id_generator = id_generator
+
+        self._initialized = True
 
     def get_spec(self) -> AgentSpec[APT]:
         """
@@ -115,7 +137,7 @@ class Agent(Generic[APT], metaclass=AgentMetaclass):  # type: ignore
         Returns:
             AgentSpec: The specification for the agent.
         """
-        return self._agent_spec
+        return self.agent_spec
 
     def _send_to_self(
         self,
@@ -231,17 +253,6 @@ class Agent(Generic[APT], metaclass=AgentMetaclass):  # type: ignore
     def get_qualified_class_name(cls):
         return f"{cls.__module__}.{cls.__name__}"
 
-    def _set_client(self, client: Client) -> Client:
-        """
-        Connects the agent to the client.
-
-        Args:
-            client (ClientType): The client used to communicate with the agent.
-        """
-
-        self._client = client
-        return self._client
-
     @classmethod
     def list_all_dependencies(cls) -> List[AgentDependency]:
         return list(cls.__annotations__[AgentAnnotations.DEPENDS_ON])
@@ -282,39 +293,9 @@ class Agent(Generic[APT], metaclass=AgentMetaclass):  # type: ignore
             is_error_message=False,
         )
 
-    def _set_generator(self, generator: GemstoneGenerator):
-        """
-        Sets the id generator for the agent.
-
-        Args:
-            generator (GemstoneGenerator): The id generator for the agent.
-
-        """
-        self._id_generator = generator
-
-    def _set_guild_spec(self, guild_spec: GuildSpec):
-        """
-        Sets the guild id for the agent.
-
-        Args:
-            guild_spec (GuildSpec): The spec for the guild this agent belongs to.
-        """
-        self.guild_spec = guild_spec
-        # Create a named logger for this class
-        self.logger = logging.getLogger(f"{guild_spec.id}.{guild_spec.name}.{self.name}")
-
     @property
     def guild_id(self) -> str:
         return self.guild_spec.id
-
-    def _set_dependency_resolvers(self, dependency_resolvers: Dict[str, DependencyResolver]):
-        """
-        Sets the dependency resolvers for the agent.
-
-        Args:
-            dependency_resolvers (Dict[str, DependencyResolver]): The dependency resolvers for the agent.
-        """
-        self._dependency_resolvers = dependency_resolvers
 
     def _generate_id(self, priority: Priority) -> GemstoneID:
         """
@@ -339,6 +320,17 @@ class Agent(Generic[APT], metaclass=AgentMetaclass):  # type: ignore
 
         for name, mh in handlers.items():
             mh.handler(self, message)
+
+    def _init_client(self, client_class: Type[Client], client_properties: Dict[str, Any]) -> Client:
+        """
+        Initializes the client for the agent.
+
+        Args:
+            client_class (Type[Client]): The class of the client to initialize.
+            client_properties (Dict[str, Any]): The properties for the client.
+        """
+        client_properties.update({"id": self.id, "name": self.name, "message_handler": self._on_message})
+        return client_class(**client_properties)
 
     def _make_process_context(
         self,
@@ -655,6 +647,7 @@ class ProcessContext[MDT]:
             format=format,
             forward_header=self._origin_message.forward_header,
             context=self.get_context(),
+            process_status=step.process_status if step.process_status else self._origin_message.process_status,
         )
 
         routed = step.apply(self._origin_message, agent_state, guild_state, routable, forwarding)
@@ -753,6 +746,7 @@ class ProcessContext[MDT]:
             traceparent=self._origin_message.traceparent,
             session_state=self.get_context() | routed_context,
             enrich_with_history=routed.enrich_with_history,
+            process_status=routed.process_status,
         )
 
         for modifier in self._outgoing_message_modifiers:
@@ -792,6 +786,7 @@ class ProcessContext[MDT]:
         traceparent: Optional[str] = None,
         session_state: Optional[JsonDict] = None,
         enrich_with_history: Optional[int] = 0,
+        process_status: Optional[ProcessStatus] = None,
     ) -> None:
         msg_id = self._get_id(priority)
         thread = self._origin_message.thread.copy()
@@ -821,6 +816,7 @@ class ProcessContext[MDT]:
                 traceparent=traceparent,
                 session_state=session_state,
                 enrich_with_history=enrich_with_history,
+                process_status=process_status,
             )
         )
 
@@ -914,10 +910,8 @@ def processor(
                 f"and Predicate: {predicate}: {predicate_result}"
             )
 
-            if (predicate_result) and (
-                not self._agent_spec.act_only_when_tagged or msg.is_tagged(self.get_agent_tag())
-            ):
-                runtime_predicate = self._agent_spec.predicates.get(func.__name__)
+            if (predicate_result) and (not self.agent_spec.act_only_when_tagged or msg.is_tagged(self.get_agent_tag())):
+                runtime_predicate = self.agent_spec.predicates.get(func.__name__)
 
                 should_process = True
 

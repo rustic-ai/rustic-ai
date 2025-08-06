@@ -109,7 +109,7 @@ class HealthMixin:
             status = HeartbeatStatus.OK
             checkmeta = {}
             if isinstance(self, agent.Agent):
-                qos_latency = self._agent_spec.qos.latency
+                qos_latency = self.agent_spec.qos.latency
                 time_now = datetime.now()
                 msg_latency = (time_now - checktime).total_seconds() * 1000  # Convert to milliseconds
                 if qos_latency and msg_latency > qos_latency:

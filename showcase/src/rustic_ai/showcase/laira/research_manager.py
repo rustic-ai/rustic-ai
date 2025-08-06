@@ -4,7 +4,7 @@ from typing import Dict
 from pydantic import BaseModel, Field
 import shortuuid
 
-from rustic_ai.core import Agent, AgentSpec, AgentTag
+from rustic_ai.core import Agent, AgentTag
 from rustic_ai.core.agents.indexing.vector_agent import VectorSearchQuery
 from rustic_ai.core.guild import BaseAgentProps, agent
 from rustic_ai.core.guild.agent import ProcessContext
@@ -46,12 +46,11 @@ class ResearchManager(Agent[ResearchManagerConf]):
     Agent that manages the research process.
     """
 
-    def __init__(self, agent_spec: AgentSpec[ResearchManagerConf]):
-        super().__init__(agent_spec)
-        self.serp_results = agent_spec.props.serp_results
-        self.vector_results = agent_spec.props.vector_results
-        self.max_serp_attempts = agent_spec.props.max_serp_attempts
-        self.context_max = agent_spec.props.context_max
+    def __init__(self):
+        self.serp_results = self.config.serp_results
+        self.vector_results = self.config.vector_results
+        self.max_serp_attempts = self.config.max_serp_attempts
+        self.context_max = self.config.context_max
 
         self.queries: Dict[str, str] = {}
         self.query_status: Dict[str, str] = {}

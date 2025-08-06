@@ -82,21 +82,21 @@ class TestMultiProcessEmbeddedMessagingIntegration(IntegrationTestABC):
         """Increase wait time for multiprocess tests due to process startup overhead."""
         return 0.3  # Balanced wait time for function-scoped tests
 
-    @pytest.fixture(autouse=True)
-    def cleanup_between_tests(self, local_test_agent):
-        """Ensure clean state between tests."""
-        # Clear any existing messages before test
-        if hasattr(local_test_agent, "captured_messages"):
-            local_test_agent.captured_messages.clear()
+    # @pytest.fixture(autouse=True)
+    # def cleanup_between_tests(self, local_test_agent):
+    #     """Ensure clean state between tests."""
+    #     # Clear any existing messages before test
+    #     if hasattr(local_test_agent, "captured_messages"):
+    #         local_test_agent.captured_messages.clear()
 
-        yield
+    #     yield
 
-        # Clear messages after test as well
-        if hasattr(local_test_agent, "captured_messages"):
-            local_test_agent.captured_messages.clear()
+    #     # Clear messages after test as well
+    #     if hasattr(local_test_agent, "captured_messages"):
+    #         local_test_agent.captured_messages.clear()
 
-        # Small delay for cleanup
-        time.sleep(0.2)
+    #     # Small delay for cleanup
+    #     time.sleep(0.2)
 
     @pytest.fixture
     def guild_id(self) -> str:
@@ -146,7 +146,7 @@ class TestMultiProcessEmbeddedMessagingIntegration(IntegrationTestABC):
         self,
         wait_time: float,
         guild,
-        local_test_agent,
+        local_test_agent_spec,
         initiator_agent,
         responder_agent,
     ):
@@ -181,7 +181,7 @@ class TestMultiProcessEmbeddedMessagingIntegration(IntegrationTestABC):
         assert rair is True
 
         local_exec_engine = SyncExecutionEngine(guild_id=guild.id, organization_id=guild.organization_id)
-        guild._add_local_agent(local_test_agent, local_exec_engine)
+        local_test_agent = guild._add_local_agent(local_test_agent_spec, local_exec_engine)
 
         # Allow time for subscriptions to be established
         time.sleep(wait_time * 5)
@@ -399,7 +399,7 @@ class TestMultiProcessEmbeddedMessagingIntegration(IntegrationTestABC):
         self,
         wait_time: float,
         guild,
-        local_test_agent,
+        local_test_agent_spec,
         initiator_agent,
         responder_agent,
     ):
@@ -420,7 +420,7 @@ class TestMultiProcessEmbeddedMessagingIntegration(IntegrationTestABC):
 
         # Add local test agent
         local_exec_engine = SyncExecutionEngine(guild_id=guild.id, organization_id=guild.organization_id)
-        guild._add_local_agent(local_test_agent, local_exec_engine)
+        local_test_agent = guild._add_local_agent(local_test_agent_spec, local_exec_engine)
 
         # Allow time for subscriptions
         time.sleep(wait_time * 5)
@@ -687,7 +687,7 @@ class TestMultiProcessEmbeddedMessagingIntegration(IntegrationTestABC):
         self,
         wait_time: float,
         guild,
-        local_test_agent,
+        local_test_agent_spec,
         initiator_agent,
         responder_agent,
     ):
@@ -727,7 +727,7 @@ class TestMultiProcessEmbeddedMessagingIntegration(IntegrationTestABC):
 
         # Add local test agent
         local_exec_engine = SyncExecutionEngine(guild_id=guild.id, organization_id=guild.organization_id)
-        guild._add_local_agent(local_test_agent, local_exec_engine)
+        local_test_agent = guild._add_local_agent(local_test_agent_spec, local_exec_engine)
 
         # Allow time for subscriptions to be established
         time.sleep(wait_time * 10)

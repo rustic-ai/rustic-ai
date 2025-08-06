@@ -22,7 +22,7 @@ from rustic_ai.huggingface.agents.models import ImageGenerationRequest
 class TestRunwaymlStableDiffusionAgent:
     @pytest.mark.skipif(os.getenv("SKIP_EXPENSIVE_TESTS") == "true", reason="Skipping expensive tests")
     @pytest.mark.skipif(os.getenv("HF_TOKEN") is None, reason="HF_TOKEN environment variable not set")
-    def test_response_is_generated(self, probe_agent: ProbeAgent, org_id):
+    def test_response_is_generated(self, probe_spec, org_id):
         """
         Test that the agent responds to a message with a message.
         """
@@ -62,7 +62,7 @@ class TestRunwaymlStableDiffusionAgent:
         dfs = FileSystem(path="/tmp/stable_diff_guild/GUILD_GLOBAL", fs=fs)
 
         guild = guild_builder.launch(organization_id=org_id)
-        guild._add_local_agent(probe_agent)
+        probe_agent: ProbeAgent = guild._add_local_agent(probe_spec)  # type: ignore
 
         generation_prompt = "Canopy of trees"
         probe_agent.publish_dict(

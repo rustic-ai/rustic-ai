@@ -15,7 +15,7 @@ from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     SystemMessage,
     UserMessage,
 )
-from rustic_ai.core.guild.dsl import AgentSpec, BaseAgentProps
+from rustic_ai.core.guild.dsl import BaseAgentProps
 
 
 class SimpleChatMessage(BaseModel):
@@ -36,12 +36,9 @@ class SimpleLLMAgent(Agent[SimpleLLMAgentConf]):
     This is a simple LLM agent, that will call and LLM and return the response.
     """
 
-    def __init__(self, agent_spec: AgentSpec[SimpleLLMAgentConf]):
-        super().__init__(agent_spec)
-        conf = agent_spec.props
-
-        self.memory: deque = deque(maxlen=conf.chat_memory)
-        self.system_messages = [SystemMessage(content=message) for message in conf.system_messages]
+    def __init__(self):
+        self.memory: deque = deque(maxlen=self.config.chat_memory)
+        self.system_messages = [SystemMessage(content=message) for message in self.config.system_messages]
 
     @agent.processor(SimpleChatMessage, depends_on=["llm"])
     def some_message_handler(self, ctx: ProcessContext[SimpleChatMessage], llm: LLM):

@@ -86,7 +86,7 @@ def test_guild():
     guild.launch_agent(agent_spec)
     
     # Get the probe agent for testing
-    probe_agent = guild.get_agent_of_type(ProbeAgent)
+    probe_agent: ProbeAgent = guild._add_local_agent(probe_spec)  # type: ignore
     
     # Return guild and probe for test use
     try:
@@ -134,7 +134,7 @@ The `GuildBuilder` class provides a convenient method to add a probe agent when 
 guild = GuildBuilder("my_guild", "My Guild", "Description").launch(add_probe=True)
 
 # Access the probe agent
-probe_agent = guild.get_agent_of_type(ProbeAgent)
+probe_agent: ProbeAgent = guild._add_local_agent(probe_spec)  # type: ignore
 ```
 
 ## Best Practices

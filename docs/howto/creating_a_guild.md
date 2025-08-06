@@ -145,7 +145,7 @@ async def main():
         .launch(organization_id="myawesomeorgid", add_probe=True)  # The add_probe=True adds a ProbeAgent for monitoring
 
     # Get the probe agent for monitoring messages
-    probe_agent = guild.get_agent_of_type(ProbeAgent)
+    probe_agent: ProbeAgent = guild._add_local_agent(probe_spec)  # type: ignore
     print(f"Created guild with ID: {guild.id}")
 
     # Create agent specs

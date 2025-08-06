@@ -3,7 +3,6 @@ from typing import Optional
 import uuid
 
 from rustic_ai.core.agents.testutils.probe_agent import ProbeAgent
-from rustic_ai.core.guild import agent
 from rustic_ai.core.guild.agent import Agent, ProcessContext, processor
 from rustic_ai.core.guild.agent_ext.depends.dependency_resolver import (
     DependencyResolver,
@@ -16,8 +15,6 @@ from rustic_ai.core.utils.priority import Priority
 
 
 class DemoAgent1(Agent):
-    def __init__(self, agent_spec: AgentSpec):
-        super().__init__(agent_spec, agent.AgentType.BOT, agent.AgentMode.LOCAL)
 
     @processor(clz=JsonDict, depends_on=["filepath", "searchindex"])
     def process_demo(self, ctx: ProcessContext, filepath: str, searchindex: str):
@@ -43,7 +40,7 @@ class SearchIndexDependencyResolver(DependencyResolver):
 
 class TestAgentDependencyInjection:
 
-    def test_agent_di(self, probe_agent: ProbeAgent, org_id):
+    def test_agent_di(self, probe_spec, org_id):
         agent_spec: AgentSpec = (
             AgentBuilder(DemoAgent1).set_description("Demo agent with dependencies").set_name("DemoAgent1").build_spec()
         )
@@ -83,7 +80,7 @@ class TestAgentDependencyInjection:
 
         guild = guild_builder.launch(organization_id=org_id)
 
-        guild._add_local_agent(probe_agent)
+        probe_agent: ProbeAgent = guild._add_local_agent(probe_spec)  # type: ignore
 
         probe_agent.publish_dict(
             topic="default_topic",

@@ -322,6 +322,7 @@ class TransformDatasetRequest(BaseModel):
 
     Attributes:
         name: The name of the dataset to transform.
+        xformed_name: Optional custom name for the transformed dataset.
         transformations: List of transformation commands.
     """
 

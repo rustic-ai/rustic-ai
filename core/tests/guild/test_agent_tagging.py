@@ -49,9 +49,9 @@ class TestAgentTagging:
             .launch(organization_id=org_id)
         )
 
-        probe_agent = AgentBuilder(ProbeAgent).set_name("probe").set_description("Probe agent").build()
+        probe_spec = AgentBuilder(ProbeAgent).set_name("probe").set_description("Probe agent").build_spec()
 
-        guild._add_local_agent(probe_agent)
+        probe_agent: ProbeAgent = guild._add_local_agent(probe_spec)  # type: ignore
 
         probe_agent.publish_dict(
             guild.DEFAULT_TOPIC,

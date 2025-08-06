@@ -66,6 +66,8 @@ class GuildRoutes(SQLModel, table=True):
         default=None, sa_column=Column(MutableDict.as_mutable(JSON(none_as_null=True)))
     )
 
+    process_status: Optional[str] = Field(default=None)
+
     @classmethod
     def from_routing_rule(cls, guild_id: str, routing_rule: RoutingRule):
         rlist = []
@@ -116,6 +118,7 @@ class GuildRoutes(SQLModel, table=True):
             guild_state_update=(
                 routing_rule.guild_state_update.model_dump() if routing_rule.guild_state_update else None
             ),
+            process_status=routing_rule.process_status,
         )
 
     def to_routing_rule(self) -> RoutingRule:
@@ -172,6 +175,7 @@ class GuildRoutes(SQLModel, table=True):
             "transformer": self.transformer,
             "agent_state_update": self.agent_state_update,
             "guild_state_update": self.guild_state_update,
+            "process_status": self.process_status,
         }
 
         return RoutingRule.model_validate(rule_dict)

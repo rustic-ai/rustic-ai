@@ -1,6 +1,6 @@
 import copy
 import logging
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional
 
 from jsonpath_ng.exceptions import JsonPathParserError
 from jsonpath_ng.ext import parse

@@ -30,9 +30,7 @@ from rustic_ai.core.agents.utils.user_proxy_agent import (
 )
 from rustic_ai.core.guild import (
     Agent,
-    AgentMode,
     AgentSpec,
-    AgentType,
     GuildTopics,
     agent,
 )
@@ -65,29 +63,21 @@ from rustic_ai.core.utils.priority import Priority
 
 
 class GuildManagerAgent(Agent[GuildManagerAgentProps]):
-    def __init__(
-        self,
-        agent_spec: AgentSpec[GuildManagerAgentProps],
-    ):
-        guild_spec = agent_spec.props.guild_spec
-        database_url = agent_spec.props.database_url
-        self.organization_id = agent_spec.properties.organization_id
+    def __init__(self):
+        guild_spec = self.agent_spec.props.guild_spec
+        database_url = self.agent_spec.props.database_url
+        self.organization_id = self.agent_spec.properties.organization_id
 
         self.database_url = database_url
         self.engine = Metastore.get_engine(database_url)
         self.original_guild_spec = guild_spec
 
-        guild_id = (
-            guild_spec.id
-        )  # Local guild_id in bootstrap because it set by Guild.run_agent after object is created
-
-        super().__init__(
-            agent_spec,
-            AgentType.BOT,
-            AgentMode.LOCAL,
+        guild_id = guild_spec.id
+        # Local guild_id in bootstrap because it set by Guild.run_agent after object is created
+        state_manager_config = GuildHelper.get_state_mgr_config(guild_spec)
+        self.state_manager: StateManager = get_state_manager(
+            GuildHelper.get_state_manager(guild_spec), state_manager_config
         )
-
-        self.state_manager: StateManager = get_state_manager(GuildHelper.get_state_manager(guild_spec))
 
         logging.info(f"Guild Manager is initializing guild {guild_id} - \n{self.original_guild_spec.model_dump()}")
 
@@ -548,6 +538,12 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
                 .set_name(uacr.user_name)
                 .set_description(f"Agent for user {user_id}")
                 .set_properties(UserProxyAgentProps(user_id=user_id))
+                .add_additional_topic(UserProxyAgent.get_user_inbox_topic(user_id))
+                .add_additional_topic(UserProxyAgent.get_user_outbox_topic(user_id))
+                .add_additional_topic(UserProxyAgent.get_user_system_notifications_topic(user_id))
+                .add_additional_topic(UserProxyAgent.get_user_system_requests_topic(user_id))
+                .add_additional_topic(GuildTopics.GUILD_STATUS_TOPIC)
+                .add_additional_topic(UserProxyAgent.BROADCAST_TOPIC)
                 .build_spec()
             )
 
@@ -642,6 +638,10 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
         """
         Updates the state of an agent or the guild.
         """
+        if getattr(self, "_shutting_down", False) and getattr(self, "_is_shutdown", False):
+            logging.info(f"Guild Manager {self.id} is shutting down")
+            return
+
         sur = ctx.payload
 
         if self.guild is None:
@@ -665,6 +665,8 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
         """
         logging.info(f"Stopping guild {self.guild_id}")
 
+        self._shutting_down = True
+
         if self.guild is None:
             raise RuntimeError("Guild is not initialized")
 
@@ -687,18 +689,30 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
                     session.add(guild_model)
                     session.commit()
 
+            with Session(self.engine) as session:
+                guild_model = GuildModel.get_by_id(session, self.guild_id)
+                if guild_model:
+                    print(guild_model.model_dump())
+
             self.guild.remove_agent(self.id)
 
             logging.info(f"Guild {self.guild_id} stopped")
 
+        self._is_shutdown = True
+
     @processor(HealthCheckRequest, handle_essential=True)
     def send_heartbeat(self, ctx: ProcessContext[HealthCheckRequest]):
+
+        if getattr(self, "_shutting_down", False) and getattr(self, "_is_shutdown", False):
+            logging.info(f"Guild Manager {self.id} is shutting down")
+            return
+
         checkmeta: dict = {}
         if isinstance(self, Agent):
             logging.info(f"Healthcheck from Guild Manager -- {self.get_agent_tag()}")
             status = HeartbeatStatus.OK
             checkmeta = {}
-            qos_latency = self._agent_spec.qos.latency
+            qos_latency = self.agent_spec.qos.latency
             time_now = datetime.now()
             checktime = ctx.payload.checktime
             msg_latency = (time_now - checktime).total_seconds() * 1000  # Convert to milliseconds

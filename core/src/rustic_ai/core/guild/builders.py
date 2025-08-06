@@ -15,11 +15,11 @@ from typing import (
     Union,
 )
 
+import chevron
 from pydantic import BaseModel
 import shortuuid
 import yaml
 
-from rustic_ai.core.agents.testutils.probe_agent import ProbeAgent
 from rustic_ai.core.guild import Agent, Guild
 from rustic_ai.core.guild.agent_ext.mixins.health import HealthConstants
 from rustic_ai.core.guild.dsl import (
@@ -41,6 +41,7 @@ from rustic_ai.core.messaging.core.message import (
     AgentTag,
     FunctionalTransformer,
     PayloadTransformer,
+    ProcessStatus,
     RoutingRule,
     RoutingSlip,
     StateTransformer,
@@ -70,6 +71,7 @@ class KeyConstants:
     ROUTES = "routes"
     ACT_ONLY_WHEN_TAGGED = "act_only_when_tagged"
     PREDICATES = "predicates"
+    CONFIGURATION = "configuration"
 
 
 class EnvConstants:
@@ -85,6 +87,7 @@ class EnvConstants:
     RUSTIC_AI_CLIENT_PROPERTIES = "RUSTIC_AI_CLIENT_PROPERTIES"
     RUSTIC_AI_DEPENDENCY_CONFIG = "RUSTIC_AI_DEPENDENCY_CONFIG"
     RUSTIC_AI_STATE_MANAGER = "RUSTIC_AI_STATE_MANAGER"
+    RUSTIC_AI_STATE_MANAGER_CONFIG = "RUSTIC_AI_STATE_MANAGER_CONFIG"
 
 
 AT = TypeVar("AT", bound=Agent, covariant=True)
@@ -231,14 +234,6 @@ class AgentBuilder(Generic[AT, APT]):  # type: ignore
         dict_copy[KeyConstants.ADDITIONAL_TOPICS] = list(dict_copy[KeyConstants.ADDITIONAL_TOPICS])
         return AgentSpec[APT].model_validate(dict_copy)
 
-    def build(self) -> AT:
-        """
-        Build and return an Agent instance with the set properties.
-        """
-
-        agent_spec = self.build_spec()
-        return class_utils.get_agent_from_spec_with_type(agent_spec, self.agent_type)
-
 
 class GuildBuilder:
     """
@@ -266,6 +261,7 @@ class GuildBuilder:
             KeyConstants.AGENTS: [],
             KeyConstants.DEPENDENCY_MAP: {},
             KeyConstants.ROUTES: RoutingSlip(),
+            KeyConstants.CONFIGURATION: {},
         }
 
         self.required_fields_set = {
@@ -394,10 +390,28 @@ class GuildBuilder:
 
         # Set the properties and agents from the parsed dictionary.
         builder.guild_spec_dict[KeyConstants.PROPERTIES] = spec_dict.get(KeyConstants.PROPERTIES, {})
-        builder.guild_spec_dict[KeyConstants.AGENTS] = spec_dict.get(KeyConstants.AGENTS, [])
         builder.guild_spec_dict[KeyConstants.DEPENDENCY_MAP] = spec_dict.get(KeyConstants.DEPENDENCY_MAP, {})
-        builder.guild_spec_dict[KeyConstants.ROUTES] = spec_dict.get(KeyConstants.ROUTES, RoutingSlip())
+        configuration = spec_dict.get(KeyConstants.CONFIGURATION, {})
 
+        if configuration:
+            updated_agents = []
+            updated_routes = []
+            for agent_spec in spec_dict.get(KeyConstants.AGENTS, []):
+                transformed_agent_json = chevron.render(json.dumps(agent_spec), configuration)
+                agent_spec_with_config = AgentSpec.model_validate(json.loads(transformed_agent_json))
+                updated_agents.append(agent_spec_with_config)
+            routing_slip_dict = spec_dict.get(KeyConstants.ROUTES, {})
+            if routing_slip_dict:
+                for routing_rule in routing_slip_dict.get("steps"):
+                    transformed_rule_json = chevron.render(json.dumps(routing_rule), configuration)
+                    routing_rule_with_spec = RoutingRule.model_validate(json.loads(transformed_rule_json))
+                    updated_routes.append(routing_rule_with_spec)
+
+            builder.guild_spec_dict[KeyConstants.AGENTS] = updated_agents
+            builder.guild_spec_dict[KeyConstants.ROUTES] = RoutingSlip(steps=updated_routes)
+        else:
+            builder.guild_spec_dict[KeyConstants.AGENTS] = spec_dict.get(KeyConstants.AGENTS, [])
+            builder.guild_spec_dict[KeyConstants.ROUTES] = spec_dict.get(KeyConstants.ROUTES, RoutingSlip())
         return builder
 
     @classmethod
@@ -552,7 +566,7 @@ class GuildBuilder:
 
         return builder
 
-    def launch(self, organization_id: str, add_probe: bool = False) -> Guild:
+    def launch(self, organization_id: str) -> Guild:
         """
         Build and return a Guild instance with the set properties.
         This will launch all the agents in the guild.
@@ -577,11 +591,6 @@ class GuildBuilder:
 
         is_running = guild.is_guild_running()
         logging.info(f"Guild {guild.id} is running: {is_running}")
-
-        if add_probe:
-            probe_agent = AgentBuilder(ProbeAgent).set_name("ProbeAgent").set_description("Probe Agent").build()
-            guild._add_local_agent(probe_agent)
-            setattr(guild, "probe", probe_agent)
 
         return guild
 
@@ -866,6 +875,37 @@ class GuildHelper:
         return guild
 
     @staticmethod
+    def get_default_state_mgr_config() -> dict:
+        """
+        Get the default StateManagerConfig.
+
+        Returns:
+            dict: The default StateManager configuration.
+        """
+        return json.loads(os.environ.get(EnvConstants.RUSTIC_AI_STATE_MANAGER_CONFIG, "{}"))
+
+    @staticmethod
+    def get_state_mgr_config(guild_spec: GuildSpec) -> dict:
+        """
+        Get the MessagingConfig from the GuildSpec.
+
+        Args:
+            guild_spec: The GuildSpec to get the messaging configuration from.
+
+        Returns:
+            dict: The state manager configuration.
+        """
+        state_manager_config: dict = GuildHelper.get_default_state_mgr_config()
+
+        if guild_spec.properties and GSKC.STATE_MANAGER_CONFIG in guild_spec.properties:
+            logging.debug(f"GuildSpec properties: {guild_spec.properties}")
+            state_manager_config = guild_spec.properties.get(GSKC.STATE_MANAGER_CONFIG, {})
+        else:
+            logging.debug(f"Using default state manager config: {state_manager_config}")
+
+        return state_manager_config
+
+    @staticmethod
     def get_default_state_manager() -> str:
         """
         Get the default State Manager.
@@ -1008,6 +1048,10 @@ class RouteBuilder:
             )
         )
         self.rule_dict[StateUpdateActions.GUILD_STATE_UPDATE] = state_transformer
+        return self
+
+    def set_process_status(self, process_status: ProcessStatus) -> "RouteBuilder":
+        self.rule_dict["process_status"] = process_status
         return self
 
     def build(self) -> RoutingRule:

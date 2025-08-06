@@ -49,9 +49,7 @@ class TestMultiProcessRedisIntegration(IntegrationTestABC):
 
     def test_multiprocess_true_parallelism(
         self,
-        wait_time: float,
         guild,
-        local_test_agent,
         initiator_agent,
         responder_agent,
     ):
@@ -91,7 +89,6 @@ class TestMultiProcessRedisIntegration(IntegrationTestABC):
         self,
         wait_time: float,
         guild,
-        local_test_agent,
         initiator_agent,
         responder_agent,
     ):
@@ -134,7 +131,7 @@ class TestMultiProcessRedisIntegration(IntegrationTestABC):
         self,
         wait_time: float,
         guild,
-        local_test_agent,
+        local_test_agent_spec,
         initiator_agent,
         responder_agent,
     ):
@@ -152,7 +149,7 @@ class TestMultiProcessRedisIntegration(IntegrationTestABC):
 
         # Add local test agent
         local_exec_engine = SyncExecutionEngine(guild_id=guild.id, organization_id=guild.organization_id)
-        guild._add_local_agent(local_test_agent, local_exec_engine)
+        local_test_agent = guild._add_local_agent(local_test_agent_spec, local_exec_engine)
 
         # Measure messaging performance
         start_time = time.time()
