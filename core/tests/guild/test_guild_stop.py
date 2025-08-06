@@ -92,7 +92,7 @@ class TestGuildStop:
 
         probe_agent.publish_dict(
             topic=GuildTopics.SYSTEM_TOPIC,
-            payload=StopGuildRequest(guild_id=guild.id).model_dump(),
+            payload=StopGuildRequest(guild_id=guild.id, user_id="test_user_id").model_dump(),
             format=StopGuildRequest,
         )
 
