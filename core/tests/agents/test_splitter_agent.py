@@ -156,7 +156,7 @@ class TestSplitterGuild:
     @pytest.mark.asyncio
     async def test_splitter_variants(self, splitter_guild: Guild, splitter_and_format, generator: GemstoneGenerator):
 
-        probe_agent: ProbeAgent = (
+        probe_sepc = (
             AgentBuilder(ProbeAgent)
             .set_id("test_agent")
             .set_name("Test Agent")
@@ -164,10 +164,10 @@ class TestSplitterGuild:
             .add_additional_topic(UserProxyAgent.BROADCAST_TOPIC)
             .add_additional_topic(GuildTopics.SYSTEM_TOPIC)
             .add_additional_topic("item_processing_results")
-            .build()
+            .build_spec()
         )
 
-        splitter_guild._add_local_agent(probe_agent)
+        probe_agent: ProbeAgent = splitter_guild._add_local_agent(probe_sepc)
 
         probe_agent.publish_dict(
             topic=GuildTopics.SYSTEM_TOPIC,
@@ -175,7 +175,7 @@ class TestSplitterGuild:
             format=UserAgentCreationRequest,
         )
 
-        await asyncio.sleep(1)
+        await asyncio.sleep(2)
 
         system_messages = probe_agent.get_messages()
         assert len(system_messages) == 1
