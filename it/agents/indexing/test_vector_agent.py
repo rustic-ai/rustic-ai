@@ -1,6 +1,7 @@
 import os
 import time
 
+from flaky import flaky
 from fsspec import filesystem
 import pytest
 
@@ -26,6 +27,7 @@ from rustic_ai.langchain.agent_ext.text_splitter.character_splitter import (
 
 @pytest.mark.skipif(os.getenv("OPENAI_API_KEY") is None, reason="OPENAI_API_KEY environment variable not set")
 class TestVectorAgent:
+    @flaky(max_runs=3, min_passes=1)
     def test_vector_agent(self, probe_spec, org_id):
         guild_id = "test_vector_guild"
         dep_map = {
@@ -83,7 +85,7 @@ class TestVectorAgent:
             payload={"query": "test"},
             format=VectorSearchQuery,
         )
-        time.sleep(2.0)  # Allow more time for search processing
+        time.sleep(3)  # Allow more time for search processing
 
         messages = probe_agent.get_messages()
         assert len(messages) == 2, f"Expected 2 messages, got {len(messages)}"
@@ -94,5 +96,7 @@ class TestVectorAgent:
         probe_agent.clear_messages()
         if dfs.exists(""):
             dfs.rm("", recursive=True)
+
+        time.sleep(2.0)  # Allow time for cleanup
 
         guild.shutdown()

@@ -40,7 +40,7 @@ class StateRefresherMixin:
             timestamp=timestamp,
         )
 
-        ctx._raw_send(
+        ctx._direct_send(
             priority=Priority.NORMAL,
             topics=[GuildTopics.STATE_TOPIC],
             payload=asfr.model_dump(),
@@ -65,7 +65,7 @@ class StateRefresherMixin:
             timestamp=timestamp,
         )
 
-        ctx._raw_send(
+        ctx._direct_send(
             priority=Priority.NORMAL,
             topics=[GuildTopics.STATE_TOPIC],
             payload=gsfr.model_dump(),
@@ -95,7 +95,7 @@ class StateRefresherMixin:
             update_timestamp=update_timestamp,
         )
 
-        ctx._raw_send(
+        ctx._direct_send(
             priority=Priority.HIGH,
             topics=[GuildTopics.STATE_TOPIC],
             payload=asu.model_dump(),
@@ -123,7 +123,7 @@ class StateRefresherMixin:
             update_version=update_version,
             update_timestamp=update_timestamp,
         )
-        ctx._raw_send(
+        ctx._direct_send(
             priority=Priority.HIGH,
             topics=[GuildTopics.STATE_TOPIC],
             payload=gsu.model_dump(),
