@@ -246,7 +246,7 @@ class UserProxyAgent(Agent[UserProxyAgentProps], GuildRefreshMixin):
 
     @processor(StopGuildRequest, predicate=system_req_filter)
     def handle_stop_guild_request(self, ctx: ProcessContext[StopGuildRequest]):
-        stopReq = StopGuildRequest(guild_id=ctx.payload.guild_id).model_dump()
+        stopReq = ctx.payload.model_dump()
         ctx._direct_send(
             priority=Priority.NORMAL,
             format=get_qualified_class_name(StopGuildRequest),
