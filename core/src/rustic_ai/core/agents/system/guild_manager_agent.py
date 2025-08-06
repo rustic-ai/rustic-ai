@@ -177,7 +177,7 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
             self.guild_spec = guild_spec
 
         guild_updated_announcement = GuildUpdatedAnnouncement(guild_id=self.guild_id, guild_spec=guild_spec)
-        ctx._raw_send(
+        ctx._direct_send(
             priority=Priority.NORMAL,
             format=get_qualified_class_name(GuildUpdatedAnnouncement),
             payload=guild_updated_announcement.model_dump(),
@@ -188,7 +188,7 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
             StateFetchRequest(state_owner=StateOwner.GUILD, guild_id=self.guild_id)
         )
 
-        ctx._raw_send(
+        ctx._direct_send(
             priority=Priority.NORMAL,
             format=get_qualified_class_name(StateFetchResponse),
             payload=guild_state.model_dump(),
@@ -272,7 +272,7 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
             healths.append(Heartbeat.model_validate(heartbeat))
 
         if self.agent_health:
-            ctx._raw_send(
+            ctx._direct_send(
                 priority=Priority.NORMAL,
                 format=get_qualified_class_name(AgentsHealthReport),
                 payload=AgentsHealthReport.model_validate(
@@ -282,7 +282,7 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
             )
 
         # Let us also send a HealthCheckRequest so already running agents will send a heartbeat
-        ctx._raw_send(
+        ctx._direct_send(
             priority=Priority.NORMAL,
             format=get_qualified_class_name(HealthCheckRequest),
             payload=HealthCheckRequest().model_dump(),
@@ -430,7 +430,7 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
                     session.add(guild_model)
                     session.commit()
 
-            ctx._raw_send(
+            ctx._direct_send(
                 priority=Priority.NORMAL,
                 format=get_qualified_class_name(AgentsHealthReport),
                 payload=health_report.model_dump(),
@@ -624,7 +624,7 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
 
         try:
             state = self.state_manager.get_state(sfr)
-            ctx._raw_send(
+            ctx._direct_send(
                 priority=Priority.NORMAL,
                 format=get_qualified_class_name(StateFetchResponse),
                 payload=state.model_dump(),
@@ -649,7 +649,7 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
 
         try:
             state_update = self.state_manager.update_state(sur)
-            ctx._raw_send(
+            ctx._direct_send(
                 priority=Priority.NORMAL,
                 format=get_qualified_class_name(StateUpdateResponse),
                 payload=state_update.model_dump(),

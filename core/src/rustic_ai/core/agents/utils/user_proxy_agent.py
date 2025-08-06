@@ -219,7 +219,7 @@ class UserProxyAgent(Agent[UserProxyAgentProps], GuildRefreshMixin):
 
     def guild_refresh_handler(self, ctx: ProcessContext[GuildUpdatedAnnouncement]) -> None:
         participants = self._get_participant_list()
-        ctx._raw_send(
+        ctx._direct_send(
             priority=Priority.NORMAL,
             payload=participants,
             format=get_qualified_class_name(ParticipantList),
@@ -237,7 +237,7 @@ class UserProxyAgent(Agent[UserProxyAgentProps], GuildRefreshMixin):
     @processor(ParticipantListRequest, predicate=system_req_filter)
     def handle_participants_request(self, ctx: ProcessContext[ParticipantListRequest]):
         participants = self._get_participant_list()
-        ctx._raw_send(
+        ctx._direct_send(
             priority=Priority.NORMAL,
             payload=participants,
             format=get_qualified_class_name(ParticipantList),
@@ -247,7 +247,7 @@ class UserProxyAgent(Agent[UserProxyAgentProps], GuildRefreshMixin):
     @processor(StopGuildRequest, predicate=system_req_filter)
     def handle_stop_guild_request(self, ctx: ProcessContext[StopGuildRequest]):
         stopReq = StopGuildRequest(guild_id=ctx.payload.guild_id).model_dump()
-        ctx._raw_send(
+        ctx._direct_send(
             priority=Priority.NORMAL,
             format=get_qualified_class_name(StopGuildRequest),
             payload=stopReq,
@@ -257,7 +257,7 @@ class UserProxyAgent(Agent[UserProxyAgentProps], GuildRefreshMixin):
 
     @processor(AgentsHealthReport, handle_essential=True)
     def handle_agents_health_report(self, ctx: ProcessContext[AgentsHealthReport]):
-        ctx._raw_send(
+        ctx._direct_send(
             priority=Priority.NORMAL,
             payload=ctx.payload.model_dump(),
             format=get_qualified_class_name(AgentsHealthReport),
@@ -265,7 +265,7 @@ class UserProxyAgent(Agent[UserProxyAgentProps], GuildRefreshMixin):
             forward_header=ForwardHeader(origin_message_id=ctx.message.id, on_behalf_of=ctx.message.sender),
         )
         participants = self._get_participant_list()
-        ctx._raw_send(
+        ctx._direct_send(
             priority=Priority.NORMAL,
             payload=participants,
             format=get_qualified_class_name(ParticipantList),
@@ -290,7 +290,7 @@ class UserProxyAgent(Agent[UserProxyAgentProps], GuildRefreshMixin):
         logging.info(f"Sending first heartbeat for {self.get_agent_tag()}")
 
         hr = self.healthcheck(datetime.now())
-        ctx._raw_send(
+        ctx._direct_send(
             priority=Priority.HIGH,
             topics=[HealthConstants.HEARTBEAT_TOPIC],
             payload=hr.model_dump(),
@@ -300,7 +300,7 @@ class UserProxyAgent(Agent[UserProxyAgentProps], GuildRefreshMixin):
         )  # TODO - remove this once multiple handlers for message type are supported
 
         participants = self._get_participant_list()
-        ctx._raw_send(
+        ctx._direct_send(
             priority=Priority.NORMAL,
             payload=participants,
             format=get_qualified_class_name(ParticipantList),
