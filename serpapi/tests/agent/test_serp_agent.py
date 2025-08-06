@@ -25,8 +25,7 @@ class TestSERPAgent:
             .set_name("TestSerpAgent")
             .set_id("test_agent")
             .set_description("Test Serp Agent")
-            .build(),
-            generator,
+            .build_spec(),
         )
 
         query = Message(
@@ -73,8 +72,7 @@ class TestSERPAgent:
                 .set_name("TestSerpAgent")
                 .set_id("test_agent")
                 .set_description("Test Serp Agent")
-                .build(),
-                generator,
+                .build_spec(),
             )
 
             query = Message(

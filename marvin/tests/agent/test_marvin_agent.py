@@ -15,6 +15,7 @@ from rustic_ai.core.agents.commons import (
     ExtractResponse,
 )
 from rustic_ai.core.guild.builders import AgentBuilder
+from rustic_ai.core.guild.dsl import AgentSpec
 from rustic_ai.core.messaging.core.message import AgentTag, Message
 from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 from rustic_ai.core.utils.priority import Priority
@@ -38,19 +39,19 @@ class StatePopulation(BaseModel):
 @pytest.mark.skipif(os.getenv("OPENAI_API_KEY") is None, reason="OPENAI_API_KEY environment variable not set")
 class TestMarvinAgent:
     @pytest.fixture
-    def agent(self):
-        agent = (
+    def agent_spec(self):
+        agent_spec = (
             AgentBuilder(MarvinAgent)
             .set_id("marvin_agent")
             .set_name("Marvin")
             .set_description("A classifier agent using Marvin")
-            .build()
+            .build_spec()
         )
-        return agent
+        return agent_spec
 
     @flaky(max_runs=3, min_passes=1)
-    async def test_classifier(self, agent: MarvinAgent, generator):
-        marvin_agent, messages = wrap_agent_for_testing(agent, generator)
+    async def test_classifier(self, agent_spec: AgentSpec, generator):
+        marvin_agent, messages = wrap_agent_for_testing(agent_spec)
 
         classify_request = ClassifyRequest(
             source_text="I am very happy with this product",
@@ -82,8 +83,8 @@ class TestMarvinAgent:
         assert response.category == "positive"
 
     @flaky(max_runs=3, min_passes=1)
-    async def test_extractor(self, agent: MarvinAgent, generator):
-        marvin_agent, messages = wrap_agent_for_testing(agent, generator)
+    async def test_extractor(self, agent_spec: AgentSpec, generator):
+        marvin_agent, messages = wrap_agent_for_testing(agent_spec)
 
         extract_request = ExtractRequest(
             source_text="The current metro area population of London in 2024 is 9,748,000, a 1.04% increase from 2023.",
@@ -122,8 +123,8 @@ class TestMarvinAgent:
         assert response.extracted_data[0].year == 2024
 
     @flaky(max_runs=3, min_passes=1)
-    async def test_classify_and_extract(self, agent: MarvinAgent, generator):
-        marvin_agent, messages = wrap_agent_for_testing(agent, generator)
+    async def test_classify_and_extract(self, agent_spec: AgentSpec, generator):
+        marvin_agent, messages = wrap_agent_for_testing(agent_spec)
 
         category_map = {
             "city": ExtractionSpec(pydantic_model_to_extract=get_qualified_class_name(CityPopulation)),

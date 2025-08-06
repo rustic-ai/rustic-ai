@@ -542,7 +542,7 @@ class ErrorHandlerAgent(Agent[BaseAgentProps]):
 Rustic AI promotes robust unit and integration testing of agents. The framework provides utilities, most notably `wrap_agent_for_testing` from `rustic_ai.testing.helpers`, to simplify the setup and execution of agent tests.
 
 The `wrap_agent_for_testing` helper typically handles:
--   **Agent Instantiation**: Taking an agent instance (usually created via `AgentBuilder(...).build()`).
+-   **Agent Spec**: Taking an agent spec (usually created via `AgentBuilder(...).build_spec()`).
 -   **Dependency Setup**: Allowing you to provide `DependencySpec`s for the agent's dependencies, enabling the use of mock resolvers or test-specific configurations.
 -   **Message ID Generation**: Often takes a `generator` (e.g., a `GemstoneGenerator` instance) for creating unique message IDs during the test.
 -   **Outgoing Message Capture**: It returns the configured agent instance and a `results` list, which automatically collects all messages sent by the agent under test.
@@ -594,11 +594,9 @@ def greeter_test_setup():
     agent_instance = AgentBuilder(GreeterAgent)\
         .set_name("TestGreeter")\
         .set_properties(GreeterAgentProps(greeting="Greetings"))\
-        .build()
+        .build_spec()
     
-    # Set up for testing
-    id_generator = GemstoneGenerator(machine_id=1)
-    test_agent, results = wrap_agent_for_testing(agent_instance, id_generator)
+    test_agent, results = wrap_agent_for_testing(agent_instance)
     
     return test_agent, results, id_generator
 
@@ -626,7 +624,7 @@ def test_greeter(greeter_test_setup):
 
 ### Key Aspects of Testing with `wrap_agent_for_testing`
 
-- **Agent Instantiation**: Pass an *instance* of your agent (usually from `AgentBuilder(...).build()`) to `wrap_agent_for_testing`.
+- **Agent Spec**: Pass an *Spec* for your agent (usually from `AgentBuilder(...).build_spec()`) to `wrap_agent_for_testing`.
 - **Dependency Management**:
   - Provide a `dependencies` dictionary to `wrap_agent_for_testing`. The keys are dependency names (as used in `@agent.processor(depends_on=[...])`) and values are `DependencySpec` objects.
   - Your `DependencySpec` in the test should point to a mock resolver or a real resolver configured for a test environment. The mock resolver's `resolve()` method should return the mock object/function your agent expects.

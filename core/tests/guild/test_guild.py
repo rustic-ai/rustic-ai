@@ -118,14 +118,16 @@ class TestGuild:
     # Test the private method _add_local_agent just to make sure someone doesn't accidentally break it
     def test_add_local_agent(self, guild: Guild):
         new_agent_id = "p2"
-        new_agent = SimpleAgent(
-            agent_spec=AgentBuilder(SimpleAgent)
+        new_agent_spec = (
+            AgentBuilder(SimpleAgent)
             .set_id(new_agent_id)
             .set_name("Jane")
             .set_description("Another human agent")
             .build_spec()
         )
-        guild._add_local_agent(new_agent)
+
+        new_agent = guild._add_local_agent(new_agent_spec)
+
         agent_from_guild = guild.get_agent(new_agent_id)
         assert agent_from_guild is not None
         assert agent_from_guild.name == new_agent.name

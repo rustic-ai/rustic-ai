@@ -54,9 +54,9 @@ def get_state_manager_class(full_class_name: str) -> Type[StateManager]:
     return state_manager_class
 
 
-def get_state_manager(full_class_name: str) -> StateManager:
+def get_state_manager(full_class_name: str, config: dict) -> StateManager:
     state_manager_class = get_state_manager_class(full_class_name)
     if not issubclass(state_manager_class, StateManager):
         raise TypeError(f"Class {full_class_name} is not a subclass of StateManager")
 
-    return state_manager_class()
+    return state_manager_class(**config)

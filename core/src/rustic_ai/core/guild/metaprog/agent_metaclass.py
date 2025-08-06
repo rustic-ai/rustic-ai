@@ -126,10 +126,6 @@ class AgentMetaclass(ABCMeta):
 
             generic_type = MetaclassHelper.get_generic_type(new_mcls)
 
-            if "__init__" in dct:
-                apt = MetaclassHelper.get_agent_param_type(new_mcls, generic_type)
-                generic_type = MetaclassHelper.select_generic_type(name, generic_type, apt)
-
             cls_annotations = deepcopy(getattr(new_mcls, "__annotations__", {}))
 
             cls_annotations[MetaclassConstants.AGENT_PROPS_TYPE] = generic_type

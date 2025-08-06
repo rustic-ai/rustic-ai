@@ -69,10 +69,10 @@ class IntegrationTestABC(ABC):
         )
 
     @pytest.fixture
-    def local_test_agent(self) -> LocalTestAgent:
+    def local_test_agent_spec(self) -> AgentSpec:
         # Instantiate the local test agent with the same message bus
-        return LocalTestAgent(
-            agent_spec=AgentBuilder(LocalTestAgent)
+        return (
+            AgentBuilder(LocalTestAgent)
             .set_id("local_test")
             .set_name("LocalTestAgent")
             .set_description("Local test agent for integration testing")
@@ -83,10 +83,11 @@ class IntegrationTestABC(ABC):
         self,
         wait_time: float,
         guild: Guild,
-        local_test_agent: LocalTestAgent,
+        local_test_agent_spec: AgentSpec,
         initiator_agent: AgentSpec,
         responder_agent: AgentSpec,
     ):
+
         execution_engine = guild._get_execution_engine()
         # Add both agents to the guild
         guild.launch_agent(initiator_agent)
@@ -94,7 +95,7 @@ class IntegrationTestABC(ABC):
 
         # Test if the agent is in the execution engine
         agents = execution_engine.get_agents_in_guild(guild.id)
-        assert len(agents) == 2
+        assert len(agents) == 2  # Initiator, Responder
 
         ia = execution_engine.find_agents_by_name(guild.id, "Initiator Agent")
         assert len(ia) == 1
@@ -111,7 +112,7 @@ class IntegrationTestABC(ABC):
         time.sleep(1)
 
         local_exec_engine = SyncExecutionEngine(guild_id=guild.id, organization_id=guild.organization_id)
-        guild._add_local_agent(local_test_agent, local_exec_engine)
+        local_test_agent = guild._add_local_agent(local_test_agent_spec, local_exec_engine)
 
         time.sleep(wait_time)
         # Initiator sends a message to trigger communication

@@ -23,6 +23,8 @@ from rustic_ai.core.utils.jexpr import JObj, JxScript
 from rustic_ai.litellm.agent import LiteLLMAgent
 from rustic_ai.litellm.conf import LiteLLMConf
 
+from rustic_ai.testing.helpers import wrap_agent_for_testing
+
 
 @pytest.fixture
 def setup_default_env(monkeypatch):
@@ -32,20 +34,39 @@ def setup_default_env(monkeypatch):
 
 class TestLiteLLMAgent:
     def test_agent_initialization(self):
-        with pytest.raises(RuntimeError, match=".*GEMINI_API_KEY not set"):
-            AgentBuilder(LiteLLMAgent).set_name("Test Agent").set_description("A test agent").set_id(
-                "lite_llm_agent"
-            ).set_properties(
-                LiteLLMConf(
-                    model=Models.gemini_2_5_flash,
-                    messages=[
-                        SystemMessage(content="You are a helpful assistant."),
-                    ],
-                )
-            ).build()
+        GEMINI_API_KEY = None
+        GOOGLE_API_KEY = None
+        if "GEMINI_API_KEY" in os.environ:
+            GEMINI_API_KEY = os.environ["GEMINI_API_KEY"]
+            del os.environ["GEMINI_API_KEY"]
 
-    def test_response_is_generated(self, setup_default_env, probe_agent: ProbeAgent, guild: Guild):
-        agent = (
+        if "GOOGLE_API_KEY" in os.environ:
+            GOOGLE_API_KEY = os.environ["GOOGLE_API_KEY"]
+            del os.environ["GOOGLE_API_KEY"]
+        with pytest.raises(RuntimeError, match=".*GEMINI_API_KEY not set"):
+            spec = (
+                AgentBuilder(LiteLLMAgent)
+                .set_name("Test Agent")
+                .set_description("A test agent")
+                .set_id("lite_llm_agent")
+                .set_properties(
+                    LiteLLMConf(
+                        model=Models.gemini_2_5_flash,
+                        messages=[
+                            SystemMessage(content="You are a helpful assistant."),
+                        ],
+                    )
+                )
+                .build_spec()
+            )
+            wrap_agent_for_testing(spec)
+        if GEMINI_API_KEY:
+            os.environ["GEMINI_API_KEY"] = GEMINI_API_KEY
+        if GOOGLE_API_KEY:
+            os.environ["GOOGLE_API_KEY"] = GOOGLE_API_KEY
+
+    def test_response_is_generated(self, setup_default_env, probe_spec, guild: Guild):
+        agent_spec = (
             AgentBuilder(LiteLLMAgent)
             .set_name("Test Agent")
             .set_description("A test agent")
@@ -58,11 +79,11 @@ class TestLiteLLMAgent:
                     ],
                 )
             )
-            .build()
+            .build_spec()
         )
 
-        guild._add_local_agent(agent)
-        guild._add_local_agent(probe_agent)
+        agent = guild._add_local_agent(agent_spec)
+        probe_agent: ProbeAgent = guild._add_local_agent(probe_spec)  # type: ignore
 
         chat_completion_request = ChatCompletionRequest(
             messages=[UserMessage(content="What is the capital of India?")],

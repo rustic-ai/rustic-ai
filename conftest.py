@@ -7,6 +7,8 @@ import uuid
 
 import pytest
 
+from rustic_ai.core.guild.dsl import AgentSpec
+
 # Configure multiprocessing early to avoid fork() warnings in multi-threaded test environments
 try:
     multiprocessing.set_start_method("spawn", force=True)
@@ -44,7 +46,7 @@ def find_working_port(start_port: int, max_attempts: int = 50) -> int:
         try:
             # Quick availability check
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.bind(('localhost', port))
+                s.bind(("localhost", port))
                 return port
         except OSError:
             continue
@@ -125,7 +127,7 @@ def cleanup_messaging_server_state(messaging_server):
 def database(request):
     """Database fixture with test-name-derived filename."""
     # Create filename from test name (sanitize for filesystem)
-    test_name = request.node.name.replace(':', '_').replace('[', '_').replace(']', '_').replace('/', '_')
+    test_name = request.node.name.replace(":", "_").replace("[", "_").replace("]", "_").replace("/", "_")
 
     # Add worker ID for pytest-xdist parallel execution
     worker_id = os.environ.get("PYTEST_XDIST_WORKER", "master")
@@ -212,37 +214,16 @@ def generator():
 
 
 @pytest.fixture
-def probe_agent(generator):
+def probe_spec():
     # Create a unique probe agent for each test to avoid state sharing
     probe_id = f"test_agent_{int(time.time() * 1000000) % 1000000}_{uuid.uuid4().hex[:8]}"
 
-    probe: ProbeAgent = (
+    probe_spec: AgentSpec = (
         AgentBuilder(ProbeAgent)
         .set_id(probe_id)
         .set_name(f"Test Agent {probe_id}")
         .set_description("A test agent")
-        .build()
+        .build_spec()
     )
 
-    # Initialize the ID generator that ProbeAgent needs for publishing messages
-    probe._set_generator(generator)
-
-    # Clear any previous state
-    probe.clear_messages()
-
-    yield probe
-
-    # Cleanup probe agent state
-    try:
-        probe.clear_messages()
-        # Reset any other state that might persist
-        if hasattr(probe, "_client") and probe._client:
-            try:
-                # Properly disconnect the client if it exists
-                probe._client.disconnect()
-            except Exception as e:
-                # Log but don't fail test cleanup
-                print(f"Warning: Error disconnecting probe agent client: {e}")
-    except Exception as e:
-        # Log but don't fail test cleanup
-        print(f"Warning: Error during probe agent cleanup: {e}")
+    return probe_spec

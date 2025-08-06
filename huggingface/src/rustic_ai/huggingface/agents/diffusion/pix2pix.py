@@ -14,7 +14,6 @@ from rustic_ai.core.agents.commons.message_formats import ErrorMessage
 from rustic_ai.core.guild import agent
 from rustic_ai.core.guild.agent import Agent, ProcessContext
 from rustic_ai.core.guild.agent_ext.depends.filesystem import FileSystem
-from rustic_ai.core.guild.dsl import AgentSpec
 from rustic_ai.huggingface.agents.models import (
     ImageGenerationRequest,
     PyTorchAgentProps,
@@ -34,12 +33,9 @@ class Image2ImageAgent(Agent[Pix2PixProps]):
     Generate image from a given image and a query
     """
 
-    def __init__(self, agent_spec: AgentSpec[Pix2PixProps]):
-        super().__init__(agent_spec)
-        if agent_spec.properties is None:
-            agent_spec.properties = Pix2PixProps()
-        self.torch_device = agent_spec.properties.torch_device
-        model_id = agent_spec.properties.model_id
+    def __init__(self):
+        self.torch_device = self.config.torch_device
+        model_id = self.config.model_id
 
         self._pipeline = StableDiffusionInstructPix2PixPipeline.from_pretrained(model_id, safety_checker=None)
         self._pipeline.scheduler = EulerAncestralDiscreteScheduler.from_config(self._pipeline.scheduler.config)

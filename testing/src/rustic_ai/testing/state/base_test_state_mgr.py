@@ -1,9 +1,8 @@
-from abc import ABC
+from abc import ABC, abstractmethod
 
 import pytest
 
 from rustic_ai.core.messaging import JsonDict
-from rustic_ai.core.state.manager.in_memory_state_manager import InMemoryStateManager
 from rustic_ai.core.state.manager.state_manager import StateManager
 from rustic_ai.core.state.models import (
     StateFetchRequest,
@@ -13,14 +12,16 @@ from rustic_ai.core.state.models import (
 )
 
 
-class TestStateManager(ABC):
-    @pytest.fixture(
-        params=[
-            InMemoryStateManager(),
-        ]
-    )
+class BaseTestStateManager(ABC):
+
+    @pytest.fixture
+    @abstractmethod
     def state_manager(self, request) -> StateManager:
-        return request.param
+        """
+        Fixture that returns StateManager Implementation being tested.
+        This should be overridden in subclasses that test specific StateManager implementations.
+        """
+        raise NotImplementedError("This fixture should be overridden in subclasses.")
 
     @pytest.fixture
     def base_state(self) -> JsonDict:

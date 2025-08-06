@@ -20,7 +20,6 @@ from pydantic import BaseModel
 import shortuuid
 import yaml
 
-from rustic_ai.core.agents.testutils.probe_agent import ProbeAgent
 from rustic_ai.core.guild import Agent, Guild
 from rustic_ai.core.guild.agent_ext.mixins.health import HealthConstants
 from rustic_ai.core.guild.dsl import (
@@ -42,6 +41,7 @@ from rustic_ai.core.messaging.core.message import (
     AgentTag,
     FunctionalTransformer,
     PayloadTransformer,
+    ProcessStatus,
     RoutingRule,
     RoutingSlip,
     StateTransformer,
@@ -87,6 +87,7 @@ class EnvConstants:
     RUSTIC_AI_CLIENT_PROPERTIES = "RUSTIC_AI_CLIENT_PROPERTIES"
     RUSTIC_AI_DEPENDENCY_CONFIG = "RUSTIC_AI_DEPENDENCY_CONFIG"
     RUSTIC_AI_STATE_MANAGER = "RUSTIC_AI_STATE_MANAGER"
+    RUSTIC_AI_STATE_MANAGER_CONFIG = "RUSTIC_AI_STATE_MANAGER_CONFIG"
 
 
 AT = TypeVar("AT", bound=Agent, covariant=True)
@@ -232,14 +233,6 @@ class AgentBuilder(Generic[AT, APT]):  # type: ignore
         dict_copy = self.agent_spec_dict.copy()
         dict_copy[KeyConstants.ADDITIONAL_TOPICS] = list(dict_copy[KeyConstants.ADDITIONAL_TOPICS])
         return AgentSpec[APT].model_validate(dict_copy)
-
-    def build(self) -> AT:
-        """
-        Build and return an Agent instance with the set properties.
-        """
-
-        agent_spec = self.build_spec()
-        return class_utils.get_agent_from_spec_with_type(agent_spec, self.agent_type)
 
 
 class GuildBuilder:
@@ -573,7 +566,7 @@ class GuildBuilder:
 
         return builder
 
-    def launch(self, organization_id: str, add_probe: bool = False) -> Guild:
+    def launch(self, organization_id: str) -> Guild:
         """
         Build and return a Guild instance with the set properties.
         This will launch all the agents in the guild.
@@ -598,11 +591,6 @@ class GuildBuilder:
 
         is_running = guild.is_guild_running()
         logging.info(f"Guild {guild.id} is running: {is_running}")
-
-        if add_probe:
-            probe_agent = AgentBuilder(ProbeAgent).set_name("ProbeAgent").set_description("Probe Agent").build()
-            guild._add_local_agent(probe_agent)
-            setattr(guild, "probe", probe_agent)
 
         return guild
 
@@ -887,6 +875,37 @@ class GuildHelper:
         return guild
 
     @staticmethod
+    def get_default_state_mgr_config() -> dict:
+        """
+        Get the default StateManagerConfig.
+
+        Returns:
+            dict: The default StateManager configuration.
+        """
+        return json.loads(os.environ.get(EnvConstants.RUSTIC_AI_STATE_MANAGER_CONFIG, "{}"))
+
+    @staticmethod
+    def get_state_mgr_config(guild_spec: GuildSpec) -> dict:
+        """
+        Get the MessagingConfig from the GuildSpec.
+
+        Args:
+            guild_spec: The GuildSpec to get the messaging configuration from.
+
+        Returns:
+            dict: The state manager configuration.
+        """
+        state_manager_config: dict = GuildHelper.get_default_state_mgr_config()
+
+        if guild_spec.properties and GSKC.STATE_MANAGER_CONFIG in guild_spec.properties:
+            logging.debug(f"GuildSpec properties: {guild_spec.properties}")
+            state_manager_config = guild_spec.properties.get(GSKC.STATE_MANAGER_CONFIG, {})
+        else:
+            logging.debug(f"Using default state manager config: {state_manager_config}")
+
+        return state_manager_config
+
+    @staticmethod
     def get_default_state_manager() -> str:
         """
         Get the default State Manager.
@@ -1029,6 +1048,10 @@ class RouteBuilder:
             )
         )
         self.rule_dict[StateUpdateActions.GUILD_STATE_UPDATE.value] = state_transformer
+        return self
+
+    def set_process_status(self, process_status: ProcessStatus) -> "RouteBuilder":
+        self.rule_dict["process_status"] = process_status
         return self
 
     def build(self) -> RoutingRule:

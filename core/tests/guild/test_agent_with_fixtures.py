@@ -7,12 +7,9 @@ from rustic_ai.core.guild import agent
 from rustic_ai.core.guild.agent import (
     Agent,
     AgentFixtures,
-    AgentMode,
-    AgentType,
     ProcessContext,
 )
 from rustic_ai.core.guild.builders import AgentBuilder
-from rustic_ai.core.guild.dsl import AgentSpec
 from rustic_ai.core.guild.guild import Guild
 from rustic_ai.core.messaging.core.message import JsonDict, Message, MessageConstants
 
@@ -26,12 +23,7 @@ class FixtureTestAgent(Agent):
     An Agent to test the fixture decorators
     """
 
-    def __init__(self, agent_spec: AgentSpec):
-        super().__init__(
-            agent_spec,
-            agent_type=AgentType.BOT,
-            agent_mode=AgentMode.LOCAL,
-        )
+    def __init__(self):
         self._before_process_count = 0
         self._after_process_count = 0
         self._send_message_count = 0
@@ -107,11 +99,11 @@ class FixtureTestAgent(Agent):
 
 
 class TestAgentFixtures:
-    def test_fixture_calls(self, guild: Guild, probe_agent: ProbeAgent):
+    def test_fixture_calls(self, guild: Guild, probe_spec):
 
-        agent = AgentBuilder(FixtureTestAgent).set_name("test_agent").set_description("test agent").build()
-        guild._add_local_agent(agent)
-        guild._add_local_agent(probe_agent)
+        agent_spec = AgentBuilder(FixtureTestAgent).set_name("test_agent").set_description("test agent").build_spec()
+        agent = guild._add_local_agent(agent_spec)
+        probe_agent: ProbeAgent = guild._add_local_agent(probe_spec)  # type: ignore
 
         probe_agent.publish_dict(guild.DEFAULT_TOPIC, {"key1": "value1"})
 

@@ -8,7 +8,7 @@ import pytest
 import shortuuid
 
 from rustic_ai.core import Guild, GuildTopics
-from rustic_ai.core.agents.planners.todo_agent import (
+from rustic_ai.core.agents.planners.todolist_agent import (
     AddTaskRequest,
     DeleteTaskRequest,
     GetTaskRequest,
@@ -50,10 +50,10 @@ class TestTodoListGuild:
 
     @pytest.fixture
     def rgdatabase(self):
-        db = "sqlite:///test_todo_guild.db"
+        db = "sqlite:///test_todolist_guild.db"
 
-        if os.path.exists("test_todo_guild.db"):
-            os.remove("test_todo_guild.db")
+        if os.path.exists("test_todolist_guild.db"):
+            os.remove("test_todolist_guild.db")
 
         Metastore.initialize_engine(db)
         Metastore.get_engine(db)
@@ -62,9 +62,9 @@ class TestTodoListGuild:
         Metastore.drop_db()
 
     @pytest.fixture
-    def todo_guild(self, rgdatabase):
+    def todolist_guild(self, rgdatabase):
         guild_builder = GuildBuilder(
-            guild_id=f"todo_guild_{shortuuid.uuid()}",
+            guild_id=f"todolist_guild_{shortuuid.uuid()}",
             guild_name="TODO Guild",
             guild_description="Manage TODOs",
         )
@@ -79,25 +79,25 @@ class TestTodoListGuild:
 
         guild_builder.add_agent_spec(todo_agent)
 
-        todo_guild = guild_builder.bootstrap(rgdatabase, "test_org")
-        yield todo_guild
-        todo_guild.shutdown()
+        guild = guild_builder.bootstrap(rgdatabase, "test_org")
+        yield guild
+        guild.shutdown()
 
     @pytest.mark.asyncio
     @flaky(max_runs=4, min_passes=1)
-    async def test_todo_flow(self, todo_guild: Guild):
+    async def test_todo_flow(self, todolist_guild: Guild):
         generator = GemstoneGenerator(17)
-        probe_agent = (
+        probe_spec = (
             AgentBuilder(ProbeAgent)
             .set_id("test_agent")
             .set_name("Test Agent")
             .set_description("A test probe agent")
             .add_additional_topic(GuildTopics.SYSTEM_TOPIC)
             .add_additional_topic(UserProxyAgent.BROADCAST_TOPIC)
-            .build()
+            .build_spec()
         )
 
-        todo_guild._add_local_agent(probe_agent)
+        probe_agent: ProbeAgent = todolist_guild._add_local_agent(probe_spec)  # type: ignore
 
         # Create user
         probe_agent.publish_dict(

@@ -5,7 +5,7 @@ from rustic_ai.core.agents.commons.message_formats import (
     GenerationPromptResponse,
 )
 from rustic_ai.core.guild import agent
-from rustic_ai.core.guild.agent import Agent, AgentMode, AgentSpec, AgentType
+from rustic_ai.core.guild.agent import Agent
 from rustic_ai.huggingface.agents.models import PyTorchAgentProps
 
 
@@ -16,20 +16,9 @@ class PhiAgentProps(PyTorchAgentProps):
 class LLMPhiAgent(Agent[PhiAgentProps]):
     """An Agent that generates a response to the given generation prompt using Phi 2."""
 
-    def __init__(
-        self,
-        agent_spec: AgentSpec[PhiAgentProps],
-    ) -> None:
-        super().__init__(
-            agent_spec=agent_spec,
-            agent_type=AgentType.BOT,
-            agent_mode=AgentMode.LOCAL,
-        )
-        if agent_spec.properties is None:
-            agent_spec.properties = PhiAgentProps()
-
-        self._device = agent_spec.properties.torch_device
-        model_id = agent_spec.properties.model_id
+    def __init__(self) -> None:
+        self._device = self.config.torch_device
+        model_id = self.config.model_id
         self.model = AutoModelForCausalLM.from_pretrained(model_id, trust_remote_code=True).to(self._device).eval()
         self.tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True, torch_dtype="auto")
 

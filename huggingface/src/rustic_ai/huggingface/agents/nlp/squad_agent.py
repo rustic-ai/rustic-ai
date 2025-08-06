@@ -2,7 +2,7 @@ from pydantic import BaseModel
 
 from rustic_ai.core.agents.commons.message_formats import ErrorMessage
 from rustic_ai.core.guild import agent
-from rustic_ai.core.guild.agent import Agent, AgentMode, AgentSpec, AgentType
+from rustic_ai.core.guild.agent import Agent
 from rustic_ai.huggingface.inference_mixin import (
     HuggingfaceInferenceMixin,
 )
@@ -18,16 +18,6 @@ class SquadAnswer(BaseModel):
 
 
 class SquadAgent(Agent, HuggingfaceInferenceMixin):
-    def __init__(
-        self,
-        agent_spec: AgentSpec,
-    ) -> None:
-        super().__init__(
-            agent_spec,
-            AgentType.BOT,
-            AgentMode.REMOTE,
-        )
-
     @agent.processor(QuestionWithContext)
     async def find_answer(self, ctx: agent.ProcessContext[QuestionWithContext]):
         """
