@@ -75,6 +75,8 @@ class GuildTopics:
 
     DEAD_LETTER_QUEUE: str = "dead_letter_queue"
 
+    ERROR_TOPIC: str = "error_topic"
+
     @staticmethod
     def get_self_agent_inbox(agent_id: str) -> str:
         """
