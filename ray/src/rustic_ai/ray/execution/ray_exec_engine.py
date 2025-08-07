@@ -42,22 +42,32 @@ class RayExecutionEngine(ExecutionEngine):
 
         default_num_cpus = float(os.environ.get("RUSTIC_NUM_CPUS_PER_AGENT", "0.3"))
 
-        agent_wrapper = RayAgentWrapper.options(
-            num_cpus=agent_spec.resources.num_cpus if agent_spec.resources.num_cpus else default_num_cpus,
-            num_gpus=agent_spec.resources.num_gpus if agent_spec.resources.num_gpus else 0,
-            resources=agent_spec.resources.custom_resources if agent_spec.resources.custom_resources else {},
-            name=agent_spec.id,
-            namespace=self._get_namespace(),
-            lifetime="detached",
-            max_restarts=3,
-        ).remote(  # type: ignore
-            guild_spec=guild_spec,
-            agent_spec=agent_spec,
-            messaging_config=messaging_config,
-            machine_id=machine_id,
-            client_type=client_type,
-            client_properties=client_properties,
-        )
+        existing_actor: Optional[ActorHandle] = None
+
+        try:
+            existing_actor = ray.get_actor(name=agent_spec.id, namespace=self._get_namespace())
+        except ValueError:
+            pass
+
+        if existing_actor:
+            agent_wrapper = existing_actor
+        else:
+            agent_wrapper = RayAgentWrapper.options(
+                num_cpus=agent_spec.resources.num_cpus if agent_spec.resources.num_cpus else default_num_cpus,
+                num_gpus=agent_spec.resources.num_gpus if agent_spec.resources.num_gpus else 0,
+                resources=agent_spec.resources.custom_resources if agent_spec.resources.custom_resources else {},
+                name=agent_spec.id,
+                namespace=self._get_namespace(),
+                lifetime="detached",
+                max_restarts=3,
+            ).remote(  # type: ignore
+                guild_spec=guild_spec,
+                agent_spec=agent_spec,
+                messaging_config=messaging_config,
+                machine_id=machine_id,
+                client_type=client_type,
+                client_properties=client_properties,
+            )
 
         # Execute the agent asynchronously
         actor = agent_wrapper.run.remote()  # type: ignore
@@ -88,11 +98,11 @@ class RayExecutionEngine(ExecutionEngine):
     def is_agent_running(self, guild_id: str, agent_id: str) -> bool:
         try:
             actor: Optional[ActorHandle] = None
-            if guild_id in self.agent_actors and agent_id in self.agent_actors[guild_id]:
-                actor = ray.get(self.agent_actors[guild_id][agent_id])
 
-            if actor is None:
+            try:
                 actor = ray.get_actor(name=agent_id, namespace=self._get_namespace())
+            except ValueError:
+                pass
 
             if actor is not None:
                 if self._is_rustic_agent(actor):
