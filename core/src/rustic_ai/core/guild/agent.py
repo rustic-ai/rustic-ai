@@ -28,6 +28,7 @@ from rustic_ai.core.messaging.core.message import (
     MessageRoutable,
     ProcessEntry,
     ProcessStatus,
+    RoutingDestination,
     RoutingOrigin,
     RoutingRule,
     RoutingSlip,
@@ -601,7 +602,7 @@ class ProcessContext[MDT]:
                 format,
             )
 
-        if not next_steps:
+        if not next_steps and not error_message:
             next_steps = [
                 RoutingRule(
                     agent=self._agent.get_agent_tag(),
@@ -609,6 +610,22 @@ class ProcessContext[MDT]:
                     message_format=format,
                 )
             ]
+
+        if error_message:
+            # Always route error messages to the error topic
+            if not next_steps:
+                next_steps = []
+
+            next_steps.append(
+                RoutingRule(
+                    agent=self._agent.get_agent_tag(),
+                    method_name=self._method_name,
+                    message_format=format,
+                    destination=RoutingDestination(
+                        topics=[GuildTopics.ERROR_TOPIC],
+                    ),
+                )
+            )
 
         messages: List[GemstoneID] = []
 
