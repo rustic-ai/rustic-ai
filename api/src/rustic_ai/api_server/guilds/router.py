@@ -81,7 +81,12 @@ def get_guild(guild_id: str, engine=Depends(Metastore.get_engine)) -> GuildSpecR
     return maybeGuild
 
 
-@router.post("/guilds/{guild_id}/relaunch", status_code=status.HTTP_200_OK, operation_id="relaunchGuild")
+@router.post(
+    "/guilds/{guild_id}/relaunch",
+    response_model=RelaunchResponse,
+    status_code=status.HTTP_200_OK,
+    operation_id="relaunchGuild",
+)
 def relaunch_guild(guild_id: str, engine=Depends(Metastore.get_engine)):
     """
     Relaunches a guild if it is not already running.
