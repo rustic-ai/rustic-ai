@@ -20,9 +20,10 @@ from rustic_ai.core.agents.system.models import (
     GuildUpdatedAnnouncement,
     RunningAgentListRequest,
     StopGuildRequest,
+    StopGuildResponse,
     UserAgentCreationRequest,
     UserAgentCreationResponse,
-    UserAgentGetRequest, StopGuildResponse,
+    UserAgentGetRequest,
 )
 from rustic_ai.core.agents.utils.user_proxy_agent import (
     UserProxyAgent,
@@ -668,7 +669,7 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
             priority=Priority.NORMAL,
             format=get_qualified_class_name(StopGuildResponse),
             payload=StopGuildResponse(user_id=ctx.payload.user_id).model_dump(),
-            topics=[GuildTopics.GUILD_STATUS_TOPIC]
+            topics=[GuildTopics.GUILD_STATUS_TOPIC],
         )
 
         self._shutting_down = True

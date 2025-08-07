@@ -650,8 +650,8 @@ class GuildBuilder:
         # Using class name instead of class to avoid circular import
 
         agent_spec = AgentSpec(  # type: ignore
-            id=f"{guild.id}#manager_agent",
-            name=f"GuildManagerAgent4{guild.id}",
+            id=GuildHelper.get_manager_agent_id(guild_spec.id),
+            name=GuildHelper.get_manager_agent_name(guild_spec.id),
             description=f"Guild Manager Agent for {guild.name}",
             class_name="rustic_ai.core.agents.system.guild_manager_agent.GuildManagerAgent",
             properties={
@@ -679,6 +679,14 @@ class GuildHelper:
     """
     A class to help with guild creation.
     """
+
+    @staticmethod
+    def get_manager_agent_id(guild_id) -> str:
+        return f"{guild_id}#manager_agent"
+
+    @staticmethod
+    def get_manager_agent_name(guild_id) -> str:
+        return f"GuildManagerAgent4{guild_id}"
 
     @staticmethod
     def get_default_messaging_config() -> dict:

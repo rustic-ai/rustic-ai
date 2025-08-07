@@ -16,7 +16,7 @@ from starlette import status
 
 from rustic_ai.api_server.api_dependency_manager import ApiDependencyManager
 from rustic_ai.api_server.guilds.comms_manager import GuildCommunicationManager
-from rustic_ai.api_server.guilds.schema import GuildSpecResponse, IdInfo, LaunchGuildReq
+from rustic_ai.api_server.guilds.schema import GuildSpecResponse, IdInfo, LaunchGuildReq, RelaunchResponse
 from rustic_ai.api_server.guilds.service import GuildService
 from rustic_ai.core import Agent
 from rustic_ai.core.agents.commons.media import MediaLink
@@ -74,6 +74,15 @@ def get_guild(guild_id: str, engine=Depends(Metastore.get_engine)) -> GuildSpecR
         raise HTTPException(status_code=404, detail="Guild not found")
 
     return maybeGuild
+
+
+@router.post("/guilds/{guild_id}/relaunch", status_code=status.HTTP_200_OK, operation_id="relaunchGuild")
+def relaunch_guild(guild_id: str, engine=Depends(Metastore.get_engine)):
+    """
+    Relaunches a guild if it is not already running.
+    """
+    is_relaunching = guild_service.relaunch_guild(guild_id, engine)
+    return RelaunchResponse(is_relaunching=is_relaunching)
 
 
 @router.get("/guilds/{guild_id}/{user_id}/messages", operation_id="getHistoricalUserMessages")
