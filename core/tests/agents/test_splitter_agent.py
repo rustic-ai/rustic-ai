@@ -129,11 +129,7 @@ class TestSplitterGuild:
             guild_description="Demonstrates splitting of messages using SplitterAgent",
         )
 
-        splitter_conf = SplitterConf(
-            splitter=splitter,
-            format_selector=format_selector,
-            topics=["item_processing_results"],
-        )
+        splitter_conf = SplitterConf(splitter=splitter, format_selector=format_selector)
 
         splitter_agent = (
             AgentBuilder(SplitterAgent)
