@@ -469,3 +469,16 @@ async def launch_guild_from_blueprint(
         return IdInfo(id=guild_id)
     except ValidationError as e:
         raise HTTPException(status_code=400, detail=e.errors())
+
+
+@catalog_router.get(
+    "/guilds/{guild_id}/users",
+    response_model=List[str],
+    status_code=status.HTTP_200_OK,
+    operation_id="getUsersAddedToGuild",
+    tags=["guilds"],
+)
+async def get_guild_users(guild_id: str, engine: Engine = Depends(Metastore.get_engine)):
+    """Get the list of users added to a guild. This includes both active and inactive users."""
+    result = CatalogStore(engine).get_users_for_guild(guild_id)
+    return result

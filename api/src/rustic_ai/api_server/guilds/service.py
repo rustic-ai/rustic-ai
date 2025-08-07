@@ -1,9 +1,11 @@
 import logging
 from typing import Optional
 
+from fastapi import HTTPException
 from sqlalchemy import Engine
 from sqlmodel import Session
 
+from rustic_ai.api_server.guilds.models import GuildRelaunchModel
 from rustic_ai.api_server.guilds.schema import GuildSpecResponse
 from rustic_ai.core.guild import GuildSpec
 from rustic_ai.core.guild.builders import GuildBuilder, GuildHelper
@@ -72,3 +74,23 @@ class GuildService:
         return GuildSpecResponse(
             **guild_spec.model_dump(), status=GuildStatus(guild_model.status) if guild_model else GuildStatus.UNKNOWN
         )
+
+    def relaunch_guild(self, guild_id: str, engine: Engine) -> bool:
+        with Session(engine) as session:
+            guild_model = GuildModel.get_by_id(session, guild_id)
+            if guild_model is None:
+                raise HTTPException(status_code=404, detail="Guild not found")
+            else:
+                if guild_model.status in [GuildStatus.STOPPED, GuildStatus.STOPPING]:
+                    raise HTTPException(status_code=400, detail="Guild is already stopped")
+                guild_spec = guild_model.to_guild_spec()
+                guild = GuildHelper.shallow_guild_from_spec(guild_spec, guild_model.organization_id)
+                mgr_agent_id = GuildHelper.get_manager_agent_id(guild.id)
+                is_guild_running = guild.is_agent_running(mgr_agent_id)
+                if not is_guild_running:
+                    logging.info(f"Guild {guild.id} is not running. Relaunching it.")
+                    relaunch_entry = GuildRelaunchModel(guild_id=guild_id)
+                    session.add(relaunch_entry)
+                    session.commit()
+                    GuildBuilder.from_spec(guild_spec).bootstrap(Metastore.get_db_url(), guild_model.organization_id)
+                return not is_guild_running

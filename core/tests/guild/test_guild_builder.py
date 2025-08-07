@@ -346,7 +346,7 @@ class TestGuildBuilder:
         assert guild.routes == routing_slip
 
         time.sleep(0.5)  # Increased wait time for EmbeddedMessagingBackend
-        manager_name = f"GuildManagerAgent4{guild_id}"
+        manager_name = GuildHelper.get_manager_agent_name(guild_id)
 
         # Test if the echo agent is added to the metastore
         with Session(engine) as session:
@@ -539,7 +539,7 @@ class TestGuildBuilder:
         guild = builder.bootstrap(database, org_id)
 
         time.sleep(0.5)
-        manager_name = f"GuildManagerAgent4{guild_id}"
+        manager_name = GuildHelper.get_manager_agent_name(guild_id)
 
         with Session(engine) as session:
             guild_model = GuildModel.get_by_id(session, guild_id)

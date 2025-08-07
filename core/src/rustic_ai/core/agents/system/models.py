@@ -144,4 +144,5 @@ class StopGuildResponse(BaseModel):
     This response is sent before the guild shutdown process begins, acknowledging receipt of the stop request.
     The `user_id` field identifies the user who initiated the stop request.
     """
+
     user_id: str
