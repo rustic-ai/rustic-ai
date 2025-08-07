@@ -41,6 +41,31 @@ class ProcessStatus(StrEnum):
     COMPLETED = "completed"
 
 
+class OriginFilterKeys(StrEnum):
+    ORIGIN_SENDER = "origin_sender"
+    ORIGIN_TOPIC = "origin_topic"
+    ORIGIN_MESSAGE_FORMAT = "origin_message_format"
+
+
+class DestinationKeys(StrEnum):
+    TOPICS = "topics"
+    RECIPIENT_LIST = "recipient_list"
+    PRIORITY = "priority"
+
+
+class RoutingKeys(StrEnum):
+    AGENT = "agent"
+    AGENT_TYPE = "agent_type"
+    METHOD_NAME = "method_name"
+    ORIGIN_FILTER = "origin_filter"
+    MESSAGE_FORMAT = "message_format"
+    DESTINATION = "destination"
+    MARK_FORWARDED = "mark_forwarded"
+    ROUTE_TIMES = "route_times"
+    PROCESS_STATUS = "process_status"
+    TRANSFORMER = "transformer"
+
+
 class AgentTag(BaseModel):
     """
     Represents a tag that can be assigned to an agent.
