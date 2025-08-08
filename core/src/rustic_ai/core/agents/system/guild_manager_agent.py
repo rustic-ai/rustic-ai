@@ -20,6 +20,7 @@ from rustic_ai.core.agents.system.models import (
     GuildUpdatedAnnouncement,
     RunningAgentListRequest,
     StopGuildRequest,
+    StopGuildResponse,
     UserAgentCreationRequest,
     UserAgentCreationResponse,
     UserAgentGetRequest,
@@ -149,11 +150,13 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
         agent_model = AgentModel.from_agent_spec(self.guild_id, agent_spec)
         if session is None:
             with Session(self.engine) as session:
-                session.add(agent_model)
-                session.commit()
-                session.close()
+                if AgentModel.get_by_id(session, self.guild_id, agent_spec.id) is None:
+                    session.add(agent_model)
+                    session.commit()
+                    session.close()
         else:
-            session.add(agent_model)  # pragma: no cover
+            if AgentModel.get_by_id(session, self.guild_id, agent_spec.id) is None:
+                session.add(agent_model)  # pragma: no cover
 
     def _announce_guild_refresh(self, ctx: ProcessContext) -> None:
         """
@@ -177,7 +180,7 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
             self.guild_spec = guild_spec
 
         guild_updated_announcement = GuildUpdatedAnnouncement(guild_id=self.guild_id, guild_spec=guild_spec)
-        ctx._raw_send(
+        ctx._direct_send(
             priority=Priority.NORMAL,
             format=get_qualified_class_name(GuildUpdatedAnnouncement),
             payload=guild_updated_announcement.model_dump(),
@@ -188,7 +191,7 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
             StateFetchRequest(state_owner=StateOwner.GUILD, guild_id=self.guild_id)
         )
 
-        ctx._raw_send(
+        ctx._direct_send(
             priority=Priority.NORMAL,
             format=get_qualified_class_name(StateFetchResponse),
             payload=guild_state.model_dump(),
@@ -240,8 +243,9 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
 
                 # Add the agents to the Metastore
                 for guild_agent in self.guild_spec.agents:
-                    agent_model = AgentModel.from_agent_spec(self.guild_id, guild_agent)
-                    session.add(agent_model)
+                    if AgentModel.get_by_id(session, self.guild_id, guild_agent.id) is None:
+                        agent_model = AgentModel.from_agent_spec(self.guild_id, guild_agent)
+                        session.add(agent_model)
 
                 session.commit()
                 session.refresh(guild_model)
@@ -258,8 +262,9 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
                 self.guild = GuildBuilder.from_spec(guild_spec).load_or_launch(self.organization_id)
 
             self.guild.register_agent(self.get_spec())
-            self_model = AgentModel.from_agent_spec(self.guild_id, self.get_spec())
-            session.add(self_model)  # pragma: no cover
+            if AgentModel.get_by_id(session, self.guild_id, self.id) is None:
+                self_model = AgentModel.from_agent_spec(self.guild_id, self.get_spec())
+                session.add(self_model)  # pragma: no cover
 
             guild_model.status = GuildStatus.STARTING
             session.add(guild_model)
@@ -272,7 +277,7 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
             healths.append(Heartbeat.model_validate(heartbeat))
 
         if self.agent_health:
-            ctx._raw_send(
+            ctx._direct_send(
                 priority=Priority.NORMAL,
                 format=get_qualified_class_name(AgentsHealthReport),
                 payload=AgentsHealthReport.model_validate(
@@ -282,7 +287,7 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
             )
 
         # Let us also send a HealthCheckRequest so already running agents will send a heartbeat
-        ctx._raw_send(
+        ctx._direct_send(
             priority=Priority.NORMAL,
             format=get_qualified_class_name(HealthCheckRequest),
             payload=HealthCheckRequest().model_dump(),
@@ -312,8 +317,9 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
         self.guild.launch_agent(aar.agent_spec)
 
         with Session(self.engine) as session:
-            session.add(AgentModel.from_agent_spec(self.guild_id, aar.agent_spec))
-            session.commit()
+            if AgentModel.get_by_id(session, self.guild_id, aar.agent_spec.id) is None:
+                session.add(AgentModel.from_agent_spec(self.guild_id, aar.agent_spec))
+                session.commit()
 
         self.state_manager.update_state(
             StateUpdateRequest(
@@ -430,7 +436,7 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
                     session.add(guild_model)
                     session.commit()
 
-            ctx._raw_send(
+            ctx._direct_send(
                 priority=Priority.NORMAL,
                 format=get_qualified_class_name(AgentsHealthReport),
                 payload=health_report.model_dump(),
@@ -624,7 +630,7 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
 
         try:
             state = self.state_manager.get_state(sfr)
-            ctx._raw_send(
+            ctx._direct_send(
                 priority=Priority.NORMAL,
                 format=get_qualified_class_name(StateFetchResponse),
                 payload=state.model_dump(),
@@ -649,7 +655,7 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
 
         try:
             state_update = self.state_manager.update_state(sur)
-            ctx._raw_send(
+            ctx._direct_send(
                 priority=Priority.NORMAL,
                 format=get_qualified_class_name(StateUpdateResponse),
                 payload=state_update.model_dump(),
@@ -664,6 +670,12 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
         Stops all the agents in the guild.
         """
         logging.info(f"Stopping guild {self.guild_id}")
+        ctx._direct_send(
+            priority=Priority.NORMAL,
+            format=get_qualified_class_name(StopGuildResponse),
+            payload=StopGuildResponse(user_id=ctx.payload.user_id).model_dump(),
+            topics=[GuildTopics.GUILD_STATUS_TOPIC],
+        )
 
         self._shutting_down = True
 

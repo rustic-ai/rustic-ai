@@ -28,6 +28,7 @@ from rustic_ai.core.messaging.core.message import (
     MessageRoutable,
     ProcessEntry,
     ProcessStatus,
+    RoutingDestination,
     RoutingOrigin,
     RoutingRule,
     RoutingSlip,
@@ -601,7 +602,7 @@ class ProcessContext[MDT]:
                 format,
             )
 
-        if not next_steps:
+        if not next_steps and not error_message:
             next_steps = [
                 RoutingRule(
                     agent=self._agent.get_agent_tag(),
@@ -609,6 +610,22 @@ class ProcessContext[MDT]:
                     message_format=format,
                 )
             ]
+
+        if error_message:
+            # Always route error messages to the error topic
+            if not next_steps:
+                next_steps = []
+
+            next_steps.append(
+                RoutingRule(
+                    agent=self._agent.get_agent_tag(),
+                    method_name=self._method_name,
+                    message_format=format,
+                    destination=RoutingDestination(
+                        topics=[GuildTopics.ERROR_TOPIC],
+                    ),
+                )
+            )
 
         messages: List[GemstoneID] = []
 
@@ -672,7 +689,7 @@ class ProcessContext[MDT]:
                 state_update=guild_state_update.state_update,
             )
 
-            self._raw_send(
+            self._direct_send(
                 priority=Priority.HIGH,
                 topics=[GuildTopics.STATE_TOPIC],
                 payload=gsu.model_dump(),
@@ -698,7 +715,7 @@ class ProcessContext[MDT]:
                 state_update=agent_state_update.state_update,
             )
 
-            self._raw_send(
+            self._direct_send(
                 priority=Priority.HIGH,
                 topics=[GuildTopics.STATE_TOPIC],
                 payload=asu.model_dump(),
@@ -770,7 +787,7 @@ class ProcessContext[MDT]:
 
         return msg_id
 
-    def _raw_send(
+    def _direct_send(
         self,
         priority: Priority,
         topics: List[str],
@@ -787,6 +804,9 @@ class ProcessContext[MDT]:
         session_state: Optional[JsonDict] = None,
         enrich_with_history: Optional[int] = 0,
         process_status: Optional[ProcessStatus] = None,
+        attach_guild_routes: bool = True,
+        reset_history: bool = False,
+        carry_session_state: bool = False,
     ) -> None:
         msg_id = self._get_id(priority)
         thread = self._origin_message.thread.copy()
@@ -795,8 +815,31 @@ class ProcessContext[MDT]:
             f"Sending message to topics: {topics} from {self._agent.get_agent_tag()} in response to {in_response_to}"
         )
 
-        if routing_slip is None:
+        if not in_response_to:
+            in_response_to = self._origin_message.id
+
+        if not message_history and not reset_history:
+            message_history = self._origin_message.message_history.copy()
+
+        message_history.append(
+            ProcessEntry(
+                agent=self._agent.get_agent_tag(),
+                processor=self.method_name,
+                origin=self._origin_message.id,
+                result=msg_id.to_int(),
+            )
+        )
+
+        if carry_session_state:
+            session_state = self._origin_message.session_state or {}
+
+        if not traceparent:
+            traceparent = self._origin_message.traceparent
+
+        if not routing_slip and attach_guild_routes:
             routing_slip = self.agent.guild_spec.routes
+        elif not routing_slip and not attach_guild_routes:
+            routing_slip = self._origin_message.routing_slip
 
         self._client.publish(
             Message(

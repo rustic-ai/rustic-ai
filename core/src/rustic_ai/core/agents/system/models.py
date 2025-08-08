@@ -131,6 +131,18 @@ class GuildUpdatedAnnouncement(BaseModel):
 class StopGuildRequest(BaseModel):
     """
     A class to represent a request to stop the guild.
+    The `user_id` field identifies the user who initiated the stop request.
     """
 
     guild_id: str
+    user_id: str
+
+
+class StopGuildResponse(BaseModel):
+    """
+    Represents the response sent when a request to stop the guild is received.
+    This response is sent before the guild shutdown process begins, acknowledging receipt of the stop request.
+    The `user_id` field identifies the user who initiated the stop request.
+    """
+
+    user_id: str

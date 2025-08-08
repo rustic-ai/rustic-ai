@@ -377,6 +377,11 @@ def test_add_user_to_guild(setup_data, catalog_client, org_id):
     assert guild_res["id"] == guild_id
     assert guild_res["name"] == guild_spec.name
     assert guild_res["blueprint_id"] is None
+    # Test listing users added to guild
+    userids_response = catalog_client.get(f"/catalog/guilds/{guild_id}/users")
+    assert userids_response.status_code == 200
+    assert len(userids_response.json()) == 1
+    assert userids_response.json()[0] == user_id
     delete_response = catalog_client.delete(f"/catalog/guilds/{guild_id}/users/{user_id}")
     assert delete_response.status_code == 204
 

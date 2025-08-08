@@ -16,7 +16,12 @@ from starlette import status
 
 from rustic_ai.api_server.api_dependency_manager import ApiDependencyManager
 from rustic_ai.api_server.guilds.comms_manager import GuildCommunicationManager
-from rustic_ai.api_server.guilds.schema import GuildSpecResponse, IdInfo, LaunchGuildReq
+from rustic_ai.api_server.guilds.schema import (
+    GuildSpecResponse,
+    IdInfo,
+    LaunchGuildReq,
+    RelaunchResponse,
+)
 from rustic_ai.api_server.guilds.service import GuildService
 from rustic_ai.core import Agent
 from rustic_ai.core.agents.commons.media import MediaLink
@@ -74,6 +79,20 @@ def get_guild(guild_id: str, engine=Depends(Metastore.get_engine)) -> GuildSpecR
         raise HTTPException(status_code=404, detail="Guild not found")
 
     return maybeGuild
+
+
+@router.post(
+    "/guilds/{guild_id}/relaunch",
+    response_model=RelaunchResponse,
+    status_code=status.HTTP_200_OK,
+    operation_id="relaunchGuild",
+)
+def relaunch_guild(guild_id: str, engine=Depends(Metastore.get_engine)):
+    """
+    Relaunches a guild if it is not already running.
+    """
+    is_relaunching = guild_service.relaunch_guild(guild_id, engine)
+    return RelaunchResponse(is_relaunching=is_relaunching)
 
 
 @router.get("/guilds/{guild_id}/{user_id}/messages", operation_id="getHistoricalUserMessages")
@@ -225,6 +244,10 @@ async def download_file(
     filesystem: FileSystem = api_deps_manager.get_dependency("filesystem", engine, guild_id, agent_id)
 
     if not filesystem.exists(filename):
+        logging.debug(
+            f"File {filename} not found in guild {guild_id}",
+            extra={"dependencies": api_deps_manager.dependency_map_cache[guild_id]},
+        )
         raise HTTPException(status_code=404, detail="File not found")
 
     try:
@@ -255,6 +278,10 @@ async def get_file_content(
     filesystem: FileSystem = api_deps_manager.get_dependency("filesystem", engine, guild_id, agent_id)
 
     if not filesystem.exists(filename):
+        logging.debug(
+            f"File {filename} not found in guild {guild_id}",
+            extra={"dependencies": api_deps_manager.dependency_map_cache[guild_id]},
+        )
         raise HTTPException(status_code=404, detail="File not found")
 
     try:

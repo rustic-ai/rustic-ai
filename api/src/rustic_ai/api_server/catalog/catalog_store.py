@@ -433,6 +433,17 @@ class CatalogStore:
             guilds: Sequence[BasicGuildInfo] = session.exec(statement).all()  # type:ignore
             return list(guilds)
 
+    def get_users_for_guild(self, guild_id: str) -> List[str]:
+        """Get all user IDs associated with a given guild."""
+        with Session(self.engine) as session:
+            guild = session.get(GuildModel, guild_id)
+            if not guild:
+                raise HTTPException(status_code=404, detail=f"Guild {guild_id} not found")
+
+            statement = select(UserGuild.user_id).where(UserGuild.guild_id == guild_id)
+            user_ids: Sequence[str] = session.exec(statement).all()  # type:ignore
+            return list(user_ids)
+
     def add_agent_icon(self, agent_class: str, icon: str):
         with Session(self.engine) as session:
             existing_icon = session.get(AgentIcon, agent_class)

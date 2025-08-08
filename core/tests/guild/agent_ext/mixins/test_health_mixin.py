@@ -12,7 +12,7 @@ from rustic_ai.core.guild.agent_ext.mixins.health import (
     HealthConstants,
     HeartbeatStatus,
 )
-from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder
+from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder, GuildHelper
 from rustic_ai.core.guild.dsl import AgentSpec, GuildTopics
 from rustic_ai.core.guild.metastore.database import Metastore
 from rustic_ai.core.messaging.core.messaging_config import MessagingConfig
@@ -227,7 +227,7 @@ class TestHealthMixin:
 
         mpair = {msg.sender.name: msg for msg in heartbeat_messages}
 
-        manager_name = f"GuildManagerAgent4{guild.id}"
+        manager_name = GuildHelper.get_manager_agent_name(guild.id)
 
         assert "EchoAgent" in mpair
         assert manager_name in mpair

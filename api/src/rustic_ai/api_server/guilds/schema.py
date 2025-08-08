@@ -19,3 +19,7 @@ class GuildSpecResponse(GuildSpec):
     """
 
     status: GuildStatus
+
+
+class RelaunchResponse(BaseModel):
+    is_relaunching: bool

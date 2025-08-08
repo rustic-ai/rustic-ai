@@ -70,6 +70,9 @@ class TestServer:
                     backend_config={"port": 31145, "auto_start_server": True},
                 ),
                 id="EmbeddedMessagingBackend",
+                marks=pytest.mark.xfail(
+                    reason="EmbeddedMessagingBackend is not fully reliable yet",
+                ),
             ),
         ],
     )

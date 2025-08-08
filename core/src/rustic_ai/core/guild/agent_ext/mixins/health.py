@@ -92,7 +92,7 @@ class HealthMixin:
     @agent.processor(HealthCheckRequest, handle_essential=True)
     def send_heartbeat(self, ctx: agent.ProcessContext[HealthCheckRequest]):
         hr = self.healthcheck(ctx.payload.checktime)
-        ctx._raw_send(
+        ctx._direct_send(
             priority=Priority.HIGH,
             topics=[HealthConstants.HEARTBEAT_TOPIC],
             payload=hr.model_dump(),
@@ -139,7 +139,7 @@ class HealthMixin:
         logging.info(f"Sending first heartbeat for {self.get_agent_tag()}")
 
         hr = self.healthcheck(datetime.now())
-        ctx._raw_send(
+        ctx._direct_send(
             priority=Priority.HIGH,
             topics=[HealthConstants.HEARTBEAT_TOPIC],
             payload=hr.model_dump(),
