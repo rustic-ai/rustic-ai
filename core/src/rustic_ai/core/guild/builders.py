@@ -1,3 +1,4 @@
+from enum import StrEnum
 from inspect import isclass
 import json
 import logging
@@ -39,12 +40,9 @@ from rustic_ai.core.guild.metaprog.constants import MetaclassConstants
 from rustic_ai.core.messaging import Client, MessageTrackingClient, MessagingConfig
 from rustic_ai.core.messaging.core.message import (
     AgentTag,
-    DestinationKeys,
     FunctionalTransformer,
-    OriginFilterKeys,
     PayloadTransformer,
     ProcessStatus,
-    RoutingKeys,
     RoutingRule,
     RoutingSlip,
     StateTransformer,
@@ -58,6 +56,31 @@ from rustic_ai.core.state.manager.state_manager import (
 from rustic_ai.core.utils import class_utils
 from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 from rustic_ai.core.utils.jexpr import JxScript
+
+
+class OriginFilterKeys(StrEnum):
+    ORIGIN_SENDER = "origin_sender"
+    ORIGIN_TOPIC = "origin_topic"
+    ORIGIN_MESSAGE_FORMAT = "origin_message_format"
+
+
+class DestinationKeys(StrEnum):
+    TOPICS = "topics"
+    RECIPIENT_LIST = "recipient_list"
+    PRIORITY = "priority"
+
+
+class RoutingKeys(StrEnum):
+    AGENT = "agent"
+    AGENT_TYPE = "agent_type"
+    METHOD_NAME = "method_name"
+    ORIGIN_FILTER = "origin_filter"
+    MESSAGE_FORMAT = "message_format"
+    DESTINATION = "destination"
+    MARK_FORWARDED = "mark_forwarded"
+    ROUTE_TIMES = "route_times"
+    PROCESS_STATUS = "process_status"
+    TRANSFORMER = "transformer"
 
 
 class KeyConstants:
