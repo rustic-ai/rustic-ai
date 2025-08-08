@@ -112,6 +112,7 @@ class AgentMetaclass(ABCMeta):
         "rustic_ai.core.guild.agent_ext.mixins.state_refresher.StateRefresherMixin",
         "rustic_ai.core.guild.agent_ext.mixins.health.HealthMixin",
         "rustic_ai.core.guild.agent_ext.mixins.telemetry.TelemetryMixin",
+        "rustic_ai.core.guild.agent_ext.mixins.scheduler.SchedulerMixin",
     ]
 
     def __new__(metaclass, name, bases, dct, /, **kwargs):
