@@ -44,6 +44,8 @@ class RayAgentWrapper(AgentWrapper):
         trace.set_tracer_provider(provider)
         print("Tracing setup complete")
 
+        self._is_running = False
+
         super().__init__(guild_spec, agent_spec, messaging_config, machine_id, client_type, client_properties)
 
     def run(self) -> None:
