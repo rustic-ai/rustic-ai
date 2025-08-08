@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, Literal, Union
+from typing import List, Literal, Optional, Union
 
 from jsonata import Jsonata
 from pydantic import BaseModel
@@ -13,11 +13,16 @@ from rustic_ai.core.utils.json_utils import JsonDict
 # Format selectors
 
 
+class PayloadWithFormat(BaseModel):
+    payload: JsonDict
+    format: str
+
+
 class BaseFormatSelector(BaseModel):
     strategy: str
 
     @abstractmethod
-    def get_formats(self, elements: List[JsonDict]) -> List[str]:
+    def get_formats(self, elements: List[JsonDict]) -> List[PayloadWithFormat]:
         pass
 
 
@@ -25,33 +30,44 @@ class FixedFormatSelector(BaseFormatSelector):
     strategy: Literal["fixed"] = "fixed"
     fixed_format: str
 
-    def get_formats(self, elements) -> List[str]:
-        return [self.fixed_format] * len(elements)
+    def get_formats(self, elements) -> List[PayloadWithFormat]:
+        result = []
+        for item in elements:
+            result.append(PayloadWithFormat(payload=item, format=self.fixed_format))
+        return result
 
 
 class ListFormatSelector(BaseFormatSelector):
     strategy: Literal["list"] = "list"
     format_list: List[str]
 
-    def get_formats(self, elements) -> List[str]:
-        return self.format_list
+    def get_formats(self, elements) -> List[PayloadWithFormat]:
+        result = []
+        for item, fmt in zip(elements, self.format_list):
+            result.append(PayloadWithFormat(payload=item, format=fmt))
+        return result
 
 
 class DictFormatSelector(BaseFormatSelector):
     strategy: Literal["dict"] = "dict"
     format_dict: dict
 
-    def get_formats(self, elements) -> List[str]:
-        return [value for key, value in sorted(self.format_dict.items())]
+    def get_formats(self, elements) -> List[PayloadWithFormat]:
+        formats = [value for key, value in sorted(self.format_dict.items())]
+        result = []
+        for item, fmt in zip(elements, formats):
+            result.append(PayloadWithFormat(payload=item, format=fmt))
+        return result
 
 
 class JsonataFormatSelector(BaseFormatSelector):
     strategy: Literal["jsonata"] = "jsonata"
     jsonata_expr: str
 
-    def get_formats(self, elements) -> List[str]:
+    def get_formats(self, elements) -> List[PayloadWithFormat]:
         expr = Jsonata(self.jsonata_expr)
-        return [expr.evaluate(item) for item in elements]
+        payload_with_format = [PayloadWithFormat(payload=item, format=expr.evaluate(item)) for item in elements]
+        return payload_with_format
 
 
 # Splitter
@@ -77,8 +93,12 @@ class ListSplitter(BaseSplitter):
 
 class DictSplitter(BaseSplitter):
     split_type: Literal["dict"] = "dict"
+    field_name: Optional[str] = None
 
     def split(self, payload: JsonDict) -> List[JsonDict]:
+        if self.field_name:
+            [value for key, value in sorted(payload[self.field_name].items())]
+
         return [value for key, value in sorted(payload.items())]
 
 
@@ -110,20 +130,20 @@ class SplitterAgent(Agent[SplitterConf]):
     def split_and_send(self, ctx: ProcessContext[JsonDict]) -> None:
         try:
             items = self.splitter.split(ctx.payload)
-            formats = self.format_selector.get_formats(items)
+            payload_with_format = self.format_selector.get_formats(items)
 
-            if len(formats) != len(items):
+            if len(payload_with_format) != len(items):
                 ctx.send_error(
                     ErrorMessage(
                         agent_type=self.get_qualified_class_name(),
                         error_type="LengthMismatch",
-                        error_message=f"Number of formats: {len(formats)} is not same as number of items {len(items)}",
+                        error_message=f"Number of formats: {len(payload_with_format)} is not same as number of items {len(items)}",
                     )
                 )
                 return
 
-            for item, fmt in zip(items, formats):
-                ctx.send_dict(payload=item, format=fmt)
+            for res in payload_with_format:
+                ctx.send_dict(payload=res.payload, format=res.format)
         except Exception as e:
             ctx.send_error(
                 ErrorMessage(
