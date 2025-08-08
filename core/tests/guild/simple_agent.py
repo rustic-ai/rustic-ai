@@ -41,3 +41,34 @@ class SimpleErrorAgent(Agent):
     @agent.processor(JsonDict)
     def error_producer(self, ctx: agent.ProcessContext[JsonDict]) -> None:
         ctx.send_error(ErrorMessage(error_message="An error occurred"))
+
+
+class DummyMessage(BaseModel):
+    key1: str
+    key2: int
+
+
+class DummyResponseOne(BaseModel):
+    key1: str
+    key2: int
+    key3: str
+
+
+class DummyResponseTwo(BaseModel):
+    key1: str
+    key2: int
+    value1: str
+
+
+class MultiProcessAgent(Agent):
+    @agent.processor(DummyMessage)
+    def process_all_messages(self, ctx: agent.ProcessContext[DummyMessage]) -> None:
+        payload = ctx.payload
+        result = DummyResponseOne(key1=payload.key1, key2=payload.key2, key3="Agent One")
+        ctx.send(result)
+
+    @agent.processor(DummyMessage, predicate=lambda x, m: m.payload["key2"] > 10)
+    def process_filtered_messages(self, ctx: agent.ProcessContext[DummyMessage]) -> None:
+        payload = ctx.payload
+        result = DummyResponseTwo(key1=payload.key1, key2=payload.key2, value1="Agent Two")
+        ctx.send(result)
