@@ -1,5 +1,4 @@
 import os
-from textwrap import dedent
 import time
 
 from flaky import flaky
@@ -12,18 +11,17 @@ from rustic_ai.core.guild.agent import (
     ProcessContext,
     processor,
 )
-from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder
+from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder, RouteBuilder
 from rustic_ai.core.guild.dsl import AgentSpec, GuildTopics, JSONataPredicate
 from rustic_ai.core.guild.dsl import KeyConstants as GSKC
 from rustic_ai.core.guild.metastore.database import Metastore
 from rustic_ai.core.messaging.core.message import (
     AgentTag,
-    RoutingRule,
     RoutingSlip,
-    StateTransformer,
 )
 from rustic_ai.core.state.models import StateUpdateFormat
 from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
+from rustic_ai.core.utils.jexpr import JArray, JObj, JxScript
 from rustic_ai.core.utils.json_utils import JsonDict
 
 
@@ -143,19 +141,11 @@ class TestStateMgmt:
 
         probe_agent: ProbeAgent = guild._add_local_agent(probe_spec)  # type: ignore
 
-        guild_update_routing_rule = RoutingRule(
-            agent=AgentTag(id=state_aware_agent.id),
-            method_name="echo_guild_state",
-            guild_state_update=StateTransformer(
-                state_update=dedent(
-                    """
-                    {
-                    "new_key": "new_value",
-                    "call_count": 1
-                }
-                """
-                )
-            ),
+        guild_update_routing_rule = (
+            RouteBuilder(AgentTag(id=state_aware_agent.id))
+            .from_method("echo_guild_state")
+            .set_guild_state_update(JxScript(JObj({"new_key": "new_value", "call_count": 1})))
+            .build()
         )
 
         # Get the guild state and trigger the state update
@@ -227,22 +217,25 @@ class TestStateMgmt:
 
         probe_agent.clear_messages()
 
-        # Get Agent state and trigger the state update
-        agent_update_routing_rule = RoutingRule(
-            agent=AgentTag(id=state_aware_agent.id),
-            method_name="echo_agent_state",
-            agent_state_update=StateTransformer(
-                update_format=StateUpdateFormat.JSON_PATCH,
-                state_update=dedent(
-                    """
-                    {
-                    "operations": [
-                    {"op": "add", "path": "/new_key", "value": "new_value"},
-                    {"op": "add", "path": "/call_count", "value": 1}
-                ]}
-                """
+        agent_update_routing_rule = (
+            RouteBuilder(AgentTag(id=state_aware_agent.id))
+            .from_method("echo_agent_state")
+            .set_agent_state_update(
+                update_agent_state=JxScript(
+                    JObj(
+                        {
+                            "operations": JArray(
+                                [
+                                    JObj({"op": "add", "path": "/new_key", "value": "new_value"}),
+                                    JObj({"op": "add", "path": "/call_count", "value": 1}),
+                                ]
+                            )
+                        }
+                    )
                 ),
-            ),
+                update_format=StateUpdateFormat.JSON_PATCH,
+            )
+            .build()
         )
 
         probe_agent.publish(

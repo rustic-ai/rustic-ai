@@ -1,3 +1,4 @@
+from enum import StrEnum
 from inspect import isclass
 import json
 import logging
@@ -48,10 +49,38 @@ from rustic_ai.core.messaging.core.message import (
     TransformationType,
 )
 from rustic_ai.core.state.manager.in_memory_state_manager import InMemoryStateManager
-from rustic_ai.core.state.manager.state_manager import StateUpdateActions
+from rustic_ai.core.state.manager.state_manager import (
+    StateUpdateActions,
+    StateUpdateFormat,
+)
 from rustic_ai.core.utils import class_utils
 from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 from rustic_ai.core.utils.jexpr import JxScript
+
+
+class OriginFilterKeys(StrEnum):
+    ORIGIN_SENDER = "origin_sender"
+    ORIGIN_TOPIC = "origin_topic"
+    ORIGIN_MESSAGE_FORMAT = "origin_message_format"
+
+
+class DestinationKeys(StrEnum):
+    TOPICS = "topics"
+    RECIPIENT_LIST = "recipient_list"
+    PRIORITY = "priority"
+
+
+class RoutingKeys(StrEnum):
+    AGENT = "agent"
+    AGENT_TYPE = "agent_type"
+    METHOD_NAME = "method_name"
+    ORIGIN_FILTER = "origin_filter"
+    MESSAGE_FORMAT = "message_format"
+    DESTINATION = "destination"
+    MARK_FORWARDED = "mark_forwarded"
+    ROUTE_TIMES = "route_times"
+    PROCESS_STATUS = "process_status"
+    TRANSFORMER = "transformer"
 
 
 class KeyConstants:
@@ -947,20 +976,20 @@ class RouteBuilder:
         self.rule_dict: dict = {}
 
         if isinstance(from_agent, AgentSpec):
-            self.rule_dict["agent"] = AgentTag(name=from_agent.name)
+            self.rule_dict[RoutingKeys.AGENT.value] = AgentTag(name=from_agent.name)
         elif isinstance(from_agent, AgentTag):
-            self.rule_dict["agent"] = from_agent
+            self.rule_dict[RoutingKeys.AGENT.value] = from_agent
         elif isclass(from_agent) and issubclass(from_agent, Agent):
-            self.rule_dict["agent_type"] = from_agent.get_qualified_class_name()
+            self.rule_dict[RoutingKeys.AGENT_TYPE.value] = from_agent.get_qualified_class_name()
         else:
             raise ValueError("Invalid from_agent type")
 
     def from_method(self, method_name: Union[Callable, str]) -> "RouteBuilder":
-        self.rule_dict["method"] = method_name.__name__ if callable(method_name) else method_name
+        self.rule_dict[RoutingKeys.METHOD_NAME.value] = method_name.__name__ if callable(method_name) else method_name
         return self
 
     def on_message_format(self, message_format: Union[Type[BaseModel], str]) -> "RouteBuilder":
-        self.rule_dict["message_format"] = (
+        self.rule_dict[RoutingKeys.MESSAGE_FORMAT.value] = (
             message_format if isinstance(message_format, str) else get_qualified_class_name(message_format)
         )
         return self
@@ -971,59 +1000,61 @@ class RouteBuilder:
         origin_topic: Optional[str] = None,
         origin_message_format: Optional[str] = None,
     ) -> "RouteBuilder":
-        self.rule_dict["origin_filter"] = {}
+        self.rule_dict[RoutingKeys.ORIGIN_FILTER.value] = {}
 
         if origin_sender:
-            self.rule_dict["origin_filter"]["origin_sender"] = (
+            self.rule_dict[RoutingKeys.ORIGIN_FILTER.value][OriginFilterKeys.ORIGIN_SENDER.value] = (
                 origin_sender if isinstance(origin_sender, AgentTag) else AgentTag(name=origin_sender.name)
             )
 
         if origin_topic:
-            self.rule_dict["origin_filter"]["origin_topic"] = origin_topic
+            self.rule_dict[RoutingKeys.ORIGIN_FILTER.value][OriginFilterKeys.ORIGIN_TOPIC.value] = origin_topic
 
         if origin_message_format:
-            self.rule_dict["origin_filter"]["origin_message_format"] = origin_message_format
+            self.rule_dict[RoutingKeys.ORIGIN_FILTER.value][
+                OriginFilterKeys.ORIGIN_MESSAGE_FORMAT.value
+            ] = origin_message_format
 
         return self
 
     def set_destination_topics(self, destination_topics: str | List[str]) -> "RouteBuilder":
-        if "destination" not in self.rule_dict:
-            self.rule_dict["destination"] = {}
+        if RoutingKeys.DESTINATION.value not in self.rule_dict:
+            self.rule_dict[RoutingKeys.DESTINATION.value] = {}
 
-        self.rule_dict["destination"]["topics"] = destination_topics
+        self.rule_dict[RoutingKeys.DESTINATION.value][DestinationKeys.TOPICS.value] = destination_topics
 
         return self
 
     def add_recipients(self, recipients: List[Union[AgentTag, AgentSpec]]) -> "RouteBuilder":
-        if "destination" not in self.rule_dict:
-            self.rule_dict["destination"] = {}
+        if RoutingKeys.DESTINATION.value not in self.rule_dict:
+            self.rule_dict[RoutingKeys.DESTINATION.value] = {}
 
-        if "recipient_list" not in self.rule_dict["destination"]:
-            self.rule_dict["destination"]["recipient_list"] = []
+        if DestinationKeys.RECIPIENT_LIST.value not in self.rule_dict[RoutingKeys.DESTINATION.value]:
+            self.rule_dict[RoutingKeys.DESTINATION.value][DestinationKeys.RECIPIENT_LIST.value] = []
 
         rlist = [
             recipient if isinstance(recipient, AgentTag) else AgentTag(name=recipient.name) for recipient in recipients
         ]
 
-        self.rule_dict["destination"]["recipient_list"].extend(rlist)
+        self.rule_dict[RoutingKeys.DESTINATION.value][DestinationKeys.RECIPIENT_LIST.value].extend(rlist)
 
         return self
 
     def mark_forwarded(self, mark_forwarded: bool) -> "RouteBuilder":
-        self.rule_dict["mark_forwarded"] = mark_forwarded
+        self.rule_dict[RoutingKeys.MARK_FORWARDED.value] = mark_forwarded
         return self
 
     def set_route_times(self, route_times: int) -> "RouteBuilder":
-        self.rule_dict["route_times"] = route_times
+        self.rule_dict[RoutingKeys.ROUTE_TIMES.value] = route_times
         return self
 
     def set_payload_transformer(
         self, output_type: Type[BaseModel], payload_xform: Union[JxScript, str]
     ) -> "RouteBuilder":
-        if "transformer" in self.rule_dict:
+        if RoutingKeys.TRANSFORMER.value in self.rule_dict:
             raise ValueError("Transformer can only be set once.")
 
-        self.rule_dict["transformer"] = PayloadTransformer(
+        self.rule_dict[RoutingKeys.TRANSFORMER.value] = PayloadTransformer(
             style=TransformationType.SIMPLE,
             output_format=get_qualified_class_name(output_type),
             expression=payload_xform.serialize() if isinstance(payload_xform, JxScript) else payload_xform,
@@ -1031,35 +1062,45 @@ class RouteBuilder:
         return self
 
     def set_functional_transformer(self, functional_xform: Union[JxScript, str]) -> "RouteBuilder":
-        if "transformer" in self.rule_dict:
+        if RoutingKeys.TRANSFORMER.value in self.rule_dict:
             raise ValueError("Transformer can only be set once.")
 
-        self.rule_dict["transformer"] = FunctionalTransformer(
+        self.rule_dict[RoutingKeys.TRANSFORMER.value] = FunctionalTransformer(
             style=TransformationType.CBR,
             handler=functional_xform.serialize() if isinstance(functional_xform, JxScript) else functional_xform,
         )
         return self
 
-    def set_agent_state_update(self, update_agent_state: Union[JxScript, str]) -> "RouteBuilder":
+    def set_agent_state_update(
+        self,
+        update_agent_state: Union[JxScript, str],
+        update_format: StateUpdateFormat = StateUpdateFormat.JSON_MERGE_PATCH,
+    ) -> "RouteBuilder":
         state_transformer = StateTransformer(
+            update_format=update_format,
             state_update=(
                 update_agent_state.serialize() if isinstance(update_agent_state, JxScript) else update_agent_state
-            )
+            ),
         )
-        self.rule_dict[StateUpdateActions.AGENT_STATE_UPDATE] = state_transformer
+        self.rule_dict[StateUpdateActions.AGENT_STATE_UPDATE.value] = state_transformer
         return self
 
-    def set_guild_state_update(self, update_guild_state: Union[JxScript, str]) -> "RouteBuilder":
+    def set_guild_state_update(
+        self,
+        update_guild_state: Union[JxScript, str],
+        update_format: StateUpdateFormat = StateUpdateFormat.JSON_MERGE_PATCH,
+    ) -> "RouteBuilder":
         state_transformer = StateTransformer(
+            update_format=update_format,
             state_update=(
                 update_guild_state.serialize() if isinstance(update_guild_state, JxScript) else update_guild_state
-            )
+            ),
         )
-        self.rule_dict[StateUpdateActions.GUILD_STATE_UPDATE] = state_transformer
+        self.rule_dict[StateUpdateActions.GUILD_STATE_UPDATE.value] = state_transformer
         return self
 
     def set_process_status(self, process_status: ProcessStatus) -> "RouteBuilder":
-        self.rule_dict["process_status"] = process_status
+        self.rule_dict[RoutingKeys.PROCESS_STATUS.value] = process_status
         return self
 
     def build(self) -> RoutingRule:
