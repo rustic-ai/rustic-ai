@@ -93,15 +93,6 @@ class TestSplitterGuild:
             ),
             (
                 ListSplitter(field_name="items"),
-                DictFormatSelector(
-                    format_dict={
-                        "0": get_qualified_class_name(ItemProcessingResult),
-                        "1": get_qualified_class_name(ItemProcessingResult),
-                    }
-                ),
-            ),
-            (
-                ListSplitter(field_name="items"),
                 FixedFormatSelector(strategy="fixed", fixed_format=get_qualified_class_name(ItemProcessingResult)),
             ),
             (
@@ -109,8 +100,8 @@ class TestSplitterGuild:
                 DictFormatSelector(
                     strategy="dict",
                     format_dict={
-                        "id": get_qualified_class_name(ItemProcessingResult),
-                        "quantity": get_qualified_class_name(ItemProcessingResult),
+                        "item1": get_qualified_class_name(ItemProcessingResult),
+                        "item2": get_qualified_class_name(ItemProcessingResult),
                     },
                 ),
             ),

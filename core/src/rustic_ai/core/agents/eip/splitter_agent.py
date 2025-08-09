@@ -43,6 +43,11 @@ class ListFormatSelector(BaseFormatSelector):
 
     def get_formats(self, elements) -> List[PayloadWithFormat]:
         result = []
+        if len(elements) != len(self.format_list):
+            raise ValueError(
+                f"Length of elements in payload: {len(elements)} do not match format list: {len(self.format_list)}"
+            )
+
         for item, fmt in zip(elements, self.format_list):
             result.append(PayloadWithFormat(payload=item, format=fmt))
         return result
@@ -51,13 +56,22 @@ class ListFormatSelector(BaseFormatSelector):
 class DictFormatSelector(BaseFormatSelector):
     strategy: Literal["dict"] = "dict"
     format_dict: dict
+    fallback_format: Optional[str] = None
 
     def get_formats(self, elements) -> List[PayloadWithFormat]:
-        formats = [value for key, value in sorted(self.format_dict.items())]
-        result = []
-        for item, fmt in zip(elements, formats):
-            result.append(PayloadWithFormat(payload=item, format=fmt))
-        return result
+        results: List[PayloadWithFormat] = []
+
+        for element in elements:
+            key, value = next(iter(element.items()))
+            if key not in self.format_dict:
+                if self.fallback_format:
+                    results.append(PayloadWithFormat(payload=value, format=self.fallback_format))
+                else:
+                    raise KeyError(f"No format defined for key '{key}' and no fallback_format provided too")
+            else:
+                results.append(PayloadWithFormat(payload=value, format=self.format_dict[key]))
+
+        return results
 
 
 class JsonataFormatSelector(BaseFormatSelector):
@@ -88,6 +102,7 @@ class ListSplitter(BaseSplitter):
     def split(self, payload: JsonDict) -> List[JsonDict]:
         if isinstance(payload[self.field_name], list):
             return payload[self.field_name]
+
         return [payload[self.field_name]]
 
 
@@ -96,10 +111,17 @@ class DictSplitter(BaseSplitter):
     field_name: Optional[str] = None
 
     def split(self, payload: JsonDict) -> List[JsonDict]:
+        target_dict = payload
         if self.field_name:
-            [value for key, value in sorted(payload[self.field_name].items())]
+            if self.field_name not in payload:
+                raise KeyError(f"Field '{self.field_name}' not found in payload.")
 
-        return [value for key, value in sorted(payload.items())]
+            target_dict = payload[self.field_name]
+            if not isinstance(target_dict, dict):
+                raise ValueError(f"Field '{self.field_name}' must contain a dictionary.")
+
+        # Split into [{key: value}] chunks to preserve mapping knowledge
+        return [{key: value} for key, value in sorted(target_dict.items())]
 
 
 class JsonataSplitter(BaseSplitter):
