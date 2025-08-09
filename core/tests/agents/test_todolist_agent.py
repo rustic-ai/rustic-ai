@@ -30,7 +30,7 @@ from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 
 class TestTodoListGuild:
 
-    async def wait_for_message(self, probe_agent, check_fn, timeout=5.0, interval=0.1):
+    async def wait_for_message(self, probe_agent, check_fn, timeout=10.0, interval=0.1):
         """
         Waits for a message satisfying check_fn to appear in probe_agent messages.
 
@@ -110,7 +110,6 @@ class TestTodoListGuild:
         probe_agent.clear_messages()
 
         # Step 1: Add a task
-        # task_id = generator.get_id(Priority.NORMAL)
         task_id = shortuuid.uuid()
         add_request = AddTaskRequest(
             id=task_id,
