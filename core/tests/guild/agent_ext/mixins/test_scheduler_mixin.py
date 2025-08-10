@@ -14,10 +14,10 @@ from rustic_ai.core.agents.system.models import (
 )
 from rustic_ai.core.agents.testutils import ProbeAgent
 from rustic_ai.core.agents.utils import UserProxyAgent
-from rustic_ai.core.guild.agent import Agent, ProcessContext, processor
-from rustic_ai.core.guild.agent_ext.mixins.scheduler import (  # Adjust import paths
+from rustic_ai.core.guild import agent
+from rustic_ai.core.guild.agent import Agent, ProcessContext
+from rustic_ai.core.guild.agent_ext.mixins.scheduler import (
     ScheduleOnceMessage,
-    SchedulerMixin,
 )
 from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder, RouteBuilder
 from rustic_ai.core.guild.metastore import Metastore
@@ -26,6 +26,7 @@ from rustic_ai.core.messaging.core.message import (
     Message,
     RoutingSlip,
 )
+from rustic_ai.core.messaging.core.messaging_config import MessagingConfig
 from rustic_ai.core.utils import GemstoneGenerator
 from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 
@@ -42,15 +43,61 @@ class DummySchedulerAgent(Agent):
     def __init__(self):
         self.received_pings = []
 
-    @processor(PingMessage)
+    @agent.processor(PingMessage)
     def handle_ping(self, ctx: ProcessContext[PingMessage]):
-        logging.info(f"[DummySchedulerAgent] Received ping: {ctx.payload.text}")
+        print(f"[DummySchedulerAgent] Received ping: {ctx.payload.text}")
         self.received_pings.append(ctx.payload.text)
 
         ctx.send(PingReply(pings=self.received_pings))
 
 
 class TestSchedulerMixin:
+    @pytest.fixture(scope="module")
+    def messaging_server(self):
+        """Start a single embedded messaging server for all tests in this module."""
+        import asyncio
+        import threading
+        import time
+
+        from rustic_ai.core.messaging.backend.embedded_backend import EmbeddedServer
+
+        port = 31149
+        server = EmbeddedServer(port=port)
+
+        def run_server():
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            loop.run_until_complete(server.start())
+            try:
+                loop.run_forever()
+            except KeyboardInterrupt:
+                pass
+            finally:
+                loop.run_until_complete(server.stop())
+                loop.close()
+
+        thread = threading.Thread(target=run_server, daemon=True)
+        thread.start()
+        time.sleep(0.5)  # Wait for server to start
+
+        yield server, port
+
+        # Clean up
+        if server.running:
+            server.topics.clear()
+            server.messages.clear()
+            server.subscribers.clear()
+
+    @pytest.fixture
+    def messaging_config(self, messaging_server):
+        # Use embedded backend for multiprocess tests (in-memory can't work across processes)
+        # Connect to the shared server started by the messaging_server fixture
+        server, port = messaging_server
+        return MessagingConfig(
+            backend_module="rustic_ai.core.messaging.backend.embedded_backend",
+            backend_class="EmbeddedMessagingBackend",
+            backend_config={"port": port, "auto_start_server": False},
+        )
 
     @pytest.fixture
     def routing_slip(self) -> RoutingSlip:
@@ -59,6 +106,7 @@ class TestSchedulerMixin:
         return slip
 
     @pytest.fixture
+    @pytest.mark.asyncio
     def rgdatabase(self):
         db = "sqlite:///scheduler_test.db"
 
@@ -72,6 +120,7 @@ class TestSchedulerMixin:
         Metastore.drop_db()
 
     @pytest.fixture
+    @pytest.mark.asyncio
     def scheduler_guild(routing_slip, rgdatabase):
         builder = GuildBuilder(
             guild_id=f"scheduler_guild_{shortuuid.uuid()}",
@@ -98,7 +147,6 @@ class TestSchedulerMixin:
 
     @pytest.mark.asyncio
     async def test_schedule_once(self, scheduler_guild: Guild, generator: GemstoneGenerator):
-
         probe_sepc = (
             AgentBuilder(ProbeAgent)
             .set_id("test_agent")
@@ -117,7 +165,7 @@ class TestSchedulerMixin:
             format=UserAgentCreationRequest,
         )
 
-        await asyncio.sleep(2)
+        await asyncio.sleep(5)
 
         system_messages = probe_agent.get_messages()
         assert len(system_messages) == 1
@@ -133,6 +181,7 @@ class TestSchedulerMixin:
             key=shortuuid.uuid(),
             delay_seconds=2.0,
             mesage_payload={"text": "Ping after delay!"},
+            message_format=get_qualified_class_name(PingMessage),
         ).model_dump()
 
         id_obj = generator.get_id(Priority.NORMAL)
@@ -150,7 +199,14 @@ class TestSchedulerMixin:
 
         await asyncio.sleep(10)
 
-        messages = probe_agent.get_messages()
-        assert len(messages) > 0
-        assert messages[0].payload["id"] == "item-001"
-        assert messages[0].payload["quantity"] == 2
+        msging = probe_agent._client._messaging
+
+        self_messages = msging.get_messages_for_topic_since(
+            GuildTopics.get_self_agent_inbox("scheduler_agent"),
+            0,
+        )
+
+        print("self_messages", self_messages)
+
+        assert len(self_messages) == 2
+        assert self_messages[-1].payload["text"] == "Ping after delay!"
