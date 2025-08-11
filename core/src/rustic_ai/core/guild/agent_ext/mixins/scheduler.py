@@ -1,20 +1,14 @@
-# scheduler.py
-import asyncio
 from datetime import datetime, timedelta
 import logging
 from typing import Dict
 
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.triggers.date import DateTrigger
-from apscheduler.triggers.interval import IntervalTrigger
 from pydantic import BaseModel, Field
 import shortuuid
 
+from rustic_ai.core.agents.commons.message_formats import ErrorMessage
 from rustic_ai.core.guild.agent import ProcessContext, processor
-from rustic_ai.core.messaging.core.message import MDT
 from rustic_ai.core.utils import JsonDict
-from rustic_ai.core.utils.basic_class_utils import get_class_from_name
 
 log = logging.getLogger(__name__)
 
@@ -64,17 +58,14 @@ class SchedulerMixin:
         if not self._scheduler_started:
             self._scheduler.start()
             self._scheduler_started = True
-            print("SchedulerMixin: BackgroundScheduler started")
+            log.info("SchedulerMixin: BackgroundScheduler started")
 
     def _job_wrapper(self, format_str: str, payload: dict):
         """
         Runs inside BackgroundScheduler worker thread.
         Construct the message object and submit _send_dict_to_self coroutine to agent loop.
         """
-        try:
-            self._send_dict_to_self(payload=payload, format=format_str)
-        except Exception:
-            print("SchedulerMixin: job wrapper failed while creating message or submitting task")
+        self._send_dict_to_self(payload=payload, format=format_str)  # type: ignore
 
     def schedule_once(self, key: str, delay_seconds: float, payload: JsonDict, format: str):
         """
@@ -91,6 +82,9 @@ class SchedulerMixin:
 
         run_time = datetime.now() + timedelta(seconds=delay_seconds)
 
+        if not self._scheduler:
+            raise Exception("Scheduler not initialized!")
+
         # add job that calls job_wrapper in background thread
         job = self._scheduler.add_job(
             func=self._job_wrapper,
@@ -103,7 +97,6 @@ class SchedulerMixin:
 
         self._scheduled_jobs[key] = job.id
         log.info("[SchedulerMixin] Scheduled one-time timer '%s' for %s", key, run_time.isoformat())
-        print(f"[SchedulerMixin] Scheduled one-time timer '{key}' for {run_time.isoformat()}")
 
     def schedule_fixed_rate(self, key: str, interval_seconds: float, payload: JsonDict, format: str):
         """
@@ -113,6 +106,9 @@ class SchedulerMixin:
 
         self._start_background_scheduler()
         self.cancel_timer(key)
+
+        if not self._scheduler:
+            raise Exception("Scheduler not initialized!")
 
         job = self._scheduler.add_job(
             func=self._job_wrapper,
@@ -125,7 +121,6 @@ class SchedulerMixin:
 
         self._scheduled_jobs[key] = job.id
         log.info("[SchedulerMixin] Scheduled fixed-rate timer '%s' every %ss", key, interval_seconds)
-        print(f"[SchedulerMixin] Scheduled fixed-rate timer '{key}' every {interval_seconds}s")
 
     def cancel_timer(self, key: str):
         self._ensure_init()
@@ -159,29 +154,52 @@ class SchedulerMixin:
     # Hook processors
     @processor(ScheduleOnceMessage)
     def schedule_once_on_message(self, ctx: ProcessContext[ScheduleOnceMessage]):
-        request = ctx.payload
-        # make sure fields exist
-        self._ensure_init()
-        # schedule - schedule_once will capture the running loop
-        self.schedule_once(
-            key=request.key,
-            delay_seconds=request.delay_seconds,
-            payload=request.mesage_payload,
-            format=request.message_format,
-        )
+        try:
+            request = ctx.payload
+            self.schedule_once(
+                key=request.key,
+                delay_seconds=request.delay_seconds,
+                payload=request.mesage_payload,
+                format=request.message_format,
+            )
+        except Exception as ex:
+            ctx.send(
+                ErrorMessage(
+                    agent_type=self.get_qualified_class_name(),  # type: ignore
+                    error_type="SchedulerError",
+                    error_message=str(ex),
+                )
+            )
 
     @processor(ScheduleFixedRateMessage)
     def schedule_fixed_rate_on_message(self, ctx: ProcessContext[ScheduleFixedRateMessage]):
-        request = ctx.payload
-        self._ensure_init()
-        self.schedule_fixed_rate(
-            key=request.key,
-            interval_seconds=request.interval_seconds,
-            payload=request.mesage_payload,
-            format=request.message_format,
-        )
+        try:
+            request = ctx.payload
+            self.schedule_fixed_rate(
+                key=request.key,
+                interval_seconds=request.interval_seconds,
+                payload=request.mesage_payload,
+                format=request.message_format,
+            )
+        except Exception as ex:
+            ctx.send(
+                ErrorMessage(
+                    agent_type=self.get_qualified_class_name(),  # type: ignore
+                    error_type="SchedulerError",
+                    error_message=str(ex),
+                )
+            )
 
     @processor(CancelScheduledJobMessage)
     def cancel_on_message(self, ctx: ProcessContext[CancelScheduledJobMessage]):
-        request = ctx.payload
-        self.cancel_timer(key=request.key)
+        try:
+            request = ctx.payload
+            self.cancel_timer(key=request.key)
+        except Exception as ex:
+            ctx.send(
+                ErrorMessage(
+                    agent_type=self.get_qualified_class_name(),  # type: ignore
+                    error_type="SchedulerError",
+                    error_message=str(ex),
+                )
+            )

@@ -1,5 +1,4 @@
 import asyncio
-import logging
 import os
 from typing import List
 
@@ -44,60 +43,23 @@ class DummySchedulerAgent(Agent, SchedulerMixin):
     def __init__(self):
         self.received_pings = []
 
-    @agent.processor(PingMessage)
+    @agent.processor(PingMessage, handle_essential=True)
     def handle_ping(self, ctx: ProcessContext[PingMessage]):
         print(f"[DummySchedulerAgent] Received ping: {ctx.payload.text}")
         self.received_pings.append(ctx.payload.text)
-
         ctx.send(PingReply(pings=self.received_pings))
+
+        ctx.send(PingReply(pings=[ctx.payload.text]))
 
 
 class TestSchedulerMixin:
-    @pytest.fixture(scope="module")
-    def messaging_server(self):
-        """Start a single embedded messaging server for all tests in this module."""
-        import asyncio
-        import threading
-        import time
-
-        from rustic_ai.core.messaging.backend.embedded_backend import EmbeddedServer
-
-        port = 31149
-        server = EmbeddedServer(port=port)
-
-        def run_server():
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            loop.run_until_complete(server.start())
-            try:
-                loop.run_forever()
-            except KeyboardInterrupt:
-                pass
-            finally:
-                loop.run_until_complete(server.stop())
-                loop.close()
-
-        thread = threading.Thread(target=run_server, daemon=True)
-        thread.start()
-        time.sleep(0.5)  # Wait for server to start
-
-        yield server, port
-
-        # Clean up
-        if server.running:
-            server.topics.clear()
-            server.messages.clear()
-            server.subscribers.clear()
 
     @pytest.fixture
-    def messaging_config(self, messaging_server):
-        # Use embedded backend for multiprocess tests (in-memory can't work across processes)
-        # Connect to the shared server started by the messaging_server fixture
-        server, port = messaging_server
+    def messaging_config(self):
         return MessagingConfig(
-            backend_module="rustic_ai.core.messaging.backend.embedded_backend",
-            backend_class="EmbeddedMessagingBackend",
-            backend_config={"port": port, "auto_start_server": False},
+            backend_module="rustic_ai.redis.messaging.backend",
+            backend_class="RedisMessagingBackend",
+            backend_config={"redis_client": {"host": "localhost", "port": 6379}},
         )
 
     @pytest.fixture
@@ -126,12 +88,14 @@ class TestSchedulerMixin:
         Metastore.drop_db()
 
     @pytest.fixture
-    def scheduler_guild(self, routing_slip, rgdatabase):
+    def scheduler_guild(self, routing_slip, rgdatabase, messaging_config):
         builder = GuildBuilder(
             guild_id=f"scheduler_guild_{shortuuid.uuid()}",
             guild_name="Scheduler Test Guild",
             guild_description="Tests scheduling messages to self",
         )
+
+        builder.set_property("messaging", messaging_config)
 
         agent_spec = (
             AgentBuilder(DummySchedulerAgent)
@@ -214,5 +178,9 @@ class TestSchedulerMixin:
         assert len(self_messages) == 2
         assert self_messages[-1].payload["text"] == "Ping after delay!"
 
-        # all_messages = probe_agent.get_messages()
-        # assert len(all_messages[-1].payload.pings) == 1
+        all_messages = probe_agent.get_messages()
+        assert all_messages[-1].format == get_qualified_class_name(PingReply)
+
+        response = PingReply.model_validate(all_messages[-1].payload)
+        assert len(response.pings) == 1
+        assert response.pings[0] == "Ping after delay!"
