@@ -8,6 +8,7 @@ from rustic_ai.core.agents.commons import (
     ExtractRequest,
     ExtractResponse,
 )
+from rustic_ai.core.agents.commons.message_formats import ErrorMessage
 from rustic_ai.core.guild import agent
 from rustic_ai.core.guild.agent import Agent, ProcessContext
 
@@ -43,18 +44,32 @@ class MarvinAgent(Agent):
         """
         request = ctx.payload
 
-        extracted_entities = await marvin.extract_async(  # type: ignore
-            request.source_text,
-            target=request.extraction_spec.extraction_class,
-            instructions=request.extraction_spec.extraction_instructions,
-        )
+        try:
+            extracted_entities = await marvin.extract_async(  # type: ignore
+                request.source_text,
+                target=request.extraction_spec.extraction_class,
+                instructions=request.extraction_spec.extraction_instructions,
+            )
 
-        response = ExtractResponse(
-            source_text=request.source_text,
-            extracted_data=extracted_entities,
-        )  # type: ignore
+            response = ExtractResponse[request.extraction_spec.extraction_class](
+                source_text=request.source_text,
+                extracted_data=[
+                    (
+                        request.extraction_spec.extraction_class.model_validate(e)
+                        if not isinstance(e, request.extraction_spec.extraction_class)
+                        else e
+                    )
+                    for e in extracted_entities
+                ],
+            )
 
-        ctx.send(response)
+            ctx.send(response)
+        except Exception as e:
+            ctx.send(
+                ErrorMessage(
+                    agent_type=self.get_qualified_class_name(), error_type="ExtractorError", error_message=str(e)
+                )
+            )
 
     @agent.processor(ClassifyAndExtractRequest)
     def classify_and_extract(self, ctx: ProcessContext[ClassifyAndExtractRequest]):

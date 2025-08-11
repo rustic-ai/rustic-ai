@@ -150,11 +150,13 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
         agent_model = AgentModel.from_agent_spec(self.guild_id, agent_spec)
         if session is None:
             with Session(self.engine) as session:
-                session.add(agent_model)
-                session.commit()
-                session.close()
+                if AgentModel.get_by_id(session, self.guild_id, agent_spec.id) is None:
+                    session.add(agent_model)
+                    session.commit()
+                    session.close()
         else:
-            session.add(agent_model)  # pragma: no cover
+            if AgentModel.get_by_id(session, self.guild_id, agent_spec.id) is None:
+                session.add(agent_model)  # pragma: no cover
 
     def _announce_guild_refresh(self, ctx: ProcessContext) -> None:
         """
@@ -241,8 +243,9 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
 
                 # Add the agents to the Metastore
                 for guild_agent in self.guild_spec.agents:
-                    agent_model = AgentModel.from_agent_spec(self.guild_id, guild_agent)
-                    session.add(agent_model)
+                    if AgentModel.get_by_id(session, self.guild_id, guild_agent.id) is None:
+                        agent_model = AgentModel.from_agent_spec(self.guild_id, guild_agent)
+                        session.add(agent_model)
 
                 session.commit()
                 session.refresh(guild_model)
@@ -259,8 +262,9 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
                 self.guild = GuildBuilder.from_spec(guild_spec).load_or_launch(self.organization_id)
 
             self.guild.register_agent(self.get_spec())
-            self_model = AgentModel.from_agent_spec(self.guild_id, self.get_spec())
-            session.add(self_model)  # pragma: no cover
+            if AgentModel.get_by_id(session, self.guild_id, self.id) is None:
+                self_model = AgentModel.from_agent_spec(self.guild_id, self.get_spec())
+                session.add(self_model)  # pragma: no cover
 
             guild_model.status = GuildStatus.STARTING
             session.add(guild_model)
@@ -313,8 +317,9 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
         self.guild.launch_agent(aar.agent_spec)
 
         with Session(self.engine) as session:
-            session.add(AgentModel.from_agent_spec(self.guild_id, aar.agent_spec))
-            session.commit()
+            if AgentModel.get_by_id(session, self.guild_id, aar.agent_spec.id) is None:
+                session.add(AgentModel.from_agent_spec(self.guild_id, aar.agent_spec))
+                session.commit()
 
         self.state_manager.update_state(
             StateUpdateRequest(

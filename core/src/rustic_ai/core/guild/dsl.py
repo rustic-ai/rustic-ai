@@ -15,7 +15,7 @@ from typing import (
 )
 
 import jsonata
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Discriminator, Field, Tag, model_validator
 import shortuuid
 
 from rustic_ai.core.guild.agent_ext.depends.dependency_resolver import DependencySpec
@@ -75,6 +75,8 @@ class GuildTopics:
 
     DEAD_LETTER_QUEUE: str = "dead_letter_queue"
 
+    ERROR_TOPIC: str = "error_topic"
+
     @staticmethod
     def get_self_agent_inbox(agent_id: str) -> str:
         """
@@ -122,7 +124,22 @@ class TypeEqualsPredicate(RuntimePredicate):
         return actual_type == self.expected_type
 
 
-RuntimePredicateType = Annotated[Union[JSONataPredicate, TypeEqualsPredicate], Field(discriminator="predicate_type")]
+def predicate_type_discriminator(value: Any) -> str:
+    if isinstance(value, dict):
+        if "predicate_type" in value:
+            return value["predicate_type"]
+        else:
+            return "jsonata_fn"
+    return getattr(value, "predicate_type", "jsonata_fn")
+
+
+RuntimePredicateType = Annotated[
+    Union[
+        Annotated[JSONataPredicate, Tag("jsonata_fn")],
+        Annotated[TypeEqualsPredicate, Tag("type_equals")],
+    ],
+    Field(discriminator=Discriminator(predicate_type_discriminator)),
+]
 
 
 class ResourceSpec(BaseModel):
