@@ -18,6 +18,7 @@ from rustic_ai.core.guild import agent
 from rustic_ai.core.guild.agent import Agent, ProcessContext
 from rustic_ai.core.guild.agent_ext.mixins.scheduler import (
     ScheduleOnceMessage,
+    SchedulerMixin,
 )
 from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder, RouteBuilder
 from rustic_ai.core.guild.metastore import Metastore
@@ -39,7 +40,7 @@ class PingReply(BaseModel):
     pings: List[str]
 
 
-class DummySchedulerAgent(Agent):
+class DummySchedulerAgent(Agent, SchedulerMixin):
     def __init__(self):
         self.received_pings = []
 
@@ -101,12 +102,17 @@ class TestSchedulerMixin:
 
     @pytest.fixture
     def routing_slip(self) -> RoutingSlip:
-
-        slip = RoutingSlip(steps=[])
+        dummy_to_final = (
+            RouteBuilder(AgentTag(name="Scheduler Agent"))
+            .on_message_format(PingReply)
+            .set_destination_topics("final_topic")
+            .set_route_times(-1)
+            .build()
+        )
+        slip = RoutingSlip(steps=[dummy_to_final])
         return slip
 
     @pytest.fixture
-    @pytest.mark.asyncio
     def rgdatabase(self):
         db = "sqlite:///scheduler_test.db"
 
@@ -120,8 +126,7 @@ class TestSchedulerMixin:
         Metastore.drop_db()
 
     @pytest.fixture
-    @pytest.mark.asyncio
-    def scheduler_guild(routing_slip, rgdatabase):
+    def scheduler_guild(self, routing_slip, rgdatabase):
         builder = GuildBuilder(
             guild_id=f"scheduler_guild_{shortuuid.uuid()}",
             guild_name="Scheduler Test Guild",
@@ -139,9 +144,8 @@ class TestSchedulerMixin:
         )
 
         builder.add_agent_spec(agent_spec)
-        # builder.set_routes(routing_slip)
+        guild = builder.set_routes(routing_slip).bootstrap(rgdatabase, "dummy_ord")
 
-        guild = builder.bootstrap(rgdatabase, "dummy_user")
         yield guild
         guild.shutdown()
 
@@ -154,6 +158,7 @@ class TestSchedulerMixin:
             .set_description("A test agent")
             .add_additional_topic(UserProxyAgent.BROADCAST_TOPIC)
             .add_additional_topic(GuildTopics.SYSTEM_TOPIC)
+            .add_additional_topic("final_topic")
             .build_spec()
         )
 
@@ -206,7 +211,8 @@ class TestSchedulerMixin:
             0,
         )
 
-        print("self_messages", self_messages)
-
         assert len(self_messages) == 2
         assert self_messages[-1].payload["text"] == "Ping after delay!"
+
+        # all_messages = probe_agent.get_messages()
+        # assert len(all_messages[-1].payload.pings) == 1

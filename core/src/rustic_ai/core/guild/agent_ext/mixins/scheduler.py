@@ -11,7 +11,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 from pydantic import BaseModel, Field
 import shortuuid
 
-from rustic_ai.core.guild.agent import AgentFixtures, ProcessContext, processor
+from rustic_ai.core.guild.agent import ProcessContext, processor
 from rustic_ai.core.messaging.core.message import MDT
 from rustic_ai.core.utils import JsonDict
 from rustic_ai.core.utils.basic_class_utils import get_class_from_name
@@ -69,14 +69,10 @@ class SchedulerMixin:
     def _job_wrapper(self, format_str: str, payload: dict):
         """
         Runs inside BackgroundScheduler worker thread.
-        Construct the message object and submit _send_to_self coroutine to agent loop.
+        Construct the message object and submit _send_dict_to_self coroutine to agent loop.
         """
         try:
-            # Build model instance
-            cls = get_class_from_name(format_str)
-            msg_obj = cls(**payload)
-            self._send_to_self(payload=msg_obj)
-
+            self._send_dict_to_self(payload=payload, format=format_str)
         except Exception:
             print("SchedulerMixin: job wrapper failed while creating message or submitting task")
 
