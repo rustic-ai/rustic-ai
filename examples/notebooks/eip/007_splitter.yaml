@@ -1,0 +1,26 @@
+id: splitter_guild
+name: SplitterGuild
+description: Demonstrates splitting of messages using SplitterAgent
+agents:
+- id: SplitterAgent
+  name: Purchase Order Splitter
+  description: Splits a PurchaseOrderRequest into multiple ItemRequest messages
+  class_name: rustic_ai.core.agents.eip.splitter_agent.SplitterAgent
+  additional_topics:
+  - purchase_orders
+  properties:
+    format_selector:
+      fixed_format: __main__.ItemProcessingResult
+      strategy: fixed
+    splitter:
+      field_name: items
+      split_type: list
+
+routes:
+  steps:
+  - agent:
+      name: Purchase Order Splitter
+    destination:
+      topics: item_processing_results
+    message_format: __main__.ItemProcessingResult
+    route_times: -1
