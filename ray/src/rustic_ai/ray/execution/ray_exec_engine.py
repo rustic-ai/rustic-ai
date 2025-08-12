@@ -49,9 +49,7 @@ class RayExecutionEngine(ExecutionEngine):
         except ValueError:
             pass
 
-        if existing_actor:
-            agent_wrapper = existing_actor
-        else:
+        if not existing_actor:
             agent_wrapper = RayAgentWrapper.options(
                 num_cpus=agent_spec.resources.num_cpus if agent_spec.resources.num_cpus else default_num_cpus,
                 num_gpus=agent_spec.resources.num_gpus if agent_spec.resources.num_gpus else 0,
@@ -69,7 +67,7 @@ class RayExecutionEngine(ExecutionEngine):
                 client_properties=client_properties,
             )
 
-        # Execute the agent asynchronously
+        agent_wrapper = ray.get_actor(name=agent_spec.id, namespace=self._get_namespace())
         actor = agent_wrapper.run.remote()  # type: ignore
 
         if guild_id not in self.agent_wrappers:
