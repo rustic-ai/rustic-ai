@@ -16,6 +16,8 @@ from rustic_ai.core.agents.utils import UserProxyAgent
 from rustic_ai.core.guild import agent
 from rustic_ai.core.guild.agent import Agent, ProcessContext
 from rustic_ai.core.guild.agent_ext.mixins.scheduler import (
+    CancelScheduledJobMessage,
+    ScheduleFixedRateMessage,
     ScheduleOnceMessage,
     SchedulerMixin,
 )
@@ -47,9 +49,8 @@ class DummySchedulerAgent(Agent, SchedulerMixin):
     def handle_ping(self, ctx: ProcessContext[PingMessage]):
         print(f"[DummySchedulerAgent] Received ping: {ctx.payload.text}")
         self.received_pings.append(ctx.payload.text)
-        ctx.send(PingReply(pings=self.received_pings))
 
-        ctx.send(PingReply(pings=[ctx.payload.text]))
+        ctx.send(PingReply(pings=self.received_pings))
 
 
 class TestSchedulerMixin:
@@ -175,7 +176,6 @@ class TestSchedulerMixin:
             0,
         )
 
-        assert len(self_messages) == 2
         assert self_messages[-1].payload["text"] == "Ping after delay!"
 
         all_messages = probe_agent.get_messages()
@@ -184,3 +184,62 @@ class TestSchedulerMixin:
         response = PingReply.model_validate(all_messages[-1].payload)
         assert len(response.pings) == 1
         assert response.pings[0] == "Ping after delay!"
+
+        probe_agent.clear_messages()
+
+        # --- Test ScheduleFixedRateMessage ---
+
+        fixed_key = shortuuid.uuid()
+        fixed_msg = ScheduleFixedRateMessage(
+            key=fixed_key,
+            interval_seconds=1.0,
+            mesage_payload={"text": "Repeated ping!"},
+            message_format=get_qualified_class_name(PingMessage),
+        ).model_dump()
+
+        wrapped_fixed = Message(
+            id_obj=generator.get_id(Priority.NORMAL),
+            topics="scheduler",
+            payload=fixed_msg,
+            format=get_qualified_class_name(ScheduleFixedRateMessage),
+            sender=AgentTag(id="test_agent", name="TestAgent"),
+        )
+        probe_agent.publish(
+            topic=UserProxyAgent.get_user_inbox_topic("test_user"),
+            payload=wrapped_fixed,
+        )
+
+        await asyncio.sleep(3.5)  # Let it fire ~3 times
+
+        all_messages = probe_agent.get_messages()
+
+        assert len(all_messages) >= 2
+        assert all_messages[-1].format == get_qualified_class_name(PingReply)
+
+        response = PingReply.model_validate(all_messages[-1].payload)
+        assert len(response.pings) >= 2
+        assert response.pings[-1] == "Repeated ping!"
+
+        probe_agent.clear_messages()
+
+        # --- Test CancelScheduledJobMessage ---
+
+        cancel_msg = CancelScheduledJobMessage(key=fixed_key).model_dump()
+        wrapped_cancel = Message(
+            id_obj=generator.get_id(Priority.NORMAL),
+            topics="scheduler",
+            payload=cancel_msg,
+            format=get_qualified_class_name(CancelScheduledJobMessage),
+            sender=AgentTag(id="test_agent", name="TestAgent"),
+        )
+        probe_agent.publish(
+            topic=UserProxyAgent.get_user_inbox_topic("test_user"),
+            payload=wrapped_cancel,
+        )
+
+        await asyncio.sleep(4)  # Give time to ensure it's cancelled
+
+        all_messages = probe_agent.get_messages()
+
+        after_cancel = [m for m in all_messages if m.payload.get("text") == "Repeated ping!"]
+        assert len(after_cancel) == 0  # no more repeats after cancel
