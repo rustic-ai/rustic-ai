@@ -36,7 +36,10 @@ class StatePopulation(BaseModel):
     year: int
 
 
-@pytest.mark.skipif(os.getenv("OPENAI_API_KEY") is None, reason="OPENAI_API_KEY environment variable not set")
+@pytest.mark.skipif(
+    os.getenv("MARVIN_AGENT_MODEL") is None and os.getenv("OPENAI_API_KEY") is None,
+    reason="MARVIN_AGENT_MODEL is OpenAI and OPENAI_API_KEY environment variable not set",
+)
 class TestMarvinAgent:
     @pytest.fixture
     def agent_spec(self):
