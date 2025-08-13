@@ -94,7 +94,7 @@ exclude = [
     "^\\.tox/",
     "^cache/",
     "cookiecutter-rustic/",
-    "out/"
+    "out/",
 ]
 
 

@@ -3,7 +3,6 @@ from typing import Any, Dict, List, Optional, Type
 
 import ray
 from ray.actor import ActorHandle
-
 from rustic_ai.core.guild.agent import Agent, AgentSpec
 from rustic_ai.core.guild.dsl import GuildSpec
 from rustic_ai.core.guild.execution.execution_engine import ExecutionEngine
@@ -18,7 +17,7 @@ class RayExecutionEngine(ExecutionEngine):
         # Ray must be initialized before using RayExecutionEngine.
         if not ray.is_initialized():
             raise Exception("Ray must be initialized before using RayExecutionEngine.")  # pragma: no cover
-        self.agent_wrappers: Dict[str, Dict[str, RayAgentWrapper]] = {}
+        self.agent_wrappers: Dict[str, Dict[str, ActorHandle]] = {}
         self.agent_actors: Dict[str, Dict[str, ray.ObjectRef]] = {}
 
     def _get_namespace(self):
