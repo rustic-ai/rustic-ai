@@ -10,7 +10,11 @@ from rustic_ai.core.guild.builders import GuildBuilder
 from rustic_ai.core.guild.dsl import AgentSpec
 from rustic_ai.core.guild.execution.utils import build_agent_from_spec
 from rustic_ai.core.messaging.core import JsonDict
-from rustic_ai.core.messaging.core.message import Message, MessageConstants, ProcessEntry
+from rustic_ai.core.messaging.core.message import (
+    Message,
+    MessageConstants,
+    ProcessEntry,
+)
 from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 from rustic_ai.core.utils.gemstone_id import GemstoneID
 
@@ -68,7 +72,7 @@ def wrap_agent_for_testing(
                 origin=self.message.id,
                 result=id_obj.to_int(),
                 processor=self.method_name,
-                to_topics=self.message.topics,
+                to_topics=self.message.topics if isinstance(self.message.topics, list) else [self.message.topics],
             )
 
             session_state = self.get_context()
