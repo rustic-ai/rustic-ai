@@ -1,6 +1,7 @@
 from typing import List
 
 import litellm
+
 from rustic_ai.core.guild.agent_ext.depends.dependency_resolver import (
     DependencyResolver,
 )
@@ -51,9 +52,11 @@ class LiteLLM(LLM):
         if prompt.tools:
             tools.extend(prompt.tools)
 
+        prompt_dict = prompt.model_dump(exclude=None, exclude_unset=True)
+
         full_prompt = {
             **self.client_props,
-            **prompt.model_dump(exclude_unset=True, exclude_none=True),
+            **prompt_dict,
             "messages": messages_dict,
         }
 
