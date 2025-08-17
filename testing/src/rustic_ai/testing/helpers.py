@@ -10,7 +10,7 @@ from rustic_ai.core.guild.builders import GuildBuilder
 from rustic_ai.core.guild.dsl import AgentSpec
 from rustic_ai.core.guild.execution.utils import build_agent_from_spec
 from rustic_ai.core.messaging.core import JsonDict
-from rustic_ai.core.messaging.core.message import Message, MessageConstants
+from rustic_ai.core.messaging.core.message import Message, MessageConstants, ProcessEntry
 from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 from rustic_ai.core.utils.gemstone_id import GemstoneID
 
@@ -40,18 +40,14 @@ def wrap_agent_for_testing(
             reason: Optional[str] = None,
         ) -> List[GemstoneID]:
             id_obj = self.agent._generate_id(self.message.priority)
-            msg = Message(
-                topics=self.message.topics,
-                format=get_qualified_class_name(data.__class__),
-                sender=self.agent.get_agent_tag(),
-                payload=data.model_dump(),
-                id_obj=id_obj,
-                in_response_to=self.message.id,
-                thread=self.message.thread,
-                recipient_list=[],
-            )
 
-            results.append(msg)
+            self.send_dict(
+                data=data.model_dump(),
+                format=get_qualified_class_name(data.__class__),
+                new_thread=new_thread,
+                forwarding=forwarding,
+                error_message=error_message,
+            )
 
             return [id_obj]
 
@@ -65,6 +61,18 @@ def wrap_agent_for_testing(
             reason: Optional[str] = None,
         ) -> List[GemstoneID]:
             id_obj = self.agent._generate_id(self.message.priority)
+
+            process_entry = ProcessEntry(
+                agent=self.agent.get_agent_tag(),
+                from_topic=self.message.topic_published_to,
+                origin=self.message.id,
+                result=id_obj.to_int(),
+                processor=self.method_name,
+                to_topics=self.message.topics,
+            )
+
+            session_state = self.get_context()
+
             msg = Message(
                 topics=self.message.topics,
                 format=format,
@@ -74,6 +82,8 @@ def wrap_agent_for_testing(
                 in_response_to=self.message.id,
                 thread=self.message.thread,
                 recipient_list=[],
+                message_history=[process_entry],
+                session_state=session_state,
             )
 
             results.append(msg)
