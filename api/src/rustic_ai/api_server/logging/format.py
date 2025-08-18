@@ -36,7 +36,7 @@ class RFC3339JsonFormatter(JsonFormatter):
         # Convert timestamp to RFC 3339 format
         if "created" in log_record:
             dt = datetime.fromtimestamp(log_record["created"], tz=timezone.utc)
-            log_record["timestamp"] = dt.isoformat() + "Z"
+            log_record["timestamp"] = dt.isoformat()
             # Remove the original timestamp fields to avoid duplication
             log_record.pop("created", None)
             log_record.pop("asctime", None)

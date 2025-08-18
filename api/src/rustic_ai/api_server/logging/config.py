@@ -1,6 +1,9 @@
 import os
 
-from rustic_ai.api_server.logging.format import HttpAccessJsonFormatter
+from rustic_ai.api_server.logging.format import (
+    HttpAccessJsonFormatter,
+    RFC3339JsonFormatter,
+)
 
 logging_level = os.environ.get("RUSTIC_LOGGING_LEVEL", "DEBUG")
 logging_format = os.environ.get("RUSTIC_LOGGING_FORMAT", "json")
@@ -12,7 +15,7 @@ LOGGING_CONFIG = {
     "formatters": {
         "standard": {"format": "%(levelname)s:\t %(asctime)s - %(name)s - %(message)s (%(filename)s:%(lineno)d)"},
         "json": {
-            "()": "pythonjsonlogger.json.JsonFormatter",
+            "()": RFC3339JsonFormatter,
             "reserved_attrs": ["color_message", "msg", "args"],
             "rename_fields": {"levelname": "level"},
         },
