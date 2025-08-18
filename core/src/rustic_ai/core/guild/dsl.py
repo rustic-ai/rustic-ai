@@ -2,6 +2,8 @@ from abc import ABC, abstractmethod
 from typing import (
     Annotated,
     Any,
+    Callable,
+    ClassVar,
     Dict,
     Generic,
     List,
@@ -22,6 +24,7 @@ from rustic_ai.core.guild.agent_ext.depends.dependency_resolver import Dependenc
 from rustic_ai.core.guild.metaprog.constants import MetaclassConstants
 from rustic_ai.core.messaging.core.message import AgentTag, RoutingSlip
 from rustic_ai.core.utils.basic_class_utils import get_class_from_name
+from rustic_ai.core.utils.cel_expr import CelExpressionEvaluator
 from rustic_ai.core.utils.json_utils import JsonDict
 
 
@@ -107,6 +110,27 @@ class JSONataPredicate(RuntimePredicate):
     def evaluate(self, message: JsonDict, agent_state: JsonDict, guild_state: JsonDict) -> bool:
         expr = jsonata.Jsonata(self.expression)
         result = expr.evaluate({"message": message, "agent_state": agent_state, "guild_state": guild_state})
+
+        # Make sure we return a boolean
+        if result:
+            return True
+        else:
+            return False
+
+
+class CelPredicate(RuntimePredicate):
+    predicate_type: Literal["cel_fn"] = "cel_fn"
+    expression: str
+    functions: ClassVar[Dict[str, Callable]] = {}
+
+    def evaluate(self, message: JsonDict, agent_state: JsonDict, guild_state: JsonDict) -> bool:
+        evaluator = CelExpressionEvaluator()
+        for k, v in self.functions.items():
+            evaluator.add_function(k, v)
+
+        result = evaluator.eval(
+            self.expression, {"message": message, "agent_state": agent_state, "guild_state": guild_state}
+        )
 
         # Make sure we return a boolean
         if result:

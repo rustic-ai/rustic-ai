@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, Literal, Optional, Union
+from typing import Callable, ClassVar, Dict, List, Literal, Optional, Union
 
 from jsonata import Jsonata
 from pydantic import BaseModel
@@ -8,6 +8,7 @@ from rustic_ai.core.agents.commons.message_formats import ErrorMessage
 from rustic_ai.core.guild import agent
 from rustic_ai.core.guild.agent import Agent, ProcessContext
 from rustic_ai.core.guild.dsl import BaseAgentProps
+from rustic_ai.core.utils.cel_expr import CelExpressionEvaluator
 from rustic_ai.core.utils.json_utils import JsonDict
 
 # Format selectors
@@ -84,6 +85,22 @@ class JsonataFormatSelector(BaseFormatSelector):
         return payload_with_format
 
 
+class CelFormatSelector(BaseFormatSelector):
+    strategy: Literal["cel"] = "cel"
+    expression: str
+    functions: ClassVar[Dict[str, Callable]] = {}
+
+    def get_formats(self, elements) -> List[PayloadWithFormat]:
+        evaluator = CelExpressionEvaluator()
+        for k, v in self.functions.items():
+            evaluator.add_function(k, v)
+
+        payload_with_format = [
+            PayloadWithFormat(payload=item, format=evaluator.eval(self.expression, item)) for item in elements
+        ]
+        return payload_with_format
+
+
 # Splitter
 
 
@@ -138,9 +155,29 @@ class JsonataSplitter(BaseSplitter):
         return []
 
 
+class CelSplitter(BaseSplitter):
+    split_type: Literal["cel"] = "cel"
+    expression: str
+    functions: ClassVar[Dict[str, Callable]] = {}
+
+    def split(self, payload: JsonDict) -> List[JsonDict]:
+        evaluator = CelExpressionEvaluator()
+        for k, v in self.functions.items():
+            evaluator.add_function(k, v)
+
+        result = evaluator.eval(self.expression, payload)
+        if isinstance(result, list):
+            return result
+        elif result is not None:
+            return [result]
+        return []
+
+
 class SplitterConf(BaseAgentProps):
-    splitter: Union[ListSplitter, JsonataSplitter, DictSplitter]
-    format_selector: Union[FixedFormatSelector, ListFormatSelector, DictFormatSelector, JsonataFormatSelector]
+    splitter: Union[ListSplitter, JsonataSplitter, DictSplitter, CelSplitter]
+    format_selector: Union[
+        FixedFormatSelector, ListFormatSelector, DictFormatSelector, JsonataFormatSelector, CelFormatSelector
+    ]
 
 
 class SplitterAgent(Agent[SplitterConf]):
