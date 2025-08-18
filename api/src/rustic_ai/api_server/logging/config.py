@@ -1,18 +1,33 @@
 import os
 
+from rustic_ai.api_server.logging.format import HttpAccessJsonFormatter
+
 logging_level = os.environ.get("RUSTIC_LOGGING_LEVEL", "DEBUG")
+logging_format = os.environ.get("RUSTIC_LOGGING_FORMAT", "json")
+
 
 LOGGING_CONFIG = {
     "version": 1,
     "disable_existing_loggers": True,
     "formatters": {
         "standard": {"format": "%(levelname)s:\t %(asctime)s - %(name)s - %(message)s (%(filename)s:%(lineno)d)"},
+        "json": {
+            "()": "pythonjsonlogger.json.JsonFormatter",
+            "reserved_attrs": ["color_message", "msg", "args"],
+            "rename_fields": {"levelname": "level"},
+        },
+        "access_json": {"()": HttpAccessJsonFormatter, "reserved_attrs": []},
     },
     "handlers": {
         "default": {
-            "formatter": "standard",
+            "formatter": logging_format,
             "class": "logging.StreamHandler",
             "stream": "ext://sys.stdout",  # Default is stderr
+        },
+        "access": {
+            "formatter": "access_json" if logging_format == "json" else "standard",
+            "class": "logging.StreamHandler",
+            "stream": "ext://sys.stdout",
         },
     },
     "loggers": {
@@ -23,7 +38,7 @@ LOGGING_CONFIG = {
         },
         "uvicorn.access": {
             "level": logging_level,
-            "handlers": ["default"],
+            "handlers": ["access"],
             "propagate": False,
         },
         "uvicorn.error": {
