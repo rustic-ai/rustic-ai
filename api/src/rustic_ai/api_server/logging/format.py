@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
 import re
 
@@ -35,7 +35,7 @@ class RFC3339JsonFormatter(JsonFormatter):
         """Process the log record and convert timestamp to RFC 3339 format"""
         # Convert timestamp to RFC 3339 format
         if "created" in log_record:
-            dt = datetime.fromtimestamp(log_record["created"])
+            dt = datetime.fromtimestamp(log_record["created"], tz=timezone.utc)
             log_record["timestamp"] = dt.isoformat() + "Z"
             # Remove the original timestamp fields to avoid duplication
             log_record.pop("created", None)
@@ -51,7 +51,7 @@ class HttpAccessJsonFormatter(RFC3339JsonFormatter):
         super().__init__(*args, **kwargs)
         # Regex to parse uvicorn access log format: IP:PORT - "METHOD /path HTTP/1.1" STATUS
         self.access_pattern = re.compile(
-            r'(?P<remote_ip>[\d\.]+):(?P<remote_port>\d+)\s+-\s+"(?P<method>\w+)\s+(?P<url>\S+)\s+(?P<protocol>HTTP/[\d\.]+)"\s+(?P<status>\d+)'
+            r'(?P<remote_ip>(?:\d{1,3}\.){3}\d{1,3}):(?P<remote_port>\d+)\s+-\s+"(?P<method>\w+)\s+(?P<url>\S+)\s+(?P<protocol>HTTP/[\d\.]+)"\s+(?P<status>\d+)'
         )
 
     def process_log_record(self, log_record):
