@@ -1,16 +1,19 @@
 import os
+
 from pydantic import BaseModel
 import pytest
+import shortuuid
 
 from rustic_ai.core.guild.agent_ext.depends.dependency_resolver import DependencySpec
-from rustic_ai.core.guild.agent_ext.depends.filesystem.filesystem import FileSystemResolver
+from rustic_ai.core.guild.agent_ext.depends.filesystem.filesystem import (
+    FileSystemResolver,
+)
 from rustic_ai.core.guild.dsl import GuildTopics
 from rustic_ai.core.messaging.core.message import AgentTag, Message
 from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 from rustic_ai.core.utils.gemstone_id import GemstoneGenerator
 from rustic_ai.core.utils.priority import Priority
 from rustic_ai.litellm.agent_ext.llm import LiteLLMResolver
-import shortuuid
 
 
 @pytest.fixture
