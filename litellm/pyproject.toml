@@ -19,7 +19,7 @@ packages = [{ include = "rustic_ai", from = "src" }]
 [tool.poetry.dependencies]
 python = ">=3.12,<3.13"
 rusticai-core = { path = "../core", develop = true }
-litellm = "^1.65.4.post1"
+litellm = "1.75.0"
 dotenv = "^0.9.9"
 openai = "^1.71.0"
 
