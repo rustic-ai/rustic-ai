@@ -13,4 +13,6 @@ class FileSystemResolver(DependencyResolver[FileSystem]):
 
     def resolve(self, guild_id: str, agent_id: str) -> FileSystem:
         basefs = filesystem(self.protocol, **self.storage_options)
-        return FileSystem(path=f"{self.path_base}/{guild_id}/{agent_id}", fs=basefs)
+        return FileSystem(
+            path=f"{self.path_base}/{guild_id}/{agent_id}", fs=basefs, storage_options=self.storage_options
+        )
