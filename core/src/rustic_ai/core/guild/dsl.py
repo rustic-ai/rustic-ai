@@ -3,7 +3,6 @@ from typing import (
     Annotated,
     Any,
     Callable,
-    ClassVar,
     Dict,
     Generic,
     List,
@@ -121,12 +120,13 @@ class JSONataPredicate(RuntimePredicate):
 class CelPredicate(RuntimePredicate):
     predicate_type: Literal["cel_fn"] = "cel_fn"
     expression: str
-    functions: ClassVar[Dict[str, Callable]] = {}
+    functions: Optional[Dict[str, Callable]] = {}
 
     def evaluate(self, message: JsonDict, agent_state: JsonDict, guild_state: JsonDict) -> bool:
         evaluator = CelExpressionEvaluator()
-        for k, v in self.functions.items():
-            evaluator.add_function(k, v)
+        if self.functions:
+            for k, v in self.functions.items():
+                evaluator.add_function(k, v)
 
         result = evaluator.eval(
             self.expression, {"message": message, "agent_state": agent_state, "guild_state": guild_state}

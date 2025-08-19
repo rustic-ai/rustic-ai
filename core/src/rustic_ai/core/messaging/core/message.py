@@ -140,7 +140,7 @@ class PayloadTransformer(Transformer):
     output_format: Optional[str] = Field(default=MessageConstants.RAW_JSON_FORMAT)
     expression_type: Optional[str] = Field(default="jsonata")
     expression: Optional[str] = Field(default=None)
-    functions: ClassVar[Dict[str, Callable]] = {}
+    functions: Optional[Dict[str, Callable]] = {}
 
     def transform(
         self, origin: "Message", agent_state: JsonDict, guild_state: JsonDict, routable: "MessageRoutable"
@@ -158,8 +158,9 @@ class PayloadTransformer(Transformer):
                 evaluated = expr.evaluate(data)
             elif self.expression and self.expression_type == "cel":
                 evaluator = CelExpressionEvaluator()
-                for k, v in self.functions.items():
-                    evaluator.add_function(k, v)
+                if self.functions:
+                    for k, v in self.functions.items():
+                        evaluator.add_function(k, v)
 
                 evaluated = evaluator.eval(self.expression, data)
             else:
@@ -184,7 +185,7 @@ class FunctionalTransformer(Transformer):
     expression_type: Optional[str] = Field(default="jsonata")
     handler: str
     lambdas: ClassVar[Dict[str, Callable]] = {}
-    functions: ClassVar[Dict[str, Callable]] = {}
+    functions: Optional[Dict[str, Callable]] = {}
 
     def transform(
         self, origin: "Message", agent_state: JsonDict, guild_state: JsonDict, routable: "MessageRoutable"
@@ -207,15 +208,15 @@ class FunctionalTransformer(Transformer):
 
                 if self.expression_type == "jsonata":
                     expr = Jsonata(self.handler)
-
                     for k, v in self.lambdas.items():
                         expr.register_lambda(k, v)
 
                     transformed = expr.evaluate(input)
                 elif self.expression_type == "cel":
                     evaluator = CelExpressionEvaluator()
-                    for k, v in self.functions.items():
-                        evaluator.add_function(k, v)
+                    if self.functions:
+                        for k, v in self.functions.items():
+                            evaluator.add_function(k, v)
 
                     transformed = evaluator.eval(self.handler, input)
                 else:

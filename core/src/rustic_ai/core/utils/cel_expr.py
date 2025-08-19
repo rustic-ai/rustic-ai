@@ -29,8 +29,7 @@ class CelExpressionEvaluator:
                 ctx[key] = celpy.json_to_cel(value)
             else:
                 ctx[key] = value
-        # Add custom functions
-        ctx.update(self._custom_funcs)
+
         return ctx
 
     def compile(self, expression: str):
@@ -39,7 +38,8 @@ class CelExpressionEvaluator:
         Uses caching for performance.
         """
         ast = self.env.compile(expression)
-        prgm = self.env.program(ast)
+        prgm = self.env.program(ast, functions=self._custom_funcs)
+
         return prgm
 
     def eval(self, expression: str, variables: Optional[Dict[str, Any]] = None) -> Any:
