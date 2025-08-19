@@ -1,5 +1,7 @@
 import os
+
 import pytest
+
 from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     ChatCompletionRequest,
     ChatCompletionResponse,
@@ -11,6 +13,7 @@ from rustic_ai.core.guild.builders import AgentBuilder
 from rustic_ai.core.guild.dsl import AgentSpec
 from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 from rustic_ai.llm_agent.basic_llm_agent import BasicLLMAgent, BasicLLMAgentConfig
+
 from rustic_ai.testing.helpers import wrap_agent_for_testing
 
 
