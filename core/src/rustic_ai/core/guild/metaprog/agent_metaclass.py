@@ -155,84 +155,28 @@ class AgentMetaclass(ABCMeta):
         super().__init__(name, bases, dct, **kwargs)
 
         if name != "Agent" and not bool(cls.__abstractmethods__):
-
-            handler_entries: Dict[str, HandlerEntry] = {}
-            agent_dependencies: List[AgentDependency] = []
-
-            # Gather send calls and register them
+            # Build call map from AST analysis
             send_calls = MetaclassHelper.gather_send_calls(cls)
+            call_map = MetaclassHelper.build_call_map(cls, send_calls)
 
-            call_map: dict = {}
-            for call in send_calls:
-                if call["agent_name"] == f"{cls.__module__}.{cls.__name__}":
-                    handler_name = call["handler_name"]
-                    if handler_name not in call_map:
-                        call_map[handler_name] = []
-                    call_map[handler_name].append(
-                        SendMessageCall(
-                            calling_class=call["function_class_name"],
-                            calling_function=call["function_name"],
-                            call_type=call["call_type"],
-                            message_type=call["message_type"],
-                        )
-                    )
+            # Collect handlers defined directly on the subclass and their dependencies
+            handler_entries, agent_dependencies = MetaclassHelper.collect_direct_handlers_from_dict(name, dct, call_map)
 
-            for _, method in dct.items():
-                if callable(method) and method.__annotations__.get(AgentAnnotations.ISHANDLER):
+            # Include base-class advertised dependencies (backward compatibility)
+            agent_dependencies.extend(MetaclassHelper.collect_base_dependencies(bases))
 
-                    message_format = (
-                        method.__annotations__[AgentAnnotations.MESSAGE_FORMAT]
-                        if AgentAnnotations.MESSAGE_FORMAT in method.__annotations__
-                        else None
-                    )
+            # Register inherited handlers (not directly defined on subclass) and collect their dependencies
+            inherited_deps = MetaclassHelper.register_inherited_handlers_and_collect_dependencies(
+                cls, handler_entries, call_map
+            )
+            agent_dependencies.extend(inherited_deps)
 
-                    message_format_name = (
-                        get_qualified_class_name(message_format)
-                        if message_format
-                        and (isinstance(message_format, type) and issubclass(message_format, BaseModel))
-                        else MessageConstants.RAW_JSON_FORMAT
-                    )
-
-                    message_format_schema = (
-                        message_format.model_json_schema()
-                        if message_format
-                        and (isinstance(message_format, type) and issubclass(message_format, BaseModel))
-                        else {"type": "object"}
-                    )
-
-                    message_format_doc = message_format.__doc__ if message_format else ""
-
-                    logging.debug(f"Registering handler {method.__name__} for {message_format_name} in {name}")
-
-                    handler_name = method.__name__
-                    handler_entries[handler_name] = HandlerEntry(
-                        handler_name=handler_name,
-                        message_format=message_format_name,
-                        message_format_schema=message_format_schema,
-                        handler_doc=message_format_doc,
-                        send_message_calls=call_map.get(handler_name, []),
-                    )
-
-                    if AgentAnnotations.DEPENDS_ON in method.__annotations__:
-                        agent_dependencies.extend(method.__annotations__[AgentAnnotations.DEPENDS_ON])
-
-                    for base in bases:
-                        if AgentAnnotations.DEPENDS_ON in base.__annotations__:
-                            base_dependencies = base.__annotations__[AgentAnnotations.DEPENDS_ON]
-                            if isinstance(base_dependencies, list):
-                                agent_dependencies.extend(base_dependencies)
-                            elif isinstance(base_dependencies, AgentDependency):
-                                agent_dependencies.append(base_dependencies)
-
-            # Remove duplicates from agent dependencies
-            agent_dependencies = list({dep.dependency_key: dep for dep in agent_dependencies}.values())
+            # Deduplicate dependencies with subclass-first precedence
+            agent_dependencies = MetaclassHelper.dedup_dependencies_first_wins(agent_dependencies)
 
             logging.debug(f"Agent {name} has dependencies: {agent_dependencies}")
 
             agent_doc: str = cls.__doc__ if cls.__doc__ else "No documentation written for Agent"
-
-            # for handler_name, calls in call_map.items():
-            #    AgentRegistry.register_send_calls(cls.__name__, handler_name, calls)
 
             AgentRegistry.register(
                 name,
@@ -247,6 +191,121 @@ class AgentMetaclass(ABCMeta):
 
 
 class MetaclassHelper:
+    @staticmethod
+    def build_call_map(cls, send_calls: List[dict]) -> Dict[str, List[SendMessageCall]]:
+        call_map: Dict[str, List[SendMessageCall]] = {}
+        try:
+            target_agent = f"{cls.__module__}.{cls.__name__}"
+            for call in send_calls:
+                if call.get("agent_name") == target_agent:
+                    handler_name: str = call.get("handler_name")  # type: ignore
+                    call_map.setdefault(handler_name, []).append(
+                        SendMessageCall(
+                            calling_class=call.get("function_class_name"),
+                            calling_function=call.get("function_name"),
+                            call_type=call.get("call_type"),
+                            message_type=call.get("message_type"),
+                        )
+                    )
+        except Exception as e:  # pragma: no cover
+            logging.debug(f"Error building call map for {cls}: {e}")
+        return call_map
+
+    @staticmethod
+    def _make_handler_entry_from_annotations(
+        method: Callable, call_map: Dict[str, List[SendMessageCall]]
+    ) -> HandlerEntry:
+        message_format = (
+            method.__annotations__[AgentAnnotations.MESSAGE_FORMAT]
+            if AgentAnnotations.MESSAGE_FORMAT in method.__annotations__
+            else None
+        )
+
+        message_format_name = (
+            get_qualified_class_name(message_format)
+            if message_format and (isinstance(message_format, type) and issubclass(message_format, BaseModel))
+            else MessageConstants.RAW_JSON_FORMAT
+        )
+
+        message_format_schema = (
+            message_format.model_json_schema()
+            if message_format and (isinstance(message_format, type) and issubclass(message_format, BaseModel))
+            else {"type": "object"}
+        )
+
+        message_format_doc = message_format.__doc__ if message_format else ""
+
+        return HandlerEntry(
+            handler_name=method.__name__,
+            message_format=message_format_name,
+            message_format_schema=message_format_schema,
+            handler_doc=message_format_doc,
+            send_message_calls=call_map.get(method.__name__, []),
+        )
+
+    @staticmethod
+    def collect_direct_handlers_from_dict(
+        class_name: str, dct: Dict[str, Any], call_map: Dict[str, List[SendMessageCall]]
+    ) -> tuple[Dict[str, HandlerEntry], List[AgentDependency]]:
+        handler_entries: Dict[str, HandlerEntry] = {}
+        agent_dependencies: List[AgentDependency] = []
+
+        for _, method in dct.items():
+            if callable(method) and method.__annotations__.get(AgentAnnotations.ISHANDLER):
+                logging.debug(
+                    f"Registering handler {method.__name__} for "
+                    f"{method.__annotations__.get(AgentAnnotations.MESSAGE_FORMAT, MessageConstants.RAW_JSON_FORMAT)} in {class_name}"
+                )
+                handler_entries[method.__name__] = MetaclassHelper._make_handler_entry_from_annotations(
+                    method, call_map
+                )
+                if AgentAnnotations.DEPENDS_ON in method.__annotations__:
+                    agent_dependencies.extend(method.__annotations__[AgentAnnotations.DEPENDS_ON])
+        return handler_entries, agent_dependencies
+
+    @staticmethod
+    def collect_base_dependencies(bases: tuple) -> List[AgentDependency]:
+        deps: List[AgentDependency] = []
+        for base in bases:
+            try:
+                if hasattr(base, "__annotations__") and AgentAnnotations.DEPENDS_ON in base.__annotations__:
+                    base_dependencies = base.__annotations__[AgentAnnotations.DEPENDS_ON]
+                    if isinstance(base_dependencies, list):
+                        deps.extend(base_dependencies)
+                    elif isinstance(base_dependencies, AgentDependency):
+                        deps.append(base_dependencies)
+            except Exception as e:  # pragma: no cover
+                logging.debug(f"Error collecting base class dependencies from {base}: {e}")
+        return deps
+
+    @staticmethod
+    def register_inherited_handlers_and_collect_dependencies(
+        cls, handler_entries: Dict[str, HandlerEntry], call_map: Dict[str, List[SendMessageCall]]
+    ) -> List[AgentDependency]:
+        deps: List[AgentDependency] = []
+        try:
+            for m_name, m in inspect.getmembers(cls, predicate=inspect.isfunction):
+                anns = getattr(m, "__annotations__", {}) or {}
+                if anns.get(AgentAnnotations.ISHANDLER):
+                    is_inherited = m_name not in handler_entries
+                    if is_inherited:
+                        # Construct a surrogate function object with the same annotations for entry creation
+                        handler_entries[m_name] = MetaclassHelper._make_handler_entry_from_annotations(m, call_map)
+                    # Always include explicit method-level dependencies (strict explicit DI)
+                    if AgentAnnotations.DEPENDS_ON in anns:
+                        deps.extend(anns[AgentAnnotations.DEPENDS_ON])
+        except Exception as e:  # pragma: no cover
+            logging.debug(f"Error scanning inherited handler methods for dependencies on {cls}: {e}")
+        return deps
+
+    @staticmethod
+    def dedup_dependencies_first_wins(deps: List[AgentDependency]) -> List[AgentDependency]:
+        seen: Dict[str, AgentDependency] = {}
+        for dep in deps:
+            if dep.dependency_key not in seen:
+                seen[dep.dependency_key] = dep
+        return list(seen.values())
+
     @staticmethod
     def extend_with_mixins(bases):
         mixins = AgentMetaclass.DEFAULT_MIXINS
