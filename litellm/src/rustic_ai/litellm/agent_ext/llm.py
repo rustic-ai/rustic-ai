@@ -71,6 +71,7 @@ class LiteLLM(LLM):
 
         completion = litellm.completion(**full_prompt)
         response: ChatCompletionResponse = ResponseUtils.from_litellm(completion)
+        response.input_messages = full_prompt["messages"]  # Store input messages in the response
         return response
 
     async def async_completion(self, prompt: ChatCompletionRequest):

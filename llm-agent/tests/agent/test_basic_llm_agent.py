@@ -6,7 +6,7 @@ from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     ChatCompletionRequest,
     ChatCompletionResponse,
     FinishReason,
-    SystemMessage,
+    Role,
     UserMessage,
 )
 from rustic_ai.core.guild.builders import AgentBuilder
@@ -28,7 +28,7 @@ class TestBasicLLMAgent:
             .set_properties(
                 BasicLLMAgentConfig(
                     model="gpt-5-mini",
-                    system_prompt="You are a helpful assistant.",
+                    system_prompt="You are a helpful assistant. Your name is Astro.",
                 )
             )
             .build_spec()
@@ -44,8 +44,7 @@ class TestBasicLLMAgent:
                 generator,
                 ChatCompletionRequest(
                     messages=[
-                        SystemMessage(content="You are a helpful assistant."),
-                        UserMessage(content="Hello, how are you?"),
+                        UserMessage(content="Hello, how are you? What is your name?"),
                     ],
                 ),
             )
@@ -66,10 +65,24 @@ class TestBasicLLMAgent:
         first_choice = payload.choices[0]
 
         assert first_choice.finish_reason == FinishReason.stop
-        assert isinstance(first_choice.message.content, str)
-        assert len(first_choice.message.content) > 1
+
+        response = first_choice.message.content
+        assert isinstance(response, str)
+        assert len(response) > 1
+        assert "Astro" in response
+
+        input_messages = payload.input_messages
+
+        assert len(input_messages) > 0
+
+        system_message = input_messages[0]
+        assert system_message.role == Role.system
+        assert system_message.content == "You are a helpful assistant. Your name is Astro."
+
+        user_message = input_messages[1]
+        assert user_message.role == Role.user
+        assert user_message.content == "Hello, how are you? What is your name?"
 
         usage = payload.usage
-
         assert usage.prompt_tokens > 0
         assert usage.completion_tokens > 0
