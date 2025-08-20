@@ -17,14 +17,14 @@ from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     ToolMessage,
     UserMessage,
 )
-from rustic_ai.llm_agent.llm_agent_conf import LLMConfigBase
+from rustic_ai.llm_agent.llm_agent_conf import LLMAgentConfig
 
 
 class LLMAgentHelper:
 
     @staticmethod
     def prep_prompts(
-        config: LLMConfigBase,
+        config: LLMAgentConfig,
         prompt: ChatCompletionRequest,
     ) -> ChatCompletionRequest:
         """
@@ -33,7 +33,12 @@ class LLMAgentHelper:
         messages = config.get_prefix_messages()
         all_messages = messages + prompt.messages
 
-        tools: List[ChatCompletionTool] = config.tools
+        tools: List[ChatCompletionTool] = []
+
+        tools_manager = config.get_tools_manager()
+        if tools_manager:
+            tools.extend(tools_manager.tools)
+
         if prompt.tools:
             tools.extend(prompt.tools)
 
@@ -51,12 +56,15 @@ class LLMAgentHelper:
 
     @staticmethod
     def invoke_llm_completion(
-        config: LLMConfigBase,
+        config: LLMAgentConfig,
         prompt: ChatCompletionRequest,
         llm: LLM,
     ) -> ChatCompletionResponse:
         """
         Invoke the LLM completion with the given context.
+        The fields from the chat completion request, Agent Config, and the LLM are combined.
+        The LLM Configuration is used as the base, overwritten by Agent config and then
+        the Chat Completion Request.
         """
         ccrequest = LLMAgentHelper.prep_prompts(config, prompt)
         response = llm.completion(ccrequest)
@@ -94,13 +102,16 @@ class LLMAgentHelper:
     @staticmethod
     def invoke_llm_and_handle_response(
         agent_name: str,
-        config: LLMConfigBase,
+        config: LLMAgentConfig,
         prompt: ChatCompletionRequest,
         llm: LLM,
         ctx: ProcessContext[ChatCompletionRequest],
     ) -> None:
         """
         Invoke the LLM and handle the response.
+        The fields from the chat completion request, Agent Config, and the LLM are combined.
+        The LLM Configuration is used as the base, overwritten by Agent config and then
+        the Chat Completion Request.
         """
         try:
             chat_response = LLMAgentHelper.invoke_llm_completion(config, prompt, llm)
