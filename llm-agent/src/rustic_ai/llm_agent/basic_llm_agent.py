@@ -9,12 +9,12 @@ from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     ToolMessage,
     UserMessage,
 )
-from rustic_ai.llm_agent.llm_agent_conf import LLMConfigBase
+from rustic_ai.llm_agent.llm_agent_conf import LLMAgentConfig
 from rustic_ai.llm_agent.llm_agent_helper import LLMAgentHelper
 from rustic_ai.llm_agent.llm_agent_utils import LLMAgentUtils
 
 
-class BasicLLMAgentConfig(LLMConfigBase):
+class BasicLLMAgentConfig(LLMAgentConfig):
     system_prompt: str
     """System prompt for the LLM agent."""
 
@@ -39,10 +39,13 @@ class BasicLLMAgentConfig(LLMConfigBase):
         ]
 
 
-class BasicLLMAgent(Agent[BasicLLMAgentConfig]):
+class LLMInvocationMixin:
     """
-    A simple LLM Agent that simply invokes an LLM.
+    Mixin class to add LLM invocation capabilities to an agent.
     """
+
+    name: str
+    config: LLMAgentConfig
 
     @processor(
         ChatCompletionRequest,
@@ -50,6 +53,10 @@ class BasicLLMAgent(Agent[BasicLLMAgentConfig]):
         depends_on=["llm"],
     )
     def invoke_llm(self, ctx: ProcessContext[ChatCompletionRequest], llm: LLM):
+        """
+        Invoke the LLM with the given context. All the LLM configuration parameters are passed along.
+        The System prompt is set in prefix messages.
+        """
         LLMAgentHelper.invoke_llm_and_handle_response(
             self.name,
             self.config,
@@ -57,3 +64,11 @@ class BasicLLMAgent(Agent[BasicLLMAgentConfig]):
             llm,
             ctx,
         )
+
+
+class BasicLLMAgent(Agent[BasicLLMAgentConfig], LLMInvocationMixin):
+    """
+    A simple LLM Agent that simply invokes an LLM.
+    """
+
+    pass

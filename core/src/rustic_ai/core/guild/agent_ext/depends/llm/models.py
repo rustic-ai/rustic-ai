@@ -746,6 +746,8 @@ class ChatCompletionResponse(LLMBaseModel):
     Represents a chat completion response returned by model, based on the provided input.
     """
 
+    model_config = ConfigDict(validate_assignment=True)
+
     id: str
     """
     A unique identifier for the chat completion.
@@ -775,6 +777,18 @@ class ChatCompletionResponse(LLMBaseModel):
     """
     Usage statistics for the completion request.
     """
+
+    input_messages: Optional[
+        List[
+            Union[
+                SystemMessage,
+                UserMessage,
+                AssistantMessage,
+                ToolMessage,
+                FunctionMessage,
+            ]
+        ]
+    ] = None
 
 
 class ChatCompletionResponseEmpty(LLMBaseModel):
