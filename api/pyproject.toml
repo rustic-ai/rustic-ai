@@ -29,6 +29,7 @@ opentelemetry-distro = "^0.52b1"
 websockets = "^15.0.1"
 griffe = "^1.7.2"
 psycopg = "^3.2.6"
+python-json-logger = "^3.3.0"
 
 [tool.poetry-monorepo.deps]
 
