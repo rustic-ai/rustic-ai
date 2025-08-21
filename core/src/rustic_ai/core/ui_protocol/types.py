@@ -25,13 +25,13 @@ class FilesWithTextFormat(DataFormat):
     text: Optional[str]
 
 
-class QuestionFormat(BaseModel):
-    title: str
-    description: str
+class QuestionFormat(DataFormat):
     options: list[str]
+
 
 class QuestionResponse(BaseModel):
     data: str
+
 
 class FormSchema(BaseModel):
     type: str = "object"
@@ -39,9 +39,7 @@ class FormSchema(BaseModel):
     required: list[str] = []
 
 
-class FormFormat(BaseModel):
-    title: str
-    description: Optional[str]
+class FormFormat(DataFormat):
     schema_: FormSchema = Field(alias="schema")
 
 
