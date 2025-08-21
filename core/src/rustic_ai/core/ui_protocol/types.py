@@ -30,6 +30,8 @@ class QuestionFormat(BaseModel):
     description: str
     options: list[str]
 
+class QuestionResponse(BaseModel):
+    data: str
 
 class FormSchema(BaseModel):
     type: str = "object"
