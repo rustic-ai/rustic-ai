@@ -650,6 +650,7 @@ class MessageRoutable(BaseModel):
         context (Optional[JsonDict]): The context of the message.
         enrich_with_history (Optional[int]): The number of previous messages to include in the context.
         process_status (Optional[str]): The status of message processing.
+        reason (Optional[str]): The reason of the message.
     """
 
     topics: Union[str, List[str]]
@@ -664,6 +665,7 @@ class MessageRoutable(BaseModel):
     context: Optional[JsonDict] = Field(default=None)
     enrich_with_history: Optional[int] = 0
     process_status: Annotated[Optional[ProcessStatus], Field(default=None)]
+    reason: Annotated[Optional[str], Field(default=None)]
 
 
 class Message(BaseModel):
@@ -686,6 +688,7 @@ class Message(BaseModel):
         topic_published_to (Optional[str]): The topic to which the message was published.
         enrich_with_history (Optional[int]): The number of previous messages to include in the context.
         process_status (Optional[str]): The status of message processing.
+        reason (Optional[str]): The reason for the message
 
     Raises:
         ValueError: If the provided payload is not JSON-serializable or if any of the attributes are not valid.
@@ -723,6 +726,7 @@ class Message(BaseModel):
     enrich_with_history: Optional[int] = 0
 
     process_status: Annotated[Optional[ProcessStatus], Field(default=None)]
+    reason: Annotated[Optional[str], Field(default=None)]
 
     _id: int  # Internal backend for id
     _priority: Priority  # Internal backend for priority

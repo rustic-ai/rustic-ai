@@ -130,6 +130,7 @@ class Agent(Generic[APT], metaclass=AgentMetaclass):  # type: ignore
         self._id_generator = id_generator
 
         self._initialized = True
+        self.default_reason: str = ""
 
     def get_spec(self) -> AgentSpec[APT]:
         """
@@ -139,6 +140,9 @@ class Agent(Generic[APT], metaclass=AgentMetaclass):  # type: ignore
             AgentSpec: The specification for the agent.
         """
         return self.agent_spec
+
+    def set_default_reason(self, default_reason: str) -> None:
+        self.default_reason = default_reason
 
     def _send_to_self(
         self,
@@ -550,10 +554,7 @@ class ProcessContext[MDT]:
         return self.send_dict(data_dict, format, error_message=True)
 
     def send(
-        self,
-        payload: BaseModel,
-        new_thread: bool = False,
-        forwarding: bool = False,
+        self, payload: BaseModel, new_thread: bool = False, forwarding: bool = False, reason: Optional[str] = None
     ) -> List[GemstoneID]:
         """
         Sends a new message with the BaseModel payload using the routing rules from the routing slip of the origin message.
@@ -563,7 +564,7 @@ class ProcessContext[MDT]:
         format = get_qualified_class_name(payload.__class__)
         data_dict = payload.model_dump()
 
-        return self.send_dict(data_dict, format, new_thread, forwarding)
+        return self.send_dict(data_dict, format, new_thread, forwarding, reason)
 
     def send_dict(
         self,
@@ -571,6 +572,7 @@ class ProcessContext[MDT]:
         format: str = MessageConstants.RAW_JSON_FORMAT,
         new_thread: bool = False,
         forwarding: bool = False,
+        reason: Optional[str] = None,
         error_message: bool = False,
     ) -> List[GemstoneID]:
         """
@@ -634,7 +636,7 @@ class ProcessContext[MDT]:
         logging.debug(f"Agent [{self.agent.name}] from method [{self.method_name}] with rules :\n{next_steps}\n")
 
         for step in next_steps:
-            msgid = self._prepare_and_send_message(payload, format, new_thread, forwarding, error_message, step)
+            msgid = self._prepare_and_send_message(payload, format, new_thread, forwarding, error_message, step, reason)
             if msgid:
                 messages.append(msgid)
             self._remaining_routing_steps -= 1
@@ -649,6 +651,7 @@ class ProcessContext[MDT]:
         forwarding: bool,
         error_message: bool,
         step: RoutingRule,
+        reason: Optional[str],
     ) -> Optional[GemstoneID]:
         self._current_routing_step = step
 
@@ -665,6 +668,7 @@ class ProcessContext[MDT]:
             forward_header=self._origin_message.forward_header,
             context=self.get_context(),
             process_status=step.process_status if step.process_status else self._origin_message.process_status,
+            reason=reason if reason else self.agent.default_reason,
         )
 
         routed = step.apply(self._origin_message, agent_state, guild_state, routable, forwarding)
@@ -764,6 +768,7 @@ class ProcessContext[MDT]:
             session_state=self.get_context() | routed_context,
             enrich_with_history=routed.enrich_with_history,
             process_status=routed.process_status,
+            reason=routed.reason,
         )
 
         for modifier in self._outgoing_message_modifiers:
