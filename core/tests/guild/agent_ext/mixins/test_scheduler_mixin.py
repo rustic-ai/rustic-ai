@@ -44,13 +44,14 @@ class PingReply(BaseModel):
 class DummySchedulerAgent(Agent, SchedulerMixin):
     def __init__(self):
         self.received_pings = []
+        self.set_default_reason("Dummy Agent action")
 
     @agent.processor(PingMessage, handle_essential=True)
     def handle_ping(self, ctx: ProcessContext[PingMessage]):
         print(f"[DummySchedulerAgent] Received ping: {ctx.payload.text}")
         self.received_pings.append(ctx.payload.text)
 
-        ctx.send(PingReply(pings=self.received_pings))
+        ctx.send(PingReply(pings=self.received_pings), reason="pings scheduled and received")
 
 
 class TestSchedulerMixin:
@@ -184,6 +185,7 @@ class TestSchedulerMixin:
         response = PingReply.model_validate(all_messages[-1].payload)
         assert len(response.pings) == 1
         assert response.pings[0] == "Ping after delay!"
+        assert all_messages[-1].reason == "pings scheduled and received"
 
         probe_agent.clear_messages()
 
