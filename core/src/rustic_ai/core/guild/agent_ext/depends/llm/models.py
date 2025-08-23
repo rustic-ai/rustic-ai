@@ -7,6 +7,7 @@ from typing import (
     Literal,
     Optional,
     Required,
+    TypeAlias,
     TypedDict,
     Union,
 )
@@ -431,21 +432,18 @@ class WebSearchOptions(LLMBaseModel):
     """
 
 
+LLMMessage: TypeAlias = Union[SystemMessage, UserMessage, AssistantMessage, ToolMessage, FunctionMessage]
+
+DiscriminatedLLMMessage = Annotated[LLMMessage, Field(discriminator="role")]
+
+
 class ChatCompletionRequest(LLMBaseModel):
     """
     A request to generate chat completions.
     """
 
     messages: Annotated[
-        List[
-            Union[
-                SystemMessage,
-                UserMessage,
-                AssistantMessage,
-                ToolMessage,
-                FunctionMessage,
-            ]
-        ],
+        List[DiscriminatedLLMMessage],
         Field(min_length=1),
     ]
     """
