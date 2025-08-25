@@ -12,11 +12,12 @@ from rustic_ai.core.guild.agent_ext.depends.llm.models import (
 from rustic_ai.core.guild.builders import AgentBuilder
 from rustic_ai.core.guild.dsl import AgentSpec
 from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
-from rustic_ai.llm_agent.memory_enabled_llm_agent import (
-    MemoryEnabledLLMAgent,
-    MemoryEnabledAgentConfig,
-)
 from rustic_ai.llm_agent.memories.queue_memories_store import QueueBasedMemoriesStore
+from rustic_ai.llm_agent.memory_enabled_llm_agent import (
+    MemoryEnabledAgentConfig,
+    MemoryEnabledLLMAgent,
+)
+
 from rustic_ai.testing.helpers import wrap_agent_for_testing
 
 

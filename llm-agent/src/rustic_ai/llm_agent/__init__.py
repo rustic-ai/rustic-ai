@@ -2,8 +2,8 @@ from .basic_llm_agent import BasicLLMAgent, BasicLLMAgentConfig
 from .dynamic_prompt_llm_agent import (
     DynamicPromptLLMAgent,
     DynamicPromptLLMAgentConfig,
-    PromptGenerator,
     DynamicSystemPromptMixin,
+    PromptGenerator,
     TemplatedPromptGenerator,
 )
 from .llm_agent_conf import LLMAgentConfig

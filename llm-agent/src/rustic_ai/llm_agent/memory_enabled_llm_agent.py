@@ -1,4 +1,3 @@
-from abc import abstractmethod
 from typing import List
 
 from rustic_ai.core.guild.agent import Agent, ProcessContext, processor
@@ -9,8 +8,7 @@ from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     LLMMessage,
     SystemMessage,
 )
-from rustic_ai.llm_agent.basic_llm_agent import BasicLLMAgentConfig, LLMInvocationMixin
-from rustic_ai.llm_agent.llm_agent_conf import LLMAgentConfig
+from rustic_ai.llm_agent.basic_llm_agent import BasicLLMAgentConfig
 from rustic_ai.llm_agent.llm_agent_helper import LLMAgentHelper
 from rustic_ai.llm_agent.llm_agent_utils import LLMAgentUtils
 from rustic_ai.llm_agent.memories.memories_store import MemoriesStore
@@ -34,6 +32,9 @@ class MemoryEnabledLLMInvocationMixin:
     """
     Mixin class to add LLM invocation capabilities to an agent.
     """
+
+    name: str
+    config: MemoryEnabledAgentConfig
 
     def get_prefix_messages(self, ctx: ProcessContext[ChatCompletionRequest], llm: LLM) -> List[LLMMessage]:
         prefix_messages = [SystemMessage(role="system", content=self.config.system_prompt)]
