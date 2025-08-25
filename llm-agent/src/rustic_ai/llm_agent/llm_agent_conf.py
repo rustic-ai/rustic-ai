@@ -9,6 +9,7 @@ from typing_extensions import Annotated
 from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     AssistantMessage,
     ChatCompletionTool,
+    LLMMessage,
     SystemMessage,
     ToolMessage,
     UserMessage,
@@ -110,19 +111,6 @@ class LLMAgentConfig(BaseAgentProps):
 
     @abstractmethod
     def get_llm_params(self) -> dict:
-        pass
-
-    @abstractmethod
-    def get_prefix_messages(
-        self,
-    ) -> List[
-        Union[
-            SystemMessage,
-            UserMessage,
-            AssistantMessage,
-            ToolMessage,
-        ]
-    ]:
         pass
 
     def get_tools_manager(self) -> Optional[ToolsManager]:
