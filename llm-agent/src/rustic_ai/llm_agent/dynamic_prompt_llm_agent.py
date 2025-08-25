@@ -3,11 +3,11 @@ from typing import List, Literal, Optional, Union
 from pydantic import BaseModel, Field
 
 from rustic_ai.core.guild.agent import Agent, ProcessContext, processor
+from rustic_ai.core.guild.agent_ext.depends.llm.llm import LLM
 from rustic_ai.core.guild.agent_ext.depends.llm.models import (
-    AssistantMessage,
+    ChatCompletionRequest,
+    LLMMessage,
     SystemMessage,
-    ToolMessage,
-    UserMessage,
 )
 from rustic_ai.core.messaging.core.message import Message
 from rustic_ai.core.utils.json_utils import JsonDict
@@ -37,68 +37,51 @@ class TemplatedPromptGenerator(PromptGenerator):
         return self.template.format(**dict)
 
 
-class DynamicPromptConfig(BaseModel):
-    """Configuration for the dynamic prompt."""
+class DynamicPromptLLMAgentConfig(LLMAgentConfig):
+    """Configuration for the dynamic prompt LLM agent."""
 
     default_system_prompt: str
     system_prompt_generator: Optional[PromptGenerator] = Field(None, discriminator="type")
 
-    _system_prompt: Optional[str] = None
-    _updated: bool = False
-
-    def update_system_prompt(self, data: JsonDict):
-        self._system_prompt = (
-            self.system_prompt_generator.generate_prompt(data)
-            if self.system_prompt_generator
-            else self.default_system_prompt
-        )
-        self._updated = True
-
-
-class DynamicPromptLLMAgentConfig(LLMAgentConfig, DynamicPromptConfig):
-    """Configuration for the dynamic prompt LLM agent."""
-
     def get_llm_params(self) -> dict:
         return self.model_dump(
             exclude_none=True,
-            exclude={"system_prompt_generator"},
+            exclude={"system_prompt_generator", "default_system_prompt"},
         )
 
-    def get_prefix_messages(self) -> List[
-        Union[
-            SystemMessage,
-            UserMessage,
-            AssistantMessage,
-            ToolMessage,
-        ]
-    ]:
-        return [
-            SystemMessage(
-                content=self._system_prompt if self._updated else self.default_system_prompt,
-            )
-        ]
 
-
-class SystemPromptUpdatingMixin:
-
-    config: DynamicPromptConfig
+class DynamicSystemPromptMixin:
+    _system_prompt: Optional[str] = None
+    _updated: bool = False
 
     def _is_system_prompt_update(self, msg: Message) -> bool:
-        assert self.config.system_prompt_generator
-        return msg.format == self.config.system_prompt_generator.update_on_message_format
+        if self.config and isinstance(self.config, DynamicPromptLLMAgentConfig):
+            return msg.format == self.config.system_prompt_generator.update_on_message_format
+        return False
 
     @processor(JsonDict, predicate=lambda self, msg: self._is_system_prompt_update(msg))
     def update_system_prompt(self, ctx: ProcessContext[JsonDict]):
         """
         Update the system prompt using the system prompt generator.
         """
+        if not self.config or not isinstance(self.config, DynamicPromptLLMAgentConfig):
+            return
+        self._system_prompt = (
+            self.config.system_prompt_generator.generate_prompt(ctx.payload)
+            if self.config.system_prompt_generator
+            else self.config.default_system_prompt
+        )
+        self._updated = True
 
-        self.config.update_system_prompt(ctx.payload)
 
-
-class DynamicPromptLLMAgent(Agent[DynamicPromptLLMAgentConfig], LLMInvocationMixin, SystemPromptUpdatingMixin):
+class DynamicPromptLLMAgent(Agent[DynamicPromptLLMAgentConfig], LLMInvocationMixin, DynamicSystemPromptMixin):
     """
     Dynamic prompt LLM agent that uses different prompt generators for system and user messages.
     """
 
-    pass
+    def get_prefix_messages(self, ctx: ProcessContext[ChatCompletionRequest], llm: LLM) -> List[LLMMessage]:
+        return [
+            SystemMessage(
+                content=self._system_prompt if self._updated else self.config.default_system_prompt,
+            )
+        ]

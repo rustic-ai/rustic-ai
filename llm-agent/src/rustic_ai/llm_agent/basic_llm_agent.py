@@ -1,13 +1,12 @@
+from abc import abstractmethod
 from typing import List, Union
 
 from rustic_ai.core.guild.agent import Agent, ProcessContext, processor
 from rustic_ai.core.guild.agent_ext.depends.llm.llm import LLM
 from rustic_ai.core.guild.agent_ext.depends.llm.models import (
-    AssistantMessage,
     ChatCompletionRequest,
+    LLMMessage,
     SystemMessage,
-    ToolMessage,
-    UserMessage,
 )
 from rustic_ai.llm_agent.llm_agent_conf import LLMAgentConfig
 from rustic_ai.llm_agent.llm_agent_helper import LLMAgentHelper
@@ -18,25 +17,13 @@ class BasicLLMAgentConfig(LLMAgentConfig):
     system_prompt: str
     """System prompt for the LLM agent."""
 
+    _default_excludes = {"system_prompt"}
+
     def get_llm_params(self) -> dict:
         return self.model_dump(
             exclude_none=True,
-            exclude={"system_prompt"},
+            exclude=self._default_excludes,
         )
-
-    def get_prefix_messages(self) -> List[
-        Union[
-            SystemMessage,
-            UserMessage,
-            AssistantMessage,
-            ToolMessage,
-        ]
-    ]:
-        return [
-            SystemMessage(
-                content=self.system_prompt,
-            )
-        ]
 
 
 class LLMInvocationMixin:
@@ -44,8 +31,9 @@ class LLMInvocationMixin:
     Mixin class to add LLM invocation capabilities to an agent.
     """
 
-    name: str
-    config: LLMAgentConfig
+    @abstractmethod
+    def get_prefix_messages(self, ctx: ProcessContext[ChatCompletionRequest], llm: LLM) -> List[LLMMessage]:
+        pass
 
     @processor(
         ChatCompletionRequest,
@@ -57,8 +45,10 @@ class LLMInvocationMixin:
         Invoke the LLM with the given context. All the LLM configuration parameters are passed along.
         The System prompt is set in prefix messages.
         """
+        prefix_messages = self.get_prefix_messages(ctx, llm)
         LLMAgentHelper.invoke_llm_and_handle_response(
             self.name,
+            prefix_messages,
             self.config,
             ctx.payload,
             llm,
@@ -71,4 +61,9 @@ class BasicLLMAgent(Agent[BasicLLMAgentConfig], LLMInvocationMixin):
     A simple LLM Agent that simply invokes an LLM.
     """
 
-    pass
+    def get_prefix_messages(self, ctx: ProcessContext[ChatCompletionRequest], llm: LLM) -> List[Union[LLMMessage]]:
+        return [
+            SystemMessage(
+                content=self.config.system_prompt,
+            )
+        ]
