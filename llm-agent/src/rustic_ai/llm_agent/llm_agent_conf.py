@@ -7,12 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from typing_extensions import Annotated
 
 from rustic_ai.core.guild.agent_ext.depends.llm.models import (
-    AssistantMessage,
     ChatCompletionTool,
-    LLMMessage,
-    SystemMessage,
-    ToolMessage,
-    UserMessage,
 )
 from rustic_ai.core.guild.agent_ext.depends.llm.tools_manager import (
     ToolsManager,

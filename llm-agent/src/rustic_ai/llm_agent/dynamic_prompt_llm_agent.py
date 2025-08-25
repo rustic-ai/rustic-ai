@@ -1,4 +1,4 @@
-from typing import List, Literal, Optional, Union
+from typing import List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -41,7 +41,7 @@ class DynamicPromptLLMAgentConfig(LLMAgentConfig):
     """Configuration for the dynamic prompt LLM agent."""
 
     default_system_prompt: str
-    system_prompt_generator: Optional[PromptGenerator] = Field(None, discriminator="type")
+    system_prompt_generator: PromptGenerator = Field(discriminator="type")
 
     def get_llm_params(self) -> dict:
         return self.model_dump(
@@ -51,6 +51,11 @@ class DynamicPromptLLMAgentConfig(LLMAgentConfig):
 
 
 class DynamicSystemPromptMixin:
+    """Mixin for dynamic system prompt updates."""
+
+    name: str
+    config: DynamicPromptLLMAgentConfig
+
     _system_prompt: Optional[str] = None
     _updated: bool = False
 

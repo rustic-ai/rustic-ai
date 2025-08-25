@@ -1,6 +1,8 @@
 from collections import deque
 from typing import List, Literal
+
 from pydantic import PrivateAttr
+
 from rustic_ai.core.guild.agent import Agent, ProcessContext
 from rustic_ai.core.guild.agent_ext.depends.llm.models import LLMMessage
 from rustic_ai.llm_agent.memories.memories_store import MemoriesStore
@@ -12,7 +14,7 @@ class QueueBasedMemoriesStore(MemoriesStore):
     memory_size: int = 36
 
     # Internal, non-serialized queue
-    _memory_queue: deque = PrivateAttr(default=None)
+    _memory_queue: deque = PrivateAttr()
 
     def model_post_init(self, __context):
         # Initialize the queue with the configured max size

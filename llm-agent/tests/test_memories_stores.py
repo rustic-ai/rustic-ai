@@ -1,19 +1,16 @@
-import types
-from types import SimpleNamespace
 from collections import deque
+from types import SimpleNamespace
 
-import pytest
-
+from rustic_ai.core.guild.agent_ext.mixins.state_refresher import StateRefresherMixin
+from rustic_ai.llm_agent.memories.history_memories_store import (
+    HistoryBasedMemoriesStore,
+)
 from rustic_ai.llm_agent.memories.queue_memories_store import (
     QueueBasedMemoriesStore,
 )
 from rustic_ai.llm_agent.memories.state_memories_store import (
     StateBackedMemoriesStore,
 )
-from rustic_ai.llm_agent.memories.history_memories_store import (
-    HistoryBasedMemoriesStore,
-)
-from rustic_ai.core.guild.agent_ext.mixins.state_refresher import StateRefresherMixin
 
 
 class FakeLLMMessage:
@@ -133,6 +130,7 @@ def test_history_based_memories_store_recall_text_only_and_dedup(monkeypatch):
     # Patch get_qualified_class_name to return class name, so we can use simple strings
     def fake_get_qcn(cls):
         return getattr(cls, "name", getattr(cls, "__name__", "Unknown"))
+
     monkeypatch.setattr(
         "rustic_ai.llm_agent.memories.history_memories_store.get_qualified_class_name",
         fake_get_qcn,
@@ -193,6 +191,7 @@ def test_history_based_memories_store_recall_includes_non_text_when_disabled(mon
     # Same monkeypatching as above
     def fake_get_qcn(cls):
         return getattr(cls, "name", getattr(cls, "__name__", "Unknown"))
+
     monkeypatch.setattr(
         "rustic_ai.llm_agent.memories.history_memories_store.get_qualified_class_name",
         fake_get_qcn,
