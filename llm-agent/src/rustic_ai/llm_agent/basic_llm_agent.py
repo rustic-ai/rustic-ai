@@ -47,9 +47,9 @@ class LLMInvocationMixin:
         """
         prefix_messages = self.get_prefix_messages(ctx, llm)
         LLMAgentHelper.invoke_llm_and_handle_response(
-            self.name,
+            self.name,  # type: ignore
             prefix_messages,
-            self.config,
+            self.config,  # type: ignore
             ctx.payload,
             llm,
             ctx,

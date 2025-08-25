@@ -1,5 +1,5 @@
-from typing import List, Literal
 import json
+from typing import List, Literal
 
 from rustic_ai.core import Message
 from rustic_ai.core.guild.agent import Agent, ProcessContext
