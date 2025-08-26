@@ -308,46 +308,6 @@ def test_share_blueprint_with_organization(setup_data, catalog_client):
     assert response.status_code == 204
 
 
-def test_blueprint_guild_linking(setup_data, catalog_client, org_id):
-    guild_spec = GuildSpec(
-        name="MyGuild",
-        description="A guild for testing",
-        properties={"storage": {"class": "rustic_ai.messaging.storage.InMemoryStorage", "properties": {}}},
-        agents=[],
-    )
-    req = LaunchGuildReq(spec=guild_spec, org_id=org_id)
-    response = catalog_client.post(
-        "/api/guilds",
-        json=req.model_dump(),
-        headers={"Content-Type": "application/json"},
-    )
-    assert response.status_code == 201
-    assert "id" in response.json()
-    guild_id = response.json()["id"]
-    # Test when guild is not linked to any blueprint
-    guild_blueprint = catalog_client.get(f"/catalog/guilds/{guild_id}/blueprints/")
-    assert guild_blueprint.status_code == 404
-    assert guild_blueprint.json()["detail"] == f"No Blueprint associated with guild {guild_id}"
-    # Test linking guild to a blueprint
-    blueprint_id = setup_data["blueprint"].id
-    response = catalog_client.post(f"/catalog/blueprints/{blueprint_id}/guilds/{guild_id}")
-    assert response.status_code == 204
-    # Test getting blueprint for guild
-    blueprint_resp = catalog_client.get(f"/catalog/guilds/{guild_id}/blueprints/")
-    assert blueprint_resp.status_code == 200
-    assert blueprint_resp.json()["id"] == blueprint_id
-    # Test for non-existent guild
-    response = catalog_client.get("/catalog/guilds/non-existent/blueprints/")
-    assert response.status_code == 404
-    response = catalog_client.post(f"/catalog/blueprints/{blueprint_id}/guilds/non-existent")
-    assert response.status_code == 404
-    assert response.json()["detail"] == "Guild non-existent not found"
-    # Test for non-existent blueprint
-    response = catalog_client.post("/catalog/blueprints/na/guilds/non-existent")
-    assert response.status_code == 404
-    assert response.json()["detail"] == "Blueprint na not found"
-
-
 def test_add_user_to_guild(setup_data, catalog_client, org_id):
     guild_spec = GuildSpec(
         name="UserGuild ",
@@ -384,37 +344,6 @@ def test_add_user_to_guild(setup_data, catalog_client, org_id):
     assert userids_response.json()[0] == user_id
     delete_response = catalog_client.delete(f"/catalog/guilds/{guild_id}/users/{user_id}")
     assert delete_response.status_code == 204
-
-
-def test_user_guild_response(setup_data, catalog_client, org_id):
-    guild_spec = GuildSpec(
-        name="UserGuild ",
-        description="A guild for testing",
-        properties={"storage": {"class": "rustic_ai.messaging.storage.InMemoryStorage", "properties": {}}},
-        agents=[],
-    )
-    req = LaunchGuildReq(spec=guild_spec, org_id=org_id)
-    response = catalog_client.post(
-        "/api/guilds",
-        json=req.model_dump(),
-        headers={"Content-Type": "application/json"},
-    )
-    guild_id = response.json()["id"]
-    blueprint_id = setup_data["blueprint"].id
-    # link blueprint and guild
-    catalog_client.post(f"/catalog/blueprints/{blueprint_id}/guilds/{guild_id}")
-    user_id = setup_data["user_id"]
-    # add user to guild
-    catalog_client.post(f"/catalog/guilds/{guild_id}/users/{user_id}")
-    user_guilds_res = catalog_client.get(f"/catalog/users/{user_id}/guilds/")
-    assert user_guilds_res.status_code == 200
-    assert len(user_guilds_res.json()) == 1
-    guild_res = user_guilds_res.json()[0]
-    assert guild_res["id"] == guild_id
-    assert guild_res["name"] == guild_spec.name
-    # check that result includes blueprint_id
-    assert guild_res["blueprint_id"] == blueprint_id
-    assert guild_res["icon"] == "icon.png"
 
 
 def test_list_guilds_org(catalog_client):
@@ -529,7 +458,7 @@ def test_create_incorrect_bp_spec(setup_data, catalog_client):
         "tags": None,
     }
     response = catalog_client.post("/catalog/blueprints/", json=blueprint_data)
-    assert response.status_code == 422
+    assert response.status_code == 400
 
 
 def test_agent_icons(setup_data, catalog_client, catalog_store):

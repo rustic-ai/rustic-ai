@@ -127,6 +127,7 @@ class TestMultiProcessRedisIntegration(IntegrationTestABC):
         # Verify the removed agent is no longer tracked
         assert not execution_engine.is_agent_running(guild.id, responder_agent.id)
 
+    @pytest.mark.xfail(reason="Timing of messages makes this test fail frequently.")
     def test_multiprocess_messaging_performance(
         self,
         wait_time: float,

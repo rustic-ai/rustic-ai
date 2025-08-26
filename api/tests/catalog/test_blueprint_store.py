@@ -119,9 +119,7 @@ class TestCatalogStore:
         assert get_blueprint_response.author_id == blueprint_create.author_id
         assert get_blueprint_response.organization_id == blueprint_create.organization_id
         assert get_blueprint_response.version == blueprint_create.version
-        assert get_blueprint_response.spec == blueprint_create.spec.model_dump(
-            exclude={"id": True, "agents": {"__all__": {"id"}}}  # type: ignore
-        )
+        assert get_blueprint_response.spec == blueprint_create.spec
         assert get_blueprint_response.category_id == blueprint_create.category_id
         assert get_blueprint_response.tags == []
 

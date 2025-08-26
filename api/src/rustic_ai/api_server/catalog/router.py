@@ -4,13 +4,15 @@ from typing import Annotated, Dict, List
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Response
 from fastapi.params import Query
+from jsonschema import exceptions as jsonschema_exceptions
+from jsonschema import validate
 from pydantic import BaseModel, ValidationError
 from sqlalchemy import Engine
 from starlette import status
 
 from rustic_ai.api_server.guilds.schema import IdInfo
 from rustic_ai.api_server.guilds.service import GuildService
-from rustic_ai.core.guild.dsl import GuildSpec
+from rustic_ai.core.guild.builders import GuildBuilder, KeyConstants
 from rustic_ai.core.guild.metaprog.agent_registry import AgentEntry
 from rustic_ai.core.guild.metastore.database import Metastore
 from rustic_ai.core.guild.metastore.models import GuildStatus
@@ -36,6 +38,14 @@ catalog_router = APIRouter()
 guild_service = GuildService()
 
 
+def validate_guild_configuration(schema: dict, data: dict):
+    try:
+        validate(instance=data, schema=schema)
+    except jsonschema_exceptions.ValidationError as e:
+        raise HTTPException(status_code=400, detail=f"configuration and/or schema invalid. {e.message}")
+    return data
+
+
 @catalog_router.post(
     "/blueprints/",
     response_model=IdInfo,
@@ -45,16 +55,27 @@ guild_service = GuildService()
 )
 async def create_blueprint(blueprint: BlueprintCreate, engine: Engine = Depends(Metastore.get_engine)):
     try:
-        GuildSpec.model_validate(blueprint.spec)
+        if KeyConstants.CONFIGURATION_SCHEMA in blueprint.spec and KeyConstants.CONFIGURATION in blueprint.spec:
+            validate_guild_configuration(
+                blueprint.spec[KeyConstants.CONFIGURATION_SCHEMA], blueprint.spec[KeyConstants.CONFIGURATION]
+            )
+        elif KeyConstants.CONFIGURATION in blueprint.spec:
+            raise HTTPException(status_code=400, detail=f"{KeyConstants.CONFIGURATION_SCHEMA} is required")
+        elif KeyConstants.CONFIGURATION_SCHEMA in blueprint.spec:
+            raise HTTPException(status_code=400, detail=f"{KeyConstants.CONFIGURATION} is required")
 
-        for agent in blueprint.spec.agents:
+        # Validate GuildSpec can be built
+        blueprint.spec.pop(KeyConstants.ID, None)
+        valid_guild_spec = GuildBuilder._from_spec_dict(blueprint.spec).build_spec()
+
+        for agent in valid_guild_spec.agents:
             class_name = agent.class_name
             try:
                 CatalogStore(engine).get_agent_by_class_name(class_name)
             except Exception:
                 raise HTTPException(status_code=400, detail=f"Agent not found for class_name: {class_name}")
-    except ValidationError as e:
-        raise HTTPException(status_code=400, detail=e.errors())
+    except ValidationError:
+        raise HTTPException(status_code=400, detail="Invalid GuildSpec")
     blueprint_id = CatalogStore(engine).create_blueprint(blueprint)
     return IdInfo(id=blueprint_id)
 
@@ -231,19 +252,6 @@ async def get_blueprint_review(blueprint_id: str, review_id: str, engine: Engine
 @catalog_router.get("/tags/", response_model=List[str], operation_id="listTags", tags=["blueprints"])
 async def list_tags(engine: Engine = Depends(Metastore.get_engine)):
     return CatalogStore(engine).get_tags()
-
-
-@catalog_router.post(
-    "/blueprints/{blueprint_id}/guilds/{guild_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
-    operation_id="addGuildToBlueprint",
-    tags=["blueprints"],
-    deprecated=True,
-)
-async def add_guild_to_blueprint(blueprint_id: str, guild_id: str, engine: Engine = Depends(Metastore.get_engine)):
-    """This API is deprecated. Please use `/blueprints/{blueprint_id}/guilds` instead to launch a guild from a blueprint."""
-    CatalogStore(engine).add_guild_to_blueprint(blueprint_id, guild_id)
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @catalog_router.get(
@@ -448,8 +456,14 @@ async def launch_guild_from_blueprint(
     if not blueprint:
         raise HTTPException(status_code=404, detail="Blueprint not found")
 
+    spec = blueprint.spec
     try:
-        guild_spec = GuildSpec.model_validate(blueprint.spec)
+        if KeyConstants.CONFIGURATION_SCHEMA in spec:
+            configuration = {**spec[KeyConstants.CONFIGURATION], **launch_request.configuration}
+            validate_guild_configuration(spec[KeyConstants.CONFIGURATION_SCHEMA], configuration)
+            spec[KeyConstants.CONFIGURATION] = configuration
+
+        guild_spec = GuildBuilder._from_spec_dict(spec).build_spec()
 
         # Update the guild name
         guild_spec.name = launch_request.guild_name
