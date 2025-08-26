@@ -212,3 +212,4 @@ class TestSplitterGuild:
         assert len(messages) > 0
         assert messages[0].payload["id"] == "item-001"
         assert messages[0].payload["quantity"] == 2
+        assert messages[0].reason == "Splits list into individual messages"

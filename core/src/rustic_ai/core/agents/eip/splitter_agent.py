@@ -147,6 +147,7 @@ class SplitterAgent(Agent[SplitterConf]):
     def __init__(self):
         self.splitter = self.config.splitter
         self.format_selector = self.config.format_selector
+        self.set_default_reason("Splits list into individual messages")
 
     @agent.processor(JsonDict)
     def split_and_send(self, ctx: ProcessContext[JsonDict]) -> None:
