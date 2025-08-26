@@ -101,6 +101,7 @@ class KeyConstants:
     ACT_ONLY_WHEN_TAGGED = "act_only_when_tagged"
     PREDICATES = "predicates"
     CONFIGURATION = "configuration"
+    CONFIGURATION_SCHEMA = "configuration_schema"
 
 
 class EnvConstants:

@@ -58,7 +58,7 @@ class CatalogStore:
             try:
                 blueprint_details = blueprint_create.model_dump(
                     exclude={
-                        "spec": {"id": True, "agents": {"__all__": {"id"}}},
+                        "spec": True,
                         "tags": True,
                         "commands": True,
                         "starter_prompts": True,
@@ -66,6 +66,7 @@ class CatalogStore:
                     }
                 )
                 blueprint = Blueprint.model_validate(blueprint_details)
+                blueprint.spec = blueprint_create.spec
                 session.add(blueprint)
                 session.commit()
                 session.refresh(blueprint)

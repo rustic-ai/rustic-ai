@@ -7,7 +7,6 @@ import shortuuid
 from sqlalchemy.ext.mutable import MutableDict
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
-from rustic_ai.core.guild.dsl import GuildSpec
 from rustic_ai.core.guild.metaprog.agent_registry import AgentEntry
 
 
@@ -108,7 +107,7 @@ class BlueprintBase(SQLModel):
 
 
 class BlueprintCreate(BlueprintBase):
-    spec: GuildSpec
+    spec: dict
     tags: Optional[List[str]] = None
     commands: Optional[List[str]] = None
     starter_prompts: Optional[List[str]] = None
@@ -342,3 +341,4 @@ class LaunchGuildFromBlueprintRequest(BaseModel):
     user_id: str
     org_id: str
     description: Optional[str] = None
+    configuration: dict = {}
