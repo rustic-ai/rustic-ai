@@ -1,5 +1,6 @@
 import asyncio
 import json
+import os
 import time
 
 import httpx
@@ -11,6 +12,10 @@ from rustic_ai.core.agents.testutils.echo_agent import EchoAgent
 from rustic_ai.core.agents.utils.user_proxy_agent import UserProxyAgent
 from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder
 from rustic_ai.core.guild.dsl import AgentSpec, GuildSpec
+from rustic_ai.core.guild.metastore import Metastore
+from rustic_ai.core.messaging.client.message_tracking_store import (
+    SqlMessageTrackingStore,
+)
 from rustic_ai.core.messaging.core.message import (
     AgentTag,
     Message,
@@ -20,6 +25,7 @@ from rustic_ai.core.messaging.core.message import (
     RoutingSlip,
 )
 from rustic_ai.core.messaging.core.messaging_config import MessagingConfig
+from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 from rustic_ai.core.utils.gemstone_id import GemstoneGenerator
 from rustic_ai.core.utils.priority import Priority
 
@@ -87,6 +93,15 @@ class TestServer:
             messaging.backend_module,
             messaging.backend_class,
             messaging.backend_config,
+        )
+
+        builder.set_property("client_type", "rustic_ai.core.messaging.client.exactly_once_client.ExactlyOnceClient")
+        builder.set_property(
+            "client_properties",
+            {
+                "tracking_store_class": get_qualified_class_name(SqlMessageTrackingStore),
+                "tracking_store_props": {"db": os.environ.get("RUSTIC_METASTORE", Metastore.get_db_url())},
+            },
         )
 
         return builder.build_spec()
