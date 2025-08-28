@@ -1,12 +1,16 @@
 from .backend import EmbeddedMessagingBackend, InMemoryMessagingBackend
 from .client import (
+    ExactlyOnceClient,
     FilteringClient,
+    LastProcessedMsg,
     LoggingClient,
     MessageTrackingClient,
+    MessageTrackingStore,
     Pipeable,
     PipelineClient,
     RetryingClient,
     SimpleClient,
+    SqlMessageTrackingStore,
     ThrottlingClient,
     TransformingClient,
 )
@@ -28,7 +32,11 @@ __all__ = [
     "MessageConstants",
     "Priority",
     "Client",
+    "MessageTrackingStore",
+    "LastProcessedMsg",
+    "SqlMessageTrackingStore",
     "SimpleClient",
+    "ExactlyOnceClient",
     "MessageTrackingClient",
     "RetryingClient",
     "PipelineClient",
