@@ -1,14 +1,19 @@
 from abc import abstractmethod
-from typing import List, Literal
-
-from pydantic import BaseModel
+from typing import List
 
 from rustic_ai.core.guild.agent import Agent, ProcessContext
-from rustic_ai.core.guild.agent_ext.depends.llm.models import LLMMessage
+from rustic_ai.core.guild.agent_ext.depends.llm.models import (
+    ChatCompletionRequest,
+    LLMMessage,
+)
+from rustic_ai.llm_agent.plugins.llm_call_wrapper import LLMCallWrapper
 
 
-class MemoriesStore(BaseModel):
-    memory_type: Literal["queue_based", "history_based", "state_backed"]
+class MemoriesStore(LLMCallWrapper):
+    """
+    Abstract base class for memory stores.
+    Memory stores are LLM Call wraapping plugins thaat provide extended memory to the agent.
+    """
 
     @abstractmethod
     def remember(self, agent: Agent, ctx: ProcessContext, message: LLMMessage) -> None:
@@ -46,3 +51,25 @@ class MemoriesStore(BaseModel):
             List[LLMMessage]: Relevant messages from the memory.
         """
         pass
+
+    def preprocess(
+        self,
+        agent: Agent,
+        ctx: ProcessContext,
+        request: ChatCompletionRequest,
+    ) -> ChatCompletionRequest:
+        old_messages = self.recall(agent, ctx, request.messages)
+        combined_messages = old_messages + request.messages
+
+        self.remember_many(agent, ctx, request.messages)
+
+        return request.model_copy(update={"messages": combined_messages})
+
+    def postprocess(
+        self,
+        agent: Agent,
+        ctx: ProcessContext,
+        final_prompt: ChatCompletionRequest,
+        llm_response,
+    ) -> None:
+        self.remember(agent, ctx, llm_response.choices[0].message)

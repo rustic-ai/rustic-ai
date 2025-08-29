@@ -1,18 +1,16 @@
 import logging
 from typing import List, Union
 
-from mistralai_azure import ChatCompletionResponse
 import openai
 
-from rustic_ai.core.guild.agent import ProcessContext
+from rustic_ai.core.guild.agent import Agent, ProcessContext
 from rustic_ai.core.guild.agent_ext.depends.llm.llm import LLM
 from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     AssistantMessage,
     ChatCompletionError,
     ChatCompletionRequest,
-    ChatCompletionTool,
+    ChatCompletionResponse,
     FunctionMessage,
-    LLMMessage,
     ResponseCodes,
     SystemMessage,
     ToolMessage,
@@ -24,43 +22,12 @@ from rustic_ai.llm_agent.llm_agent_conf import LLMAgentConfig
 class LLMAgentHelper:
 
     @staticmethod
-    def prep_prompts(
-        prefix_messages: List[LLMMessage],
-        config: LLMAgentConfig,
-        prompt: ChatCompletionRequest,
-    ) -> ChatCompletionRequest:
-        """
-        Prepare the prompt for the LLM by merging pre-defined messages and tools.
-        """
-        all_messages = prefix_messages + prompt.messages
-
-        tools: List[ChatCompletionTool] = []
-
-        tools_manager = config.get_tools_manager()
-        if tools_manager:
-            tools.extend(tools_manager.tools)
-
-        if prompt.tools:
-            tools.extend(prompt.tools)
-
-        config_dict = config.get_llm_params()
-        prompt_dict = prompt.model_dump(exclude_none=True)
-
-        final_prompt = {
-            **config_dict,
-            **prompt_dict,
-            "messages": all_messages,
-            "tools": [tool.model_dump(exclude_none=True) for tool in tools],
-        }
-
-        return ChatCompletionRequest.model_validate(final_prompt)
-
-    @staticmethod
     def invoke_llm_completion(
-        prefix_messages: List[LLMMessage],
+        agent: Agent,
         config: LLMAgentConfig,
-        prompt: ChatCompletionRequest,
         llm: LLM,
+        ctx: ProcessContext[ChatCompletionRequest],
+        prompt: ChatCompletionRequest,
     ) -> ChatCompletionResponse:
         """
         Invoke the LLM completion with the given context.
@@ -68,8 +35,35 @@ class LLMAgentHelper:
         The LLM Configuration is used as the base, overwritten by Agent config and then
         the Chat Completion Request.
         """
-        ccrequest = LLMAgentHelper.prep_prompts(prefix_messages, config, prompt)
+
+        pre_processors = config.request_preprocessors or []
+        wrap_processors = config.llm_request_wrappers or []
+        post_processors = config.response_postprocessors or []
+
+        for pre_processor in pre_processors:
+            prompt = pre_processor.preprocess(agent=agent, ctx=ctx, request=prompt)
+
+        for wrap_processor in wrap_processors:
+            prompt = wrap_processor.preprocess(agent=agent, ctx=ctx, request=prompt)
+
+        config_dict = config.get_llm_params()
+        prompt_dict = prompt.model_dump(exclude_none=True)
+
+        final_prompt = {
+            **config_dict,
+            **prompt_dict,
+        }
+
+        ccrequest: ChatCompletionRequest = ChatCompletionRequest.model_validate(final_prompt)
+
         response = llm.completion(ccrequest)
+
+        for wrap_processor in reversed(wrap_processors):
+            wrap_processor.postprocess(agent=agent, ctx=ctx, final_prompt=ccrequest, llm_response=response)
+
+        for post_processor in post_processors:
+            post_processor.postprocess(agent=agent, ctx=ctx, final_prompt=ccrequest, llm_response=response)
+
         return response
 
     @staticmethod
@@ -104,12 +98,11 @@ class LLMAgentHelper:
 
     @staticmethod
     def invoke_llm_and_handle_response(
-        agent_name: str,
-        prefix_messages: List[LLMMessage],
+        agent: Agent,
         config: LLMAgentConfig,
-        prompt: ChatCompletionRequest,
         llm: LLM,
         ctx: ProcessContext[ChatCompletionRequest],
+        prompt: ChatCompletionRequest,
     ) -> ChatCompletionResponse | ChatCompletionError:
         """
         Invoke the LLM and handle the response.
@@ -118,7 +111,7 @@ class LLMAgentHelper:
         the Chat Completion Request.
         """
         try:
-            chat_response = LLMAgentHelper.invoke_llm_completion(prefix_messages, config, prompt, llm)
+            chat_response = LLMAgentHelper.invoke_llm_completion(agent, config, llm, ctx, prompt)
             ctx.send(chat_response)
             return chat_response
         except openai.APIStatusError as e:  # pragma: no cover
@@ -129,15 +122,15 @@ class LLMAgentHelper:
                 ctx=ctx,
                 status_code=ResponseCodes(e.status_code),
                 error=e,
-                messages=prompt.messages,
+                messages=ctx.payload.messages,
             )
         except Exception as e:  # pragma: no cover
             logging.error(f"Unexpected error in LLM completion: {e}")
             error = ChatCompletionError(
                 status_code=ResponseCodes.INTERNAL_SERVER_ERROR,
                 message=str(e),
-                model=agent_name,
-                request_messages=prompt.messages,
+                model=agent.name,
+                request_messages=ctx.payload.messages,
             )
 
             ctx.send_error(error)
