@@ -2,6 +2,7 @@
 Message format types for UI components.
 
 These types correspond to the message formats used in the Rustic UI component library.
+Please use only formats that extend DataFormat, VisualizationFormat or MediaFormat.
 For more examples and detailed explanations, check out the Storybook documentation:
 https://rustic-ai.github.io/rustic-ui-components
 """
@@ -23,7 +24,10 @@ class DataFormat(BaseModel):
 
 
 class VisualizationFormat(DataFormat):
-    """Base class for visual components that need accessibility support."""
+    """Base class for visual components that need accessibility support.
+    Please use the following formats: LocationFormat, ImageFormat, MermaidFormat,
+    PlotlyGraphFormat, VegaLiteFormat, TableFormat.
+    """
 
     alt: Optional[str] = None
 
@@ -54,14 +58,7 @@ class TextFormat(DataFormat):
 
 class FileData(BaseModel):
     """Represents file information with name and URL.
-
-    Example:
-        ```python
-        file_data = FileData(
-            name="report.pdf",
-            url="https://example.com/files/report.pdf"
-        )
-        ```
+    Please use the following format: FilesWithTextFormat.
     """
 
     name: str
@@ -132,23 +129,7 @@ class QuestionResponse(BaseModel):
 
 
 class FormSchema(BaseModel):
-    """JSON schema definition for dynamic forms.
-
-    Example:
-        ```python
-        schema = FormSchema(
-            title="Provide a delivery address",
-            type="object",
-            properties={
-                "city": {"type": "string"},
-                "state": {"type": "string"},
-                "street": {"type": "string"},
-                "zip": {"type": "string", "pattern": "^[0-9]{5}(?:-[0-9]{4})?$"}
-            },
-            required=["city","zip",'street']
-        )
-        ```
-    """
+    """JSON schema definition for dynamic forms. Please use the following format: FormFormat."""
 
     type: str = "object"
     properties: Dict[str, JsonValue]
@@ -210,17 +191,7 @@ class CodeFormat(DataFormat):
 class CalendarEvent(BaseModel):
     """Represents a single calendar event with date, time, and details.
 
-    Example:
-        ```python
-        event = CalendarEvent(
-            start="2024-03-15T09:00:00Z",
-            end="2024-03-15T10:30:00Z",
-            title="Team Meeting",
-            description="Weekly team sync meeting",
-            location="Conference Room A",
-            is_all_day=False
-        )
-        ```
+    Please use the following format: CalendarFormat.
     """
 
     start: str
@@ -298,6 +269,7 @@ class ImageFormat(VisualizationFormat):
 class MermaidFormat(VisualizationFormat):
     """Format for displaying Mermaid diagrams.
 
+    Please write the diagram following the guidelines in the Mermaid documentation: https://mermaid.js.org/intro/
     Examples:
         Class diagram:
         ```python
@@ -330,6 +302,7 @@ class MermaidFormat(VisualizationFormat):
 class PlotlyGraphFormat(VisualizationFormat):
     """Format for displaying Plotly interactive graphs and charts.
 
+    Please write the plot_params following the guidelines in the Plotly documentation: https://plotly.com/javascript/
     Example:
         Grouped bar chart:
         ```python
@@ -386,8 +359,9 @@ class PlotlyGraphFormat(VisualizationFormat):
 class VegaLiteFormat(VisualizationFormat):
     """Format for displaying Vega-Lite visualizations.
 
-    Example:
-        Bar chart:
+    Please write the spec following the guidelines in the Vega-Lite documentation: https://vega.github.io/vega-lite/docs/
+    Examples:
+        Bar chart with inline data:
         ```python
         bar_chart = VegaLiteFormat(
             spec={
@@ -426,6 +400,30 @@ class VegaLiteFormat(VisualizationFormat):
             alt="Bar chart showing categorical data with values from A to E"
         )
         ```
+
+        Chart with data from URL:
+        ```python
+        url_chart = VegaLiteFormat(
+            spec={
+                "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+                "data": {
+                    "url": "https://raw.githubusercontent.com/vega/vega-datasets/master/data/cars.json"
+                },
+                "mark": "point",
+                "encoding": {
+                    "x": {"field": "Horsepower", "type": "quantitative"},
+                    "y": {"field": "Miles_per_Gallon", "type": "quantitative"},
+                    "color": {"field": "Origin", "type": "nominal"}
+                }
+            },
+            theme={
+                "light": "quartz",
+                "dark": "dark"
+            },
+            title="Cars Dataset Scatter Plot",
+            alt="Scatter plot showing relationship between horsepower and miles per gallon"
+        )
+        ```
     """
 
     spec: Dict[str, JsonValue]
@@ -436,13 +434,7 @@ class VegaLiteFormat(VisualizationFormat):
 class TableHeader(BaseModel):
     """Configuration for table column headers.
 
-    Example:
-        ```python
-        header = TableHeader(
-            data_key="user_name",
-            label="User Name"
-        )
-        ```
+    Please use the following format: TableFormat.
     """
 
     data_key: str = Field(alias="dataKey")
@@ -506,13 +498,7 @@ class FilterOperation(str, Enum):
 class TableSort(BaseModel):
     """Configuration for table column sorting.
 
-    Example:
-        ```python
-        sort_config = TableSort(
-            field="created_date",
-            option=TableSortOption.DESC
-        )
-        ```
+    Please use the following format: TableFormat.
     """
 
     field: str
@@ -522,14 +508,7 @@ class TableSort(BaseModel):
 class TableFilter(BaseModel):
     """Configuration for table data filtering.
 
-    Example:
-        ```python
-        filter_config = TableFilter(
-            field="status",
-            operation=FilterOperation.IN,
-            value=["active", "pending"]
-        )
-        ```
+    Please use the following format: TableFormat.
     """
 
     field: str
@@ -540,15 +519,7 @@ class TableFilter(BaseModel):
 class TableConfig(BaseModel):
     """Advanced configuration for table display and data processing.
 
-    Example:
-        ```python
-        config = TableConfig(
-            columns=["name", "email", "status"],
-            group_by=["department"],
-            sort=[TableSort(field="name", option=TableSortOption.ASC)],
-            filter=[TableFilter(field="status", operation=FilterOperation.EQ, value="active")]
-        )
-        ```
+    Please use the following format: TableFormat.
     """
 
     columns: Optional[list[str]] = None
@@ -562,7 +533,7 @@ class TableConfig(BaseModel):
 
 
 class TableFormat(VisualizationFormat):
-    """Format for displaying tabular data with advanced features like sorting and filtering.
+    """Format for displaying Table and PerspectiveViz Components.
     Note: Headers are used in the basic table to set the order of columns and assign labels and can also be used to limit which columns are shown.
 
     Examples:
@@ -601,6 +572,8 @@ class TableFormat(VisualizationFormat):
             title="Sales Analysis Pivot"
         )
         ```
+        For more information about how to set the config for PerspectiveViz component,
+        please refer to the official documentation: https://perspective.finos.org/.
     """
 
     data: list[Dict[str, Union[str, int, float]]]
@@ -611,15 +584,7 @@ class TableFormat(VisualizationFormat):
 class MediaFormat(DataFormat):
     """Base format for media content (audio/video) with optional captions and transcripts.
 
-    Example:
-        ```python
-        media = MediaFormat(
-            src="https://example.com/video.mp4",
-            captions="https://example.com/captions.vtt",
-            transcript="Full transcript of the video content...",
-            title="Product Demo Video"
-        )
-        ```
+    Please use the following formats: AudioFormat, VideoFormat.
     """
 
     src: str
@@ -663,14 +628,7 @@ class VideoFormat(MediaFormat):
 class Weather(BaseModel):
     """Represents weather data for a specific timestamp.
 
-    Example:
-        ```python
-        weather_data = Weather(
-            timestamp=1640995200,  # Unix timestamp
-            temp={"low": 15, "high": 25, "current": 22},
-            weather_icon={"icon": "sunny", "description": "Clear sky"}
-        )
-        ```
+    Please use the following format: WeatherFormat.
     """
 
     timestamp: int
@@ -707,23 +665,3 @@ class WeatherFormat(DataFormat):
     weather: list[Weather]
     location: str
     units: Literal["metric", "imperial"]
-
-
-class PromptsFormat(BaseModel):
-    """Format for displaying interactive prompt suggestions to users.
-
-    Example:
-        ```python
-        prompts = PromptsFormat(
-            prompts=[
-                "What's the weather like today?",
-                "Help me write a Python function",
-                "Explain machine learning basics"
-            ],
-            position="inConversation"
-        )
-        ```
-    """
-
-    prompts: list[str]
-    position: Optional[Literal["inConversation", "hoverOverInput"]] = None
