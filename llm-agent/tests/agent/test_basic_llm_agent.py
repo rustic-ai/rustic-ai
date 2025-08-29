@@ -12,7 +12,8 @@ from rustic_ai.core.guild.agent_ext.depends.llm.models import (
 from rustic_ai.core.guild.builders import AgentBuilder
 from rustic_ai.core.guild.dsl import AgentSpec
 from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
-from rustic_ai.llm_agent.basic_llm_agent import BasicLLMAgent, BasicLLMAgentConfig
+from rustic_ai.llm_agent.llm_agent import LLMAgent
+from rustic_ai.llm_agent.llm_agent_conf import LLMAgentConfig
 
 from rustic_ai.testing.helpers import wrap_agent_for_testing
 
@@ -21,14 +22,13 @@ class TestBasicLLMAgent:
     @pytest.mark.skipif(os.getenv("SKIP_EXPENSIVE_TESTS") == "true", reason="Skipping expensive tests")
     def test_invoke_llm(self, generator, build_message_from_payload, dependency_map):
         agent_spec: AgentSpec = (
-            AgentBuilder(BasicLLMAgent)
+            AgentBuilder(LLMAgent)
             .set_id("llm_agent")
             .set_name("LLM Agent")
             .set_description("An agent that uses a large language model")
             .set_properties(
-                BasicLLMAgentConfig(
-                    model="gpt-5-mini",
-                    system_prompt="You are a helpful assistant. Your name is Astro.",
+                LLMAgentConfig(
+                    model="gpt-5-mini", default_system_prompt="You are a helpful assistant. Your name is Astro."
                 )
             )
             .build_spec()
@@ -56,7 +56,7 @@ class TestBasicLLMAgent:
 
         assert len(result.message_history) > 0
         pe = result.message_history[0]
-        assert pe.processor == BasicLLMAgent.invoke_llm.__name__
+        assert pe.processor == LLMAgent.invoke_llm.__name__
 
         payload = ChatCompletionResponse.model_validate(result.payload)
 

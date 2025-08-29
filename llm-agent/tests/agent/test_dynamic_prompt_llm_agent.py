@@ -13,11 +13,9 @@ from rustic_ai.core.guild.agent_ext.depends.llm.models import (
 from rustic_ai.core.guild.builders import AgentBuilder
 from rustic_ai.core.guild.dsl import AgentSpec
 from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
-from rustic_ai.llm_agent.dynamic_prompt_llm_agent import (
-    DynamicPromptLLMAgent,
-    DynamicPromptLLMAgentConfig,
-    TemplatedPromptGenerator,
-)
+from rustic_ai.llm_agent.llm_agent import LLMAgent
+from rustic_ai.llm_agent.llm_agent_conf import LLMAgentConfig
+from rustic_ai.llm_agent.plugins.prompt_generators import TemplatedPromptGenerator
 
 from rustic_ai.testing.helpers import wrap_agent_for_testing
 
@@ -31,12 +29,12 @@ class TestDynamicPromptLLMAgent:
     @pytest.fixture
     def agent_spec(self):
         agent_spec: AgentSpec = (
-            AgentBuilder(DynamicPromptLLMAgent)
+            AgentBuilder(LLMAgent)
             .set_id("llm_agent")
             .set_name("LLM Agent")
             .set_description("An agent that uses a large language model")
             .set_properties(
-                DynamicPromptLLMAgentConfig(
+                LLMAgentConfig(
                     model="gpt-5-mini",
                     system_prompt_generator=TemplatedPromptGenerator(
                         template="You are a helpful assistant. Your name is {name}.",
@@ -74,7 +72,7 @@ class TestDynamicPromptLLMAgent:
 
         assert len(result.message_history) > 0
         pe = result.message_history[0]
-        assert pe.processor == DynamicPromptLLMAgent.invoke_llm.__name__
+        assert pe.processor == LLMAgent.invoke_llm.__name__
 
         payload = ChatCompletionResponse.model_validate(result.payload)
 
@@ -139,7 +137,7 @@ class TestDynamicPromptLLMAgent:
 
         assert len(result.message_history) > 0
         pe = result.message_history[0]
-        assert pe.processor == DynamicPromptLLMAgent.invoke_llm.__name__
+        assert pe.processor == LLMAgent.invoke_llm.__name__
 
         payload = ChatCompletionResponse.model_validate(result.payload)
 
