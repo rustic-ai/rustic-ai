@@ -1,14 +1,11 @@
 from abc import ABC, abstractmethod
-from typing import List, Optional
+from typing import Optional
 
 from mistralai_azure import ChatCompletionResponse
 from pydantic import BaseModel, Field, model_validator
 
 from rustic_ai.core.guild.agent import Agent, ProcessContext
-from rustic_ai.core.guild.agent_ext.depends.llm.models import (
-    ChatCompletionRequest,
-    LLMMessage,
-)
+from rustic_ai.core.guild.agent_ext.depends.llm.models import ChatCompletionRequest
 
 
 class LLMCallWrapper(BaseModel, ABC):
