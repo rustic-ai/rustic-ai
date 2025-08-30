@@ -1,6 +1,8 @@
 from pydantic import BaseModel
 
 from rustic_ai.core.agents.eip.basic_wiring_agent import BasicWiringAgent
+from rustic_ai.core.agents.testutils import EchoAgent
+from rustic_ai.core.agents.utils import UserProxyAgent
 from rustic_ai.core.guild.builders import AgentBuilder, RouteBuilder
 from rustic_ai.core.guild.dsl import AgentSpec
 from rustic_ai.core.messaging.core.message import (
@@ -90,3 +92,16 @@ class TestRouteBuilder:
         assert route.message_format == "JsonMessage"
         assert isinstance(route.transformer, FunctionalTransformer)
         assert '{"payload": {"key1": "value1"}, "format": "testing"}' in route.transformer.handler
+
+    def test_route_builder_with_reason(self):
+        # Build the route
+        route = (
+            RouteBuilder(EchoAgent)
+            .set_destination_topics(UserProxyAgent.get_user_outbox_topic("test_user"))
+            .set_reason("simply doing my job")
+            .set_process_status(ProcessStatus.COMPLETED)
+            .build()
+        )
+
+        assert route.reason == "simply doing my job"
+        assert route.process_status == ProcessStatus.COMPLETED

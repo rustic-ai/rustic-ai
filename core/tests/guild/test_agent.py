@@ -7,6 +7,7 @@ from rustic_ai.core.guild.guild import Guild
 from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 
 from core.tests.guild.simple_agent import (
+    AccountableAgent,
     DummyMessage,
     DummyResponseOne,
     DummyResponseTwo,
@@ -69,7 +70,7 @@ class TestAgent:
         assert messages[0].payload["error_message"] == "An error occurred"
         assert messages[0].topic_published_to == GuildTopics.ERROR_TOPIC
 
-    def test_agent_with_multiple_handlers(self, guild: Guild):
+    def test_agent_with_multiple_handlers(self, guild: Guild, probe_spec):
         agent_id = "p2"
         name = "Bot"
         description = "A bot agent"
@@ -80,9 +81,7 @@ class TestAgent:
 
         guild._add_local_agent(agent_spec)
 
-        probe_agent: ProbeAgent = guild._add_local_agent(
-            AgentBuilder(ProbeAgent).set_id("probe").set_name("Probe").set_description("Probe agent").build_spec()
-        )
+        probe_agent: ProbeAgent = guild._add_local_agent(probe_spec)  # type: ignore
 
         probe_agent.publish(guild.DEFAULT_TOPIC, DummyMessage(key1="value1", key2=5))
 
@@ -107,3 +106,47 @@ class TestAgent:
 
         assert get_qualified_class_name(DummyResponseOne) in formats
         assert get_qualified_class_name(DummyResponseTwo) in formats
+
+    def test_agent_send_with_reason(self, guild: Guild):
+        name = "Accountable Agent"
+        description = "Agent that provides accountability by sending messages with a reason"
+        agent_spec: AgentSpec = (
+            AgentBuilder(AccountableAgent)
+            .set_name(name)
+            .set_description(description)
+            .listen_to_default_topic(True)
+            .build_spec()
+        )
+
+        guild._add_local_agent(agent_spec)
+
+        probe_spec: AgentSpec = (
+            AgentBuilder(ProbeAgent)
+            .set_id("probe")
+            .set_name("Probe")
+            .set_description("Probe agent")
+            .add_additional_topic(GuildTopics.ERROR_TOPIC)
+            .build_spec()
+        )
+
+        probe_agent: ProbeAgent = guild._add_local_agent(probe_spec)  # type: ignore
+
+        probe_agent.publish_dict(guild.DEFAULT_TOPIC, DummyMessage(key1="jkl", key2=789))
+
+        time.sleep(0.5)
+
+        messages = probe_agent.get_messages()
+        assert len(messages) == 1
+        dummy_response = messages[0]
+        assert dummy_response.format == get_qualified_class_name(DummyResponseOne)
+        assert "Identified payload as DummyMessage" in dummy_response.message_history[-1].reason
+
+        probe_agent.clear_messages()
+
+        probe_agent.publish_dict(guild.DEFAULT_TOPIC, {"year": 2025, "month": "August"})
+        time.sleep(0.5)
+
+        messages = probe_agent.get_messages()
+        assert len(messages) == 1
+        dummy_response = messages[0]
+        assert "Cannot read payload" in dummy_response.message_history[-1].reason
