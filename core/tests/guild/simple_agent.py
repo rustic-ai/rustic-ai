@@ -72,3 +72,15 @@ class MultiProcessAgent(Agent):
         payload = ctx.payload
         result = DummyResponseTwo(key1=payload.key1, key2=payload.key2, value1="Agent Two")
         ctx.send(result)
+
+
+class AccountableAgent(Agent):
+
+    @agent.processor(JsonDict)
+    def custom_handler(self, ctx: agent.ProcessContext[JsonDict]) -> None:
+        try:
+            payload = DummyMessage.model_validate(ctx.payload)
+            result = DummyResponseOne(key1=payload.key1, key2=payload.key2, key3="Agent One")
+            ctx.send(result, reason="Identified payload as DummyMessage")
+        except Exception:
+            ctx.send_error(ErrorMessage(error_message="An error occurred"), reason="Cannot read payload")

@@ -67,6 +67,7 @@ class GuildRoutes(SQLModel, table=True):
     )
 
     process_status: Optional[str] = Field(default=None)
+    reason: Optional[str] = Field(default=None)
 
     @classmethod
     def from_routing_rule(cls, guild_id: str, routing_rule: RoutingRule):
@@ -119,6 +120,7 @@ class GuildRoutes(SQLModel, table=True):
                 routing_rule.guild_state_update.model_dump() if routing_rule.guild_state_update else None
             ),
             process_status=routing_rule.process_status,
+            reason=routing_rule.reason,
         )
 
     def to_routing_rule(self) -> RoutingRule:
@@ -176,6 +178,7 @@ class GuildRoutes(SQLModel, table=True):
             "agent_state_update": self.agent_state_update,
             "guild_state_update": self.guild_state_update,
             "process_status": self.process_status,
+            "reason": self.reason,
         }
 
         return RoutingRule.model_validate(rule_dict)
