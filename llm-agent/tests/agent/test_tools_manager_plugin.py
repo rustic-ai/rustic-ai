@@ -5,6 +5,7 @@ from typing import List, Optional, Type
 from pydantic import BaseModel
 import pytest
 
+from rustic_ai.core.guild.agent_ext.depends.llm.llm import LLM
 from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     ChatCompletionNamedToolChoice,
     ChatCompletionRequest,
@@ -80,6 +81,22 @@ class EchoParameters(BaseModel):
     text: str
 
 
+class MockLLM(LLM):
+
+    def completion(self, prompt: ChatCompletionRequest) -> ChatCompletionResponse:
+        return ChatCompletionResponse(choices=[])
+
+    async def async_completion(self, prompt: ChatCompletionRequest) -> ChatCompletionResponse:
+        return ChatCompletionResponse(choices=[])
+
+    @property
+    def model(self) -> str:
+        return "mock-model"
+
+    def get_config(self) -> dict:
+        return {"model": self.model}
+
+
 class TestToolsManagerPlugin:
     def test_preprocess_adds_tools_when_request_has_none(self):
         provider = ToolsManagerPlugin(
@@ -91,7 +108,7 @@ class TestToolsManagerPlugin:
             )
         )
         req = _base_request_with_no_tools()
-        new_req = provider.preprocess(agent=None, ctx=None, request=req)
+        new_req = provider.preprocess(agent=None, ctx=None, request=req, llm=MockLLM())
         assert new_req.tools is not None
         assert [t.function.name for t in new_req.tools] == ["search", "weather"]
 
@@ -107,7 +124,7 @@ class TestToolsManagerPlugin:
         )
         req = _base_request_with_tools([existing])
         original_tools_list = req.tools
-        new_req = provider.preprocess(agent=None, ctx=None, request=req)
+        new_req = provider.preprocess(agent=None, ctx=None, request=req, llm=MockLLM())
         assert req.tools is original_tools_list
         assert [t.function.name for t in req.tools] == ["calendar"]
         assert [t.function.name for t in new_req.tools] == ["calendar", "email"]
@@ -122,17 +139,30 @@ class TestToolsManagerPlugin:
             )
         )
         req = ChatCompletionRequest(messages=[UserMessage(content="hi")], tools=[])
-        new_req = provider.preprocess(agent=None, ctx=None, request=req)
+        new_req = provider.preprocess(agent=None, ctx=None, request=req, llm=MockLLM())
         assert [t.function.name for t in new_req.tools] == ["math"]
 
 
 class _CapturePromptToolsWrapper(LLMCallWrapper):
     captured_tools: list[str] | None = None
 
-    def preprocess(self, agent, ctx, request: ChatCompletionRequest) -> ChatCompletionRequest:
+    def preprocess(
+        self,
+        agent,
+        ctx,
+        request,
+        llm,
+    ) -> ChatCompletionRequest:
         return request
 
-    def postprocess(self, agent, ctx, final_prompt: ChatCompletionRequest, llm_response) -> Optional[List[BaseModel]]:
+    def postprocess(
+        self,
+        agent,
+        ctx,
+        final_prompt: ChatCompletionRequest,
+        llm_response,
+        llm,
+    ) -> Optional[List[BaseModel]]:
         tools = final_prompt.tools or []
         self.captured_tools = [t.function.name for t in tools]
         return tools

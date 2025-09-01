@@ -110,6 +110,7 @@ class ToolsManagerPlugin(LLMCallWrapper):
         agent,
         ctx,
         request,
+        llm,
     ) -> ChatCompletionRequest:
         messages = request.messages
         if messages is None:
@@ -135,6 +136,7 @@ class ToolsManagerPlugin(LLMCallWrapper):
         ctx,
         final_prompt,
         llm_response,
+        llm,
     ) -> Optional[List[BaseModel]]:
         tool_calls = ToolsHelper.extract_tool_calls(self.toolset, llm_response)
         return tool_calls

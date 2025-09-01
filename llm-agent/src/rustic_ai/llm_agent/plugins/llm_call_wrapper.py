@@ -5,6 +5,7 @@ from mistralai_azure import ChatCompletionResponse
 from pydantic import BaseModel, Field, model_validator
 
 from rustic_ai.core.guild.agent import Agent, ProcessContext
+from rustic_ai.core.guild.agent_ext.depends.llm.llm import LLM
 from rustic_ai.core.guild.agent_ext.depends.llm.models import ChatCompletionRequest
 
 
@@ -34,6 +35,7 @@ class LLMCallWrapper(BaseModel, ABC):
         agent: Agent,
         ctx: ProcessContext[ChatCompletionRequest],
         request: ChatCompletionRequest,
+        llm: LLM,
     ) -> ChatCompletionRequest: ...
 
     @abstractmethod
@@ -43,4 +45,5 @@ class LLMCallWrapper(BaseModel, ABC):
         ctx: ProcessContext[ChatCompletionRequest],
         final_prompt: ChatCompletionRequest,
         llm_response: ChatCompletionResponse,
+        llm: LLM,
     ) -> Optional[List[BaseModel]]: ...

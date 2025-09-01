@@ -1,4 +1,5 @@
 from rustic_ai.core.guild.agent import Agent, ProcessContext
+from rustic_ai.core.guild.agent_ext.depends.llm.llm import LLM
 from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     ChatCompletionRequest,
     ChatCompletionTool,
@@ -21,6 +22,7 @@ class ToolsProvider(RequestPreprocessor):
         agent: Agent,
         ctx: ProcessContext[ChatCompletionRequest],
         request: ChatCompletionRequest,
+        llm: LLM,
     ) -> ChatCompletionRequest:
 
         _tools = list(request.tools or [])

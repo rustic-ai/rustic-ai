@@ -39,10 +39,10 @@ class LLMAgentHelper:
         post_processors = config.response_postprocessors or []
 
         for pre_processor in pre_processors:
-            prompt = pre_processor.preprocess(agent=agent, ctx=ctx, request=prompt)
+            prompt = pre_processor.preprocess(agent=agent, ctx=ctx, request=prompt, llm=llm)
 
         for wrap_processor in wrap_processors:
-            prompt = wrap_processor.preprocess(agent=agent, ctx=ctx, request=prompt)
+            prompt = wrap_processor.preprocess(agent=agent, ctx=ctx, request=prompt, llm=llm)
 
         config_dict = config.get_llm_params()
         prompt_dict = prompt.model_dump(exclude_none=True)
@@ -88,6 +88,7 @@ class LLMAgentHelper:
                     ctx=ctx,
                     final_prompt=ccrequest,
                     llm_response=response,
+                    llm=llm,
                 )
                 if post_msg:
                     new_messages.extend(post_msg)
@@ -98,6 +99,7 @@ class LLMAgentHelper:
                     ctx=ctx,
                     final_prompt=ccrequest,
                     llm_response=response,
+                    llm=llm,
                 )
                 if post_msg:
                     new_messages.extend(post_msg)
