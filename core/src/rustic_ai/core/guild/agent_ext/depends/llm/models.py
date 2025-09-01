@@ -14,6 +14,8 @@ from typing import (
 
 from pydantic import BaseModel, ConfigDict, Field, RootModel
 
+from rustic_ai.core.utils.json_utils import JsonDict
+
 
 class LLMBaseModel(BaseModel):
     model_config = ConfigDict(
@@ -589,7 +591,7 @@ class ChatCompletionRequest(LLMBaseModel):
     each with an associated log probability. `logprobs` must be set to `true` if this parameter is used.
     """
 
-    parallel_tool_calls: Optional[bool] = False
+    parallel_tool_calls: Optional[bool] = None
     """
     Whether to enable parallel tool calls. If true, multiple tools can be called in parallel.
     """
@@ -817,6 +819,7 @@ class ResponseCodes(IntEnum):
     CONTENT_POLICY_VIOLATION_ERROR = 1002
     API_CONNECTION_ERROR = 1003
     API_TIMEOUT_ERROR = 1004
+    RESPONSE_PROCESSING_ERROR = 1005
 
 
 class ChatCompletionError(LLMBaseModel):
@@ -828,18 +831,22 @@ class ChatCompletionError(LLMBaseModel):
     """
     The status code of the response.
     """
+
     message: str
     """
     The error message.
     """
+
     response: Optional[str] = None
     """
     The response object.
     """
+
     model: Optional[str] = None
     """
     The model used for the chat completion.
     """
+
     request_messages: List[
         Union[
             SystemMessage,
@@ -851,6 +858,11 @@ class ChatCompletionError(LLMBaseModel):
     ]
     """
     A list of messages comprising the conversation so far.
+    """
+
+    body: Optional[JsonDict] = None
+    """
+    The body of the response if is it a valid JSON.
     """
 
 

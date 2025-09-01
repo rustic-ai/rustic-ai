@@ -52,7 +52,7 @@ class LiteLLM(LLM):
         if prompt.tools:
             tools.extend(prompt.tools)
 
-        prompt_dict = prompt.model_dump(exclude=None, exclude_unset=True)
+        prompt_dict = prompt.model_dump(exclude_none=True, exclude_unset=True)
 
         full_prompt = {
             **self.client_props,

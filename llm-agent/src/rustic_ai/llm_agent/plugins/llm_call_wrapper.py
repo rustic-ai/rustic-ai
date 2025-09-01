@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Optional
+from typing import List, Optional
 
 from mistralai_azure import ChatCompletionResponse
 from pydantic import BaseModel, Field, model_validator
@@ -43,4 +43,4 @@ class LLMCallWrapper(BaseModel, ABC):
         ctx: ProcessContext[ChatCompletionRequest],
         final_prompt: ChatCompletionRequest,
         llm_response: ChatCompletionResponse,
-    ) -> None: ...
+    ) -> Optional[List[BaseModel]]: ...
