@@ -335,7 +335,9 @@ class Agent(Generic[APT], metaclass=AgentMetaclass):  # type: ignore
             client_class (Type[Client]): The class of the client to initialize.
             client_properties (Dict[str, Any]): The properties for the client.
         """
-        client_properties.update({"id": self.id, "name": self.name, "message_handler": self._on_message})
+        client_properties.update(
+            {"id": f"{self.guild_id}${self.id}", "name": self.name, "message_handler": self._on_message}
+        )
         return client_class(**client_properties)
 
     def _make_process_context(
