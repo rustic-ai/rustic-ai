@@ -81,6 +81,7 @@ class RoutingKeys(StrEnum):
     ROUTE_TIMES = "route_times"
     PROCESS_STATUS = "process_status"
     TRANSFORMER = "transformer"
+    REASON = "reason"
 
 
 class KeyConstants:
@@ -1102,6 +1103,10 @@ class RouteBuilder:
 
     def set_process_status(self, process_status: ProcessStatus) -> "RouteBuilder":
         self.rule_dict[RoutingKeys.PROCESS_STATUS.value] = process_status
+        return self
+
+    def set_reason(self, reason: str) -> "RouteBuilder":
+        self.rule_dict[RoutingKeys.REASON.value] = reason
         return self
 
     def build(self) -> RoutingRule:
