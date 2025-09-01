@@ -70,7 +70,7 @@ class TestAgentWrapper:
         assert (
             agent_wrapper.agent._client.__class__.__name__ == "MessageTrackingClient"
         ), "Client should be MessageTrackingClient"
-        assert agent_wrapper.agent._client.id == agent_spec.id, "Client ID should be set"
+        assert agent_wrapper.agent._client.id == f"{guild_spec.id}${agent_spec.id}", "Client ID should be set"
         assert agent_wrapper.agent._client.name == agent_spec.name, "Client name should be set"
 
     def test_initialize_agent_with_messaging_instance(self, agent_spec, guild_spec):
@@ -96,5 +96,5 @@ class TestAgentWrapper:
         assert (
             agent_wrapper.agent._client.__class__.__name__ == "MessageTrackingClient"
         ), "Client should be MessageTrackingClient"
-        assert agent_wrapper.agent._client.id == agent_spec.id, "Client ID should be set"
+        assert agent_wrapper.agent._client.id == f"{guild_spec.id}${agent_spec.id}", "Client ID should be set"
         assert agent_wrapper.agent._client.name == agent_spec.name, "Client name should be set"
