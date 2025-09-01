@@ -4,6 +4,7 @@ from typing import Optional
 from pydantic import BaseModel, Field, model_validator
 
 from rustic_ai.core.guild.agent import Agent, ProcessContext
+from rustic_ai.core.guild.agent_ext.depends.llm.llm import LLM
 from rustic_ai.core.guild.agent_ext.depends.llm.models import ChatCompletionRequest
 
 
@@ -32,4 +33,5 @@ class RequestPreprocessor(BaseModel, ABC):
         agent: Agent,
         ctx: ProcessContext[ChatCompletionRequest],
         request: ChatCompletionRequest,
+        llm: LLM,
     ) -> ChatCompletionRequest: ...

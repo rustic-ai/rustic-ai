@@ -4,6 +4,7 @@ from typing import List, Optional
 from pydantic import BaseModel
 import pytest
 
+from rustic_ai.core.guild.agent_ext.depends.llm.llm import LLM
 from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     ChatCompletionNamedToolChoice,
     ChatCompletionRequest,
@@ -41,12 +42,28 @@ def _base_request_with_tools(tool_names: list[str]) -> ChatCompletionRequest:
     )
 
 
+class MockLLM(LLM):
+
+    def completion(self, prompt: ChatCompletionRequest) -> ChatCompletionResponse:
+        return ChatCompletionResponse(choices=[])
+
+    async def async_completion(self, prompt: ChatCompletionRequest) -> ChatCompletionResponse:
+        return ChatCompletionResponse(choices=[])
+
+    @property
+    def model(self) -> str:
+        return "mock-model"
+
+    def get_config(self) -> dict:
+        return {"model": self.model}
+
+
 class TestToolsProvider:
     def test_preprocess_adds_tools_when_request_has_none(self):
         provider = ToolsProvider(tools=[_make_tool("search"), _make_tool("weather")])
         req = _base_request_with_no_tools()
 
-        new_req = provider.preprocess(agent=None, ctx=None, request=req)
+        new_req = provider.preprocess(agent=None, ctx=None, request=req, llm=MockLLM())
 
         # Original request is not mutated
         assert req.tools is None
@@ -65,7 +82,7 @@ class TestToolsProvider:
         # Keep a reference to the original list for mutation checks
         original_tools_list = req.tools
 
-        new_req = provider.preprocess(agent=None, ctx=None, request=req)
+        new_req = provider.preprocess(agent=None, ctx=None, request=req, llm=MockLLM())
 
         # Original request's tools list and order remain unchanged
         assert req.tools is original_tools_list
@@ -79,7 +96,7 @@ class TestToolsProvider:
         provider = ToolsProvider(tools=[])
         req = _base_request_with_tools(["files", "search"])
 
-        new_req = provider.preprocess(agent=None, ctx=None, request=req)
+        new_req = provider.preprocess(agent=None, ctx=None, request=req, llm=MockLLM())
 
         assert [t.function.name for t in new_req.tools] == ["files", "search"]
 
@@ -87,7 +104,7 @@ class TestToolsProvider:
         provider = ToolsProvider(tools=[_make_tool("math")])
         req = ChatCompletionRequest(messages=[UserMessage(content="hi")], tools=[])
 
-        new_req = provider.preprocess(agent=None, ctx=None, request=req)
+        new_req = provider.preprocess(agent=None, ctx=None, request=req, llm=MockLLM())
 
         assert [t.function.name for t in new_req.tools] == ["math"]
 
@@ -97,11 +114,24 @@ class _CapturePromptToolsWrapper(LLMCallWrapper):
 
     captured_tools: list[str] | None = None
 
-    def preprocess(self, agent, ctx, request: ChatCompletionRequest) -> ChatCompletionRequest:  # type: ignore[override]
+    def preprocess(
+        self,
+        agent,
+        ctx,
+        request,
+        llm,
+    ) -> ChatCompletionRequest:  # type: ignore[override]
         # Nothing to change, just pass through
         return request
 
-    def postprocess(self, agent, ctx, final_prompt: ChatCompletionRequest, llm_response) -> Optional[List[BaseModel]]:  # type: ignore[override]
+    def postprocess(
+        self,
+        agent,
+        ctx,
+        final_prompt: ChatCompletionRequest,
+        llm_response,
+        llm,
+    ) -> Optional[List[BaseModel]]:  # type: ignore[override]
         # Capture the tool names in the exact order that will be sent to LLM
         tools = final_prompt.tools or []
         self.captured_tools = [t.function.name for t in tools]

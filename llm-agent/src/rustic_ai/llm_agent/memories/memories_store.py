@@ -4,6 +4,7 @@ from typing import List, Optional
 from pydantic import BaseModel
 
 from rustic_ai.core.guild.agent import Agent, ProcessContext
+from rustic_ai.core.guild.agent_ext.depends.llm.llm import LLM
 from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     ChatCompletionRequest,
     LLMMessage,
@@ -59,6 +60,7 @@ class MemoriesStore(LLMCallWrapper):
         agent: Agent,
         ctx: ProcessContext,
         request: ChatCompletionRequest,
+        llm: LLM,
     ) -> ChatCompletionRequest:
         old_messages = self.recall(agent, ctx, request.messages)
         combined_messages = old_messages + request.messages
@@ -73,6 +75,7 @@ class MemoriesStore(LLMCallWrapper):
         ctx: ProcessContext,
         final_prompt: ChatCompletionRequest,
         llm_response,
+        llm,
     ) -> Optional[List[BaseModel]]:
         self.remember(agent, ctx, llm_response.choices[0].message)
         return None
