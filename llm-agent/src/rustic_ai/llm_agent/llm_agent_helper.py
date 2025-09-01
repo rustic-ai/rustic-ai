@@ -6,17 +6,15 @@ import openai
 from rustic_ai.core.guild.agent import Agent, ProcessContext
 from rustic_ai.core.guild.agent_ext.depends.llm.llm import LLM
 from rustic_ai.core.guild.agent_ext.depends.llm.models import (
-    AssistantMessage,
     ChatCompletionError,
     ChatCompletionRequest,
     ChatCompletionResponse,
-    FunctionMessage,
+    LLMMessage,
     ResponseCodes,
-    SystemMessage,
-    ToolMessage,
-    UserMessage,
 )
 from rustic_ai.llm_agent.llm_agent_conf import LLMAgentConfig
+from rustic_ai.llm_agent.plugins.llm_call_wrapper import LLMCallWrapper
+from rustic_ai.llm_agent.plugins.response_postprocessor import ResponsePostprocessor
 
 
 class LLMAgentHelper:
@@ -28,7 +26,7 @@ class LLMAgentHelper:
         llm: LLM,
         ctx: ProcessContext[ChatCompletionRequest],
         prompt: ChatCompletionRequest,
-    ) -> ChatCompletionResponse:
+    ) -> Union[ChatCompletionResponse, ChatCompletionError]:
         """
         Invoke the LLM completion with the given context.
         The fields from the chat completion request, Agent Config, and the LLM are combined.
@@ -56,13 +54,77 @@ class LLMAgentHelper:
 
         ccrequest: ChatCompletionRequest = ChatCompletionRequest.model_validate(final_prompt)
 
+        max_retries = config.max_retries
+
+        return LLMAgentHelper._invoke_llm_completion(
+            agent=agent,
+            ctx=ctx,
+            llm=llm,
+            ccrequest=ccrequest,
+            wrap_processors=wrap_processors,
+            post_processors=post_processors,
+            max_retries=max_retries,
+        )
+
+    @staticmethod
+    def _invoke_llm_completion(
+        agent: Agent,
+        ctx: ProcessContext[ChatCompletionRequest],
+        llm: LLM,
+        ccrequest: ChatCompletionRequest,
+        wrap_processors: List[LLMCallWrapper],
+        post_processors: List[ResponsePostprocessor],
+        max_retries: int,
+    ) -> Union[ChatCompletionResponse, ChatCompletionError]:
+
         response = llm.completion(ccrequest)
 
-        for wrap_processor in reversed(wrap_processors):
-            wrap_processor.postprocess(agent=agent, ctx=ctx, final_prompt=ccrequest, llm_response=response)
+        new_messages = []
 
-        for post_processor in post_processors:
-            post_processor.postprocess(agent=agent, ctx=ctx, final_prompt=ccrequest, llm_response=response)
+        try:
+            for wrap_processor in reversed(wrap_processors):
+                post_msg = wrap_processor.postprocess(
+                    agent=agent,
+                    ctx=ctx,
+                    final_prompt=ccrequest,
+                    llm_response=response,
+                )
+                if post_msg:
+                    new_messages.extend(post_msg)
+
+            for post_processor in post_processors:
+                post_msg = post_processor.postprocess(
+                    agent=agent,
+                    ctx=ctx,
+                    final_prompt=ccrequest,
+                    llm_response=response,
+                )
+                if post_msg:
+                    new_messages.extend(post_msg)
+
+            for msg in new_messages:
+                ctx.send(msg)
+
+        except Exception as e:  # pragma: no cover
+            logging.error(f"Error in post processing: {e}")
+            if max_retries > 0:
+                logging.info(f"Retrying LLM call, remaining retries: {max_retries}")
+                return LLMAgentHelper._invoke_llm_completion(
+                    agent=agent,
+                    ctx=ctx,
+                    llm=llm,
+                    ccrequest=ccrequest,
+                    wrap_processors=wrap_processors,
+                    post_processors=post_processors,
+                    max_retries=max_retries - 1,
+                )
+            else:
+                return ChatCompletionError(
+                    status_code=ResponseCodes.RESPONSE_PROCESSING_ERROR,
+                    message=str(e),
+                    model=agent.name,
+                    request_messages=ctx.payload.messages,
+                )
 
         return response
 
@@ -72,29 +134,21 @@ class LLMAgentHelper:
         ctx: ProcessContext[ChatCompletionRequest],
         status_code: ResponseCodes,
         error: openai.APIStatusError,
-        messages: List[
-            Union[
-                SystemMessage,
-                UserMessage,
-                AssistantMessage,
-                ToolMessage,
-                FunctionMessage,
-            ]
-        ],
+        messages: List[Union[LLMMessage]],
     ) -> ChatCompletionError:  # pragma: no cover
         """
         Process API status error and return a ChatCompletionError object.
         """
-        error = ChatCompletionError(
+        cc_error = ChatCompletionError(
             status_code=status_code,
             message=error.message,
             response=error.response.text if error.response else None,
             model=model_name,
             request_messages=messages,
+            body=error.body if hasattr(error, "body") else None,
         )
 
-        ctx.send_error(error)  # pragma: no cover
-        return error
+        return cc_error
 
     @staticmethod
     def invoke_llm_and_handle_response(
@@ -112,18 +166,26 @@ class LLMAgentHelper:
         """
         try:
             chat_response = LLMAgentHelper.invoke_llm_completion(agent, config, llm, ctx, prompt)
+
+            if isinstance(chat_response, ChatCompletionError):
+                ctx.send_error(chat_response)
+                return chat_response
+
             ctx.send(chat_response)
             return chat_response
         except openai.APIStatusError as e:  # pragma: no cover
             logging.error(f"Error in LLM completion: {e}")
             # Publish the error message
-            return LLMAgentHelper.process_api_status_error(
+            error = LLMAgentHelper.process_api_status_error(
                 model_name=config.model,
                 ctx=ctx,
                 status_code=ResponseCodes(e.status_code),
                 error=e,
                 messages=ctx.payload.messages,
             )
+
+            ctx.send_error(error)
+            return error
         except Exception as e:  # pragma: no cover
             logging.error(f"Unexpected error in LLM completion: {e}")
             error = ChatCompletionError(

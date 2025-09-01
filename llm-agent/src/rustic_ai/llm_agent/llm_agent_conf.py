@@ -1,30 +1,15 @@
 from enum import Enum
-from typing import Any, List, Literal, Optional, Type, TypeVar, Union, cast
+from typing import Any, List, Optional, Type, TypeVar, Union, cast
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from typing_extensions import Annotated
 
-from rustic_ai.core.guild.agent_ext.depends.llm.models import ChatCompletionTool
-from rustic_ai.core.guild.agent_ext.depends.llm.tools_manager import ToolSpec
 from rustic_ai.core.guild.dsl import BaseAgentProps
 from rustic_ai.core.utils.basic_class_utils import get_class_from_name
 from rustic_ai.llm_agent.plugins.llm_call_wrapper import LLMCallWrapper
 from rustic_ai.llm_agent.plugins.prompt_generators import PromptGenerator
 from rustic_ai.llm_agent.plugins.request_preprocessor import RequestPreprocessor
 from rustic_ai.llm_agent.plugins.response_postprocessor import ResponsePostprocessor
-
-
-class ToolsetClassModel(BaseModel):
-    type: Literal["toolset_class"] = Field("toolset_class", frozen=True)
-    class_path: str  # will be resolved later
-
-
-class ToolspecListModel(BaseModel):
-    type: Literal["toolspec_list"] = Field("toolspec_list", frozen=True)
-    tools: List[ToolSpec]
-
-
-ToolsetUnion = Annotated[Union[ToolsetClassModel, ToolspecListModel], Field(discriminator="type")]
 
 
 class Models(str, Enum):
@@ -144,6 +129,13 @@ class LLMAgentConfig(BaseAgentProps):
     If the completion takes longer than this time, the request will be aborted.
     """
 
+    max_retries: int = 0
+    """
+    Maximum number of retries for LLM requests if post processing fails.
+    This is useful if the LLM returns a response that can not be processed successfully
+    e.g. due to a parsing error in tools response.
+    """
+
     default_system_prompt: Optional[str] = None
     """
     Default system prompt to use if no other mechanism updates the prompt.
@@ -152,11 +144,6 @@ class LLMAgentConfig(BaseAgentProps):
     system_prompt_generator: Optional[PromptGenerator] = Field(discriminator="type", default=None)
     """
     Mechanism to update the system prompt based on messages from other agents messages.
-    """
-
-    tools: List[ChatCompletionTool] = Field(default_factory=list)
-    """
-    List of LLM tools for the agent.
     """
 
     request_preprocessors: List[RequestPreprocessor] = Field(default_factory=list)
@@ -180,6 +167,13 @@ class LLMAgentConfig(BaseAgentProps):
     Any modifications to the response don't have any affect on other post processors or the final response.
     """
 
+    send_response: bool = True
+    """
+    Whether to send the original LLM response back to the conversation.
+    If False, only the post-processed messages (if any) will be sent back.
+    This is useful if the LLM response is only used for tool calls and not for direct responses.
+    """
+
     @field_validator("request_preprocessors", mode="before")
     @classmethod
     def _coerce_req(cls, v):
@@ -196,11 +190,13 @@ class LLMAgentConfig(BaseAgentProps):
         return _build_plugins(v, ResponsePostprocessor)
 
     _non_llm_fields = {
+        "max_retries",
         "request_preprocessors",
         "llm_request_wrappers",
         "response_postprocessors",
         "default_system_prompt",
         "system_prompt_generator",
+        "send_response",
     }
 
     def get_llm_params(self) -> dict:
