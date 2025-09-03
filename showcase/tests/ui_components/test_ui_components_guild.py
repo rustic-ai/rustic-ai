@@ -71,14 +71,13 @@ class TestUiComponentsGuild:
 
         messages = probe_agent.get_messages()
 
-        # Should receive multiple messages from all UI components
         # Expected: TextFormat, MarkdownFormat, CanvasFormat(x2), FilesWithTextFormat,
         # QuestionFormat, FormFormat, CodeFormat, CalendarFormat, WeatherFormat,
         # LocationFormat, ImageFormat, MermaidFormat, PlotlyGraphFormat,
-        # VegaLiteFormat, TableFormat(x2), PerspectiveFormat, AudioFormat, VideoFormat, ChatCompletionResponse
-        assert len(messages) >= 20, f"Expected at least 20 messages, got {len(messages)}"
-
-        # Helper function to get messages by format
+        # VegaLiteFormat, TableFormat, PerspectiveFormat, AudioFormat, VideoFormat, ChatCompletionResponse
+        assert len(messages) == 20, f"Expected 20 messages, got {len(messages)}"
+        
+         # Helper function to get messages by format
         def get_messages_by_format(format_class):
             format_name = get_qualified_class_name(format_class)
             return [msg for msg in messages if msg.format == format_name]
