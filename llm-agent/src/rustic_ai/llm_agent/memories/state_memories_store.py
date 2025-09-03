@@ -23,12 +23,14 @@ class StateBackedMemoriesStore(MemoriesStore):
             return
 
         if not self._memory:
+            self._memory = deque(self.memory_size)
             state_memories = agent._state.get("memories", [])
             self._memory.extend(state_memories)
-        original_memories = {"memories": self._memory.copy()}
+
+        original_memories = {"memories": list(self._memory)}
         self._memory.append(message.model_dump())
 
-        new_memories = {"memories": self._memory}
+        new_memories = {"memories": list(self._memory)}
 
         update = jsonpatch.make_patch(original_memories, new_memories)
 
