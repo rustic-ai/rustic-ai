@@ -13,6 +13,7 @@ from typing import Dict, Literal, Optional, Union
 from pydantic import BaseModel, ConfigDict, Field, JsonValue
 
 from rustic_ai.core import AgentTag
+from rustic_ai.core.agents.commons.media import MediaLink
 
 
 class DataFormat(BaseModel):
@@ -47,22 +48,13 @@ class TextFormat(DataFormat):
         Markdown text:
         ```python
         markdown_msg = TextFormat(
-            text="# Welcome to the Project\n\nHere's a **bold** statement and some `code`.\n\n- Item 1\n- Item 2\n- Item 3",
+            text="# Welcome to the Project\\n\\nHere's a **bold** statement and some `code`.\\n\\n- Item 1\\n- Item 2\\n- Item 3",
             title="Project Overview"
         )
         ```
     """
 
     text: str
-
-
-class FileData(BaseModel):
-    """Represents file information with name and URL.
-    Please use the following format: FilesWithTextFormat.
-    """
-
-    name: str
-    url: str
 
 
 class FilesWithTextFormat(DataFormat):
@@ -72,15 +64,15 @@ class FilesWithTextFormat(DataFormat):
         ```python
         files = FilesWithTextFormat(
             files=[
-                FileData(name="document.pdf", url="https://example.com/doc.pdf"),
-                FileData(name="image.jpg", url="https://example.com/img.jpg")
+                MediaLink(name="document.pdf", url="https://example.com/doc.pdf"),
+                MediaLink(name="image.jpg", url="https://example.com/img.jpg")
             ],
             text="Please review these attached files",
         )
         ```
     """
 
-    files: list[FileData]
+    files: list[MediaLink]
     text: Optional[str]
 
 
@@ -145,7 +137,7 @@ class FormFormat(DataFormat):
             schema_=FormSchema(
                 properties={
                     "username": {"type": "string", "title": "Username"},
-                    "password": {"type": "string", "format": "password"}
+                    "password": {"type": "string", "title": "Password"}
                 },
                 required=["username", "password"]
             ),
@@ -174,9 +166,9 @@ class CodeFormat(DataFormat):
     """Format for displaying syntax-highlighted code snippets.
 
     Example:
-        ```python
+        ```
         code_snippet = CodeFormat(
-            code='def hello_world():\n    print("Hello, World!")',
+            code='def hello_world():\\n    print("Hello, World!")',
             language="Python",
             title="Python Function",
             description="A simple hello world function"
@@ -248,20 +240,19 @@ class LocationFormat(VisualizationFormat):
     latitude: float
 
 
-class ImageFormat(VisualizationFormat):
+class ImageFormat(VisualizationFormat, MediaLink):
     """Format for displaying images with optional sizing.
 
     Example:
-        ```python
-        image = ImageFormat(
-            src="https://example.com/image.jpg",
-            alt="Product screenshot showing the main dashboard",
-            title="Dashboard Screenshot"
-        )
-        ```
+    ```
+    image = ImageFormat(
+        url="https://example.com/image.jpg",
+        alt="Product screenshot showing the main dashboard",
+        title="Dashboard Screenshot"
+    )
+    ```
     """
 
-    src: str
     width: Optional[int] = None
     height: Optional[int] = None
 
@@ -272,7 +263,7 @@ class MermaidFormat(VisualizationFormat):
     Please write the diagram following the guidelines in the Mermaid documentation: https://mermaid.js.org/intro/
     Examples:
         Class diagram:
-        ```python
+        ```
         class_diagram = MermaidFormat(
             diagram="classDiagram\\n   Animal <|-- Duck\\n   Animal <|-- Fish\\n   Animal <|-- Zebra\\n   "
                     "Animal : +int age\\n   Animal : +String gender\\n   Animal: +isMammal()\\n   Animal: +mate()\\n   "
@@ -285,10 +276,15 @@ class MermaidFormat(VisualizationFormat):
         ```
 
         Flowchart diagram:
-        ```python
+        ```
         flowchart = MermaidFormat(
-            diagram="flowchart TD\\n   A[Christmas] -->|Get money| B(Go shopping)\\n   B --> C{Let me think}\\n   "
-                    "C -->|One| D[Laptop]\\n   C -->|Two| E[iPhone]\\n   C -->|Three| F[fa:fa-car Car]",
+            diagram=r'''flowchart TD
+               A[Christmas] -->|Get money| B(Go shopping)
+               B --> C{Let me think}
+               C -->|One| D[Laptop]
+               C -->|Two| E[iPhone]
+               C -->|Three| F[fa:fa-car Car]
+               ''',
             title="Christmas Shopping Decision",
             alt="Flowchart showing Christmas shopping decision process"
         )
@@ -303,6 +299,7 @@ class PlotlyGraphFormat(VisualizationFormat):
     """Format for displaying Plotly interactive graphs and charts.
 
     Please write the plot_params following the guidelines in the Plotly documentation: https://plotly.com/javascript/
+
     Example:
         Grouped bar chart:
         ```python
@@ -353,7 +350,7 @@ class PlotlyGraphFormat(VisualizationFormat):
     """
 
     plot_params: Dict[str, JsonValue] = Field(alias="plotParams")
-    model_config = ConfigDict(populate_by_name=True)
+    model_config = ConfigDict(serialize_by_alias=True)
 
 
 class VegaLiteFormat(VisualizationFormat):
@@ -402,7 +399,7 @@ class VegaLiteFormat(VisualizationFormat):
         ```
 
         Chart with data from URL:
-        ```python
+        ```
         url_chart = VegaLiteFormat(
             spec={
                 "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
@@ -427,7 +424,7 @@ class VegaLiteFormat(VisualizationFormat):
     """
 
     spec: Dict[str, JsonValue]
-    theme: Dict[str, Optional[str]]
+    theme: Optional[Dict[str, Optional[str]]] = None
     options: Optional[Dict[str, JsonValue]] = None
 
 
@@ -439,7 +436,7 @@ class TableHeader(BaseModel):
 
     data_key: str = Field(alias="dataKey")
     label: Optional[str] = None
-    model_config = ConfigDict(populate_by_name=True)
+    model_config = ConfigDict(serialize_by_alias=True)
 
 
 class TableSortOption(str, Enum):
@@ -587,18 +584,18 @@ class MediaFormat(DataFormat):
     Please use the following formats: AudioFormat, VideoFormat.
     """
 
-    src: str
+    url: str
     captions: Optional[str] = None
     transcript: Optional[str] = None
 
 
-class AudioFormat(MediaFormat):
+class AudioFormat(VisualizationFormat, MediaLink):
     """Format for audio content playback.
 
     Example:
         ```python
         audio = AudioFormat(
-            src="https://example.com/podcast.mp3",
+            url="https://example.com/podcast.mp3",
             transcript="Welcome to our weekly podcast...",
             title="Weekly Tech Podcast"
         )
@@ -608,13 +605,13 @@ class AudioFormat(MediaFormat):
     pass
 
 
-class VideoFormat(MediaFormat):
+class VideoFormat(VisualizationFormat, MediaLink):
     """Format for video content with optional poster image.
 
     Example:
         ```python
         video = VideoFormat(
-            src="https://example.com/training.mp4",
+            url="https://example.com/training.mp4",
             poster="https://example.com/poster.jpg",
             captions="https://example.com/captions.vtt",
             title="Training Video"
@@ -634,7 +631,7 @@ class Weather(BaseModel):
     timestamp: int
     temp: Dict[str, Union[int, float]]
     weather_icon: Dict[str, str] = Field(alias="weatherIcon")
-    model_config = ConfigDict(populate_by_name=True)
+    model_config = ConfigDict(serialize_by_alias=True)
 
 
 class WeatherFormat(DataFormat):
@@ -665,3 +662,38 @@ class WeatherFormat(DataFormat):
     weather: list[Weather]
     location: str
     units: Literal["metric", "imperial"]
+
+
+class CanvasFormat(DataFormat):
+    """Format for canvas component that can hold any component type with dynamic fields.
+
+    Examples:
+        Markdown component:
+
+        ```python
+        canvas_markdown = CanvasFormat(
+            component="MarkdownFormat",
+            title="Canvas Markdown Example",
+            description="Canvas component with markdown content",
+            text="# Canvas Component\\n\\nThis is a **canvas** with *markdown* content.\\n\\n"
+                 "- Flexible structure\\n- Dynamic fields\\n- Component-based rendering"
+        )
+        ```
+
+        Image component:
+
+        ```python
+        from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
+
+        canvas_image = CanvasFormat(
+            component=get_qualified_class_name(ImageFormat),
+            title="Canvas Image Example",
+            description="Canvas component with image content",
+            url="http://localhost:3000/640e5f0fb14b6075ead8.png",
+            alt="Dragonscale logo in canvas"
+        )
+        ```
+    """
+
+    component: str
+    model_config = ConfigDict(extra="allow", arbitrary_types_allowed=True)
