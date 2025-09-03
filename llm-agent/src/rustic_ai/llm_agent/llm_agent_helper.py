@@ -104,8 +104,13 @@ class LLMAgentHelper:
                 if post_msg:
                     new_messages.extend(post_msg)
 
+            reasoning = response.choices[0].message.reasoning_content if response.choices else ""
+
             for msg in new_messages:
-                ctx.send(msg)
+                if reasoning:
+                    ctx.send(msg, reason=reasoning)
+                else:
+                    ctx.send(msg)
 
         except Exception as e:  # pragma: no cover
             logging.error(f"Error in post processing: {e}")
@@ -173,7 +178,12 @@ class LLMAgentHelper:
                 ctx.send_error(chat_response)
                 return chat_response
 
-            ctx.send(chat_response)
+            reasonsing = chat_response.choices[0].message.reasoning_content if chat_response.choices else ""
+
+            if reasonsing:
+                ctx.send(chat_response, reason=reasonsing)
+            else:
+                ctx.send(chat_response)
             return chat_response
         except openai.APIStatusError as e:  # pragma: no cover
             logging.error(f"Error in LLM completion: {e}")
