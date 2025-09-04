@@ -10,6 +10,7 @@ from rustic_ai.core.ui_protocol.types import (
     CalendarFormat,
     CanvasFormat,
     CodeFormat,
+    FileData,
     FilesWithTextFormat,
     FormFormat,
     FormSchema,
@@ -75,17 +76,21 @@ class UiComponentAgent(Agent):
             component=get_qualified_class_name(ImageFormat),
             title="Canvas Image Example",
             description="Canvas component with image content",
-            url="http://localhost:3000/640e5f0fb14b6075ead8.png",
+            mediaLink=MediaLink(
+                url="http://localhost:3000/640e5f0fb14b6075ead8.png",
+            ),
             alt="Dragonscale logo in canvas",
         )
         ctx.send(payload=canvas_image_msg)
 
-        # FilesWithTextFormat
         files_msg = FilesWithTextFormat(
             files=[
-                MediaLink(
-                    name="document.pdf", url="https://rustic-ai.github.io/rustic-ui-components/files/pdfExample.pdf"
-                ),
+                FileData(
+                    mediaLink=MediaLink(
+                        name="logo.png",
+                        url="http://localhost:3000/640e5f0fb14b6075ead8.png",
+                    )
+                )
             ],
             text="Please review this document.",
             title="File Attachments",
@@ -179,7 +184,7 @@ class UiComponentAgent(Agent):
 
         # ImageFormat
         image_msg = ImageFormat(
-            url="http://localhost:3000/640e5f0fb14b6075ead8.png", alt="Dragonscale logo", title="Dragonscale logo"
+            src="http://localhost:3000/640e5f0fb14b6075ead8.png", alt="Dragonscale logo", title="Dragonscale logo"
         )
         ctx.send(payload=image_msg)
 
@@ -358,7 +363,7 @@ class UiComponentAgent(Agent):
 
         # AudioFormat
         audio_msg = AudioFormat(
-            url="https://rustic-ai.github.io/rustic-ui-components/audioExamples/audioStorybook.mp3",
+            src="https://rustic-ai.github.io/rustic-ui-components/audioExamples/audioStorybook.mp3",
             transcript="audio test transcript...",
             title="Weekly Tech Podcast",
         )
@@ -366,7 +371,7 @@ class UiComponentAgent(Agent):
 
         # VideoFormat
         video_msg = VideoFormat(
-            url="https://rustic-ai.github.io/rustic-ui-components/videoExamples/videoCaptions.mp4",
+            src="https://rustic-ai.github.io/rustic-ui-components/videoExamples/videoCaptions.mp4",
             captions="https://rustic-ai.github.io/rustic-ui-components/audioExamples/captions.vtt",
             title="Training Video",
         )
@@ -381,7 +386,10 @@ class UiComponentAgent(Agent):
             choices=[
                 {
                     "index": 0,
-                    "message": {"role": "assistant", "content": "This is a chat completion response message"},
+                    "message": {
+                        "role": "assistant",
+                        "content": "This is a **chat completion response message** in markdown format",
+                    },
                     "finish_reason": "stop",
                 }
             ],
