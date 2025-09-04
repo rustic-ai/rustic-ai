@@ -76,8 +76,8 @@ class TestUiComponentsGuild:
         # LocationFormat, ImageFormat, MermaidFormat, PlotlyGraphFormat,
         # VegaLiteFormat, TableFormat, PerspectiveFormat, AudioFormat, VideoFormat, ChatCompletionResponse
         assert len(messages) == 20, f"Expected 20 messages, got {len(messages)}"
-        
-         # Helper function to get messages by format
+
+        # Helper function to get messages by format
         def get_messages_by_format(format_class):
             format_name = get_qualified_class_name(format_class)
             return [msg for msg in messages if msg.format == format_name]
@@ -113,15 +113,15 @@ class TestUiComponentsGuild:
             msg for msg in canvas_messages if msg.payload["component"] == get_qualified_class_name(ImageFormat)
         )
         assert canvas_img.payload["title"] == "Canvas Image Example"
-        assert canvas_img.payload["url"] == "http://localhost:3000/640e5f0fb14b6075ead8.png"
+        assert canvas_img.payload["mediaLink"]["url"] == "http://localhost:3000/640e5f0fb14b6075ead8.png"
 
         # Verify FilesWithTextFormat message
         files_messages = get_messages_by_format(FilesWithTextFormat)
         assert len(files_messages) == 1
         files_payload = files_messages[0].payload
         assert len(files_payload["files"]) == 1
-        assert files_payload["files"][0]["name"] == "document.pdf"
-        assert "rustic-ai.github.io" in files_payload["files"][0]["url"]
+        assert files_payload["files"][0]["mediaLink"]["name"] == "logo.png"
+        assert files_payload["files"][0]["mediaLink"]["url"] == "http://localhost:3000/640e5f0fb14b6075ead8.png"
 
         # Verify QuestionFormat message
         question_messages = get_messages_by_format(QuestionFormat)
@@ -170,7 +170,7 @@ class TestUiComponentsGuild:
         image_messages = get_messages_by_format(ImageFormat)
         assert len(image_messages) == 1
         image_payload = image_messages[0].payload
-        assert image_payload["url"] == "http://localhost:3000/640e5f0fb14b6075ead8.png"
+        assert image_payload["src"] == "http://localhost:3000/640e5f0fb14b6075ead8.png"
         assert image_payload["alt"] == "Dragonscale logo"
 
         # Verify MermaidFormat message
@@ -212,14 +212,14 @@ class TestUiComponentsGuild:
         audio_messages = get_messages_by_format(AudioFormat)
         assert len(audio_messages) == 1
         audio_payload = audio_messages[0].payload
-        assert "rustic-ai.github.io" in audio_payload["url"]
+        assert "rustic-ai.github.io" in audio_payload["src"]
         assert audio_payload["title"] == "Weekly Tech Podcast"
 
         # Verify VideoFormat message
         video_messages = get_messages_by_format(VideoFormat)
         assert len(video_messages) == 1
         video_payload = video_messages[0].payload
-        assert "rustic-ai.github.io" in video_payload["url"]
+        assert "rustic-ai.github.io" in video_payload["src"]
         assert video_payload["title"] == "Training Video"
 
         guild.shutdown()

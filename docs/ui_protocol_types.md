@@ -1,9 +1,4 @@
 # UI Protocol Types Documentation
-
-The UI protocol defines message formats for various UI components. These types correspond to the message formats used in the Rustic UI component library.
-
-For more examples and detailed explanations, check out the [Storybook documentation](https://rustic-ai.github.io/rustic-ui-components).
-
 ::: rustic_ai.core.ui_protocol.types
     options:
       filters: ["!^__"]

@@ -3,14 +3,13 @@ Message format types for UI components.
 
 These types correspond to the message formats used in the Rustic UI component library.
 Please use only formats that extend DataFormat, VisualizationFormat or MediaFormat.
-For more examples and detailed explanations, check out the Storybook documentation:
-https://rustic-ai.github.io/rustic-ui-components
+For more examples and detailed explanations, check out the [Storybook documentation](https://rustic-ai.github.io/rustic-ui-components).
 """
 
 from enum import Enum
 from typing import Dict, Literal, Optional, Union
 
-from pydantic import BaseModel, ConfigDict, Field, JsonValue
+from pydantic import BaseModel, ConfigDict, Field, JsonValue, model_validator
 
 from rustic_ai.core import AgentTag
 from rustic_ai.core.agents.commons.media import MediaLink
@@ -57,6 +56,27 @@ class TextFormat(DataFormat):
     text: str
 
 
+class FileData(BaseModel):
+    """Represents file information with name and URL.
+    Please use the following format: FilesWithTextFormat.
+    """
+
+    name: Optional[str] = None
+    url: Optional[str] = None
+    media_link: Optional[MediaLink] = Field(default=None, alias="mediaLink")
+    model_config = ConfigDict(serialize_by_alias=True)
+
+    @model_validator(mode="after")
+    def validate_file_source(self):
+        has_name_and_url = self.name is not None and self.url is not None
+        has_media_link = self.media_link is not None
+
+        if not has_name_and_url and not has_media_link:
+            raise ValueError("Either both 'name' and 'url' must be provided, or 'media_link' must be provided")
+
+        return self
+
+
 class FilesWithTextFormat(DataFormat):
     """Format for messages containing files with optional text. Used in the Multipart component.
 
@@ -64,15 +84,15 @@ class FilesWithTextFormat(DataFormat):
         ```python
         files = FilesWithTextFormat(
             files=[
-                MediaLink(name="document.pdf", url="https://example.com/doc.pdf"),
-                MediaLink(name="image.jpg", url="https://example.com/img.jpg")
+                FileData(name="document.pdf", url="https://example.com/doc.pdf"),
+                FileData(name="image.jpg", url="https://example.com/img.jpg")
             ],
             text="Please review these attached files",
         )
         ```
     """
 
-    files: list[MediaLink]
+    files: list[FileData]
     text: Optional[str]
 
 
@@ -240,21 +260,44 @@ class LocationFormat(VisualizationFormat):
     latitude: float
 
 
-class ImageFormat(VisualizationFormat, MediaLink):
+class ImageFormat(VisualizationFormat):
     """Format for displaying images with optional sizing.
 
     Example:
+    Using src URL directly:
     ```
     image = ImageFormat(
-        url="https://example.com/image.jpg",
+        src="https://example.com/image.jpg",
         alt="Product screenshot showing the main dashboard",
         title="Dashboard Screenshot"
     )
     ```
+
+    Using MediaLink object:
+        ```
+        image = ImageFormat(
+            media_link=MediaLink(
+                name="product_screenshot.jpg",
+                url="product_screenshot.jpg",
+                on_filesystem=True
+            ),
+            alt="Product screenshot showing the main dashboard",
+            title="Dashboard Screenshot",
+        )
+        ```
     """
 
+    src: Optional[str] = None
+    media_link: Optional[MediaLink] = Field(default=None, alias="mediaLink")
     width: Optional[int] = None
     height: Optional[int] = None
+    model_config = ConfigDict(serialize_by_alias=True)
+
+    @model_validator(mode="after")
+    def validate_image_source(self):
+        if not self.src and not self.media_link:
+            raise ValueError("Either 'src' or 'media_link' must be provided")
+        return self
 
 
 class MermaidFormat(VisualizationFormat):
@@ -584,18 +627,26 @@ class MediaFormat(DataFormat):
     Please use the following formats: AudioFormat, VideoFormat.
     """
 
-    url: str
+    src: Optional[str] = None
+    media_link: Optional[MediaLink] = Field(default=None, alias="mediaLink")
     captions: Optional[str] = None
     transcript: Optional[str] = None
+    model_config = ConfigDict(serialize_by_alias=True)
+
+    @model_validator(mode="after")
+    def validate_image_source(self):
+        if not self.src and not self.media_link:
+            raise ValueError("Either 'src' or 'media_link' must be provided")
+        return self
 
 
-class AudioFormat(VisualizationFormat, MediaLink):
+class AudioFormat(MediaFormat):
     """Format for audio content playback.
 
     Example:
         ```python
         audio = AudioFormat(
-            url="https://example.com/podcast.mp3",
+            src="https://example.com/podcast.mp3",
             transcript="Welcome to our weekly podcast...",
             title="Weekly Tech Podcast"
         )
@@ -605,13 +656,13 @@ class AudioFormat(VisualizationFormat, MediaLink):
     pass
 
 
-class VideoFormat(VisualizationFormat, MediaLink):
+class VideoFormat(MediaFormat):
     """Format for video content with optional poster image.
 
     Example:
         ```python
         video = VideoFormat(
-            url="https://example.com/training.mp4",
+            src="https://example.com/training.mp4",
             poster="https://example.com/poster.jpg",
             captions="https://example.com/captions.vtt",
             title="Training Video"
@@ -689,7 +740,7 @@ class CanvasFormat(DataFormat):
             component=get_qualified_class_name(ImageFormat),
             title="Canvas Image Example",
             description="Canvas component with image content",
-            url="http://localhost:3000/640e5f0fb14b6075ead8.png",
+            src="http://localhost:3000/640e5f0fb14b6075ead8.png",
             alt="Dragonscale logo in canvas"
         )
         ```
