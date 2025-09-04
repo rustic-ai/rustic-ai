@@ -1,0 +1,67 @@
+{
+    "name": "UI Component Demo App",
+    "description": "Demonstrates UI components by sending messages in various formats",
+    "version": "v1",
+    "icon": null,
+    "intro_msg": "",
+    "exposure": "private",
+    "author_id": "n5i0k8zv4i4o",
+    "organization_id": null,
+    "category_id": null,
+    "tags": [],
+    "commands": [],
+    "starter_prompts": [],
+    "spec": {
+        "name": "UI Component Guild",
+        "description": "A guild that demonstrates UI components using TextFormat and LocationFormat",
+        "properties": {},
+        "agents": [
+            {
+                "name": "ui_component_agent_1",
+                "description": "UI Component Demo Agent",
+                "class_name": "rustic_ai.core.agents.testutils.ui_component_agent.UiComponentAgent",
+                "additional_topics": [
+                    "ui_component_topic"
+                ],
+                "properties": {},
+                "listen_to_default_topic": false,
+                "act_only_when_tagged": false,
+                "dependency_map": {}
+            }
+        ],
+        "dependency_map": {},
+        "routes": {
+            "steps": [
+                {
+                    "agent_type": "rustic_ai.core.agents.utils.user_proxy_agent.UserProxyAgent",
+                    "method_name": "unwrap_and_forward_message",
+                    "origin_filter": null,
+                    "message_format": null,
+                    "transformer": null,
+                    "destination": {
+                        "topics": "ui_component_topic",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "route_times": 1
+                },
+                {
+                    "agent": {
+                        "name": "ui_component_agent_1"
+                    },
+                    "method_name": null,
+                    "origin_filter": null,
+                    "message_format": null,
+                    "transformer": null,
+                    "process_status": "completed",
+                    "destination": {
+                        "topics": "user_message_broadcast",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "route_times": -1
+                }
+            ]
+        }
+    }
+}
