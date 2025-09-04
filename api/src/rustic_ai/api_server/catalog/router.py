@@ -1,5 +1,6 @@
 # Routes to work with the Catalog models
 
+from copy import deepcopy
 from typing import Annotated, Dict, List
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Response
@@ -66,7 +67,8 @@ async def create_blueprint(blueprint: BlueprintCreate, engine: Engine = Depends(
 
         # Validate GuildSpec can be built
         blueprint.spec.pop(KeyConstants.ID, None)
-        valid_guild_spec = GuildBuilder._from_spec_dict(blueprint.spec).build_spec()
+        spec_copy = deepcopy(blueprint.spec)  # deepcopy to prevent modification of the original spec
+        valid_guild_spec = GuildBuilder._from_spec_dict(spec_copy).build_spec()
 
         for agent in valid_guild_spec.agents:
             class_name = agent.class_name
@@ -456,7 +458,7 @@ async def launch_guild_from_blueprint(
     if not blueprint:
         raise HTTPException(status_code=404, detail="Blueprint not found")
 
-    spec = blueprint.spec
+    spec = deepcopy(blueprint.spec)  # deepcopy to prevent modification of the original spec
     try:
         if KeyConstants.CONFIGURATION_SCHEMA in spec:
             configuration = {**spec[KeyConstants.CONFIGURATION], **launch_request.configuration}

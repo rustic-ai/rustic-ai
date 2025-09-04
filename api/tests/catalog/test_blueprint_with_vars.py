@@ -123,6 +123,12 @@ def test_create_blueprint_vars(catalog_client, session: Session):
     assert response.status_code == 201
     blueprint_id = response.json()["id"]
 
+    # Ensure stored spec matches exactly with the given input
+    stored_bp_response = catalog_client.get(f"/catalog/blueprints/{blueprint_id}")
+    assert stored_bp_response.status_code == 200
+    stored_bp = stored_bp_response.json()
+    assert stored_bp["spec"] == spec
+
     # Test successful guild launch
     launch_request = LaunchGuildFromBlueprintRequest(
         guild_name="My New Guild",
