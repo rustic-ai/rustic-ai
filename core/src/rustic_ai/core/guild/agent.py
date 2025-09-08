@@ -146,6 +146,7 @@ class Agent(Generic[APT], metaclass=AgentMetaclass):  # type: ignore
         new_thread: bool = True,
         origin_message: Optional[Message] = None,
         is_error_message: bool = False,
+        reason: Optional[str] = None,
     ) -> GemstoneID:
         """
         Sends a message to the agent itself.
@@ -159,6 +160,7 @@ class Agent(Generic[APT], metaclass=AgentMetaclass):  # type: ignore
             new_thread=new_thread,
             origin_message=origin_message,
             is_error_message=is_error_message,
+            reason=reason,
         )
 
     def _send_dict_to_self(
@@ -169,6 +171,7 @@ class Agent(Generic[APT], metaclass=AgentMetaclass):  # type: ignore
         new_thread: bool = True,
         origin_message: Optional[Message] = None,
         is_error_message: bool = False,
+        reason: Optional[str] = None,
     ) -> GemstoneID:
         """
         Sends a message to the agent itself.
@@ -211,6 +214,7 @@ class Agent(Generic[APT], metaclass=AgentMetaclass):  # type: ignore
                     processor=f"{self.__class__.__name__}:self",
                     from_topic=origin_message.topic_published_to,
                     to_topics=topics if isinstance(topics, list) else [topics],
+                    reason=[reason] if reason else None,
                 )
             )
             traceparent = origin_message.traceparent
@@ -222,6 +226,7 @@ class Agent(Generic[APT], metaclass=AgentMetaclass):  # type: ignore
                     result=msg_id.to_int(),
                     processor=f"{self.__class__.__name__}:self",
                     to_topics=topics if isinstance(topics, list) else [topics],
+                    reason=[reason] if reason else None,
                 )
             )
 
@@ -330,7 +335,9 @@ class Agent(Generic[APT], metaclass=AgentMetaclass):  # type: ignore
             client_class (Type[Client]): The class of the client to initialize.
             client_properties (Dict[str, Any]): The properties for the client.
         """
-        client_properties.update({"id": self.id, "name": self.name, "message_handler": self._on_message})
+        client_properties.update(
+            {"id": f"{self.guild_id}${self.id}", "name": self.name, "message_handler": self._on_message}
+        )
         return client_class(**client_properties)
 
     def _make_process_context(
@@ -539,7 +546,7 @@ class ProcessContext[MDT]:
 
         self._origin_message.routing_slip.add_step(routing_entry)
 
-    def send_error(self, payload: BaseModel) -> List[GemstoneID]:
+    def send_error(self, payload: BaseModel, reason: Optional[str] = None) -> List[GemstoneID]:
         """
         Sends an error message with the BaseModel payload using the routing rules from the routing slip of the origin message.
         If no routing rules are found, the message is sent using the default routing rule.
@@ -547,13 +554,14 @@ class ProcessContext[MDT]:
         format = get_qualified_class_name(payload.__class__)
         data_dict = payload.model_dump()
 
-        return self.send_dict(data_dict, format, error_message=True)
+        return self.send_dict(data_dict, format, error_message=True, reason=reason)
 
     def send(
         self,
         payload: BaseModel,
         new_thread: bool = False,
         forwarding: bool = False,
+        reason: Optional[str] = None,
     ) -> List[GemstoneID]:
         """
         Sends a new message with the BaseModel payload using the routing rules from the routing slip of the origin message.
@@ -563,7 +571,7 @@ class ProcessContext[MDT]:
         format = get_qualified_class_name(payload.__class__)
         data_dict = payload.model_dump()
 
-        return self.send_dict(data_dict, format, new_thread, forwarding)
+        return self.send_dict(data_dict, format, new_thread, forwarding, reason=reason)
 
     def send_dict(
         self,
@@ -572,6 +580,7 @@ class ProcessContext[MDT]:
         new_thread: bool = False,
         forwarding: bool = False,
         error_message: bool = False,
+        reason: Optional[str] = None,
     ) -> List[GemstoneID]:
         """
         Sends a new message with the JsonDict payload using the routing rules from the routing slip of the origin message.
@@ -624,6 +633,7 @@ class ProcessContext[MDT]:
                     destination=RoutingDestination(
                         topics=[GuildTopics.ERROR_TOPIC],
                     ),
+                    reason=reason,
                 )
             )
 
@@ -634,7 +644,7 @@ class ProcessContext[MDT]:
         logging.debug(f"Agent [{self.agent.name}] from method [{self.method_name}] with rules :\n{next_steps}\n")
 
         for step in next_steps:
-            msgid = self._prepare_and_send_message(payload, format, new_thread, forwarding, error_message, step)
+            msgid = self._prepare_and_send_message(payload, format, new_thread, forwarding, error_message, step, reason)
             if msgid:
                 messages.append(msgid)
             self._remaining_routing_steps -= 1
@@ -649,6 +659,7 @@ class ProcessContext[MDT]:
         forwarding: bool,
         error_message: bool,
         step: RoutingRule,
+        reason: Optional[str] = None,
     ) -> Optional[GemstoneID]:
         self._current_routing_step = step
 
@@ -695,6 +706,7 @@ class ProcessContext[MDT]:
                 payload=gsu.model_dump(),
                 format=get_qualified_class_name(StateUpdateRequest),
                 in_response_to=self._origin_message.id,
+                reason=reason,
             )
 
         agent_state_update: Optional[StateUpdate] = step.get_updated_state(
@@ -721,6 +733,7 @@ class ProcessContext[MDT]:
                 payload=asu.model_dump(),
                 format=get_qualified_class_name(StateUpdateRequest),
                 in_response_to=self._origin_message.id,
+                reason=reason,
             )
 
         msg_id = self._get_id(routed.priority)
@@ -729,6 +742,9 @@ class ProcessContext[MDT]:
             msg_thread.append(msg_id.to_int())
 
         message_history = self._origin_message.message_history.copy()
+        reasons = [reason] if reason else []
+        if self._current_routing_step.reason:
+            reasons.append(self._current_routing_step.reason)
         message_history.append(
             ProcessEntry(
                 agent=self._agent.get_agent_tag(),
@@ -737,6 +753,7 @@ class ProcessContext[MDT]:
                 processor=self.method_name,
                 from_topic=self._origin_message.topic_published_to,
                 to_topics=routed.topics if isinstance(routed.topics, list) else [routed.topics],
+                reason=reasons if len(reasons) else None,
             )
         )
 
@@ -807,6 +824,7 @@ class ProcessContext[MDT]:
         attach_guild_routes: bool = True,
         reset_history: bool = False,
         carry_session_state: bool = False,
+        reason: Optional[str] = None,
     ) -> None:
         msg_id = self._get_id(priority)
         thread = self._origin_message.thread.copy()
@@ -827,6 +845,7 @@ class ProcessContext[MDT]:
                 processor=self.method_name,
                 origin=self._origin_message.id,
                 result=msg_id.to_int(),
+                reason=reason,
             )
         )
 

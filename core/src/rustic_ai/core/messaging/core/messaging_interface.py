@@ -137,20 +137,21 @@ class MessagingInterface:
                 message.session_state = {}
             message.session_state["enriched_history"] = prev_messages_json
         recipients = self.subscribers.get(self._get_namespaced_topic(message.topic_published_to), set())
+        recipients_map = {r: r.split("$")[-1] for r in recipients}
 
-        for recipient_id in recipients:
+        for recipient_client, recipient_id in recipients_map.items():
             if (
-                recipient_id in self.clients
+                recipient_client in self.clients
                 and recipient_id != message.sender.id
                 and not message.topic_published_to.startswith(f"{GuildTopics.AGENT_SELF_INBOX_PREFIX}")
             ):  # pragma: no cover
-                self.clients[recipient_id].notify_new_message(message)
+                self.clients[recipient_client].notify_new_message(message)
             elif (
-                recipient_id in self.clients
+                recipient_client in self.clients
                 and recipient_id == message.sender.id
                 and message.topic_published_to.startswith(f"{GuildTopics.AGENT_SELF_INBOX_PREFIX}")
             ):
-                self.clients[recipient_id].notify_new_message(message)
+                self.clients[recipient_client].notify_new_message(message)
 
     def subscribe(self, topic: str, client: Client) -> None:
         """

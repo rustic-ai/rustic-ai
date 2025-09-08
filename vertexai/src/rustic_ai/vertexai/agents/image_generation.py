@@ -41,7 +41,7 @@ class VertexAiImagenAgent(Agent[VertexAiImagenAgentProps], VertexAIBase):
     @agent.processor(VertexAiImageGenerationRequest, depends_on=["filesystem:guild_fs:True"])
     def generate_image(self, ctx: agent.ProcessContext[VertexAiImageGenerationRequest], guild_fs: FileSystem) -> None:
         image_gen_request = ctx.payload
-
+        gen_error_msg = "Failed to generate image as the prompt was too complicated or triggered a safety mechanism."
         result = ImageGenerationResponse(files=[], errors=[], request=image_gen_request.model_dump_json())
         try:
             model_response = self.genai_client.models.generate_images(
@@ -63,14 +63,17 @@ class VertexAiImagenAgent(Agent[VertexAiImagenAgentProps], VertexAIBase):
             output_images = model_response.generated_images if model_response.generated_images else []
             if not output_images:
                 self.logger.info(f"Failed to generate image. Prompt was: {image_gen_request.prompt}")
-                result.errors.append(
-                    "Failed to generate image as the prompt was too complicated or triggered a safety mechanism."
-                )
+                result.errors.append(gen_error_msg)
             else:
                 for i, generated_image in enumerate(output_images):
                     if generated_image.image is not None:
                         # Note: the result is not a PIL.Image object but a custom Google one
                         image_obj: types.Image = generated_image.image
+
+                        if image_obj.image_bytes is None:
+                            self.logger.info(f"Failed to generate image. Prompt was: {image_gen_request.prompt}")
+                            result.errors.append(gen_error_msg)
+                            continue
                         filename = f"{uuid.uuid4()}.{image_gen_request.image_format}"
                         try:
                             with guild_fs.open(filename, "wb") as f:

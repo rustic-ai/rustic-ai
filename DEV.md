@@ -66,7 +66,22 @@ Before you submit a pull request, check that it meets these guidelines:
 3. If the pull request adds functionality, the docs should be updated. Put
    your new functionality into a function with a docstring and add the
    feature to the list in [README.md](README.md).
-4. IMPORTANT: Make sure the tests pass. Run the tests locally:
+4. **Do not add dependencies directly to the root project.** The root module should only depend on the submodules, 
+   docs and testing related libraries. Any other python library dependencies should be added to the relevant submodule. 
+   When adding a new dependency to an existing module, ensure all submodules that depend on it are also updated.
+   For example, if a new dependency was added in core, from the root project, execute
+   ```sh
+   ./scripts/run_on_each.sh poetry update rusticai-core
+   poetry update rusticai-*
+   ```
+5. For any new module being added, test the module individually, before testing from the root project
+   ```shell
+      cd custom-module
+      poetry install --with dev --all-extras
+      poetry shell
+      tox
+   ```
+6. **IMPORTANT:** Make sure the tests pass. Run the tests locally:
 
     ```sh
     poetry run tox

@@ -1,0 +1,44 @@
+{
+  "name": "Accountable Guild",
+  "description": "A guild where every agent's accountability is tracked.",
+  "properties": {},
+  "agents": [
+    {
+      "name": "Accountable Agent",
+      "description": "Agent that provides accountability by sending messages with a reason",
+      "class_name": "guild.simple_agent.AccountableAgent",
+      "additional_topics": ["test_topic"],
+      "properties": {},
+      "listen_to_default_topic": false,
+      "act_only_when_tagged": false,
+      "dependency_map": {}
+    }
+  ],
+  "dependency_map": {},
+  "routes": {
+    "steps": [
+      {
+        "agent": {
+          "id": null,
+          "name": "Accountable Agent"
+        },
+        "agent_type": null,
+        "method_name": null,
+        "origin_filter": null,
+        "message_format": null,
+        "destination": {
+          "topics": "default_topic",
+          "recipient_list": [],
+          "priority": null
+        },
+        "mark_forwarded": false,
+        "route_times": 1,
+        "transformer": null,
+        "agent_state_update": null,
+        "guild_state_update": null,
+        "reason": "simply doing my job",
+        "process_status": "completed"
+      }
+    ]
+  }
+}

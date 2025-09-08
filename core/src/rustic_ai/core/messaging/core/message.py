@@ -93,6 +93,7 @@ class ProcessEntry(BaseModel):
     processor: str
     from_topic: Optional[str] = Field(default=None)
     to_topics: List[str] = Field(default_factory=list)
+    reason: Optional[List[str]] = None
 
 
 class TransformationType(StrEnum):
@@ -400,6 +401,7 @@ class RoutingRule(BaseModel):
     agent_state_update: Optional[StateTransformer] = None
     guild_state_update: Optional[StateTransformer] = None
     process_status: Optional[ProcessStatus] = None
+    reason: Optional[str] = None
 
     @model_validator(mode="before")
     @classmethod

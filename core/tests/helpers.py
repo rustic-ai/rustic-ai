@@ -1,5 +1,5 @@
 from functools import partial
-from typing import Dict, List, Tuple, TypeVar
+from typing import Dict, List, Optional, Tuple, TypeVar
 from unittest.mock import MagicMock
 
 from pydantic import BaseModel
@@ -37,6 +37,7 @@ def wrap_agent_for_testing(
             new_thread: bool = False,
             forwarding: bool = False,
             error_message: bool = False,
+            reason: Optional[str] = None,
         ) -> List[GemstoneID]:
             id_obj = self.agent._generate_id(self.message.priority)
             msg = Message(
@@ -61,6 +62,7 @@ def wrap_agent_for_testing(
             new_thread: bool = False,
             forwarding: bool = False,
             error_message: bool = False,
+            reason: Optional[str] = None,
         ) -> List[GemstoneID]:
             id_obj = self.agent._generate_id(self.message.priority)
             msg = Message(

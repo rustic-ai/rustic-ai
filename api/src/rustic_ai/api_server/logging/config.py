@@ -6,7 +6,7 @@ from rustic_ai.api_server.logging.format import (
 )
 
 logging_level = os.environ.get("RUSTIC_LOGGING_LEVEL", "DEBUG")
-logging_format = os.environ.get("RUSTIC_LOGGING_FORMAT", "json")
+logging_format = os.environ.get("RUSTIC_LOGGING_FORMAT", "standard")
 
 
 LOGGING_CONFIG = {
