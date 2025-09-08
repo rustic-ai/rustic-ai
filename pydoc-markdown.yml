@@ -1,0 +1,17 @@
+loaders:
+  - type: python
+    search_path: [core/src]
+    modules: [rustic_ai.core.ui_protocol.types]
+
+processors:
+  - type: smart
+  - type: crossref
+
+renderer:
+  type: markdown
+  filename: docs/ui-protocol-types.md
+  descriptive_class_title: false
+  descriptive_module_title: false
+  add_method_class_prefix: false
+  add_member_class_prefix: false
+  insert_header_anchors: false
