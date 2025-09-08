@@ -5,15 +5,15 @@
     "icon": null,
     "intro_msg": "",
     "exposure": "private",
-    "author_id": "n5i0k8zv4i4o",
+    "author_id": "dummyuserid",
     "organization_id": null,
     "category_id": null,
     "tags": [],
     "commands": [],
     "starter_prompts": [],
     "spec": {
-        "name": "UI Component Guild",
-        "description": "A guild that demonstrates UI components using TextFormat and LocationFormat",
+        "name": "UI Component Demo App",
+        "description": "A guild that demonstrates the models corresponding to UI components",
         "properties": {},
         "agents": [
             {

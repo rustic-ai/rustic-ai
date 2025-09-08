@@ -31,7 +31,7 @@ from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 
 
 class UiComponentAgent(Agent):
-    """An Agent that demonstrates UI components by sending messages in various formats."""
+    """An Agent that sends messages in formats compatible with UI components."""
 
     def __init__(self) -> None:
         self.handled_formats = [MessageConstants.RAW_JSON_FORMAT]

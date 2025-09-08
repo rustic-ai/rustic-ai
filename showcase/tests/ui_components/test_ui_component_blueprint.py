@@ -25,10 +25,10 @@ from rustic_ai.core.ui_protocol.types import (
 from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 
 
-class TestUiComponentsGuild:
+class TestUiComponentBlueprint:
 
     def test_ui_component_agent_sends_formats(self, org_id):
-        """Test that UiComponentAgent sends TextFormat and LocationFormat messages correctly."""
+        """Test that UiComponentAgent sends messages correctly."""
 
         # Build guild with UiComponentAgent using simple in-memory messaging
         builder = GuildBuilder(
