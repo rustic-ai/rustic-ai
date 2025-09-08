@@ -32,7 +32,7 @@ class TestMemoryEnabledLLMAgent:
                 LLMAgentConfig(
                     model="gpt-5-mini",
                     default_system_prompt="You are a helpful assistant.",
-                    llm_request_wrappers=[QueueBasedMemoriesStore(memory_queue_size=5)],
+                    llm_request_wrappers=[QueueBasedMemoriesStore(memory_size=5)],
                 )
             )
             .build_spec()
