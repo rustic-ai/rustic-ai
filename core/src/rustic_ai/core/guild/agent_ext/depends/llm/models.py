@@ -500,7 +500,7 @@ class ChatCompletionRequest(LLMBaseModel):
     [Example Python code](https://cookbook.openai.com/examples/how_to_count_tokens_with_tiktoken) for counting tokens.
     """
 
-    prediction: Annotated[Optional[str], Field(None)]
+    prediction: Annotated[Optional[str], Field(None)] = None
     """
     Configuration for a Predicted Output, which can greatly improve response times when large parts of the model response are known ahead of time.
     This is most common when you are regenerating a file with only minor changes to most of the content.
