@@ -113,7 +113,7 @@ class TestMemoryEnabledLLMAgent:
         assert isinstance(first_choice2.message.content, str)
         assert "Astro" in first_choice2.message.content
 
-        # Validate that is remembers it's own past generation (Best friend's Name)
+        # Validate that it remembers it's own past generation (Best friend's Name)
         agent._on_message(
             build_message_from_payload(
                 generator,
