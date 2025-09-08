@@ -83,7 +83,7 @@ class TestMemoryEnabledLLMAgent:
 
         assert len(input_messages) > 0
 
-        # Validate that is remembers the user provided info (Agent's Name)
+        # Validate that it remembers the user-provided info (Agent's Name)
         agent._on_message(
             build_message_from_payload(
                 generator,
