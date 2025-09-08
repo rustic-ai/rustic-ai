@@ -178,10 +178,10 @@ class LLMAgentHelper:
                 ctx.send_error(chat_response)
                 return chat_response
 
-            reasonsing = chat_response.choices[0].message.reasoning_content if chat_response.choices else ""
+            reasoning = chat_response.choices[0].message.reasoning_content if chat_response.choices else ""
 
-            if reasonsing:
-                ctx.send(chat_response, reason=reasonsing)
+            if reasoning:
+                ctx.send(chat_response, reason=reasoning)
             else:
                 ctx.send(chat_response)
             return chat_response
