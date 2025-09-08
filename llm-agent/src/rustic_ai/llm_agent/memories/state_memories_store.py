@@ -23,7 +23,7 @@ class StateBackedMemoriesStore(MemoriesStore):
             return
 
         if not self._memory:
-            self._memory = deque(self.memory_size)
+            self._memory = deque(maxlen=self.memory_size)
             state_memories = agent._state.get("memories", [])
             self._memory.extend(state_memories)
 
