@@ -10,6 +10,7 @@ from starlette.requests import Request
 import uvicorn
 
 from rustic_ai.api_server import catalog, guilds
+from rustic_ai.api_server.boards import router as boards_router
 from rustic_ai.api_server.guilds.socket import lifespan
 from rustic_ai.api_server.logging import LOGGING_CONFIG, RusticLogFormatter
 from rustic_ai.core.guild.metastore.database import Metastore
@@ -41,6 +42,7 @@ if not Metastore.is_initialized():
     Metastore.initialize_engine(rustic_metastore)
 app = FastAPI(title="Rustic AI API", lifespan=lifespan)
 app.include_router(guilds.router, prefix="/api")
+app.include_router(boards_router.router, prefix="/api")
 app.include_router(guilds.socket, prefix="/ws")
 app.include_router(catalog.catalog_router, prefix="/catalog")
 
