@@ -37,9 +37,10 @@ mypy = "^1.15.0"
 flaky = "^3.8.1"
 pytest-asyncio = "^0.26.0"
 rusticai-testing = {path = "../testing", develop = true}
+rusticai-litellm = {path = "../litellm", develop = true}
 
 [tool.poetry.extras]
-test = ["pytest", "pytest-asyncio", "rusticai-testing"]
+test = ["pytest", "pytest-asyncio", "rusticai-testing","rusticai-litellm"]
 
 [tool.black]
 line-length = 120

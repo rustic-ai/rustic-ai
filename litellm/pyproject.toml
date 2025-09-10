@@ -37,9 +37,10 @@ flake8 = "^7.1.2"
 tox = "^4.24.1"
 isort = "^6.0.0"
 mypy = "^1.15.0"
+rusticai-testing = {path = "../testing", develop = true}
 
 [tool.poetry.extras]
-test = ["pytest"]
+test = ["pytest","rusticai-testing"]
 
 [tool.black]
 line-length = 120
