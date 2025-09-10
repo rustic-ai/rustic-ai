@@ -34,4 +34,9 @@ class RequestPreprocessor(BaseModel, ABC):
         ctx: ProcessContext[ChatCompletionRequest],
         request: ChatCompletionRequest,
         llm: LLM,
-    ) -> ChatCompletionRequest: ...
+    ) -> ChatCompletionRequest:
+        """
+        Preprocess the prompt before sending it to the LLM.
+        This method can modify the prompt as needed.
+        """
+        pass

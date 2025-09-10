@@ -38,7 +38,12 @@ class LLMCallWrapper(BaseModel, ABC):
         ctx: ProcessContext[ChatCompletionRequest],
         request: ChatCompletionRequest,
         llm: LLM,
-    ) -> ChatCompletionRequest: ...
+    ) -> ChatCompletionRequest:
+        """
+        Preprocess the prompt before sending it to the LLM.
+        This method can modify the prompt as needed.
+        """
+        pass
 
     @abstractmethod
     def postprocess(
@@ -48,4 +53,10 @@ class LLMCallWrapper(BaseModel, ABC):
         final_prompt: ChatCompletionRequest,
         llm_response: ChatCompletionResponse,
         llm: LLM,
-    ) -> Optional[List[BaseModel]]: ...
+    ) -> Optional[List[BaseModel]]:
+        """
+        Postprocess the response received from the LLM.
+        This method can perform an action using the response.
+        Any values returned from this method will be sent as messages.
+        """
+        pass

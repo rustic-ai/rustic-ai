@@ -52,7 +52,7 @@ class LLMAgentHelper:
             **prompt_dict,
         }
 
-        ccrequest: ChatCompletionRequest = ChatCompletionRequest.model_validate(final_prompt)
+        cc_request: ChatCompletionRequest = ChatCompletionRequest.model_validate(final_prompt)
 
         max_retries = config.max_retries
 
@@ -60,7 +60,7 @@ class LLMAgentHelper:
             agent=agent,
             ctx=ctx,
             llm=llm,
-            ccrequest=ccrequest,
+            cc_request=cc_request,
             wrap_processors=wrap_processors,
             post_processors=post_processors,
             max_retries=max_retries,
@@ -71,13 +71,13 @@ class LLMAgentHelper:
         agent: Agent,
         ctx: ProcessContext[ChatCompletionRequest],
         llm: LLM,
-        ccrequest: ChatCompletionRequest,
+        cc_request: ChatCompletionRequest,
         wrap_processors: List[LLMCallWrapper],
         post_processors: List[ResponsePostprocessor],
         max_retries: int,
     ) -> Union[ChatCompletionResponse, ChatCompletionError]:
 
-        response = llm.completion(ccrequest)
+        response = llm.completion(cc_request)
 
         new_messages = []
 
@@ -86,7 +86,7 @@ class LLMAgentHelper:
                 post_msg = wrap_processor.postprocess(
                     agent=agent,
                     ctx=ctx,
-                    final_prompt=ccrequest,
+                    final_prompt=cc_request,
                     llm_response=response,
                     llm=llm,
                 )
@@ -97,7 +97,7 @@ class LLMAgentHelper:
                 post_msg = post_processor.postprocess(
                     agent=agent,
                     ctx=ctx,
-                    final_prompt=ccrequest,
+                    final_prompt=cc_request,
                     llm_response=response,
                     llm=llm,
                 )
@@ -120,7 +120,7 @@ class LLMAgentHelper:
                     agent=agent,
                     ctx=ctx,
                     llm=llm,
-                    ccrequest=ccrequest,
+                    cc_request=cc_request,
                     wrap_processors=wrap_processors,
                     post_processors=post_processors,
                     max_retries=max_retries - 1,

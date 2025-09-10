@@ -19,6 +19,7 @@ packages = [{ include = "rustic_ai", from = "src" }]
 [tool.poetry.dependencies]
 python = ">=3.12,<3.13"
 rusticai-core = { path = "../core", develop = true }
+openai = "^1.107.0"
 
 [tool.poetry-monorepo.deps]
 

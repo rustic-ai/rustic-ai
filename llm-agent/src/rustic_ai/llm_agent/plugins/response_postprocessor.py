@@ -38,4 +38,10 @@ class ResponsePostprocessor(BaseModel, ABC):
         final_prompt: ChatCompletionRequest,
         llm_response: ChatCompletionResponse,
         llm: LLM,
-    ) -> Optional[List[BaseModel]]: ...
+    ) -> Optional[List[BaseModel]]:
+        """
+        Postprocess the response received from the LLM.
+        This method can perform an action using the response.
+        Any values returned from this method will be sent as messages.
+        """
+        pass
