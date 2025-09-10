@@ -5,6 +5,8 @@ from copy import deepcopy
 from enum import Enum
 import inspect
 import logging
+from queue import Queue
+import threading
 from typing import Any, Callable, Dict, Generic, List, Optional, Type, TypeVar
 
 from pydantic import BaseModel, Field
@@ -917,18 +919,39 @@ class ProcessorHelper:
             return resolver.get_or_resolve(guild_id=guild_id, agent_id=agent_id)
 
     @staticmethod
-    def run_coroutine(self, func, dependencies, context):
-        loop = None
+    def run_coroutine_blocking(self, func, dependencies, context):
+        async def _runner():
+            return await func(self, context, **dependencies)
+
+        # Are we already inside an event loop in this thread?
         try:
             loop = asyncio.get_running_loop()
-        except RuntimeError as re:
-            logging.debug(f"Error getting running loop: {re}")
+        except RuntimeError:
             loop = None
 
         if loop and loop.is_running():
-            loop.create_task(func(self, context, **dependencies))
+            # Run in a private loop on a worker thread, block current thread
+            q: Queue = Queue(maxsize=1)
+
+            def worker():
+                new_loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(new_loop)
+                try:
+                    new_loop.run_until_complete(_runner())
+                    q.put(None)  # success
+                except Exception as e:
+                    q.put(e)  # propagate error
+                finally:
+                    new_loop.close()
+
+            t = threading.Thread(target=worker, daemon=True)
+            t.start()
+            exc = q.get()  # block until done
+            if exc is not None:
+                raise exc
         else:
-            asyncio.run(func(self, context, **dependencies))
+            # No running loop here; this blocks and will re-raise exceptions
+            return asyncio.run(_runner())
 
     @staticmethod
     def execute_before_fixtures(processor, context):
@@ -1015,21 +1038,22 @@ def processor(
 
                 try:
                     if inspect.iscoroutinefunction(func):
-                        ProcessorHelper.run_coroutine(self, func, dependencies, context)
+                        # Blocks until completion, exceptions bubble up
+                        ProcessorHelper.run_coroutine_blocking(self, func, dependencies, context)
                     else:
                         func(self, context, **dependencies)
-                except Exception as e:  # pragma: no cover
+                except Exception as e:
                     logging.exception(f"Error in processor {func.__name__}: {e}")
                     context.send_error(
                         ErrorMessage(
                             agent_type=self.get_qualified_class_name(),
-                            error_type="UNHANDLED_EXECEPTION",
+                            error_type="UNHANDLED_EXCEPTION",
                             error_message=str(e),
                         )
                     )
-
-                ProcessorHelper.execute_after_fixtures(self, context)
-                return
+                finally:
+                    # Runs exactly once for both sync and async paths
+                    ProcessorHelper.execute_after_fixtures(self, context)
             else:
                 logging.debug(
                     f"Predicate {predicate} on method [{func.__name__}] failed for message:\n {msg.model_dump()}\n"

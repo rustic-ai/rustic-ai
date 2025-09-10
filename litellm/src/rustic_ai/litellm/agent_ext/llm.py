@@ -17,13 +17,32 @@ from rustic_ai.litellm.utils import ResponseUtils
 
 class LiteLLM(LLM):
     def __init__(self, props: LiteLLMConf):
-        self.preset_messages = props.messages
-        self.tool_manager = props.get_tools_manager()
+        litellm.drop_params = True
+        litellm.set_verbose = False
+        # set callbacks
+        litellm.input_callback = []
+        litellm.success_callback = []
+        litellm.failure_callback = []
+        self.pre_messages = props.messages
         self._model = props.model
-        self.client_props = props.model_dump(mode="json", exclude_unset=True, exclude_none=True)
+        self.client_props = props.model_dump(
+            mode="json",
+            exclude_unset=True,
+            exclude_none=True,
+            exclude={
+                "message_memory",
+                "toolset",
+                "filter_attachments",
+                "extract_tool_calls",
+                "skip_chat_response_on_tool_call",
+                "retries_on_tool_parse_error",
+            },
+        )
+
+        self.tool_manager = props.get_tools_manager()
 
     def _prep_prompt(self, prompt: ChatCompletionRequest) -> dict:
-        messages = self.preset_messages if self.preset_messages else []
+        messages = self.pre_messages if self.pre_messages else []
 
         all_messages = messages + prompt.messages
 
@@ -33,9 +52,11 @@ class LiteLLM(LLM):
         if prompt.tools:
             tools.extend(prompt.tools)
 
+        prompt_dict = prompt.model_dump(exclude_none=True, exclude_unset=True)
+
         full_prompt = {
             **self.client_props,
-            **prompt.model_dump(exclude_unset=True, exclude_none=True),
+            **prompt_dict,
             "messages": messages_dict,
         }
 
@@ -48,8 +69,9 @@ class LiteLLM(LLM):
     def completion(self, prompt: ChatCompletionRequest):
         full_prompt = self._prep_prompt(prompt)
 
-        completion = litellm.completion(**full_prompt, verbose=True)
+        completion = litellm.completion(**full_prompt)
         response: ChatCompletionResponse = ResponseUtils.from_litellm(completion)
+        response.input_messages = full_prompt["messages"]  # Store input messages in the response
         return response
 
     async def async_completion(self, prompt: ChatCompletionRequest):
