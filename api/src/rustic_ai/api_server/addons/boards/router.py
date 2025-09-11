@@ -4,14 +4,14 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import Engine
 from starlette import status
 
-from rustic_ai.api_server.boards.schema import (
+from rustic_ai.api_server.addons.boards.schema import (
+    AddMessageToBoardRequest,
     BoardMessagesResponse,
     BoardResponse,
     BoardsResponse,
     CreateBoardRequest,
-    PinMessageToBoardRequest,
 )
-from rustic_ai.api_server.boards.service import BoardService
+from rustic_ai.api_server.addons.boards.service import BoardService
 from rustic_ai.api_server.guilds.schema import IdInfo
 from rustic_ai.core.guild.metastore import Metastore
 
@@ -20,12 +20,12 @@ board_service = BoardService()
 
 
 @router.post(
-    "/guilds/{guild_id}/boards",
+    "/",
     response_model=IdInfo,
     status_code=status.HTTP_201_CREATED,
     operation_id="createBoard",
 )
-def create_board(guild_id: str, board: CreateBoardRequest, engine: Engine = Depends(Metastore.get_engine)):
+def create_board(board: CreateBoardRequest, engine: Engine = Depends(Metastore.get_engine)):
     """
     Creates a new board for a guild.
 
@@ -37,7 +37,7 @@ def create_board(guild_id: str, board: CreateBoardRequest, engine: Engine = Depe
         IdInfo: The id of the newly created board.
     """
     try:
-        board_id = board_service.create_board(engine, guild_id, board)
+        board_id = board_service.create_board(engine, board.guild_id, board)
         logging.debug(f"New board created: {board_id}")
         return IdInfo(id=board_id)
     except HTTPException:
@@ -46,7 +46,7 @@ def create_board(guild_id: str, board: CreateBoardRequest, engine: Engine = Depe
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/guilds/{guild_id}/boards", response_model=BoardsResponse, operation_id="getBoards")
+@router.get("/", response_model=BoardsResponse, operation_id="getBoards")
 def get_boards(guild_id: str, engine: Engine = Depends(Metastore.get_engine)):
     """
     Retrieves all boards for a guild.
@@ -78,25 +78,25 @@ def get_boards(guild_id: str, engine: Engine = Depends(Metastore.get_engine)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/boards/{board_id}/messages", status_code=status.HTTP_200_OK, operation_id="pinMessageToBoard")
-def pin_message_to_board(
+@router.post("/{board_id}/messages", status_code=status.HTTP_200_OK, operation_id="addMessageToBoard")
+def add_message_to_board(
     board_id: str,
-    request: PinMessageToBoardRequest,
+    request: AddMessageToBoardRequest,
     engine: Engine = Depends(Metastore.get_engine),
 ):
     """
-    Pins a message to a board.
+    Adds a message to a board.
 
     Args:
-        board_id (str): The ID of the board to pin the message to.
-        request (PinMessageToBoardRequest): The request containing the message_id.
+        board_id (str): The ID of the board to add the message to.
+        request (AddMessageToBoardRequest): The request containing the message_id.
 
     Returns:
         dict: Success message.
     """
     try:
-        board_service.pin_message_to_board(engine, board_id, request.message_id)
-        return {"message": "Message pinned to the board successfully"}
+        board_service.add_message_to_board(engine, board_id, request.message_id)
+        return {"message": "Message added to the board successfully"}
     except HTTPException:
         raise
     except Exception as e:
@@ -104,7 +104,7 @@ def pin_message_to_board(
 
 
 @router.get(
-    "/boards/{board_id}/messages",
+    "/{board_id}/messages",
     response_model=BoardMessagesResponse,
     operation_id="getBoardMessageIds",
 )
@@ -128,24 +128,24 @@ def get_board_messages(board_id: str, engine: Engine = Depends(Metastore.get_eng
 
 
 @router.delete(
-    "/boards/{board_id}/messages/{message_id}",
+    "/{board_id}/messages/{message_id}",
     status_code=status.HTTP_200_OK,
-    operation_id="unpinMessageFromBoard",
+    operation_id="removeMessageFromBoard",
 )
-def unpin_message_from_board(board_id: str, message_id: str, engine: Engine = Depends(Metastore.get_engine)):
+def remove_message_from_board(board_id: str, message_id: str, engine: Engine = Depends(Metastore.get_engine)):
     """
-    Unpins a message from a board.
+    Removes a message from a board.
 
     Args:
-        board_id (str): The ID of the board to unpin the message from.
-        message_id (str): The ID of the message to unpin.
+        board_id (str): The ID of the board to remove the message from.
+        message_id (str): The ID of the message to remove.
 
     Returns:
         dict: Success message.
     """
     try:
-        board_service.unpin_message_from_board(engine, board_id, message_id)
-        return {"message": "Message unpinned from the board successfully"}
+        board_service.remove_message_from_board(engine, board_id, message_id)
+        return {"message": "Message removed from the board successfully"}
     except HTTPException:
         raise
     except Exception as e:

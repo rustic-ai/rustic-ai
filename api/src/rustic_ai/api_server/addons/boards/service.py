@@ -4,8 +4,8 @@ from fastapi import HTTPException
 from sqlalchemy import Engine
 from sqlmodel import Session, select
 
-from rustic_ai.api_server.boards.models import Board, PinnedMessage
-from rustic_ai.api_server.boards.schema import CreateBoardRequest
+from rustic_ai.api_server.addons.boards.models import Board, BoardMessage
+from rustic_ai.api_server.addons.boards.schema import CreateBoardRequest
 from rustic_ai.core.guild.metastore import GuildModel
 
 
@@ -62,26 +62,26 @@ class BoardService:
 
             return list(boards)
 
-    def pin_message_to_board(self, engine: Engine, board_id: str, message_id: str) -> None:
+    def add_message_to_board(self, engine: Engine, board_id: str, message_id: str) -> None:
         """
-        Pins a message to a board.
+        Adds a message to a board.
 
         Args:
             engine (Engine): The database engine.
-            board_id (str): The ID of the board to pin the message to.
-            message_id (str): The ID of the message to pin.
+            board_id (str): The ID of the board to add the message to.
+            message_id (str): The ID of the message to add.
         """
         with Session(engine) as session:
             board = session.get(Board, board_id)
             if board is None:
                 raise HTTPException(status_code=404, detail="Board not found")
 
-            existing_entry = session.get(PinnedMessage, (board_id, message_id))
+            existing_entry = session.get(BoardMessage, (board_id, message_id))
             if existing_entry is not None:
-                raise HTTPException(status_code=409, detail="Message already pinned to board")
+                raise HTTPException(status_code=409, detail="Message already added to board")
 
-            pinned_message = PinnedMessage(board_id=board_id, message_id=message_id)
-            session.add(pinned_message)
+            board_message = BoardMessage(board_id=board_id, message_id=message_id)
+            session.add(board_message)
             session.commit()
 
     def get_board_message_ids(self, engine: Engine, board_id: str) -> List[str]:
@@ -100,28 +100,28 @@ class BoardService:
             if board is None:
                 raise HTTPException(status_code=404, detail="Board not found")
 
-            statement = select(PinnedMessage.message_id).where(PinnedMessage.board_id == board_id)
+            statement = select(BoardMessage.message_id).where(BoardMessage.board_id == board_id)
             message_ids = session.exec(statement).all()
 
             return list(message_ids)
 
-    def unpin_message_from_board(self, engine: Engine, board_id: str, message_id: str) -> None:
+    def remove_message_from_board(self, engine: Engine, board_id: str, message_id: str) -> None:
         """
-        Unpins a message from a board.
+        Removes a message from a board.
 
         Args:
             engine (Engine): The database engine.
-            board_id (str): The ID of the board to unpin the message from.
-            message_id (str): The ID of the message to unpin.
+            board_id (str): The ID of the board to remove the message from.
+            message_id (str): The ID of the message to remove.
         """
         with Session(engine) as session:
             board = session.get(Board, board_id)
             if board is None:
                 raise HTTPException(status_code=404, detail="Board not found")
 
-            pinned_message = session.get(PinnedMessage, (board_id, message_id))
-            if pinned_message is None:
-                raise HTTPException(status_code=404, detail="Message not pinned to board")
+            board_message = session.get(BoardMessage, (board_id, message_id))
+            if board_message is None:
+                raise HTTPException(status_code=404, detail="Message not found on board")
 
-            session.delete(pinned_message)
+            session.delete(board_message)
             session.commit()

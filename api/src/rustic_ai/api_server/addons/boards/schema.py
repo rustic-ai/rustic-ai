@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 
 class CreateBoardRequest(BaseModel):
+    guild_id: str
     name: str
     created_by: str
     is_default: Optional[bool] = False
@@ -25,7 +26,7 @@ class BoardsResponse(BaseModel):
     boards: List[BoardResponse]
 
 
-class PinMessageToBoardRequest(BaseModel):
+class AddMessageToBoardRequest(BaseModel):
     message_id: str
 
 
