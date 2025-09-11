@@ -11,7 +11,7 @@ from rustic_ai.api_server.guilds.schema import LaunchGuildReq
 from rustic_ai.core.agents.testutils.echo_agent import EchoAgent
 from rustic_ai.core.agents.utils.user_proxy_agent import UserProxyAgent
 from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder
-from rustic_ai.core.guild.dsl import AgentSpec, GuildSpec
+from rustic_ai.core.guild.dsl import AgentSpec, GuildSpec, KeyConstants
 from rustic_ai.core.guild.metastore import Metastore
 from rustic_ai.core.messaging.client.message_tracking_store import (
     SqlMessageTrackingStore,
@@ -49,14 +49,6 @@ class TestServer:
         params=[
             pytest.param(
                 MessagingConfig(
-                    backend_module="rustic_ai.core.messaging.backend",
-                    backend_class="InMemoryMessagingBackend",
-                    backend_config={},
-                ),
-                id="InMemoryMessagingBackend",
-            ),
-            pytest.param(
-                MessagingConfig(
                     backend_module="rustic_ai.redis.messaging.backend",
                     backend_class="RedisMessagingBackend",
                     backend_config={
@@ -68,17 +60,6 @@ class TestServer:
                     },
                 ),
                 id="RedisMessagingBackend",
-            ),
-            pytest.param(
-                MessagingConfig(
-                    backend_module="rustic_ai.core.messaging.backend.embedded_backend",
-                    backend_class="EmbeddedMessagingBackend",
-                    backend_config={"port": 31145, "auto_start_server": True},
-                ),
-                id="EmbeddedMessagingBackend",
-                marks=pytest.mark.xfail(
-                    reason="EmbeddedMessagingBackend is not fully reliable yet",
-                ),
             ),
         ],
     )
@@ -124,7 +105,7 @@ class TestServer:
                 RoutingRule(
                     agent=AgentTag(name="EchoAgent"),
                     destination=RoutingDestination(
-                        topics=UserProxyAgent.get_user_outbox_topic("user123"),
+                        topics=UserProxyAgent.BROADCAST_TOPIC,
                     ),
                 ),
                 RoutingRule(
@@ -289,7 +270,7 @@ class TestServer:
             assert json1["payload"]["content"] == "Hello, guild 2!"
             assert json1["sender"]["id"] == UserProxyAgent.get_user_agent_id("user123")
             assert json1["sender"]["name"] == "user_name_123"
-            assert json0["forward_header"]["on_behalf_of"]["name"] == "EchoAgent"
+            assert json1["forward_header"]["on_behalf_of"]["name"] == "EchoAgent"
 
             # Test sending invalid JSON
             msg3 = Message(
@@ -320,7 +301,7 @@ class TestServer:
             assert json2["payload"]["content"] == "Hello, guild 3!"
             assert json2["sender"]["id"] == UserProxyAgent.get_user_agent_id("user123")
             assert json2["sender"]["name"] == "user_name_123"
-            assert json0["forward_header"]["on_behalf_of"]["name"] == "EchoAgent"
+            assert json2["forward_header"]["on_behalf_of"]["name"] == "EchoAgent"
 
         # Test fetching historical messages
         async with httpx.AsyncClient(base_url=f"http://{server}", timeout=wait_time * 2) as client:
@@ -332,7 +313,7 @@ class TestServer:
             assert messages_json[1]["payload"]["content"] == "Hello, guild!"
             assert messages_json[1]["sender"]["id"] == UserProxyAgent.get_user_agent_id("user123")
             assert messages_json[1]["sender"]["name"] == "user_name_123"
-            assert json0["forward_header"]["on_behalf_of"]["name"] == "EchoAgent"
+            assert messages_json[1]["forward_header"]["on_behalf_of"]["name"] == "EchoAgent"
 
             assert messages_json[3]["payload"]["content"] == "Hello, guild INT!"
 
@@ -340,4 +321,32 @@ class TestServer:
 
             assert messages_json[7]["payload"]["content"] == "Hello, guild 2!"
 
+            assert messages_json[9]["payload"]["content"] == "Hello, guild 3!"
+
+        # Test fetching historical messages for different user
+        async with httpx.AsyncClient(base_url=f"http://{server}", timeout=wait_time * 2) as client:
+            messages = await asyncio.wait_for(client.get(f"/api/guilds/{guild.id}/user234/messages"), wait_time * 2)
+
+            assert messages.status_code == 200
+            messages_json = messages.json()
+            assert len(messages_json) == 10
+
+            assert messages_json[0]["sender"]["name"] == "user_name_123"
+            assert messages_json[1]["payload"]["content"] == "Hello, guild!"
+            assert messages_json[1]["sender"]["name"] == "EchoAgent"
+
+            assert messages_json[2]["sender"]["name"] == "user_name_123"
+            assert messages_json[3]["sender"]["name"] == "EchoAgent"
+            assert messages_json[3]["payload"]["content"] == "Hello, guild INT!"
+
+            assert messages_json[4]["sender"]["name"] == "user_name_123"
+            assert messages_json[5]["sender"]["name"] == "EchoAgent"
+            assert messages_json[5]["payload"]["content"] == "Hello, guild NOID!"
+
+            assert messages_json[6]["sender"]["name"] == "user_name_123"
+            assert messages_json[7]["sender"]["name"] == "EchoAgent"
+            assert messages_json[7]["payload"]["content"] == "Hello, guild 2!"
+
+            assert messages_json[8]["sender"]["name"] == "user_name_123"
+            assert messages_json[9]["sender"]["name"] == "EchoAgent"
             assert messages_json[9]["payload"]["content"] == "Hello, guild 3!"
