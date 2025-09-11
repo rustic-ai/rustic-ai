@@ -131,6 +131,10 @@ class GuildCommunicationManager:
             except Exception as e:  # pragma: no cover
                 logging.error(f"Error sending message: {e}")
 
+    @staticmethod
+    def get_socket_agent_id(user_id: str):
+        return f"user_socket:{user_id}"
+
     async def handle_websocket_connection(
         self,
         websocket: WebSocket,
@@ -152,7 +156,7 @@ class GuildCommunicationManager:
             guild_client: Client = await self.create_guild_client(guild_id, user_id, messaging, websocket, loop)
             messaging.subscribe(UserProxyAgent.get_user_notifications_topic(user_id), guild_client)
 
-            user_agent_tag = AgentTag(id=f"user_socket:{user_id}", name=user_name)
+            user_agent_tag = AgentTag(id=self.get_socket_agent_id(user_id), name=user_name)
 
             guild_client.publish(
                 Message(
@@ -240,18 +244,44 @@ class GuildCommunicationManager:
             except WebSocketDisconnect:
                 messaging.unsubscribe(UserProxyAgent.get_user_notifications_topic(user_id), guild_client)
 
+    @staticmethod
+    def is_dupe_broadcast_message(agent_id: str, broadcasted_msg: Message, forwarded_message_ids: set[int]) -> bool:
+        result = False
+        if broadcasted_msg.id in forwarded_message_ids:
+            # This message has already been forwarded
+            result = True
+        elif broadcasted_msg.forward_header is None:
+            # This is not a forwarded message
+            result = False
+        elif broadcasted_msg.forward_header.on_behalf_of.id == agent_id:
+            # This message was forwarded on behalf of this user
+            result = True
+        return result
+
     async def get_historical_user_notifications(self, guild_id: str, user_id: str, engine: Engine) -> List[Message]:
         guild_spec = await self.get_or_fetch_guild_spec(guild_id, engine)
 
         logging.debug(f"Retrieving historical messages for User[{user_id}] in Guild[{guild_id}]")
 
-        if guild_spec:
-            mi = await self.get_or_create_messaging_interface(guild_spec)
-            msgs = mi.get_messages(UserProxyAgent.get_user_notifications_topic(user_id))
-            logging.debug(f"Retrieved {len(msgs)} messages")
-            return msgs
-        else:  # pragma: no cover
+        if not guild_spec:
             return []
+
+        mi = await self.get_or_create_messaging_interface(guild_spec)
+        user_msgs = mi.get_messages(UserProxyAgent.get_user_notifications_topic(user_id))
+        broadcast_msgs = mi.get_messages(UserProxyAgent.BROADCAST_TOPIC)
+        # Create a set of user message IDs for efficient lookup
+        user_msg_ids = {msg.forward_header.origin_message_id for msg in user_msgs if msg.forward_header is not None}
+        # Filter broadcast messages
+        filtered_broadcast_msgs = [
+            msg
+            for msg in broadcast_msgs
+            if not self.is_dupe_broadcast_message(self.get_socket_agent_id(user_id), msg, user_msg_ids)
+        ]
+        # Combine and sort messages
+        all_messages = user_msgs + filtered_broadcast_msgs
+        result = sorted(all_messages, key=lambda msg: msg.id)
+        logging.debug(f"Retrieved {len(result)} messages")
+        return result
 
     @classmethod
     def get_instance(cls) -> "GuildCommunicationManager":
