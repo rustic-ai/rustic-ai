@@ -1,4 +1,4 @@
-from .boards import BoardService
+from .boards import BoardStore
 from .router import router
 
-__all__ = ["BoardService", "router"]
+__all__ = ["BoardStore", "router"]

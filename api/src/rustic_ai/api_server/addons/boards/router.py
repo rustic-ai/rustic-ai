@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import Engine
 from starlette import status
 
+from rustic_ai.api_server.addons.boards.board_store import BoardStore
 from rustic_ai.api_server.addons.boards.schema import (
     AddMessageToBoardRequest,
     BoardMessagesResponse,
@@ -11,12 +12,10 @@ from rustic_ai.api_server.addons.boards.schema import (
     BoardsResponse,
     CreateBoardRequest,
 )
-from rustic_ai.api_server.addons.boards.service import BoardService
 from rustic_ai.api_server.guilds.schema import IdInfo
 from rustic_ai.core.guild.metastore import Metastore
 
 router = APIRouter()
-board_service = BoardService()
 
 
 @router.post(
@@ -37,7 +36,8 @@ def create_board(board: CreateBoardRequest, engine: Engine = Depends(Metastore.g
         IdInfo: The id of the newly created board.
     """
     try:
-        board_id = board_service.create_board(engine, board.guild_id, board)
+        board_store = BoardStore(engine)
+        board_id = board_store.create_board(board.guild_id, board)
         logging.debug(f"New board created: {board_id}")
         return IdInfo(id=board_id)
     except HTTPException:
@@ -58,7 +58,8 @@ def get_boards(guild_id: str, engine: Engine = Depends(Metastore.get_engine)):
         BoardsResponse: The boards for the guild.
     """
     try:
-        boards = board_service.get_boards(engine, guild_id)
+        board_store = BoardStore(engine)
+        boards = board_store.get_boards(guild_id)
         board_responses = [
             BoardResponse(
                 id=board.id,
@@ -95,7 +96,8 @@ def add_message_to_board(
         dict: Success message.
     """
     try:
-        board_service.add_message_to_board(engine, board_id, request.message_id)
+        board_store = BoardStore(engine)
+        board_store.add_message_to_board(board_id, request.message_id)
         return {"message": "Message added to the board successfully"}
     except HTTPException:
         raise
@@ -119,7 +121,8 @@ def get_board_messages(board_id: str, engine: Engine = Depends(Metastore.get_eng
         BoardMessagesResponse: The message IDs in the board.
     """
     try:
-        message_ids = board_service.get_board_message_ids(engine, board_id)
+        board_store = BoardStore(engine)
+        message_ids = board_store.get_board_message_ids(board_id)
         return BoardMessagesResponse(ids=message_ids)
     except HTTPException:
         raise
@@ -144,7 +147,8 @@ def remove_message_from_board(board_id: str, message_id: str, engine: Engine = D
         dict: Success message.
     """
     try:
-        board_service.remove_message_from_board(engine, board_id, message_id)
+        board_store = BoardStore(engine)
+        board_store.remove_message_from_board(board_id, message_id)
         return {"message": "Message removed from the board successfully"}
     except HTTPException:
         raise
