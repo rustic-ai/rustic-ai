@@ -50,7 +50,6 @@ class AskUserRequest(BaseModel):
 
 class DataAnalystToolset(Toolset):
 
-    @property
     def toolsmanager(self) -> ToolsManager:
         """
         Returns the ToolsManager instance for this tool set.

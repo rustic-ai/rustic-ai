@@ -18,7 +18,7 @@ class RayExecutionEngine(ExecutionEngine):
         # Ray must be initialized before using RayExecutionEngine.
         if not ray.is_initialized():
             raise Exception("Ray must be initialized before using RayExecutionEngine.")  # pragma: no cover
-        self.agent_wrappers: Dict[str, Dict[str, RayAgentWrapper]] = {}
+        self.agent_wrappers: Dict[str, Dict[str, ActorHandle]] = {}
         self.agent_actors: Dict[str, Dict[str, ray.ObjectRef]] = {}
 
     def _get_namespace(self):
