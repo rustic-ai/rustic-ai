@@ -37,7 +37,7 @@ class ItemProcessingResult(BaseModel):
     quantity: Optional[int]
 
 
-class TestSplitterGuild:
+class TestCelFnGuild:
 
     @pytest.fixture
     def routing_slip(self) -> RoutingSlip:

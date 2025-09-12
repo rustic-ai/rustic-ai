@@ -11,7 +11,7 @@ from rustic_ai.api_server.guilds.schema import LaunchGuildReq
 from rustic_ai.core.agents.testutils.echo_agent import EchoAgent
 from rustic_ai.core.agents.utils.user_proxy_agent import UserProxyAgent
 from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder
-from rustic_ai.core.guild.dsl import AgentSpec, GuildSpec, KeyConstants
+from rustic_ai.core.guild.dsl import AgentSpec, GuildSpec
 from rustic_ai.core.guild.metastore import Metastore
 from rustic_ai.core.messaging.client.message_tracking_store import (
     SqlMessageTrackingStore,

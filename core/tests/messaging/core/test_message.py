@@ -411,13 +411,7 @@ class TestMessage:
         assert transformed.payload == {"new_key": "value"}
 
     def test_simple_transformer_with_cel_expression(self, generator):
-
-        def caps(s):
-            return "{}".format(s).upper()
-
-        transformer = PayloadTransformer(
-            expression_type="cel", expression="{'new_key': caps(key)}", functions={"caps": caps}
-        )
+        transformer = PayloadTransformer(expression_type="cel", expression="{'new_key': key}")
 
         origin = Message(
             id_obj=generator.get_id(Priority.NORMAL),
@@ -439,7 +433,7 @@ class TestMessage:
         transformed = transformer.transform(origin=origin, agent_state={}, guild_state={}, routable=routable)
 
         assert transformed is not None
-        assert transformed.payload == {"new_key": "VALUE"}
+        assert transformed.payload == {"new_key": "value"}
 
     def test_simple_transformer_with_invalid_expression(self, generator):
         transformer = PayloadTransformer(expression="$.key")
