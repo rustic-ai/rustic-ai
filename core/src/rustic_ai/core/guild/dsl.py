@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 from typing import (
     Annotated,
     Any,
-    Callable,
     Dict,
     Generic,
     List,

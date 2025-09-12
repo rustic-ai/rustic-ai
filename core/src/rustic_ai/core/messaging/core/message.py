@@ -304,7 +304,7 @@ class StateTransformer(BaseModel):
                     transformed = evaluator.eval(self.state_update, input)
                 else:
                     raise ValueError("expression_type not found! Please set expression_type as 'jsonata' or 'cel'")
-                
+
                 if transformed is None:
                     return None
                 else:

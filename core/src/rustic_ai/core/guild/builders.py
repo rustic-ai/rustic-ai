@@ -40,6 +40,7 @@ from rustic_ai.core.guild.metaprog.constants import MetaclassConstants
 from rustic_ai.core.messaging import Client, MessageTrackingClient, MessagingConfig
 from rustic_ai.core.messaging.core.message import (
     AgentTag,
+    ExpressionType,
     FunctionalTransformer,
     PayloadTransformer,
     ProcessStatus,
@@ -56,7 +57,6 @@ from rustic_ai.core.state.manager.state_manager import (
 from rustic_ai.core.utils import class_utils
 from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 from rustic_ai.core.utils.jexpr import JxScript
-from rustic_ai.core.messaging.core.message import ExpressionType
 
 
 class OriginFilterKeys(StrEnum):
@@ -1078,7 +1078,7 @@ class RouteBuilder:
         self,
         update_agent_state: Union[JxScript, str],
         update_format: StateUpdateFormat = StateUpdateFormat.JSON_MERGE_PATCH,
-        expression_type: Optional[str] = ExpressionType.JSONATA
+        expression_type: Optional[str] = ExpressionType.JSONATA,
     ) -> "RouteBuilder":
         state_transformer = StateTransformer(
             expression_type=expression_type,
@@ -1094,7 +1094,7 @@ class RouteBuilder:
         self,
         update_guild_state: Union[JxScript, str],
         update_format: StateUpdateFormat = StateUpdateFormat.JSON_MERGE_PATCH,
-        expression_type: Optional[str] = ExpressionType.JSONATA
+        expression_type: Optional[str] = ExpressionType.JSONATA,
     ) -> "RouteBuilder":
         state_transformer = StateTransformer(
             expression_type=expression_type,

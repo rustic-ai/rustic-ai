@@ -1,4 +1,5 @@
 import pytest
+
 from rustic_ai.core.utils.cel_expr import CelExpressionEvaluator
 
 
@@ -9,17 +10,17 @@ class TestCelExpressionEvaluator:
     def test_simple_expression(self):
         expr = "payload.numkey > 10"
         result = self.evaluator.eval(expr, {"payload": {"numkey": 15}})
-        assert result == True, "Expression should evaluate to True"
+        assert result is True, "Expression should evaluate to True"
 
     def test_simple_false_expression(self):
         expr = "payload.numkey > 10"
         result = self.evaluator.eval(expr, {"payload": {"numkey": 5}})
-        assert result == False, "Expression should evaluate to False"
+        assert result is False, "Expression should evaluate to False"
 
     def test_string_comparison(self):
         expr = "payload.name == 'Alice'"
         result = self.evaluator.eval(expr, {"payload": {"name": "Alice"}})
-        assert result == True
+        assert result is True
 
     def test_arithmetic_expression(self):
         expr = "payload.x * payload.y + 10"
@@ -58,20 +59,18 @@ class TestCelExpressionEvaluator:
 
     def test_boolean_logic(self):
         expr = "payload.isActive && !payload.isBanned"
-        result = self.evaluator.eval(
-            expr, {"payload": {"isActive": True, "isBanned": False}}
-        )
-        assert result == True
+        result = self.evaluator.eval(expr, {"payload": {"isActive": True, "isBanned": False}})
+        assert result is True
 
     def test_math_operations(self):
         expr = "(payload.a + payload.b) * payload.c"
-        result = self.evaluator.eval(expr, {"payload": {"a": 2, "b": 3, "c": 4}})
-        assert result == 20
+        result = self.evaluator.eval(expr, {"payload": {"a": 2.0, "b": 3.0, "c": 4.0}})
+        assert result == 20.0
 
     def test_null_check(self):
         expr = "payload.value == null"
         result = self.evaluator.eval(expr, {"payload": {"value": None}})
-        assert result == True
+        assert result is True
 
     def test_custom_function_uppercase(self):
         def caps(x):
@@ -105,12 +104,6 @@ class TestCelExpressionEvaluator:
         expr = "payload.orders[0].items[1].quantity"
         result = self.evaluator.eval(
             expr,
-            {
-                "payload": {
-                    "orders": [
-                        {"items": [{"id": "item-1", "quantity": 2}, {"id": "item-2", "quantity": 5}]}
-                    ]
-                }
-            },
+            {"payload": {"orders": [{"items": [{"id": "item-1", "quantity": 2}, {"id": "item-2", "quantity": 5}]}]}},
         )
         assert result == 5

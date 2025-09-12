@@ -1,6 +1,7 @@
 from typing import Any, Callable, Dict, Optional
 
 import celpy
+from celpy import celtypes
 
 
 class CelExpressionEvaluator:
@@ -48,5 +49,9 @@ class CelExpressionEvaluator:
         """
         prgm = self.compile(expression)
         ctx = self._build_context(variables or {})
+        result = prgm.evaluate(ctx)
 
-        return prgm.evaluate(ctx)
+        if isinstance(result, celtypes.BoolType):
+            return bool(result)
+
+        return result

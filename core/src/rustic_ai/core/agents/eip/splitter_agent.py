@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Callable, Dict, List, Literal, Optional, Union
+from typing import List, Literal, Optional, Union
 
 from jsonata import Jsonata
 from pydantic import BaseModel
