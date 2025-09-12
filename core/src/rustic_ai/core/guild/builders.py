@@ -56,6 +56,7 @@ from rustic_ai.core.state.manager.state_manager import (
 from rustic_ai.core.utils import class_utils
 from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 from rustic_ai.core.utils.jexpr import JxScript
+from rustic_ai.core.messaging.core.message import ExpressionType
 
 
 class OriginFilterKeys(StrEnum):
@@ -1077,8 +1078,10 @@ class RouteBuilder:
         self,
         update_agent_state: Union[JxScript, str],
         update_format: StateUpdateFormat = StateUpdateFormat.JSON_MERGE_PATCH,
+        expression_type: Optional[str] = ExpressionType.JSONATA
     ) -> "RouteBuilder":
         state_transformer = StateTransformer(
+            expression_type=expression_type,
             update_format=update_format,
             state_update=(
                 update_agent_state.serialize() if isinstance(update_agent_state, JxScript) else update_agent_state
@@ -1091,8 +1094,10 @@ class RouteBuilder:
         self,
         update_guild_state: Union[JxScript, str],
         update_format: StateUpdateFormat = StateUpdateFormat.JSON_MERGE_PATCH,
+        expression_type: Optional[str] = ExpressionType.JSONATA
     ) -> "RouteBuilder":
         state_transformer = StateTransformer(
+            expression_type=expression_type,
             update_format=update_format,
             state_update=(
                 update_guild_state.serialize() if isinstance(update_guild_state, JxScript) else update_guild_state

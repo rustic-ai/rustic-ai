@@ -10,7 +10,7 @@ class CelExpressionEvaluator:
     """
 
     def __init__(self):
-        self.env = celpy.Environment()
+        self.celpy_env = celpy.Environment()
         self._custom_funcs: Dict[str, Callable] = {}
 
     def add_function(self, name: str, func: Callable):
@@ -37,8 +37,8 @@ class CelExpressionEvaluator:
         Compile CEL expression into a reusable program.
         Uses caching for performance.
         """
-        ast = self.env.compile(expression)
-        prgm = self.env.program(ast, functions=self._custom_funcs)
+        ast = self.celpy_env.compile(expression)
+        prgm = self.celpy_env.program(ast, functions=self._custom_funcs)
 
         return prgm
 

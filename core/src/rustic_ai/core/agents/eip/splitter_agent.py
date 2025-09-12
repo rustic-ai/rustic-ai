@@ -88,14 +88,9 @@ class JsonataFormatSelector(BaseFormatSelector):
 class CelFormatSelector(BaseFormatSelector):
     strategy: Literal["cel"] = "cel"
     expression: str
-    functions: Optional[Dict[str, Callable]] = {}
 
     def get_formats(self, elements) -> List[PayloadWithFormat]:
         evaluator = CelExpressionEvaluator()
-        if self.functions:
-            for k, v in self.functions.items():
-                evaluator.add_function(k, v)
-
         payload_with_format = [
             PayloadWithFormat(payload=item, format=evaluator.eval(self.expression, item)) for item in elements
         ]
@@ -159,14 +154,9 @@ class JsonataSplitter(BaseSplitter):
 class CelSplitter(BaseSplitter):
     split_type: Literal["cel"] = "cel"
     expression: str
-    functions: Optional[Dict[str, Callable]] = {}
 
     def split(self, payload: JsonDict) -> List[JsonDict]:
         evaluator = CelExpressionEvaluator()
-        if self.functions:
-            for k, v in self.functions.items():
-                evaluator.add_function(k, v)
-
         result = evaluator.eval(self.expression, payload)
         if isinstance(result, list):
             return result
