@@ -1,8 +1,7 @@
 from fastapi import APIRouter
 
-from .boards import router as boards_router
+from .boards import boards_router
 
-router = APIRouter()
+addons_router = APIRouter()
 
-# Include boards router under /boards path
-router.include_router(boards_router, prefix="/boards", tags=["boards"])
+addons_router.include_router(boards_router, prefix="/boards", tags=["boards"])

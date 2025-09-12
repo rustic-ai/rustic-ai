@@ -2,13 +2,13 @@ import json
 
 import pytest
 
+from rustic_ai.api_server.guilds.schema import LaunchGuildReq
+from rustic_ai.core.guild.dsl import GuildSpec
+
 
 @pytest.fixture
 def guild_id(client, org_id):
     """Create a test guild and return its ID."""
-    from rustic_ai.api_server.guilds.schema import LaunchGuildReq
-    from rustic_ai.core.guild.dsl import GuildSpec
-
     guild_spec = GuildSpec(
         name="TestGuild",
         description="A guild for board testing",

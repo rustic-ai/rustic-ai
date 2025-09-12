@@ -3,6 +3,8 @@ import os
 from fastapi.testclient import TestClient
 import pytest
 
+from rustic_ai.api_server import addons, catalog, guilds  # noqa
+
 
 @pytest.fixture
 def client(request):

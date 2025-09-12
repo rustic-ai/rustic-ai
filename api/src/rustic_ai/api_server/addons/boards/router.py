@@ -15,10 +15,10 @@ from rustic_ai.api_server.addons.boards.schema import (
 from rustic_ai.api_server.guilds.schema import IdInfo
 from rustic_ai.core.guild.metastore import Metastore
 
-router = APIRouter()
+boards_router = APIRouter()
 
 
-@router.post(
+@boards_router.post(
     "/",
     response_model=IdInfo,
     status_code=status.HTTP_201_CREATED,
@@ -46,7 +46,7 @@ def create_board(board: CreateBoardRequest, engine: Engine = Depends(Metastore.g
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/", response_model=BoardsResponse, operation_id="getBoards")
+@boards_router.get("/", response_model=BoardsResponse, operation_id="getBoards")
 def get_boards(guild_id: str, engine: Engine = Depends(Metastore.get_engine)):
     """
     Retrieves all boards for a guild.
@@ -79,7 +79,7 @@ def get_boards(guild_id: str, engine: Engine = Depends(Metastore.get_engine)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/{board_id}/messages", status_code=status.HTTP_200_OK, operation_id="addMessageToBoard")
+@boards_router.post("/{board_id}/messages", status_code=status.HTTP_200_OK, operation_id="addMessageToBoard")
 def add_message_to_board(
     board_id: str,
     request: AddMessageToBoardRequest,
@@ -105,7 +105,7 @@ def add_message_to_board(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get(
+@boards_router.get(
     "/{board_id}/messages",
     response_model=BoardMessagesResponse,
     operation_id="getBoardMessageIds",
@@ -130,7 +130,7 @@ def get_board_messages(board_id: str, engine: Engine = Depends(Metastore.get_eng
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.delete(
+@boards_router.delete(
     "/{board_id}/messages/{message_id}",
     status_code=status.HTTP_200_OK,
     operation_id="removeMessageFromBoard",
