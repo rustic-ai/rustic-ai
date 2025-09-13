@@ -138,9 +138,25 @@ Each `RoutingRule` defines how a message, upon matching certain criteria, should
     -   `origin_message_format` (str): The Pydantic model type of the original message.
 -   **`message_format`** (str, optional): The Pydantic model type (fully qualified name) of the incoming message payload this rule should match (e.g., `"rustic_ai.ui_protocol.types.TextFormat"`).
 -   **`transformer`** (Dict, optional): Defines how to transform the incoming message payload before sending it to the destination.
-    -   `expression` (str): A JSONata expression or a custom transformation logic to apply to the incoming message payload.
-    -   `output_format` (str): The Pydantic model type (fully qualified name) of the transformed payload (e.g., `"rustic_ai.agents.laira.research_manager.UserQuery"`).
-    Example: `{"expression": "{\"query\": text}", "output_format": "rustic_ai.agents.laira.research_manager.UserQuery"}`
+        -   `expression_type` (str): The type of expression language to use. Supported values: `JSONATA` and `CEL` (Common Expression Language).
+        -   `expression` (str): A JSONata or CEL expression to apply to the incoming message payload.
+        -   `output_format` (str): The Pydantic model type (fully qualified name) of the transformed payload (e.g., `"rustic_ai.agents.laira.research_manager.UserQuery"`).
+        Example (CEL):
+        ```json
+        {
+            "expression_type": "CEL",
+            "expression": "payload.value > 10 ? 'high' : 'low'",
+            "output_format": "rustic_ai.agents.laira.research_manager.UserQuery"
+        }
+        ```
+        Example (JSONATA):
+        ```json
+        {
+            "expression_type": "JSONATA",
+            "expression": "{\"query\": text}",
+            "output_format": "rustic_ai.agents.laira.research_manager.UserQuery"
+        }
+        ```
 -   **`destination`** (Dict, optional): Specifies where the (transformed) message should be sent. If `null`, the message is typically sent back to the original sender or follows routing slip logic from the incoming message.
     -   `topics` (str | List[str]): The topic(s) to publish the message to (e.g., `"echo_topic"`, `"user_message_broadcast"`).
     -   `recipient_list` (List[AgentTag]): A list of specific agents to send the message to.
@@ -150,16 +166,35 @@ Each `RoutingRule` defines how a message, upon matching certain criteria, should
 
 ### Example Route Step:
 
-This rule takes a `TextFormat` message from a `UserProxyAgent`, transforms its `text` field into a `UserQuery`'s `query` field, and sends it to the `default_topic`.
+This rule takes a `TextFormat` message from a `UserProxyAgent`, transforms its `text` field into a `UserQuery`'s `query` field, and sends it to the `default_topic`. You can use either JSONata or CEL for the transformation:
 
+**JSONata Example:**
 ```json
-// Inside RoutingSlip.steps list
 {
     "agent_type": "rustic_ai.agents.utils.user_proxy_agent.UserProxyAgent",
-    "method_name": "unwrap_and_forward_message", // From UserProxyAgent
+    "method_name": "unwrap_and_forward_message",
     "message_format": "rustic_ai.ui_protocol.types.TextFormat",
     "transformer": {
+        "expression_type": "JSONATA",
         "expression": "{\"query\": text}",
+        "output_format": "rustic_ai.agents.laira.research_manager.UserQuery"
+    },
+    "destination": {
+        "topics": "default_topic"
+    },
+    "route_times": 1
+}
+```
+
+**CEL Example:**
+```json
+{
+    "agent_type": "rustic_ai.agents.utils.user_proxy_agent.UserProxyAgent",
+    "method_name": "unwrap_and_forward_message",
+    "message_format": "rustic_ai.ui_protocol.types.TextFormat",
+    "transformer": {
+        "expression_type": "CEL",
+        "expression": "payload.text.size() > 0 ? {query: payload.text} : {query: \"empty\"}",
         "output_format": "rustic_ai.agents.laira.research_manager.UserQuery"
     },
     "destination": {
@@ -173,7 +208,7 @@ Routing slips enable powerful patterns:
 -   **Sequential Processing**: Message passed from agent A -> B -> C.
 -   **Fan-out/Fan-in**: One message triggers multiple agents, results are aggregated.
 -   **Content-Based Routing**: Message content dictates the next recipient.
--   **Transformations**: Messages are reshaped between agents to match differing interfaces.
+-   **Transformations**: Messages are reshaped between agents to match differing interfaces. You can use either JSONata or CEL for these transformations.
 
 ## Guild Lifecycle & Management
 
