@@ -27,6 +27,7 @@ from pydantic import (
 
 from rustic_ai.core.state.models import StateUpdateFormat
 from rustic_ai.core.utils import GemstoneID, JsonDict, Priority
+from rustic_ai.core.utils.cel_expr import CelExpressionEvaluator
 
 MDT = TypeVar("MDT", bound=Union[BaseModel, JsonDict])
 
@@ -39,6 +40,11 @@ class ProcessStatus(StrEnum):
     RUNNING = "running"
     ERROR = "error"
     COMPLETED = "completed"
+
+
+class ExpressionType(StrEnum):
+    JSONATA = "jsonata"
+    CEL = "cel"
 
 
 class AgentTag(BaseModel):
@@ -138,6 +144,7 @@ class Transformer(BaseModel, ABC):
 class PayloadTransformer(Transformer):
 
     output_format: Optional[str] = Field(default=MessageConstants.RAW_JSON_FORMAT)
+    expression_type: Optional[str] = Field(default=ExpressionType.JSONATA)
     expression: Optional[str] = Field(default=None)
 
     def transform(
@@ -148,14 +155,21 @@ class PayloadTransformer(Transformer):
         This transformer is basic and acts only on the payload.
         """
         data = routable.payload
+        evaluated = None
 
         try:
-            if self.expression:
+            if self.expression and self.expression_type == ExpressionType.JSONATA:
                 expr = Jsonata(self.expression)
                 evaluated = expr.evaluate(data)
-                if evaluated is None:
-                    return None
-                routable.payload = evaluated
+            elif self.expression and self.expression_type == ExpressionType.CEL:
+                evaluator = CelExpressionEvaluator()
+                evaluated = evaluator.eval(self.expression, data)
+            else:
+                raise ValueError("expression_type not found! Please set expression_type as 'jsonata' or 'cel'")
+
+            if evaluated is None:
+                return None
+            routable.payload = evaluated
 
             if self.output_format:
                 routable.format = self.output_format
@@ -169,6 +183,7 @@ class PayloadTransformer(Transformer):
 
 class FunctionalTransformer(Transformer):
 
+    expression_type: Optional[str] = Field(default=ExpressionType.JSONATA)
     handler: str
     lambdas: ClassVar[Dict[str, Callable]] = {}
 
@@ -182,11 +197,6 @@ class FunctionalTransformer(Transformer):
 
         try:
             if self.handler:
-                expr = Jsonata(self.handler)
-
-                for k, v in self.lambdas.items():
-                    expr.register_lambda(k, v)
-
                 current_dict = routable.model_dump()
                 input = {
                     "origin": origin.model_dump(
@@ -196,7 +206,21 @@ class FunctionalTransformer(Transformer):
                     "guild_state": guild_state,
                 } | current_dict
 
-                transformed = expr.evaluate(input)
+                if self.expression_type == ExpressionType.JSONATA:
+                    expr = Jsonata(self.handler)
+                    for k, v in self.lambdas.items():
+                        expr.register_lambda(k, v)
+
+                    transformed = expr.evaluate(input)
+                elif self.expression_type == ExpressionType.CEL:
+                    evaluator = CelExpressionEvaluator()
+                    for k, v in self.lambdas.items():
+                        evaluator.add_function(k, v)
+
+                    transformed = evaluator.eval(self.handler, input)
+                else:
+                    raise ValueError("expression_type not found! Please set expression_type as 'jsonata' or 'cel'")
+
                 if transformed is None:
                     return None
 
@@ -245,6 +269,7 @@ class StateTransformer(BaseModel):
         output_format (str): The format of the transformed state.
     """
 
+    expression_type: Optional[str] = Field(default=ExpressionType.JSONATA)
     update_format: StateUpdateFormat = Field(default=StateUpdateFormat.JSON_MERGE_PATCH)
     state_update: Optional[str] = Field(default=None)
 
@@ -261,7 +286,6 @@ class StateTransformer(BaseModel):
         """
         try:
             if self.state_update:
-                expr = Jsonata(self.state_update)
                 current_dict = routed.model_dump()
                 input = {
                     "origin": origin.model_dump(
@@ -272,7 +296,15 @@ class StateTransformer(BaseModel):
                     "untransformed": untransformed.model_dump(),
                 } | current_dict
 
-                transformed = expr.evaluate(input)
+                if self.expression_type == ExpressionType.JSONATA:
+                    expr = Jsonata(self.state_update)
+                    transformed = expr.evaluate(input)
+                elif self.expression_type == ExpressionType.CEL:
+                    evaluator = CelExpressionEvaluator()
+                    transformed = evaluator.eval(self.state_update, input)
+                else:
+                    raise ValueError("expression_type not found! Please set expression_type as 'jsonata' or 'cel'")
+
                 if transformed is None:
                     return None
                 else:
