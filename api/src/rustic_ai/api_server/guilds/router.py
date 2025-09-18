@@ -91,8 +91,12 @@ def relaunch_guild(guild_id: str, engine=Depends(Metastore.get_engine)):
     """
     Relaunches a guild if it is not already running.
     """
-    is_relaunching = guild_service.relaunch_guild(guild_id, engine)
-    return RelaunchResponse(is_relaunching=is_relaunching)
+    try:
+        is_relaunching = guild_service.relaunch_guild(guild_id, engine)
+        return RelaunchResponse(is_relaunching=is_relaunching)
+    except Exception as e:
+        logging.exception(e)
+        raise
 
 
 @router.get("/guilds/{guild_id}/{user_id}/messages", operation_id="getHistoricalUserMessages")
