@@ -1,3 +1,4 @@
+import logging
 from typing import Any, AsyncGenerator, List
 
 from fsspec.implementations.dirfs import DirFileSystem as FileSystem
@@ -34,6 +35,7 @@ class JSONPathChunker(ChunkerPlugin):
 
             data: Any = json.loads(content) if content else None
         except Exception:
+            logging.warning("Failed to load JSON", exc_info=True)
             data = None
 
         idx = 0

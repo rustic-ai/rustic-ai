@@ -16,6 +16,7 @@ from .kbindex_backend import KBIndexBackend, SearchResult
 from .knol_utils import KnolUtils
 from .model import Knol
 from .pipeline_executor import EmittedRow, PipelineExecutor, ResolvedPipeline
+from .query import SearchQuery
 
 
 class KnowledgeBase:
@@ -92,19 +93,49 @@ class KnowledgeBase:
     async def delete_chunks(self, *, table_name: str, chunk_ids: Sequence[str]) -> None:
         await self.index.delete_by_chunk_ids(table_name=table_name, chunk_ids=list(chunk_ids))
 
-    async def search(
-        self,
-        *,
-        table_name: str,
-        vector_column: str,
-        query_vector: List[float],
-        limit: int = 20,
-        filter=None,
-    ) -> List[SearchResult]:
-        return await self.index.search(
-            table_name=table_name,
-            vector_column=vector_column,
-            query_vector=query_vector,
-            limit=limit,
-            filter=filter,
-        )
+    async def search(self, *, query: SearchQuery) -> List[SearchResult]:
+        # If single target, defer directly to backend
+        if len(query.targets) <= 1:
+            return await self.index.search(query=query)
+
+        # Multi-target fanout with simple linear fusion and per-target weighting
+        # Strategy: call backend for each target separately using same orchestrator-level args
+        # Aggregate results by chunk_id with weighted score sum, then take top-N
+        fused: dict[str, float] = {}
+        payload_by_id: dict[str, dict] = {}
+
+        # For each target, search with a single-target query clone
+        for tgt in query.targets:
+            subq = SearchQuery(
+                text=query.text,
+                vector=query.vector,
+                targets=[tgt],
+                hybrid=query.hybrid,
+                filter=query.filter,
+                aggregations=query.aggregations,
+                expansion=query.expansion,
+                rerank=query.rerank,
+                rerank_candidates=query.rerank_candidates,
+                limit=query.rerank_candidates or max(query.limit, 50),
+                offset=0,
+                highlight=query.highlight,
+                explain=query.explain,
+            )
+            results = await self.index.search(query=subq)
+            weight = float(getattr(tgt, "weight", 1.0) or 1.0)
+            # Min-max normalize per target for simple fusion stability
+            if results:
+                svals = [r.score for r in results]
+                smin, smax = min(svals), max(svals)
+                for r in results:
+                    if smax > smin:
+                        norm = (r.score - smin) / (smax - smin)
+                    else:
+                        norm = 0.0
+                    fused[r.chunk_id] = fused.get(r.chunk_id, 0.0) + weight * norm
+                    payload_by_id.setdefault(r.chunk_id, r.payload)
+
+        # Materialize fused list
+        ranked = sorted(((score, cid) for cid, score in fused.items()), key=lambda t: t[0], reverse=True)
+        top = ranked[query.offset : query.offset + query.limit]
+        return [SearchResult(chunk_id=cid, score=score, payload=payload_by_id.get(cid, {})) for score, cid in top]

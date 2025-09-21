@@ -18,19 +18,6 @@ from .model import Knol
 from .plugins import ChunkerPlugin, EmbedderPlugin, ProjectorPlugin
 
 
-class PipelineExecutionReport(BaseModel):
-    """Optional summary of an execution (kept minimal, orthogonal to storage)."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    knol_id: str
-    chunks_seen: int = 0
-    chunks_embedded: int = 0
-    vectors_by_space: Dict[str, int] = Field(default_factory=dict)
-    success: bool = True
-    errors: List[str] = Field(default_factory=list)
-
-
 class EmittedRow(BaseModel):
     """Schema-agnostic record representing one source chunk and its vectors.
 

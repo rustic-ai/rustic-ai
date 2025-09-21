@@ -7,6 +7,13 @@ from rustic_ai.core.knowledgebase.kbindex_backend_memory import InMemoryKBIndexB
 from rustic_ai.core.knowledgebase.metadata import CommonMetaPart
 from rustic_ai.core.knowledgebase.model import Knol
 from rustic_ai.core.knowledgebase.pipeline_executor import EmittedRow
+from rustic_ai.core.knowledgebase.query import (
+    BoolFilter,
+    FilterClause,
+    FilterOp,
+    SearchQuery,
+    SearchTarget,
+)
 from rustic_ai.core.knowledgebase.schema import (
     ColumnSpec,
     KBSchema,
@@ -84,7 +91,12 @@ async def test_memory_backend_upsert_and_search():
 
     # Search by vector
     res = await be.search(
-        table_name="text_chunks", vector_column="vs_a", query_vector=[1.0, 0.0], limit=10, filter={"language": "en"}
+        query=SearchQuery(
+            vector=[1.0, 0.0],
+            targets=[SearchTarget(table_name="text_chunks", vector_column="vs_a")],
+            limit=10,
+            filter=BoolFilter(must=[FilterClause(field="language", op=FilterOp.EQ, value="en")]),
+        )
     )
     assert len(res) == 1
     assert res[0].chunk_id == row.chunk_id
@@ -94,7 +106,12 @@ async def test_memory_backend_upsert_and_search():
 
     # Negative filter returns empty
     res2 = await be.search(
-        table_name="text_chunks", vector_column="vs_a", query_vector=[1.0, 0.0], limit=10, filter={"language": "fr"}
+        query=SearchQuery(
+            vector=[1.0, 0.0],
+            targets=[SearchTarget(table_name="text_chunks", vector_column="vs_a")],
+            limit=10,
+            filter=BoolFilter(must=[FilterClause(field="language", op=FilterOp.EQ, value="fr")]),
+        )
     )
     assert res2 == []
 
@@ -107,11 +124,23 @@ async def test_memory_backend_delete():
 
     row = _row("k2", "goodbye")
     await be.upsert(table_name="text_chunks", rows=_aiter_one(row))
-    res = await be.search(table_name="text_chunks", vector_column="vs_a", query_vector=[1.0, 0.0], limit=10)
+    res = await be.search(
+        query=SearchQuery(
+            vector=[1.0, 0.0],
+            targets=[SearchTarget(table_name="text_chunks", vector_column="vs_a")],
+            limit=10,
+        )
+    )
     assert len(res) == 1
 
     await be.delete_by_chunk_ids(table_name="text_chunks", chunk_ids=[row.chunk_id])
-    res2 = await be.search(table_name="text_chunks", vector_column="vs_a", query_vector=[1.0, 0.0], limit=10)
+    res2 = await be.search(
+        query=SearchQuery(
+            vector=[1.0, 0.0],
+            targets=[SearchTarget(table_name="text_chunks", vector_column="vs_a")],
+            limit=10,
+        )
+    )
     assert res2 == []
 
 
@@ -137,5 +166,11 @@ async def test_memory_backend_unknown_vector_is_skipped():
     row = EmittedRow(chunk_id=chunk.id, knol=knol, chunk=chunk, vectors={"vs_unknown": [0.0, 0.0]})
     await be.upsert(table_name="text_chunks", rows=_aiter_one(row))
 
-    res = await be.search(table_name="text_chunks", vector_column="vs_a", query_vector=[0.0, 1.0], limit=10)
+    res = await be.search(
+        query=SearchQuery(
+            vector=[0.0, 1.0],
+            targets=[SearchTarget(table_name="text_chunks", vector_column="vs_a")],
+            limit=10,
+        )
+    )
     assert res == []

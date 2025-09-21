@@ -7,11 +7,12 @@ ColumnSpec selectors (source=knol|chunk|meta) can extract values from EmittedRow
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, AsyncIterable, Dict, List, Optional, Sequence
+from typing import Any, AsyncIterable, Dict, List, Sequence
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from .pipeline_executor import EmittedRow
+from .query import SearchQuery
 from .schema import KBSchema
 
 
@@ -79,25 +80,13 @@ class KBIndexBackend(ABC):
     async def search(
         self,
         *,
-        table_name: str,
-        vector_column: str,
-        query_vector: List[float],
-        limit: int = 20,
-        filter: Optional[Any] = None,
+        query: SearchQuery,
     ) -> List[SearchResult]:
         """Run vector search with optional scalar filtering.
 
         Args:
-            table_name: Target table/collection
-            vector_column: Name of the vector column to search
-            query_vector: Query embedding
-            limit: Max results
-            filter: Backend-specific filter (expression or dict)
+            query: SearchQuery. Implementations may assume a single target
+                (first entry of query.targets) and ignore orchestrator-level
+                concerns like reranking or expansion.
         """
         raise NotImplementedError
-
-
-__all__ = [
-    "KBIndexBackend",
-    "SearchResult",
-]
