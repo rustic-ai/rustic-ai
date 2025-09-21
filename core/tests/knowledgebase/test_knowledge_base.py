@@ -241,6 +241,105 @@ async def test_hybrid_text_search_dense_and_sparse(filesystem: FileSystem):
     assert hybrid[0].chunk_id.endswith(":1")
 
 
+@pytest.mark.asyncio
+async def test_explain_single_target_includes_timings_and_targets(filesystem: FileSystem):
+    schema = _schema_text()
+    cfg = _kb_config(schema)
+    executor = SimplePipelineExecutor()
+    backend = InMemoryKBIndexBackend()
+    kb = KnowledgeBase(
+        config=cfg, filesystem=filesystem, library_path="library", executor=executor, index_backend=backend
+    )
+
+    await kb.ensure_ready()
+    resolved = kb.resolve_pipelines([("p1", "vs_a")])
+    await kb.ingest_knol(knol=_knol(), table_name="text_chunks", pipelines=resolved)
+
+    wrap = await kb.search(
+        query=SearchQuery(
+            vector=[1.0, 0.0], targets=[SearchTarget(table_name="text_chunks", vector_column="vs_a")], limit=10
+        )
+    )
+    assert wrap.search_duration_ms is not None and wrap.search_duration_ms >= 0.0
+    assert wrap.explain is not None
+    exp = wrap.explain
+    assert exp.fusion.value in ("linear", "rrf")
+    assert exp.targets_used and len(exp.targets_used) == 1
+    tu = exp.targets_used[0]
+    assert tu.table_name == "text_chunks" and tu.vector_column == "vs_a"
+    assert tu.requested == 10 and tu.returned >= 1
+    assert tu.duration_ms >= 0.0
+    # Retrieval counts and timings
+    key = f"{tu.table_name}.{tu.vector_column}"
+    assert exp.retrieval_counts.get(key) == tu.returned
+    assert f"t.{key}" in exp.timings_ms
+
+
+@pytest.mark.asyncio
+async def test_explain_includes_rerank_metadata(filesystem: FileSystem):
+    schema = _schema_text()
+    cfg = _kb_config(schema)
+    # Add a reranker
+    cfg.plugins.rerankers["rrf"] = RRFReranker(id="rrf")
+    executor = SimplePipelineExecutor()
+    backend = InMemoryKBIndexBackend()
+    kb = KnowledgeBase(
+        config=cfg, filesystem=filesystem, library_path="library", executor=executor, index_backend=backend
+    )
+    await kb.ensure_ready()
+    resolved = kb.resolve_pipelines([("p1", "vs_a")])
+    await kb.ingest_knol(knol=_knol(), table_name="text_chunks", pipelines=resolved)
+
+    wrap = await kb.search(
+        query=SearchQuery(
+            vector=[1.0, 0.0],
+            targets=[SearchTarget(table_name="text_chunks", vector_column="vs_a")],
+            limit=10,
+            rerank=RerankOptions(strategy=RerankStrategy.RRF, model="rrf", top_n=10),
+        )
+    )
+    assert wrap.explain is not None
+    exp = wrap.explain
+    assert exp.rerank_used is True
+    assert exp.rerank_strategy == RerankStrategy.RRF
+    assert exp.rerank_model == "rrf"
+    assert exp.timings_ms.get("rerank") is not None
+
+
+@pytest.mark.asyncio
+async def test_explain_multitable_targets_and_norm_ranges(filesystem: FileSystem):
+    schema = _schema_text_multi()
+    cfg = _kb_config_multi(schema)
+    executor = SimplePipelineExecutor()
+    backend = InMemoryKBIndexBackend()
+    kb = KnowledgeBase(
+        config=cfg, filesystem=filesystem, library_path="library", executor=executor, index_backend=backend
+    )
+
+    await kb.ensure_ready()
+    resolved = kb.resolve_pipelines([("p1", "vs_a"), ("p2", "vs_a")])
+    await kb.ingest_knol(knol=_knol(), table_name="text_chunks", pipelines=[p for p in resolved if p.id == "p1"])
+    await kb.ingest_knol(knol=_knol2(), table_name="notes_chunks", pipelines=[p for p in resolved if p.id == "p2"])
+
+    wrap = await kb.search(
+        query=SearchQuery(
+            vector=[1.0, 0.0],
+            targets=[
+                SearchTarget(table_name="text_chunks", vector_column="vs_a", weight=1.0),
+                SearchTarget(table_name="notes_chunks", vector_column="vs_a", weight=0.5),
+            ],
+            limit=5,
+        )
+    )
+    assert wrap.explain is not None
+    exp = wrap.explain
+    # We should have two targets with norm ranges recorded
+    assert len(exp.targets_used) == 2
+    for t in exp.targets_used:
+        assert t.norm_min is None or isinstance(t.norm_min, float)
+        assert t.norm_max is None or isinstance(t.norm_max, float)
+
+
 def _kb_config_with_reranker(schema: KBSchema) -> KBConfig:
     cfg = _kb_config(schema)
     cfg.plugins.rerankers["rrf"] = RRFReranker(id="rrf")

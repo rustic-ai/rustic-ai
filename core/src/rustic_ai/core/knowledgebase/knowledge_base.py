@@ -7,6 +7,8 @@ This class keeps responsibilities minimal:
 - Thin wrappers for search and deletes
 """
 
+import time
+import uuid
 from typing import AsyncIterator, Dict, List, Sequence, Tuple
 
 from fsspec.implementations.dirfs import DirFileSystem as FileSystem
@@ -20,6 +22,7 @@ from .query import (
     ExplainData,
     ExplainTargetStat,
     FusionStrategy,
+    NormalizationMethod,
     RerankStrategy,
     SearchQuery,
     SearchResult,
@@ -105,8 +108,24 @@ class KnowledgeBase:
         # If single target, defer directly to backend
         targets_stats: List[ExplainTargetStat] = []
         norm_ranges: Dict[str, Tuple[float, float]] = {}
+        t0 = time.perf_counter()
+        trace_id = str(uuid.uuid4())
         if len(query.targets) <= 1:
+            t_bt0 = time.perf_counter()
             initial_results = await self.index.search(query=query)
+            t_bt1 = time.perf_counter()
+            # Record single-target timing
+            tgt = query.targets[0]
+            targets_stats.append(
+                ExplainTargetStat(
+                    table_name=tgt.table_name,
+                    vector_column=tgt.vector_column,
+                    weight=float(getattr(tgt, "weight", 1.0) or 1.0),
+                    requested=query.limit,
+                    returned=len(initial_results),
+                    duration_ms=(t_bt1 - t_bt0) * 1000.0,
+                )
+            )
         else:
             # Multi-target fanout with simple linear fusion and per-target weighting
             initial_results, targets_stats, norm_ranges = await self._fanout_search(query)
@@ -115,13 +134,26 @@ class KnowledgeBase:
         rerank_options = query.rerank
         if rerank_options.strategy == RerankStrategy.NONE or not self.config.plugins.rerankers:
             fusion_mode = query.hybrid.fusion_strategy if query.hybrid else FusionStrategy.LINEAR
+            t1 = time.perf_counter()
             return SearchResults(
                 results=initial_results,
                 explain=ExplainData(
                     fusion=fusion_mode,
                     weighting=query.hybrid,
                     targets_used=targets_stats,
+                    retrieval_counts={
+                        f"{s.table_name}.{s.vector_column}": s.returned for s in targets_stats
+                    },
+                    timings_ms={
+                        "total": (t1 - t0) * 1000.0,
+                        **{
+                            f"t.{s.table_name}.{s.vector_column}": s.duration_ms for s in targets_stats
+                        },
+                    },
+                    normalization_method=NormalizationMethod.MINMAX,
+                    trace_id=trace_id,
                 ),
+                search_duration_ms=(t1 - t0) * 1000.0,
             )
 
         reranker_id = rerank_options.model
@@ -131,24 +163,40 @@ class KnowledgeBase:
         reranker = self.config.plugins.rerankers.get(reranker_id) if reranker_id else None
         if not reranker:
             fusion_mode = query.hybrid.fusion_strategy if query.hybrid else FusionStrategy.LINEAR
+            t1 = time.perf_counter()
             return SearchResults(
                 results=initial_results,
                 explain=ExplainData(
                     fusion=fusion_mode,
                     weighting=query.hybrid,
                     targets_used=targets_stats,
+                    retrieval_counts={
+                        f"{s.table_name}.{s.vector_column}": s.returned for s in targets_stats
+                    },
+                    timings_ms={
+                        "total": (t1 - t0) * 1000.0,
+                        **{
+                            f"t.{s.table_name}.{s.vector_column}": s.duration_ms for s in targets_stats
+                        },
+                    },
+                    normalization_method=NormalizationMethod.MINMAX,
+                    trace_id=trace_id,
                     notes=["No reranker found; returning initial results"],
                 ),
+                search_duration_ms=(t1 - t0) * 1000.0,
             )
 
         # Rerank top N candidates
         candidates = initial_results[: rerank_options.top_n]
         remainder = initial_results[rerank_options.top_n :]
 
+        t_rrf0 = time.perf_counter()
         reranked_candidates = await reranker.rerank(results=candidates, query=query)
+        t_rrf1 = time.perf_counter()
 
         final_results = reranked_candidates + remainder
         fusion_mode = query.hybrid.fusion_strategy if query.hybrid else FusionStrategy.LINEAR
+        t1 = time.perf_counter()
         explain = ExplainData(
             fusion=fusion_mode,
             weighting=query.hybrid,
@@ -156,8 +204,22 @@ class KnowledgeBase:
             rerank_used=True,
             rerank_strategy=rerank_options.strategy,
             rerank_model=reranker_id,
+            retrieval_counts={
+                f"{s.table_name}.{s.vector_column}": s.returned for s in targets_stats
+            },
+            timings_ms={
+                "total": (t1 - t0) * 1000.0,
+                "rerank": (t_rrf1 - t_rrf0) * 1000.0,
+                **{f"t.{s.table_name}.{s.vector_column}": s.duration_ms for s in targets_stats},
+            },
+            normalization_method=NormalizationMethod.MINMAX,
+            trace_id=trace_id,
         )
-        return SearchResults(results=final_results[: query.limit], explain=explain)
+        return SearchResults(
+            results=final_results[: query.limit],
+            explain=explain,
+            search_duration_ms=(t1 - t0) * 1000.0,
+        )
 
     async def _fanout_search(
         self, query: SearchQuery
@@ -185,7 +247,9 @@ class KnowledgeBase:
                 highlight=query.highlight,
                 explain=query.explain,
             )
+            t_bt0 = time.perf_counter()
             results = await self.index.search(query=subq)
+            t_bt1 = time.perf_counter()
             weight = float(getattr(tgt, "weight", 1.0) or 1.0)
             # Min-max normalize per target for simple fusion stability
             if results:
@@ -207,6 +271,9 @@ class KnowledgeBase:
                     weight=weight,
                     requested=subq.limit,
                     returned=len(results),
+                    duration_ms=(t_bt1 - t_bt0) * 1000.0,
+                    norm_min=norm_ranges.get(f"{tgt.table_name}.{tgt.vector_column}", (None, None))[0],
+                    norm_max=norm_ranges.get(f"{tgt.table_name}.{tgt.vector_column}", (None, None))[1],
                 )
             )
 

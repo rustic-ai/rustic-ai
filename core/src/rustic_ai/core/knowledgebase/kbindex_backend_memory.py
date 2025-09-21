@@ -130,7 +130,22 @@ class InMemoryKBIndexBackend(KBIndexBackend):
 
         out.sort(key=lambda t: t[0], reverse=True)
         top = out[: max(1, int(limit))]
-        return [SearchResult(chunk_id=rec.chunk_id, score=score, payload=dict(rec.columns)) for score, rec in top]
+        results: List[SearchResult] = [SearchResult(chunk_id=rec.chunk_id, score=score, payload=dict(rec.columns)) for score, rec in top]
+        # Attach debug breakdown when explain=True
+        if getattr(query, "explain", False):
+            dense_by_id: Dict[str, float] = {rec.chunk_id: s for s, rec in dense_scores}
+            sparse_by_id: Dict[str, float] = {rec.chunk_id: s for s, rec in sparse_scores}
+            for r in results:
+                dbg = {
+                    "score_breakdown": {
+                        "dense_score": dense_by_id.get(r.chunk_id),
+                        "sparse_score": sparse_by_id.get(r.chunk_id),
+                        "hybrid_score": r.score,
+                    },
+                    "distance": vspec.distance,
+                }
+                r.payload["_debug"] = dbg
+        return results
 
     # ---- Helpers: filtering ----
     def _eval_bool_clause(self, rec: _RowRecord, clause: FilterClause) -> bool:

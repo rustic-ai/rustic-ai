@@ -173,6 +173,22 @@ class SearchResult(BaseModel):
     payload: Dict[str, Any] = Field(default_factory=dict, description="Optional scalar fields returned by backend")
 
 
+class NormalizationMethod(str, Enum):
+    NONE = "none"
+    MINMAX = "minmax"
+    ZSCORE = "zscore"
+    DISTANCE_TO_SIMILARITY = "distance_to_similarity"
+
+
+class ScoreBreakdown(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    dense_score: Optional[float] = None
+    sparse_score: Optional[float] = None
+    hybrid_score: Optional[float] = None
+    rerank_score: Optional[float] = None
+
+
 class ExplainTargetStat(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -197,6 +213,8 @@ class ExplainData(BaseModel):
     rerank_used: bool = False
     rerank_strategy: Optional[RerankStrategy] = None
     rerank_model: Optional[str] = None
+    normalization_method: NormalizationMethod = NormalizationMethod.MINMAX
+    trace_id: Optional[str] = None
     notes: List[str] = Field(default_factory=list)
 
 
@@ -205,3 +223,4 @@ class SearchResults(BaseModel):
 
     results: List[SearchResult] = Field(default_factory=list)
     explain: Optional[ExplainData] = None
+    search_duration_ms: Optional[float] = None
