@@ -163,3 +163,11 @@ class SearchQuery(BaseModel):
     offset: int = Field(0, ge=0)
     highlight: Optional[HighlightOptions] = None
     explain: bool = False
+
+
+class SearchResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    chunk_id: str = Field(description="Identifier of the matched chunk")
+    score: float = Field(description="Similarity score (higher is better unless backend returns distance)")
+    payload: Dict[str, Any] = Field(default_factory=dict, description="Optional scalar fields returned by backend")

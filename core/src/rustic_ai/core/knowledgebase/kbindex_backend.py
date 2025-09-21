@@ -7,21 +7,11 @@ ColumnSpec selectors (source=knol|chunk|meta) can extract values from EmittedRow
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, AsyncIterable, Dict, List, Sequence
-
-from pydantic import BaseModel, ConfigDict, Field
+from typing import AsyncIterable, List, Sequence
 
 from .pipeline_executor import EmittedRow
-from .query import SearchQuery
+from .query import SearchQuery, SearchResult
 from .schema import KBSchema
-
-
-class SearchResult(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    chunk_id: str = Field(description="Identifier of the matched chunk")
-    score: float = Field(description="Similarity score (higher is better unless backend returns distance)")
-    payload: Dict[str, Any] = Field(default_factory=dict, description="Optional scalar fields returned by backend")
 
 
 class KBIndexBackend(ABC):

@@ -12,11 +12,11 @@ from typing import AsyncIterator, List, Sequence, Tuple
 from fsspec.implementations.dirfs import DirFileSystem as FileSystem
 
 from .config import KBConfig
-from .kbindex_backend import KBIndexBackend, SearchResult
+from .kbindex_backend import KBIndexBackend
 from .knol_utils import KnolUtils
 from .model import Knol
 from .pipeline_executor import EmittedRow, PipelineExecutor, ResolvedPipeline
-from .query import SearchQuery
+from .query import RerankStrategy, SearchQuery, SearchResult
 
 
 class KnowledgeBase:
@@ -96,11 +96,35 @@ class KnowledgeBase:
     async def search(self, *, query: SearchQuery) -> List[SearchResult]:
         # If single target, defer directly to backend
         if len(query.targets) <= 1:
-            return await self.index.search(query=query)
+            initial_results = await self.index.search(query=query)
+        else:
+            # Multi-target fanout with simple linear fusion and per-target weighting
+            initial_results = await self._fanout_search(query)
 
-        # Multi-target fanout with simple linear fusion and per-target weighting
-        # Strategy: call backend for each target separately using same orchestrator-level args
-        # Aggregate results by chunk_id with weighted score sum, then take top-N
+        # Apply reranking if configured
+        rerank_options = query.rerank
+        if rerank_options.strategy == RerankStrategy.NONE or not self.config.plugins.rerankers:
+            return initial_results
+
+        reranker_id = rerank_options.model
+        if not reranker_id:
+            reranker_id = next(iter(self.config.plugins.rerankers.keys()), None)
+
+        reranker = self.config.plugins.rerankers.get(reranker_id) if reranker_id else None
+        if not reranker:
+            return initial_results  # Or log a warning
+
+        # Rerank top N candidates
+        candidates = initial_results[: rerank_options.top_n]
+        remainder = initial_results[rerank_options.top_n :]
+
+        reranked_candidates = await reranker.rerank(results=candidates, query=query)
+
+        final_results = reranked_candidates + remainder
+        return final_results[: query.limit]
+
+    async def _fanout_search(self, query: SearchQuery) -> List[SearchResult]:
+        """Multi-target fanout with simple linear fusion and per-target weighting."""
         fused: dict[str, float] = {}
         payload_by_id: dict[str, dict] = {}
 

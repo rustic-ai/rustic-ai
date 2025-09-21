@@ -12,9 +12,9 @@ from typing import Any, AsyncIterable, Dict, List, Optional, Sequence, Tuple
 
 from pydantic import BaseModel
 
-from .kbindex_backend import KBIndexBackend, SearchResult
+from .kbindex_backend import KBIndexBackend
 from .pipeline_executor import EmittedRow
-from .query import BoolFilter, FilterClause, FilterOp, SearchQuery
+from .query import BoolFilter, FilterClause, FilterOp, SearchQuery, SearchResult
 from .schema import KBSchema, TableSpec, VectorSpec
 
 

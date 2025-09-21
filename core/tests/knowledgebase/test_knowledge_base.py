@@ -20,7 +20,14 @@ from rustic_ai.core.knowledgebase.pipeline import (
 )
 from rustic_ai.core.knowledgebase.pipeline_executor import SimplePipelineExecutor
 from rustic_ai.core.knowledgebase.plugins import ChunkerPlugin, EmbedderPlugin
-from rustic_ai.core.knowledgebase.query import HybridOptions, SearchQuery, SearchTarget
+from rustic_ai.core.knowledgebase.query import (
+    HybridOptions,
+    RerankOptions,
+    RerankStrategy,
+    SearchQuery,
+    SearchTarget,
+)
+from rustic_ai.core.knowledgebase.rerankers.rrf import RRFReranker
 from rustic_ai.core.knowledgebase.schema import (
     ColumnSpec,
     KBSchema,
@@ -228,6 +235,54 @@ async def test_hybrid_text_search_dense_and_sparse(filesystem: FileSystem):
     )
     assert len(hybrid) >= 1
     assert hybrid[0].chunk_id.endswith(":1")
+
+
+def _kb_config_with_reranker(schema: KBSchema) -> KBConfig:
+    cfg = _kb_config(schema)
+    cfg.plugins.rerankers["rrf"] = RRFReranker(id="rrf")
+    return cfg
+
+
+@pytest.mark.asyncio
+async def test_search_with_reranker(filesystem: FileSystem):
+    schema = _schema_text()
+    cfg = _kb_config_with_reranker(schema)
+    executor = SimplePipelineExecutor()
+    backend = InMemoryKBIndexBackend()
+    kb = KnowledgeBase(
+        config=cfg, filesystem=filesystem, library_path="library", executor=executor, index_backend=backend
+    )
+
+    await kb.ensure_ready()
+    resolved = kb.resolve_pipelines([("p1", "vs_a")])
+    await kb.ingest_knol(knol=_knol(), table_name="text_chunks", pipelines=resolved)
+
+    # Initial search (dense-only) prefers chunk 0
+    query_no_rerank = SearchQuery(
+        vector=[1.0, 0.0],
+        targets=[SearchTarget(table_name="text_chunks", vector_column="vs_a")],
+        limit=10,
+    )
+    results_no_rerank = await kb.search(query=query_no_rerank)
+    assert len(results_no_rerank) == 2
+    assert results_no_rerank[0].chunk_id.endswith(":0")
+    original_score_0 = results_no_rerank[0].score
+    original_score_1 = results_no_rerank[1].score
+    assert original_score_0 > original_score_1
+
+    # Search with RRF reranking. The scores should change according to RRF formula.
+    query_with_rerank = SearchQuery(
+        vector=[1.0, 0.0],
+        targets=[SearchTarget(table_name="text_chunks", vector_column="vs_a")],
+        limit=10,
+        rerank=RerankOptions(strategy=RerankStrategy.RRF, model="rrf", top_n=10),
+    )
+    results_reranked = await kb.search(query=query_with_rerank)
+    assert len(results_reranked) == 2
+    assert results_reranked[0].chunk_id.endswith(":0")  # Order should be preserved as RRF is rank-based
+    # Check that scores have been transformed
+    assert results_reranked[0].score == 1.0 / (60 + 1)
+    assert results_reranked[1].score == 1.0 / (60 + 2)
 
 
 def _schema_text_multi() -> KBSchema:

@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 from rustic_ai.core.utils.basic_class_utils import get_class_from_name
 
 from .pipeline import PipelineSpec
-from .plugins import ChunkerPlugin, EmbedderPlugin, ProjectorPlugin
+from .plugins import ChunkerPlugin, EmbedderPlugin, ProjectorPlugin, RerankerPlugin
 from .schema import KBSchema
 
 T = TypeVar("T")
@@ -77,6 +77,7 @@ class PluginRegistry(BaseModel):
     chunkers: Dict[str, ChunkerPlugin] = Field(default_factory=dict)
     projectors: Dict[str, ProjectorPlugin] = Field(default_factory=dict)
     embedders: Dict[str, EmbedderPlugin] = Field(default_factory=dict)
+    rerankers: Dict[str, RerankerPlugin] = Field(default_factory=dict)
 
     @field_validator("chunkers", mode="before")
     @classmethod
@@ -92,6 +93,11 @@ class PluginRegistry(BaseModel):
     @classmethod
     def _coerce_embedders(cls, v):
         return build_plugin_map(v, EmbedderPlugin)
+
+    @field_validator("rerankers", mode="before")
+    @classmethod
+    def _coerce_rerankers(cls, v):
+        return build_plugin_map(v, RerankerPlugin)
 
 
 class KBConfig(BaseModel):

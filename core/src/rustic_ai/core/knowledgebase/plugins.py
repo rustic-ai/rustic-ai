@@ -8,6 +8,7 @@ from rustic_ai.core.knowledgebase.knol_utils import KnolUtils
 
 from .chunks import ChunkBase
 from .model import Knol, Modality, Vector
+from .query import SearchQuery, SearchResult
 from .schema import DistanceType
 
 
@@ -167,6 +168,30 @@ class ChunkerPlugin(KBPlugin, ABC):
         if False:
             # Hint to type-checker: this is an async generator
             yield cast(ChunkBase, None)
+        raise NotImplementedError
+
+
+class RerankerPlugin(KBPlugin, ABC):
+    """Abstract base class for second-stage reranking of search results."""
+
+    @abstractmethod
+    async def rerank(
+        self,
+        *,
+        results: List["SearchResult"],
+        query: SearchQuery,
+    ) -> List["SearchResult"]:
+        """
+        Rerank a list of search results based on the original query.
+
+        Args:
+            results: The initial list of SearchResult objects from the backend.
+            query: The original SearchQuery object.
+
+        Returns:
+            A new list of SearchResult objects, sorted according to the
+            reranking strategy, with potentially updated scores.
+        """
         raise NotImplementedError
 
 
