@@ -93,7 +93,13 @@ class InMemoryKBIndexBackend(KBIndexBackend):
             return []
 
         # Determine signals
-        qvec: Optional[List[float]] = [float(x) for x in query.vector] if query.vector is not None else None
+        # Prefer per-target query vector when provided
+        qvec: Optional[List[float]] = None
+        if getattr(query, "targets", None) and query.targets[0].query_vector is not None:
+            qvec = [float(x) for x in query.targets[0].query_vector or []]
+        # Global vector removed from SearchQuery; keep fallback for compatibility if present
+        elif getattr(query, "vector", None) is not None:  # type: ignore[attr-defined]
+            qvec = [float(x) for x in getattr(query, "vector")]  # type: ignore[index]
         qtext: Optional[str] = query.text or None
 
         # Sparse stats

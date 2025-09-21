@@ -118,6 +118,10 @@ class SearchTarget(BaseModel):
     table_name: str
     vector_column: str
     weight: float = Field(1.0, gt=0)
+    query_vector: Optional[List[float]] = Field(
+        default=None,
+        description="Optional per-target dense vector. If present, overrides any global vector usage.",
+    )
 
 
 class SearchQuery(BaseModel):
@@ -129,16 +133,9 @@ class SearchQuery(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    # Core input signals
+    # Core input signals (global text)
     text: Optional[str] = Field(
         None, description="Primary query text. Used for keyword search and/or to generate query vectors."
-    )
-    vector: Optional[List[float]] = Field(
-        None,
-        description=(
-            "Optional pre-computed query vector. When searching multiple targets, the orchestrator may "
-            "only use this vector for targets whose vector space dimension matches."
-        ),
     )
 
     # Search scopes

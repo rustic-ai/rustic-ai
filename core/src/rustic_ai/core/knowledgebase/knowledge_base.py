@@ -234,7 +234,6 @@ class KnowledgeBase:
         for tgt in query.targets:
             subq = SearchQuery(
                 text=query.text,
-                vector=query.vector,
                 targets=[tgt],
                 hybrid=query.hybrid,
                 filter=query.filter,

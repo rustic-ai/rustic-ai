@@ -178,8 +178,7 @@ async def test_kb_resolve_pipelines_and_ingest(filesystem: FileSystem):
 
     results_wrap = await kb.search(
         query=SearchQuery(
-            vector=[1.0, 0.0],
-            targets=[SearchTarget(table_name="text_chunks", vector_column="vs_a")],
+            targets=[SearchTarget(table_name="text_chunks", vector_column="vs_a", query_vector=[1.0, 0.0])],
             limit=10,
         )
     )
@@ -209,7 +208,7 @@ async def test_hybrid_text_search_dense_and_sparse(filesystem: FileSystem):
     # Dense-only should prefer chunk index 0 (embedding [1,0])
     dense_only_wrap = await kb.search(
         query=SearchQuery(
-            vector=[1.0, 0.0], targets=[SearchTarget(table_name="text_chunks", vector_column="vs_a")], limit=10
+            targets=[SearchTarget(table_name="text_chunks", vector_column="vs_a", query_vector=[1.0, 0.0])], limit=10
         )
     )
     dense_only = dense_only_wrap.results
@@ -230,8 +229,7 @@ async def test_hybrid_text_search_dense_and_sparse(filesystem: FileSystem):
     hybrid_wrap = await kb.search(
         query=SearchQuery(
             text="second",
-            vector=[1.0, 0.0],
-            targets=[SearchTarget(table_name="text_chunks", vector_column="vs_a")],
+            targets=[SearchTarget(table_name="text_chunks", vector_column="vs_a", query_vector=[1.0, 0.0])],
             hybrid=HybridOptions(dense_weight=0.3, sparse_weight=0.7),
             limit=10,
         )
@@ -257,7 +255,7 @@ async def test_explain_single_target_includes_timings_and_targets(filesystem: Fi
 
     wrap = await kb.search(
         query=SearchQuery(
-            vector=[1.0, 0.0], targets=[SearchTarget(table_name="text_chunks", vector_column="vs_a")], limit=10
+            targets=[SearchTarget(table_name="text_chunks", vector_column="vs_a", query_vector=[1.0, 0.0])], limit=10
         )
     )
     assert wrap.search_duration_ms is not None and wrap.search_duration_ms >= 0.0
@@ -292,8 +290,7 @@ async def test_explain_includes_rerank_metadata(filesystem: FileSystem):
 
     wrap = await kb.search(
         query=SearchQuery(
-            vector=[1.0, 0.0],
-            targets=[SearchTarget(table_name="text_chunks", vector_column="vs_a")],
+            targets=[SearchTarget(table_name="text_chunks", vector_column="vs_a", query_vector=[1.0, 0.0])],
             limit=10,
             rerank=RerankOptions(strategy=RerankStrategy.RRF, model="rrf", top_n=10),
         )
@@ -323,10 +320,9 @@ async def test_explain_multitable_targets_and_norm_ranges(filesystem: FileSystem
 
     wrap = await kb.search(
         query=SearchQuery(
-            vector=[1.0, 0.0],
             targets=[
-                SearchTarget(table_name="text_chunks", vector_column="vs_a", weight=1.0),
-                SearchTarget(table_name="notes_chunks", vector_column="vs_a", weight=0.5),
+                SearchTarget(table_name="text_chunks", vector_column="vs_a", weight=1.0, query_vector=[1.0, 0.0]),
+                SearchTarget(table_name="notes_chunks", vector_column="vs_a", weight=0.5, query_vector=[1.0, 0.0]),
             ],
             limit=5,
         )
@@ -365,8 +361,7 @@ async def test_search_with_reranker(filesystem: FileSystem):
 
     # Initial search (dense-only) prefers chunk 0
     query_no_rerank = SearchQuery(
-        vector=[1.0, 0.0],
-        targets=[SearchTarget(table_name="text_chunks", vector_column="vs_a")],
+        targets=[SearchTarget(table_name="text_chunks", vector_column="vs_a", query_vector=[1.0, 0.0])],
         limit=10,
     )
     results_no_rerank = (await kb.search(query=query_no_rerank)).results
@@ -378,8 +373,7 @@ async def test_search_with_reranker(filesystem: FileSystem):
 
     # Search with RRF reranking. The scores should change according to RRF formula.
     query_with_rerank = SearchQuery(
-        vector=[1.0, 0.0],
-        targets=[SearchTarget(table_name="text_chunks", vector_column="vs_a")],
+        targets=[SearchTarget(table_name="text_chunks", vector_column="vs_a", query_vector=[1.0, 0.0])],
         limit=10,
         rerank=RerankOptions(strategy=RerankStrategy.RRF, model="rrf", top_n=10),
     )
@@ -407,8 +401,7 @@ async def test_search_with_noop_reranker(filesystem: FileSystem):
     await kb.ingest_knol(knol=_knol(), table_name="text_chunks", pipelines=resolved)
 
     query = SearchQuery(
-        vector=[1.0, 0.0],
-        targets=[SearchTarget(table_name="text_chunks", vector_column="vs_a")],
+        targets=[SearchTarget(table_name="text_chunks", vector_column="vs_a", query_vector=[1.0, 0.0])],
         rerank=RerankOptions(strategy=RerankStrategy.RRF, model="noop"),
     )
     results = (await kb.search(query=query)).results
@@ -440,8 +433,7 @@ async def test_search_with_bm25_reranker(filesystem: FileSystem):
     # Vector search prefers doc 0 ([1,0]), but query text matches doc 1
     query = SearchQuery(
         text="lazy dog",
-        vector=[1.0, 0.0],
-        targets=[SearchTarget(table_name="text_chunks", vector_column="vs_a")],
+        targets=[SearchTarget(table_name="text_chunks", vector_column="vs_a", query_vector=[1.0, 0.0])],
         rerank=RerankOptions(strategy=RerankStrategy.RRF, model="bm25"),
     )
     results = (await kb.search(query=query)).results
@@ -477,8 +469,7 @@ async def test_search_with_mmr_reranker(filesystem: FileSystem):
     # So a vector query for [1,0] will rank doc 0 and 2 highly.
     query = SearchQuery(
         text="dogs",
-        vector=[1.0, 0.0],
-        targets=[SearchTarget(table_name="text_chunks", vector_column="vs_a")],
+        targets=[SearchTarget(table_name="text_chunks", vector_column="vs_a", query_vector=[1.0, 0.0])],
         rerank=RerankOptions(strategy=RerankStrategy.RRF, model="mmr", top_n=3),
     )
     results = (await kb.search(query=query)).results
@@ -595,10 +586,9 @@ async def test_multitable_fanout_and_fusion(filesystem: FileSystem):
 
     # Heavier weight on text_chunks should prefer k1's chunk
     q1 = SearchQuery(
-        vector=[1.0, 0.0],
         targets=[
-            SearchTarget(table_name="text_chunks", vector_column="vs_a", weight=1.0),
-            SearchTarget(table_name="notes_chunks", vector_column="vs_a", weight=0.3),
+            SearchTarget(table_name="text_chunks", vector_column="vs_a", weight=1.0, query_vector=[1.0, 0.0]),
+            SearchTarget(table_name="notes_chunks", vector_column="vs_a", weight=0.3, query_vector=[1.0, 0.0]),
         ],
         limit=5,
     )
@@ -608,10 +598,9 @@ async def test_multitable_fanout_and_fusion(filesystem: FileSystem):
 
     # Flip weights to prefer notes_chunks
     q2 = SearchQuery(
-        vector=[1.0, 0.0],
         targets=[
-            SearchTarget(table_name="text_chunks", vector_column="vs_a", weight=0.3),
-            SearchTarget(table_name="notes_chunks", vector_column="vs_a", weight=1.0),
+            SearchTarget(table_name="text_chunks", vector_column="vs_a", weight=0.3, query_vector=[1.0, 0.0]),
+            SearchTarget(table_name="notes_chunks", vector_column="vs_a", weight=1.0, query_vector=[1.0, 0.0]),
         ],
         limit=5,
     )
