@@ -1,4 +1,5 @@
 import asyncio
+from datetime import datetime
 from enum import StrEnum
 import hashlib
 import logging
@@ -216,14 +217,24 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
                 with filesystem.open(f"scraped_data/{filename}", "w") as f:
                     f.write(content)
 
+                hostname = urlparse(response.url).hostname
+
                 metadata = {
                     "scraped_url": url,
                     "title": title,
                     "request_id": request.id,
+                    "source_system": f"internet:{hostname}" if hostname else "internet",
+                    "was_derived_from": response.url,
+                    "was_generated_by": "playwright_scraper_agent",
+                    "description": f"Web page scraped from {url}",
+                    "tags": ["web", "scraped", hostname] if hostname else ["web", "scraped"],
+                    "was_retrieved_at": str(datetime.utcnow()),
+                    "created_at": response.headers.get("last-modified", str(datetime.utcnow())),
+                    "source_etag": response.headers.get("etag", ""),
                 }
 
                 output = MediaLink(
-                    url=f"scraped_data/{filename}",
+                    url=f"file:///scraped_data/{filename}",
                     name=filename,
                     metadata=metadata,
                     on_filesystem=True,
