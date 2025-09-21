@@ -7,7 +7,7 @@ This class keeps responsibilities minimal:
 - Thin wrappers for search and deletes
 """
 
-from typing import AsyncIterator, List, Sequence, Tuple
+from typing import AsyncIterator, Dict, List, Sequence, Tuple
 
 from fsspec.implementations.dirfs import DirFileSystem as FileSystem
 
@@ -16,7 +16,15 @@ from .kbindex_backend import KBIndexBackend
 from .knol_utils import KnolUtils
 from .model import Knol
 from .pipeline_executor import EmittedRow, PipelineExecutor, ResolvedPipeline
-from .query import RerankStrategy, SearchQuery, SearchResult
+from .query import (
+    ExplainData,
+    ExplainTargetStat,
+    FusionStrategy,
+    RerankStrategy,
+    SearchQuery,
+    SearchResult,
+    SearchResults,
+)
 
 
 class KnowledgeBase:
@@ -93,18 +101,28 @@ class KnowledgeBase:
     async def delete_chunks(self, *, table_name: str, chunk_ids: Sequence[str]) -> None:
         await self.index.delete_by_chunk_ids(table_name=table_name, chunk_ids=list(chunk_ids))
 
-    async def search(self, *, query: SearchQuery) -> List[SearchResult]:
+    async def search(self, *, query: SearchQuery) -> SearchResults:
         # If single target, defer directly to backend
+        targets_stats: List[ExplainTargetStat] = []
+        norm_ranges: Dict[str, Tuple[float, float]] = {}
         if len(query.targets) <= 1:
             initial_results = await self.index.search(query=query)
         else:
             # Multi-target fanout with simple linear fusion and per-target weighting
-            initial_results = await self._fanout_search(query)
+            initial_results, targets_stats, norm_ranges = await self._fanout_search(query)
 
         # Apply reranking if configured
         rerank_options = query.rerank
         if rerank_options.strategy == RerankStrategy.NONE or not self.config.plugins.rerankers:
-            return initial_results
+            fusion_mode = query.hybrid.fusion_strategy if query.hybrid else FusionStrategy.LINEAR
+            return SearchResults(
+                results=initial_results,
+                explain=ExplainData(
+                    fusion=fusion_mode,
+                    weighting=query.hybrid,
+                    targets_used=targets_stats,
+                ),
+            )
 
         reranker_id = rerank_options.model
         if not reranker_id:
@@ -112,7 +130,16 @@ class KnowledgeBase:
 
         reranker = self.config.plugins.rerankers.get(reranker_id) if reranker_id else None
         if not reranker:
-            return initial_results  # Or log a warning
+            fusion_mode = query.hybrid.fusion_strategy if query.hybrid else FusionStrategy.LINEAR
+            return SearchResults(
+                results=initial_results,
+                explain=ExplainData(
+                    fusion=fusion_mode,
+                    weighting=query.hybrid,
+                    targets_used=targets_stats,
+                    notes=["No reranker found; returning initial results"],
+                ),
+            )
 
         # Rerank top N candidates
         candidates = initial_results[: rerank_options.top_n]
@@ -121,12 +148,25 @@ class KnowledgeBase:
         reranked_candidates = await reranker.rerank(results=candidates, query=query)
 
         final_results = reranked_candidates + remainder
-        return final_results[: query.limit]
+        fusion_mode = query.hybrid.fusion_strategy if query.hybrid else FusionStrategy.LINEAR
+        explain = ExplainData(
+            fusion=fusion_mode,
+            weighting=query.hybrid,
+            targets_used=targets_stats,
+            rerank_used=True,
+            rerank_strategy=rerank_options.strategy,
+            rerank_model=reranker_id,
+        )
+        return SearchResults(results=final_results[: query.limit], explain=explain)
 
-    async def _fanout_search(self, query: SearchQuery) -> List[SearchResult]:
+    async def _fanout_search(
+        self, query: SearchQuery
+    ) -> Tuple[List[SearchResult], List[ExplainTargetStat], Dict[str, Tuple[float, float]]]:
         """Multi-target fanout with simple linear fusion and per-target weighting."""
         fused: dict[str, float] = {}
         payload_by_id: dict[str, dict] = {}
+        stats: List[ExplainTargetStat] = []
+        norm_ranges: Dict[str, Tuple[float, float]] = {}
 
         # For each target, search with a single-target query clone
         for tgt in query.targets:
@@ -151,6 +191,8 @@ class KnowledgeBase:
             if results:
                 svals = [r.score for r in results]
                 smin, smax = min(svals), max(svals)
+                norm_ranges_key = f"{tgt.table_name}.{tgt.vector_column}"
+                norm_ranges[norm_ranges_key] = (smin, smax)
                 for r in results:
                     if smax > smin:
                         norm = (r.score - smin) / (smax - smin)
@@ -158,8 +200,18 @@ class KnowledgeBase:
                         norm = 0.0
                     fused[r.chunk_id] = fused.get(r.chunk_id, 0.0) + weight * norm
                     payload_by_id.setdefault(r.chunk_id, r.payload)
+            stats.append(
+                ExplainTargetStat(
+                    table_name=tgt.table_name,
+                    vector_column=tgt.vector_column,
+                    weight=weight,
+                    requested=subq.limit,
+                    returned=len(results),
+                )
+            )
 
         # Materialize fused list
         ranked = sorted(((score, cid) for cid, score in fused.items()), key=lambda t: t[0], reverse=True)
         top = ranked[query.offset : query.offset + query.limit]
-        return [SearchResult(chunk_id=cid, score=score, payload=payload_by_id.get(cid, {})) for score, cid in top]
+        results = [SearchResult(chunk_id=cid, score=score, payload=payload_by_id.get(cid, {})) for score, cid in top]
+        return results, stats, norm_ranges

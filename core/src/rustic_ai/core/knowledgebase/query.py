@@ -171,3 +171,37 @@ class SearchResult(BaseModel):
     chunk_id: str = Field(description="Identifier of the matched chunk")
     score: float = Field(description="Similarity score (higher is better unless backend returns distance)")
     payload: Dict[str, Any] = Field(default_factory=dict, description="Optional scalar fields returned by backend")
+
+
+class ExplainTargetStat(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    table_name: str
+    vector_column: str
+    weight: float = 1.0
+    requested: int = 0
+    returned: int = 0
+    duration_ms: float = 0.0
+    norm_min: float | None = None
+    norm_max: float | None = None
+
+
+class ExplainData(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    fusion: FusionStrategy = FusionStrategy.LINEAR
+    weighting: Optional[HybridOptions] = None
+    targets_used: List[ExplainTargetStat] = Field(default_factory=list)
+    retrieval_counts: Dict[str, int] = Field(default_factory=dict)
+    timings_ms: Dict[str, float] = Field(default_factory=dict)
+    rerank_used: bool = False
+    rerank_strategy: Optional[RerankStrategy] = None
+    rerank_model: Optional[str] = None
+    notes: List[str] = Field(default_factory=list)
+
+
+class SearchResults(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    results: List[SearchResult] = Field(default_factory=list)
+    explain: Optional[ExplainData] = None

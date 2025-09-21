@@ -176,13 +176,14 @@ async def test_kb_resolve_pipelines_and_ingest(filesystem: FileSystem):
     # Ingest a knol and verify two rows (two chunks) persisted
     await kb.ingest_knol(knol=_knol(), table_name="text_chunks", pipelines=resolved)
 
-    results = await kb.search(
+    results_wrap = await kb.search(
         query=SearchQuery(
             vector=[1.0, 0.0],
             targets=[SearchTarget(table_name="text_chunks", vector_column="vs_a")],
             limit=10,
         )
     )
+    results = results_wrap.results
     assert len(results) == 2
     # Ensure scalar mapping exists
     langs = {r.payload.get("language") for r in results}
@@ -206,25 +207,27 @@ async def test_hybrid_text_search_dense_and_sparse(filesystem: FileSystem):
     await kb.ingest_knol(knol=_knol(), table_name="text_chunks", pipelines=resolved)
 
     # Dense-only should prefer chunk index 0 (embedding [1,0])
-    dense_only = await kb.search(
+    dense_only_wrap = await kb.search(
         query=SearchQuery(
             vector=[1.0, 0.0], targets=[SearchTarget(table_name="text_chunks", vector_column="vs_a")], limit=10
         )
     )
+    dense_only = dense_only_wrap.results
     assert len(dense_only) >= 1
     assert dense_only[0].chunk_id.endswith(":0")
 
     # Sparse-only with text "second" should prefer chunk index 1
-    sparse_only = await kb.search(
+    sparse_only_wrap = await kb.search(
         query=SearchQuery(
             text="second", targets=[SearchTarget(table_name="text_chunks", vector_column="vs_a")], limit=10
         )
     )
+    sparse_only = sparse_only_wrap.results
     assert len(sparse_only) >= 1
     assert sparse_only[0].chunk_id.endswith(":1")
 
     # Hybrid with heavier sparse weight should prefer chunk index 1
-    hybrid = await kb.search(
+    hybrid_wrap = await kb.search(
         query=SearchQuery(
             text="second",
             vector=[1.0, 0.0],
@@ -233,6 +236,7 @@ async def test_hybrid_text_search_dense_and_sparse(filesystem: FileSystem):
             limit=10,
         )
     )
+    hybrid = hybrid_wrap.results
     assert len(hybrid) >= 1
     assert hybrid[0].chunk_id.endswith(":1")
 
@@ -266,7 +270,7 @@ async def test_search_with_reranker(filesystem: FileSystem):
         targets=[SearchTarget(table_name="text_chunks", vector_column="vs_a")],
         limit=10,
     )
-    results_no_rerank = await kb.search(query=query_no_rerank)
+    results_no_rerank = (await kb.search(query=query_no_rerank)).results
     assert len(results_no_rerank) == 2
     assert results_no_rerank[0].chunk_id.endswith(":0")
     original_score_0 = results_no_rerank[0].score
@@ -280,7 +284,7 @@ async def test_search_with_reranker(filesystem: FileSystem):
         limit=10,
         rerank=RerankOptions(strategy=RerankStrategy.RRF, model="rrf", top_n=10),
     )
-    results_reranked = await kb.search(query=query_with_rerank)
+    results_reranked = (await kb.search(query=query_with_rerank)).results
     assert len(results_reranked) == 2
     assert results_reranked[0].chunk_id.endswith(":0")  # Order should be preserved as RRF is rank-based
     # Check that scores have been transformed
@@ -308,7 +312,7 @@ async def test_search_with_noop_reranker(filesystem: FileSystem):
         targets=[SearchTarget(table_name="text_chunks", vector_column="vs_a")],
         rerank=RerankOptions(strategy=RerankStrategy.RRF, model="noop"),
     )
-    results = await kb.search(query=query)
+    results = (await kb.search(query=query)).results
 
     assert len(results) == 2
     assert results[0].chunk_id.endswith(":0")
@@ -341,7 +345,7 @@ async def test_search_with_bm25_reranker(filesystem: FileSystem):
         targets=[SearchTarget(table_name="text_chunks", vector_column="vs_a")],
         rerank=RerankOptions(strategy=RerankStrategy.RRF, model="bm25"),
     )
-    results = await kb.search(query=query)
+    results = (await kb.search(query=query)).results
 
     assert len(results) == 2
     # BM25 should pull "a slow lazy dog" to the top
@@ -378,7 +382,7 @@ async def test_search_with_mmr_reranker(filesystem: FileSystem):
         targets=[SearchTarget(table_name="text_chunks", vector_column="vs_a")],
         rerank=RerankOptions(strategy=RerankStrategy.RRF, model="mmr", top_n=3),
     )
-    results = await kb.search(query=query)
+    results = (await kb.search(query=query)).results
 
     assert len(results) == 3
     # With MMR, after the first highly relevant "dog" document is selected (doc 0),
@@ -499,7 +503,7 @@ async def test_multitable_fanout_and_fusion(filesystem: FileSystem):
         ],
         limit=5,
     )
-    r1 = await kb.search(query=q1)
+    r1 = (await kb.search(query=q1)).results
     assert len(r1) >= 1
     assert r1[0].chunk_id.startswith("k1:")
 
@@ -512,6 +516,6 @@ async def test_multitable_fanout_and_fusion(filesystem: FileSystem):
         ],
         limit=5,
     )
-    r2 = await kb.search(query=q2)
+    r2 = (await kb.search(query=q2)).results
     assert len(r2) >= 1
     assert r2[0].chunk_id.startswith("k2:")
