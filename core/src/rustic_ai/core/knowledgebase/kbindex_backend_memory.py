@@ -10,6 +10,10 @@ from typing import Any, AsyncIterable, Dict, List, Optional, Sequence, Tuple
 
 from pydantic import BaseModel
 
+from rustic_ai.core.guild.agent_ext.depends.dependency_resolver import (
+    DependencyResolver,
+)
+
 from .kbindex_backend import KBIndexBackend
 from .pipeline_executor import EmittedRow
 from .query import BoolFilter, FilterClause, FilterOp, SearchQuery, SearchResult
@@ -421,3 +425,15 @@ class InMemoryKBIndexBackend(KBIndexBackend):
         if da <= 0.0 or db <= 0.0:
             return 0.0
         return num / (da * db)
+
+
+class InMemoryKBIndexBackendResolver(DependencyResolver[KBIndexBackend]):
+    """Resolver for the in-memory KBIndexBackend (Phase-1 only)."""
+
+    def __init__(self, backend_profile: Optional[str] = None, **kwargs):
+        super().__init__()
+        self.backend_profile = (backend_profile or "memory").lower()
+        self.kwargs = kwargs
+
+    def resolve(self, guild_id: str, agent_id: str) -> KBIndexBackend:  # type: ignore[override]
+        return InMemoryKBIndexBackend()
