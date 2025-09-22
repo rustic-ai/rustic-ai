@@ -64,7 +64,6 @@ class KnowledgeAgent(Agent):
     """
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
         self._kb: Optional[KnowledgeBase] = None
         self._target_to_pipeline: Dict[Tuple[str, str], ResolvedPipeline] = {}
         self._pipeline_specs_by_id: Dict[str, PipelineSpec] = {}

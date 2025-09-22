@@ -80,6 +80,7 @@ def wrap_agent_for_testing(
             # Ensure nested payload is JSON-serializable (pydantic JsonValue). Datetime/AnyUrl -> string
             def _coerce_jsonable(obj):
                 import datetime
+
                 from pydantic import AnyUrl
 
                 if isinstance(obj, dict):
