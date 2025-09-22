@@ -107,9 +107,31 @@ class KBConfig(BaseModel):
     version: int = 1
     description: Optional[str] = None
 
+    # Either provide a concrete schema under the alias 'schema' OR provide a 'schema_infer' block
     kb_schema: KBSchema = Field(alias="schema")
+    # Accept dict or object; resolved in a pre-validator to a concrete KBSchema
+    schema_infer: Optional[Any] = None
     plugins: PluginRegistry
     pipelines: List[PipelineSpec] = Field(default_factory=list)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _resolve_schema(cls, data):
+        # Allow callers to provide 'schema_infer' instead of a concrete 'schema'
+        if not isinstance(data, dict):
+            return data
+        if data.get("schema") is not None:
+            return data
+        si = data.get("schema_infer")
+        if not si:
+            return data
+        # Import lazily to avoid circular imports
+        from .schema_infer import SchemaInferConfig, infer_kb_schema
+
+        cfg = si if isinstance(si, SchemaInferConfig) else SchemaInferConfig(**si)
+        schema = infer_kb_schema(cfg)
+        data["schema"] = schema
+        return data
 
     @model_validator(mode="after")
     def _validate_references(self) -> "KBConfig":

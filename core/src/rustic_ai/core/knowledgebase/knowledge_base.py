@@ -8,8 +8,8 @@ This class keeps responsibilities minimal:
 """
 
 import time
-import uuid
 from typing import AsyncIterator, Dict, List, Sequence, Tuple
+import uuid
 
 from fsspec.implementations.dirfs import DirFileSystem as FileSystem
 
@@ -141,14 +141,10 @@ class KnowledgeBase:
                     fusion=fusion_mode,
                     weighting=query.hybrid,
                     targets_used=targets_stats,
-                    retrieval_counts={
-                        f"{s.table_name}.{s.vector_column}": s.returned for s in targets_stats
-                    },
+                    retrieval_counts={f"{s.table_name}.{s.vector_column}": s.returned for s in targets_stats},
                     timings_ms={
                         "total": (t1 - t0) * 1000.0,
-                        **{
-                            f"t.{s.table_name}.{s.vector_column}": s.duration_ms for s in targets_stats
-                        },
+                        **{f"t.{s.table_name}.{s.vector_column}": s.duration_ms for s in targets_stats},
                     },
                     normalization_method=NormalizationMethod.MINMAX,
                     trace_id=trace_id,
@@ -170,14 +166,10 @@ class KnowledgeBase:
                     fusion=fusion_mode,
                     weighting=query.hybrid,
                     targets_used=targets_stats,
-                    retrieval_counts={
-                        f"{s.table_name}.{s.vector_column}": s.returned for s in targets_stats
-                    },
+                    retrieval_counts={f"{s.table_name}.{s.vector_column}": s.returned for s in targets_stats},
                     timings_ms={
                         "total": (t1 - t0) * 1000.0,
-                        **{
-                            f"t.{s.table_name}.{s.vector_column}": s.duration_ms for s in targets_stats
-                        },
+                        **{f"t.{s.table_name}.{s.vector_column}": s.duration_ms for s in targets_stats},
                     },
                     normalization_method=NormalizationMethod.MINMAX,
                     trace_id=trace_id,
@@ -204,9 +196,7 @@ class KnowledgeBase:
             rerank_used=True,
             rerank_strategy=rerank_options.strategy,
             rerank_model=reranker_id,
-            retrieval_counts={
-                f"{s.table_name}.{s.vector_column}": s.returned for s in targets_stats
-            },
+            retrieval_counts={f"{s.table_name}.{s.vector_column}": s.returned for s in targets_stats},
             timings_ms={
                 "total": (t1 - t0) * 1000.0,
                 "rerank": (t_rrf1 - t_rrf0) * 1000.0,

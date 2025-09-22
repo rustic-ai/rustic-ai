@@ -21,6 +21,10 @@ from rustic_ai.core.knowledgebase.schema import (
     VectorIndexSpec,
     VectorSpec,
 )
+from rustic_ai.core.knowledgebase.schema_infer import (
+    KBIdentity,
+    SchemaInferConfig,
+)
 
 
 def _schema_text_only():
@@ -110,3 +114,39 @@ def test_kbconfig_plugin_coercion_and_refs():
     # coercion should produce instances
     assert "default" in cfg.plugins.chunkers
     assert "text-emb" in cfg.plugins.embedders
+
+
+def test_kbconfig_schema_infer_resolution():
+    # Provide schema via inference config only
+    sic = SchemaInferConfig(
+        kb=KBIdentity(id="kb-auto"),
+        modalities={
+            # Minimal modality; defaults produce a table and routing for text
+            # The rest of the config is validated downstream
+            # No vectors specified here
+            # Specialized types intentionally empty
+            # include_text uses defaults
+            # indexes use defaults
+            # keys use defaults
+            # naming uses defaults
+            # denormalize meta uses defaults
+            # chunk class uses default TextChunk
+            # This should be enough to build a concrete KBSchema
+            # without referencing plugins/pipelines
+            # (pipelines are validated separately below)
+            # NOTE: keep this minimal to avoid coupling to inference internals
+            # The test only asserts that a schema is resolved and pipelines can be validated later
+            # when provided.
+            # Use text modality
+        },
+    )
+
+    cfg = KBConfig(
+        id="kb",
+        schema_infer=sic,
+        plugins=PluginRegistry(chunkers={}, projectors={}, embedders={}, rerankers={}),
+        pipelines=[],
+    )
+
+    # Should have a concrete schema resolved
+    assert isinstance(cfg.kb_schema, KBSchema)

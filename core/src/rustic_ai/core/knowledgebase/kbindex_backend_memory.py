@@ -4,8 +4,6 @@ Not for production use. Stores rows in process memory and supports simple vector
 search with cosine/dot similarity or negative L2 distance as score.
 """
 
-from __future__ import annotations
-
 import math
 import re
 from typing import Any, AsyncIterable, Dict, List, Optional, Sequence, Tuple
@@ -136,7 +134,9 @@ class InMemoryKBIndexBackend(KBIndexBackend):
 
         out.sort(key=lambda t: t[0], reverse=True)
         top = out[: max(1, int(limit))]
-        results: List[SearchResult] = [SearchResult(chunk_id=rec.chunk_id, score=score, payload=dict(rec.columns)) for score, rec in top]
+        results: List[SearchResult] = [
+            SearchResult(chunk_id=rec.chunk_id, score=score, payload=dict(rec.columns)) for score, rec in top
+        ]
         # Attach debug breakdown when explain=True
         if getattr(query, "explain", False):
             dense_by_id: Dict[str, float] = {rec.chunk_id: s for s, rec in dense_scores}
@@ -421,8 +421,3 @@ class InMemoryKBIndexBackend(KBIndexBackend):
         if da <= 0.0 or db <= 0.0:
             return 0.0
         return num / (da * db)
-
-
-__all__ = [
-    "InMemoryKBIndexBackend",
-]

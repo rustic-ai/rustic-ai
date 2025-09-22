@@ -92,8 +92,7 @@ async def test_memory_backend_upsert_and_search():
     # Search by vector
     res = await be.search(
         query=SearchQuery(
-            vector=[1.0, 0.0],
-            targets=[SearchTarget(table_name="text_chunks", vector_column="vs_a")],
+            targets=[SearchTarget(table_name="text_chunks", vector_column="vs_a", query_vector=[1.0, 0.0])],
             limit=10,
             filter=BoolFilter(must=[FilterClause(field="language", op=FilterOp.EQ, value="en")]),
         )
@@ -107,8 +106,7 @@ async def test_memory_backend_upsert_and_search():
     # Negative filter returns empty
     res2 = await be.search(
         query=SearchQuery(
-            vector=[1.0, 0.0],
-            targets=[SearchTarget(table_name="text_chunks", vector_column="vs_a")],
+            targets=[SearchTarget(table_name="text_chunks", vector_column="vs_a", query_vector=[1.0, 0.0])],
             limit=10,
             filter=BoolFilter(must=[FilterClause(field="language", op=FilterOp.EQ, value="fr")]),
         )
@@ -126,8 +124,7 @@ async def test_memory_backend_delete():
     await be.upsert(table_name="text_chunks", rows=_aiter_one(row))
     res = await be.search(
         query=SearchQuery(
-            vector=[1.0, 0.0],
-            targets=[SearchTarget(table_name="text_chunks", vector_column="vs_a")],
+            targets=[SearchTarget(table_name="text_chunks", vector_column="vs_a", query_vector=[1.0, 0.0])],
             limit=10,
         )
     )
@@ -136,8 +133,7 @@ async def test_memory_backend_delete():
     await be.delete_by_chunk_ids(table_name="text_chunks", chunk_ids=[row.chunk_id])
     res2 = await be.search(
         query=SearchQuery(
-            vector=[1.0, 0.0],
-            targets=[SearchTarget(table_name="text_chunks", vector_column="vs_a")],
+            targets=[SearchTarget(table_name="text_chunks", vector_column="vs_a", query_vector=[1.0, 0.0])],
             limit=10,
         )
     )
@@ -168,8 +164,7 @@ async def test_memory_backend_unknown_vector_is_skipped():
 
     res = await be.search(
         query=SearchQuery(
-            vector=[0.0, 1.0],
-            targets=[SearchTarget(table_name="text_chunks", vector_column="vs_a")],
+            targets=[SearchTarget(table_name="text_chunks", vector_column="vs_a", query_vector=[0.0, 1.0])],
             limit=10,
         )
     )
