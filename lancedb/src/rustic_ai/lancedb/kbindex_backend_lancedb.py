@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import os
 from typing import Any, AsyncIterable, Dict, List, Optional, Sequence, Tuple
 
 import pyarrow as pa
@@ -9,7 +8,7 @@ import pyarrow as pa
 try:
     import lancedb
     from lancedb.index import HnswSq, IvfFlat, IvfPq
-except Exception as _e:  # pragma: no cover - import errors surfaced during test collection
+except Exception:  # pragma: no cover - import errors surfaced during test collection
     lancedb = None  # type: ignore
     IvfFlat = IvfPq = HnswPq = HnswSq = None  # type: ignore
 
@@ -37,10 +36,10 @@ class LanceDBKBIndexBackend(KBIndexBackend):
         - Always persists a "chunk_id" scalar column (if missing) to return it in results
     """
 
-    def __init__(self, *, uri: Optional[str] = None) -> None:
+    def __init__(self, *, uri: str) -> None:
         if lancedb is None:  # pragma: no cover - surfaced in tests if dependency missing
             raise RuntimeError("lancedb package is not available; please install it")
-        self._uri: str = uri or os.environ.get("RUSTIC_LANCEDB_URI", ".lancedb")
+        self._uri: str = uri
         self._schema: Optional[KBSchema] = None
         self._table_by_name: Dict[str, TableSpec] = {}
         self._vector_specs: Dict[Tuple[str, str], VectorSpec] = {}
@@ -56,7 +55,7 @@ class LanceDBKBIndexBackend(KBIndexBackend):
             for vs in t.vector_columns:
                 self._vector_specs[(t.name, vs.name)] = vs
 
-        self._conn = await lancedb.connect_async(self._uri)
+        self._conn = await lancedb.connect_async(self._uri)  # type: ignore[attr-defined]
 
         for t in schema.tables:
             await self._ensure_table_ready(t)
@@ -210,7 +209,7 @@ class LanceDBKBIndexBackend(KBIndexBackend):
 
             if pa.types.is_fixed_size_list(dtype):
                 dim = dtype.list_size  # type: ignore[attr-defined]
-                normed = []
+                normed: List[Optional[List[float]]] = []
                 for v in vals:
                     if v is None:
                         # leave as null vector (row-level null), not zeros
@@ -498,10 +497,10 @@ class LanceDBKBIndexBackendResolver(DependencyResolver[KBIndexBackend]):
         uri: Optional[str] database URI for LanceDB (e.g., file path). Defaults to env or .lancedb
     """
 
-    def __init__(self, uri: Optional[str] = None, **kwargs):
+    def __init__(self, uri: str, **kwargs):
         super().__init__()
-        self.uri = uri
-        self.kwargs = kwargs
+        self.uri: str = uri
+        self.kwargs: dict = kwargs
 
     def resolve(self, guild_id: str, agent_id: str) -> KBIndexBackend:  # type: ignore[override]
         return LanceDBKBIndexBackend(uri=self.uri)

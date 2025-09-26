@@ -221,7 +221,7 @@ class KnolManager:
         # Build the Knol directly (no MediaLink mutation)
         knol_id = f"{meta['content_hash']}"  # id policy: just the hash (your current choice)
 
-        source_uri = medialink.url
+        source_uri = medialink.url if medialink.url.startswith("file://") else f"file://{medialink.url}"
 
         prov_props = {}
         for key in Provenance.model_fields.keys():

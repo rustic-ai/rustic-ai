@@ -3,11 +3,11 @@ from hashlib import sha256
 import json
 import logging
 import mimetypes
-from typing import Optional
+from typing import Any, Optional
 from urllib.parse import urlparse
 
 from fsspec.implementations.dirfs import DirFileSystem as FileSystem
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator, model_validator
 import shortuuid
 
 from ...messaging import JsonDict
@@ -371,3 +371,12 @@ class MediaLink(Media):
     def only_name(self) -> str:
         filename = self.get_filename()
         return filename.split(".")[0]
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_filesystem_url(cls, data: Any):
+        if isinstance(data, dict):
+            url = data.get("url")
+            if data.get("on_filesystem") and isinstance(url, str) and url.startswith("file:///"):
+                data = {**data, "url": url.replace("file://", "", 1)}
+        return data

@@ -231,6 +231,7 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
                     "was_retrieved_at": str(datetime.utcnow()),
                     "created_at": response.headers.get("last-modified", str(datetime.utcnow())),
                     "source_etag": response.headers.get("etag", ""),
+                    "source_uri": response.url,
                 }
 
                 output = MediaLink(

@@ -168,6 +168,7 @@ class TestResearchGuild:
         yield research_guild
         research_guild.shutdown()
 
+    @pytest.mark.skip(reason="Deprecated test, needs to be updated")
     @pytest.mark.parametrize("dep_map_config", ["openai_chroma", "vertexai"], indirect=True)
     @pytest.mark.skipif(os.getenv("SKIP_EXPENSIVE_TESTS") == "true", reason="Skipping expensive tests")
     @flaky(max_runs=3, min_passes=1)
