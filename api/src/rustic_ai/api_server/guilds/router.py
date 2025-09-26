@@ -94,7 +94,7 @@ def relaunch_guild(guild_id: str, engine=Depends(Metastore.get_engine)):
     try:
         is_relaunching = guild_service.relaunch_guild(guild_id, engine)
         return RelaunchResponse(is_relaunching=is_relaunching)
-    except Exception as e:
+    except Exception:
         logging.exception("Relaunch failed for guild %s", guild_id)
         raise
 

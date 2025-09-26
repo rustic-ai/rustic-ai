@@ -17,7 +17,7 @@ class DocUtils:
     def to_langchain(document: Document) -> LCDocument:
         metadata = document.metadata or {}
         metadata["name"] = document.name
-        metadata["mime"] = document.mimetype
+        metadata["mimetype"] = document.mimetype
         metadata["encoding"] = document.encoding
 
         return LCDocument(

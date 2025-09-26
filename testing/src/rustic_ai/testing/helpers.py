@@ -46,7 +46,7 @@ def wrap_agent_for_testing(
             id_obj = self.agent._generate_id(self.message.priority)
 
             self.send_dict(
-                data=data.model_dump(),
+                data=data.model_dump(mode="json"),
                 format=get_qualified_class_name(data.__class__),
                 new_thread=new_thread,
                 forwarding=forwarding,
@@ -76,6 +76,27 @@ def wrap_agent_for_testing(
             )
 
             session_state = self.get_context()
+
+            # Ensure nested payload is JSON-serializable (pydantic JsonValue). Datetime/AnyUrl -> string
+            def _coerce_jsonable(obj):
+                import datetime
+
+                from pydantic import AnyUrl
+
+                if isinstance(obj, dict):
+                    return {k: _coerce_jsonable(v) for k, v in obj.items()}
+                if isinstance(obj, list):
+                    return [_coerce_jsonable(v) for v in obj]
+                if isinstance(obj, (datetime.datetime, datetime.date)):
+                    try:
+                        return obj.isoformat()
+                    except Exception:
+                        return str(obj)
+                if isinstance(obj, AnyUrl):
+                    return str(obj)
+                return obj
+
+            data = _coerce_jsonable(data)
 
             msg = Message(
                 topics=self.message.topics,
