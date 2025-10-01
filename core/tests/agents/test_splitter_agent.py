@@ -8,6 +8,8 @@ import shortuuid
 
 from rustic_ai.core import Guild, GuildTopics, Priority
 from rustic_ai.core.agents.eip.splitter_agent import (
+    CelFormatSelector,
+    CelSplitter,
     DictFormatSelector,
     DictSplitter,
     FixedFormatSelector,
@@ -86,6 +88,10 @@ class TestSplitterGuild:
                 JsonataFormatSelector(
                     strategy="jsonata", jsonata_expr=f"'{get_qualified_class_name(ItemProcessingResult)}'"
                 ),
+            ),
+            (
+                CelSplitter(expression='items.map(i, {"id": i.id, "quantity": i.quantity})'),
+                CelFormatSelector(strategy="cel", expression=f"'{get_qualified_class_name(ItemProcessingResult)}'"),
             ),
             (
                 ListSplitter(field_name="items"),
