@@ -126,3 +126,7 @@ api/scripts/zipkin/data-tmp/traces.json
 
 old-docs/
 out/
+
+Agents.md
+copilot-instructions.md
+.cursor/

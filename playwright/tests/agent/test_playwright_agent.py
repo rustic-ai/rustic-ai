@@ -90,29 +90,29 @@ class TestPlaywrightAgent:
             if isinstance(r.payload, dict)
             and "metadata" in r.payload
             and r.payload["metadata"]["scraped_url"] == "https://example.com/index.html"
-        ]
+        ][0]
 
-        assert selected_result[0].priority == Priority.NORMAL
-        assert selected_result[0].in_response_to == message.id
-        assert selected_result[0].current_thread_id == message.id
-        assert selected_result[0].recipient_list == []
+        assert selected_result.priority == Priority.NORMAL
+        assert selected_result.in_response_to == message.id
+        assert selected_result.current_thread_id == message.id
+        assert selected_result.recipient_list == []
 
-        assert selected_result[0].payload["id"] is not None
-        assert selected_result[0].payload["mimetype"] == "text/html"
-        assert selected_result[0].payload["encoding"] == "utf-8"
-        assert selected_result[0].payload["name"] is not None
+        assert selected_result.payload["id"] is not None
+        assert selected_result.payload["mimetype"] == "text/html"
+        assert selected_result.payload["encoding"] == "utf-8"
+        assert selected_result.payload["name"] is not None
 
-        assert selected_result[0].payload["metadata"] is not None
-        assert selected_result[0].payload["metadata"]["scraped_url"] == "https://example.com/index.html"  # type: ignore
-        assert selected_result[0].payload["metadata"]["title"] == "Example Domain"  # type: ignore
-        assert selected_result[0].payload["metadata"]["request_id"] == request_id  # type: ignore
+        assert selected_result.payload["metadata"] is not None
+        assert selected_result.payload["metadata"]["scraped_url"] == "https://example.com/index.html"  # type: ignore
+        assert selected_result.payload["metadata"]["title"] == "Example Domain"  # type: ignore
+        assert selected_result.payload["metadata"]["request_id"] == request_id  # type: ignore
 
-        assert selected_result[0].payload["url"] is not None
-        assert selected_result[0].payload["on_filesystem"] is True
+        assert selected_result.payload["url"] is not None
+        assert selected_result.payload["on_filesystem"] is True
 
         fs = filesystem.to_resolver().resolve(agent.guild_id, "GUILD_GLOBAL")
 
-        assert fs.exists(results[0].payload["url"])
+        assert fs.exists(selected_result.payload["url"])
 
         completed = WebScrapingCompleted.model_validate(results[-1].payload)
 

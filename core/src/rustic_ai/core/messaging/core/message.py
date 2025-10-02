@@ -22,6 +22,7 @@ from pydantic import (
     Field,
     computed_field,
     field_serializer,
+    field_validator,
     model_validator,
 )
 
@@ -140,6 +141,15 @@ class PayloadTransformer(Transformer):
     output_format: Optional[str] = Field(default=MessageConstants.RAW_JSON_FORMAT)
     expression: Optional[str] = Field(default=None)
 
+    @field_validator("expression")
+    @classmethod
+    def validate_expression(cls, v):
+        if v is not None:
+            expr = Jsonata(v)
+            if expr.errors:
+                raise ValueError(f"Invalid expression: {v} with errors: {expr.errors}")
+        return v
+
     def transform(
         self, origin: "Message", agent_state: JsonDict, guild_state: JsonDict, routable: "MessageRoutable"
     ) -> Optional["MessageRoutable"]:
@@ -171,6 +181,15 @@ class FunctionalTransformer(Transformer):
 
     handler: str
     lambdas: ClassVar[Dict[str, Callable]] = {}
+
+    @field_validator("handler")
+    @classmethod
+    def validate_handler(cls, v):
+        if v is not None:
+            expr = Jsonata(v)
+            if expr.errors:
+                raise ValueError(f"Invalid expression: {v} with errors: {expr.errors}")
+        return v
 
     def transform(
         self, origin: "Message", agent_state: JsonDict, guild_state: JsonDict, routable: "MessageRoutable"
