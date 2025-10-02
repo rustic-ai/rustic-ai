@@ -2,6 +2,8 @@ from typing import AsyncIterator, Dict, List, Optional, Sequence, Tuple
 
 from fsspec.implementations.dirfs import DirFileSystem as FileSystem
 
+from rustic_ai.core.agents.commons import MediaLink
+
 from .chunks import TextChunk
 from .config import KBConfig
 from .kbindex_backend import KBIndexBackend
@@ -113,7 +115,7 @@ class KnowledgeBase:
     async def search(self, *, query: SearchQuery) -> SearchResults:
         return await self._search_manager.search(query=query)
 
-    async def catalog_media(self, media: List[object]) -> List[CatalogStatus]:
+    async def catalog_media(self, media: List[MediaLink]) -> List[CatalogStatus]:
         km = self._knol_manager
         out: List[CatalogStatus] = []
         for ml in media:
@@ -124,7 +126,7 @@ class KnowledgeBase:
                 out.append(CatalogStatusFailed(error=str(e), action="catalog"))
         return out
 
-    async def ingest_media(self, media: List[object]) -> List[CatalogStatus]:
+    async def ingest_media(self, media: List[MediaLink]) -> List[CatalogStatus]:
         statuses = await self.catalog_media(media)
         target_map = self.resolve_target_pipeline_map()
         for st in statuses:

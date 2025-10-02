@@ -7,7 +7,7 @@ from typing import Any, Optional
 from urllib.parse import urlparse
 
 from fsspec.implementations.dirfs import DirFileSystem as FileSystem
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, model_validator
 import shortuuid
 
 from ...messaging import JsonDict
