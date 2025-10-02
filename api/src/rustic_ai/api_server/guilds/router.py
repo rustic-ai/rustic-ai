@@ -24,7 +24,7 @@ from rustic_ai.api_server.guilds.schema import (
 )
 from rustic_ai.api_server.guilds.service import GuildService
 from rustic_ai.core import Agent
-from rustic_ai.core.agents.commons.media import MediaLink
+from rustic_ai.core.agents.commons.media import MediaLink, MediaUtils
 from rustic_ai.core.guild.agent_ext.depends.filesystem import FileSystem
 from rustic_ai.core.guild.metaprog.agent_registry import AgentRegistry
 from rustic_ai.core.guild.metastore import Metastore
@@ -194,14 +194,16 @@ async def list_files(
         result = []
         for file_details in files_with_details:
             file_name = file_details["name"]
+            metadata_file = _get_meta_file_name(file_name)
             if not file_name.startswith("."):
-                file_meta = json.load(filesystem.open(_get_meta_file_name(file_name), "r"))
-                mimetype = file_meta["content_type"]
+                media_link = MediaUtils.medialink_from_file(filesystem=filesystem, file_url=file_name)
+                file_meta = json.load(filesystem.open(metadata_file, "r")) if filesystem.exists(metadata_file) else None
+                mimetype = file_meta["content_type"] if file_meta else media_link.mimetype
                 result.append(
                     MediaLink(
-                        url=file_name,
-                        name=file_name,
-                        metadata={x: file_meta[x] for x in file_meta if x != "content_type"},
+                        url=media_link.url,
+                        name=media_link.name,
+                        metadata={x: file_meta[x] for x in file_meta if x != "content_type"} if file_meta else None,
                         on_filesystem=True,
                         mimetype=mimetype,
                     ).model_dump()
