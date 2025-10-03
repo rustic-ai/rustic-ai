@@ -15,12 +15,19 @@ from rustic_ai.core import AgentTag
 from rustic_ai.core.agents.commons.media import MediaLink
 
 
+class UpdateType(str, Enum):
+    append = "append"
+    replace = "replace"
+
+
 class DataFormat(BaseModel):
     """Base class for all message data formats."""
 
     title: Optional[str] = None
     description: Optional[str] = None
     tagged_users: list[AgentTag] = []
+    update_id: Optional[str] = None
+    update_type: Optional[UpdateType] = None
 
 
 class VisualizationFormat(DataFormat):
