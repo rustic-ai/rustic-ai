@@ -22,6 +22,7 @@ from rustic_ai.core.ui_protocol.types import (
     TableFormat,
     TableHeader,
     TextFormat,
+    UpdateType,
     VegaLiteFormat,
     VideoFormat,
     Weather,
@@ -395,3 +396,18 @@ class UiComponentAgent(Agent):
             ],
         )
         ctx.send(payload=chat_response)
+
+        # Update messages
+        text_msg_1 = TextFormat(
+            updateId="test_update_text", text="This is a text message example", title="update text format example"
+        )
+        ctx.send_dict(payload=text_msg_1.model_dump(), format="updateTextFormat")
+
+        text_msg_2 = TextFormat(
+            updateId="test_update_text",
+            text="This text should be appended to previous text in UI",
+            title="update text format example",
+            updateType=UpdateType.APPEND,
+        )
+
+        ctx.send_dict(payload=text_msg_2.model_dump(), format="updateTextFormat")
