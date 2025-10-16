@@ -1,5 +1,6 @@
 import os
 import time
+from typing import Any
 
 import pytest
 
@@ -25,7 +26,7 @@ class TestContentModerationAgent:
         """
         Test multiple content moderation scenarios with different inputs and expected responses.
         """
-        moderation_scenarios = [
+        moderation_scenarios: list[dict[str, Any]] = [
             {
                 "input": "Hello, how are you today? The weather is nice.",
                 "description": "Safe content - should not be flagged",
