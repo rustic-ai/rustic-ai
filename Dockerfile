@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.4
-FROM python:3.12.11-slim AS base
+FROM python:3.13.0-slim AS base
 
 ARG RAY_UID=1000
 ARG RAY_GID=1000
@@ -32,7 +32,7 @@ FROM base AS builder
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-RUN apt-get update && apt-get install -y --no-install-recommends libpq-dev
+RUN apt-get update && apt-get install -y --no-install-recommends build-essential gcc g++ python3-dev cmake libpq-dev wget curl
 
 RUN pip install poetry==2.1.3
 

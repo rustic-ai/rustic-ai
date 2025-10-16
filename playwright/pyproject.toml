@@ -17,7 +17,7 @@ packages = [{ include = "rustic_ai", from = "src" }]
 "Rustic AI Core" = "https://pypi.org/project/rusticai-core/"
 
 [tool.poetry.dependencies]
-python = ">=3.12,<3.13"
+python = ">=3.13,<3.14"
 rusticai-core = { path = "../core", develop = true }
 playwright = "^1.51.0"
 install-playwright = "^0.1.1"
@@ -45,7 +45,7 @@ test = ["pytest", "pytest-asyncio", "flaky", "rusticai-testing"]
 
 [tool.black]
 line-length = 120
-target-version = ['py312']
+target-version = ['py313']
 include = '\.pyi?$'
 exclude = '''
 /(
@@ -61,7 +61,7 @@ exclude = '''
 '''
 
 [tool.mypy]
-python_version = "3.12"
+python_version = "3.13"
 ignore_missing_imports = true
 check_untyped_defs = true
 plugins = "pydantic.mypy"
