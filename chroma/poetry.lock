@@ -134,7 +134,6 @@ files = [
 
 [package.dependencies]
 frozenlist = ">=1.1.0"
-typing-extensions = {version = ">=4.2", markers = "python_version < \"3.13\""}
 
 [[package]]
 name = "annotated-types"
@@ -163,7 +162,6 @@ files = [
 [package.dependencies]
 idna = ">=2.8"
 sniffio = ">=1.1"
-typing_extensions = {version = ">=4.5", markers = "python_version < \"3.13\""}
 
 [package.extras]
 trio = ["trio (>=0.26.1)"]
@@ -2067,7 +2065,7 @@ files = [
 
 [package.dependencies]
 googleapis-common-protos = ">=1.57,<2.0"
-grpcio = {version = ">=1.63.2,<2.0.0", markers = "python_version < \"3.13\""}
+grpcio = {version = ">=1.66.2,<2.0.0", markers = "python_version >= \"3.13\""}
 opentelemetry-api = ">=1.15,<2.0"
 opentelemetry-exporter-otlp-proto-common = "1.36.0"
 opentelemetry-proto = "1.36.0"
@@ -3128,7 +3126,6 @@ files = [
 [package.dependencies]
 attrs = ">=22.2.0"
 rpds-py = ">=0.7.0"
-typing-extensions = {version = ">=4.4.0", markers = "python_version < \"3.13\""}
 
 [[package]]
 name = "requests"
@@ -3375,7 +3372,7 @@ name = "rusticai-core"
 version = "0.1.0"
 description = "Rustic AI’s modular, agentic AI framework for building human-centered, multi-agent workflows"
 optional = false
-python-versions = ">=3.12,<3.13"
+python-versions = ">=3.13,<3.14"
 groups = ["main"]
 files = []
 develop = true
@@ -4316,5 +4313,5 @@ test = []
 
 [metadata]
 lock-version = "2.1"
-python-versions = ">=3.12,<3.13"
-content-hash = "da5ba78eac5c7572e574bea48f9553177e8b32cd7bf7060dd9be3f9c5376329a"
+python-versions = ">=3.13,<3.14"
+content-hash = "036a5289a2d9f389607ef6174314e572761f95d037db60c7d0dc1d905e292327"

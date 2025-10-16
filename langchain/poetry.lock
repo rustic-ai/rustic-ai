@@ -134,7 +134,6 @@ files = [
 
 [package.dependencies]
 frozenlist = ">=1.1.0"
-typing-extensions = {version = ">=4.2", markers = "python_version < \"3.13\""}
 
 [[package]]
 name = "annotated-types"
@@ -163,7 +162,6 @@ files = [
 [package.dependencies]
 idna = ">=2.8"
 sniffio = ">=1.1"
-typing_extensions = {version = ">=4.5", markers = "python_version < \"3.13\""}
 
 [package.extras]
 trio = ["trio (>=0.26.1)"]
@@ -2278,7 +2276,7 @@ name = "rusticai-core"
 version = "0.1.0"
 description = "Rustic AI’s modular, agentic AI framework for building human-centered, multi-agent workflows"
 optional = false
-python-versions = ">=3.12,<3.13"
+python-versions = ">=3.13,<3.14"
 groups = ["main"]
 files = []
 develop = true
@@ -3022,5 +3020,5 @@ test = []
 
 [metadata]
 lock-version = "2.1"
-python-versions = ">=3.12,<3.13"
-content-hash = "6db7f64d40c9942a28a1647708953a2b68b837aaa1ebf4d7db37421c473a17c2"
+python-versions = ">=3.13,<3.14"
+content-hash = "103d32cbd24aa668bc1fa77a858c168fafca232bde2bb488327871951cfaa742"

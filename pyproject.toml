@@ -12,7 +12,7 @@ repository = "https://github.com/rustic-ai/rustic-ai"
 package-mode = false
 
 [tool.poetry.dependencies]
-python = ">=3.12,<3.13"
+python = ">=3.13,<3.14"
 rusticai-core = { path = "./core", develop = true }
 rusticai-redis = { path = "./redis", develop = true }
 rusticai-ray = { path = "./ray", develop = true }
@@ -23,8 +23,8 @@ rusticai-marvin = { path = "./marvin", develop = true }
 rusticai-serpapi = { path = "./serpapi", develop = true }
 rusticai-playwright = { path = "./playwright", develop = true }
 torch = [ # Adding torch dependency explicitly to avoid issues on macOS
-    { version = "^2.4.0", source = "pypi", platform = "darwin" },
-    { version = "^2.4.0", source = "pytorch-cpu", platform = "linux" },
+    { version = "^2.9.0", source = "pypi", platform = "darwin" },
+    { version = "^2.9.0", source = "pytorch-cpu", platform = "linux" },
 ]
 rusticai-huggingface = { path = "./huggingface", develop = true }
 rusticai-langchain = { path = "./langchain", develop = true }
@@ -70,7 +70,7 @@ google-cloud = ["gcsfs"]
 
 [tool.black]
 line-length = 120
-target-version = ['py312']
+target-version = ['py313']
 include = '(\\.pyi?$|.*/src/|.*/tests/|it/)'
 exclude = '''
 /(
@@ -88,7 +88,7 @@ exclude = '''
 '''
 
 [tool.mypy]
-python_version = "3.12"
+python_version = "3.13"
 ignore_missing_imports = true
 check_untyped_defs = true
 plugins = "pydantic.mypy"

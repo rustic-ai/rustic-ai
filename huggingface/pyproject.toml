@@ -17,11 +17,11 @@ packages = [{ include = "rustic_ai", from = "src" }]
 "Rustic AI Core" = "https://pypi.org/project/rusticai-core/"
 
 [tool.poetry.dependencies]
-python = ">=3.12,<3.13"
+python = ">=3.13,<3.14"
 rusticai-core = { path = "../core", develop = true }
 torch = [
-    { version = "^2.4.0", source = "pypi", platform = "darwin" },
-    { version = "^2.4.0", source = "pytorch-cpu", platform = "linux" },
+    { version = "^2.9.0", source = "pypi", platform = "darwin" },
+    { version = "^2.9.0", source = "pytorch-cpu", platform = "linux" },
 ]
 transformers = { version = "^4.51.2" }
 datasets = { version = "^3.5.0" }
@@ -51,7 +51,7 @@ test = ["pytest"]
 
 [tool.black]
 line-length = 120
-target-version = ['py312']
+target-version = ['py313']
 include = '\.pyi?$'
 exclude = '''
 /(
@@ -67,7 +67,7 @@ exclude = '''
 '''
 
 [tool.mypy]
-python_version = "3.12"
+python_version = "3.13"
 ignore_missing_imports = true
 check_untyped_defs = true
 plugins = "pydantic.mypy"

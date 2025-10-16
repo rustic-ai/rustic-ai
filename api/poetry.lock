@@ -149,7 +149,6 @@ files = [
 
 [package.dependencies]
 frozenlist = ">=1.1.0"
-typing-extensions = {version = ">=4.2", markers = "python_version < \"3.13\""}
 
 [[package]]
 name = "annotated-types"
@@ -178,7 +177,6 @@ files = [
 [package.dependencies]
 idna = ">=2.8"
 sniffio = ">=1.1"
-typing_extensions = {version = ">=4.5", markers = "python_version < \"3.13\""}
 
 [package.extras]
 trio = ["trio (>=0.26.1)"]
@@ -749,7 +747,7 @@ files = [
 [package.dependencies]
 google-auth = ">=2.14.1,<3.0.0"
 googleapis-common-protos = ">=1.56.2,<2.0.0"
-proto-plus = ">=1.22.3,<2.0.0"
+proto-plus = {version = ">=1.25.0,<2.0.0", markers = "python_version >= \"3.13\""}
 protobuf = ">=3.19.5,<3.20.0 || >3.20.0,<3.20.1 || >3.20.1,<4.21.0 || >4.21.0,<4.21.1 || >4.21.1,<4.21.2 || >4.21.2,<4.21.3 || >4.21.3,<4.21.4 || >4.21.4,<4.21.5 || >4.21.5,<7.0.0"
 requests = ">=2.18.0,<3.0.0"
 
@@ -1711,7 +1709,7 @@ files = [
 [package.dependencies]
 deprecated = ">=1.2.6"
 googleapis-common-protos = ">=1.52,<2.0"
-grpcio = {version = ">=1.63.2,<2.0.0", markers = "python_version < \"3.13\""}
+grpcio = {version = ">=1.66.2,<2.0.0", markers = "python_version >= \"3.13\""}
 opentelemetry-api = ">=1.15,<2.0"
 opentelemetry-exporter-otlp-proto-common = "1.31.1"
 opentelemetry-proto = "1.31.1"
@@ -2112,7 +2110,6 @@ files = [
 ]
 
 [package.dependencies]
-typing-extensions = {version = ">=4.6", markers = "python_version < \"3.13\""}
 tzdata = {version = "*", markers = "sys_platform == \"win32\""}
 
 [package.extras]
@@ -2663,7 +2660,6 @@ files = [
 [package.dependencies]
 attrs = ">=22.2.0"
 rpds-py = ">=0.7.0"
-typing-extensions = {version = ">=4.4.0", markers = "python_version < \"3.13\""}
 
 [[package]]
 name = "requests"
@@ -2872,7 +2868,7 @@ name = "rusticai-core"
 version = "0.1.0"
 description = "Rustic AI’s modular, agentic AI framework for building human-centered, multi-agent workflows"
 optional = false
-python-versions = ">=3.12,<3.13"
+python-versions = ">=3.13,<3.14"
 groups = ["main", "dev"]
 files = []
 develop = true
@@ -2909,7 +2905,7 @@ name = "rusticai-ray"
 version = "0.1.0"
 description = "Rustic AI execution engine running on Ray Cluster"
 optional = false
-python-versions = ">=3.12,<3.13"
+python-versions = ">=3.13,<3.14"
 groups = ["main"]
 files = []
 develop = true
@@ -2933,7 +2929,7 @@ name = "rusticai-testing"
 version = "0.1.0"
 description = "Test Utilities for Rustic AI Framework"
 optional = false
-python-versions = ">=3.12,<3.13"
+python-versions = ">=3.13,<3.14"
 groups = ["dev"]
 files = []
 develop = true
@@ -3696,5 +3692,5 @@ test = []
 
 [metadata]
 lock-version = "2.1"
-python-versions = ">=3.12,<3.13"
-content-hash = "26cf98bf2aedc7aa63e1ee285038b26fb0c4fcbe0c67030e6288c9e3f139398b"
+python-versions = ">=3.13,<3.14"
+content-hash = "13ddb186081867a80656befe3873389a0c24d723147e161170d4da93ccdd2069"
