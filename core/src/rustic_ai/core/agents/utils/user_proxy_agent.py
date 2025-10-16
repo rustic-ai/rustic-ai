@@ -212,7 +212,7 @@ class UserProxyAgent(Agent[UserProxyAgentProps], GuildRefreshMixin):
         # Escape special regex characters in agent names
         escaped_tags = [re.escape(tag) for tag in sorted_tags]
         # Create pattern like: @Echo Agent|@Echo|@John
-        pattern = '|'.join(escaped_tags)
+        pattern = "|".join(escaped_tags)
         return re.compile(pattern)
 
     def _get_participant_list(self):
