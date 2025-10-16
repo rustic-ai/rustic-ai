@@ -972,6 +972,12 @@ class ProcessorHelper:
                 logging.exception(f"Error in after fixture {af.__name__}: {e}")
 
 
+ALWAYS_HANDLE_FORMATS = [
+    "rustic_ai.core.guild.agent.SelfReadyNotification",
+    "rustic_ai.core.guild.agent_ext.mixins.health.HealthCheckRequest",
+]
+
+
 def processor(
     clz: Type[MDT],
     predicate: Optional[Callable[[AT, Message], bool]] = None,
@@ -995,7 +1001,10 @@ def processor(
                 f"and Predicate: {predicate}: {predicate_result}"
             )
 
-            if (predicate_result) and (not self.agent_spec.act_only_when_tagged or msg.is_tagged(self.get_agent_tag())):
+            if (predicate_result) and (
+                not self.agent_spec.act_only_when_tagged
+                or (msg.is_tagged(self.get_agent_tag()) or msg.format in ALWAYS_HANDLE_FORMATS)
+            ):
                 runtime_predicate = self.agent_spec.predicates.get(func.__name__)
 
                 should_process = True
