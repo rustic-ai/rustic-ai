@@ -121,8 +121,10 @@ async def get_user_blueprints(user_id: str, engine: Engine = Depends(Metastore.g
     operation_id="getAccessibleBlueprintsByUserId",
     tags=["blueprints", "users"],
 )
-async def get_user_accessible_blueprints(user_id: str, engine: Engine = Depends(Metastore.get_engine)):
-    return CatalogStore(engine).get_user_accessible_blueprints(user_id)
+async def get_user_accessible_blueprints(
+    user_id: str, org_id: Annotated[str | None, Query()] = None, engine: Engine = Depends(Metastore.get_engine)
+):
+    return CatalogStore(engine).get_user_accessible_blueprints(user_id, org_id)
 
 
 class ShareWithOrgRequest(BaseModel):
