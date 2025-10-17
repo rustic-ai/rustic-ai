@@ -12,6 +12,7 @@ from rustic_ai.api_server.catalog.models import (
     BlueprintCategoryCreate,
     BlueprintCategoryResponse,
     BlueprintCreate,
+    BlueprintExposure,
     BlueprintReviewCreate,
     CatalogAgentEntry,
     LaunchGuildFromBlueprintRequest,
@@ -291,13 +292,6 @@ def test_get_category_blueprints(setup_data, catalog_client):
     assert category0["name"] == category_name
 
 
-def test_get_user_accessible_blueprints(setup_data, catalog_client):
-    user_id = setup_data["user_id"]
-    response = catalog_client.get(f"/catalog/users/{user_id}/blueprints/accessible/")
-    assert response.status_code == 200
-    assert len(response.json()) > 0
-
-
 def test_share_blueprint_with_organization(setup_data, catalog_client):
     blueprint_id = setup_data["blueprint"].id
     org2 = setup_data["org2_id"]
@@ -306,6 +300,115 @@ def test_share_blueprint_with_organization(setup_data, catalog_client):
 
     response = catalog_client.delete(f"/catalog/blueprints/{blueprint_id}/share/{org2}")
     assert response.status_code == 204
+
+
+def test_get_user_accessible_blueprints(setup_data, catalog_client):
+    user_id = "3b2eef4e-8447-45f9-b305-d23413ce4838"
+    org_id = "c7d39428-e865-4ce1-be70-1e3dd7ca034d"
+
+    public_bp = BlueprintCreate(
+        name="Public Blueprint",
+        description="A test blueprint with exposure public",
+        exposure=BlueprintExposure.PUBLIC,
+        author_id="dummyuserid",
+        organization_id=None,
+        version="1.0.0",
+        spec={"name": "test blueprint spec", "description": "a guildspec for testing blueprint api"},
+        category_id=None,
+        icon=None,
+    )
+    response = catalog_client.post("/catalog/blueprints/", json=public_bp.model_dump())
+    assert response.status_code == 201
+    public_bp_id = response.json()["id"]
+
+    user_owned_bp = BlueprintCreate(
+        name="Personal Blueprint",
+        description="A test blueprint with exposure private",
+        exposure=BlueprintExposure.PRIVATE,
+        author_id=user_id,
+        organization_id=None,
+        version="1.0.0",
+        spec={"name": "test blueprint spec", "description": "a guildspec for testing blueprint api"},
+        category_id=None,
+        icon=None,
+    )
+    response = catalog_client.post("/catalog/blueprints/", json=user_owned_bp.model_dump())
+    assert response.status_code == 201
+    user_owned_bp_id = response.json()["id"]
+
+    user_owned_bp_2 = BlueprintCreate(
+        name="Personal Blueprint of DummyUser",
+        description="A test blueprint with exposure private",
+        exposure=BlueprintExposure.PRIVATE,
+        author_id="dummyuserid",
+        organization_id=None,
+        version="1.0.0",
+        spec={"name": "test blueprint spec", "description": "a guildspec for testing blueprint api"},
+        category_id=None,
+        icon=None,
+    )
+    response = catalog_client.post("/catalog/blueprints/", json=user_owned_bp_2.model_dump())
+    assert response.status_code == 201
+    user_owned_bp_2_id = response.json()["id"]
+
+    org_exposed_bp = BlueprintCreate(
+        name="Org-wide Blueprint",
+        description="A test blueprint with exposure organization",
+        exposure=BlueprintExposure.ORGANIZATION,
+        author_id="orgadminuserid",
+        organization_id=org_id,
+        version="1.0.0",
+        spec={"name": "test blueprint spec", "description": "a guildspec for testing blueprint api"},
+        category_id=None,
+        icon=None,
+    )
+    response = catalog_client.post("/catalog/blueprints/", json=org_exposed_bp.model_dump())
+    assert response.status_code == 201
+    org_exposed_bp_id = response.json()["id"]
+
+    org_exposed_bp_2 = BlueprintCreate(
+        name="Org-wide Blueprint of Another Organization",
+        description="A test blueprint with exposure organization",
+        exposure=BlueprintExposure.ORGANIZATION,
+        author_id="orgadminuserid",
+        organization_id="anotherOrganization",
+        version="1.0.0",
+        spec={"name": "test blueprint spec", "description": "a guildspec for testing blueprint api"},
+        category_id=None,
+        icon=None,
+    )
+    response = catalog_client.post("/catalog/blueprints/", json=org_exposed_bp_2.model_dump())
+    assert response.status_code == 201
+    org_exposed_bp_id2 = response.json()["id"]
+
+    response = catalog_client.get(f"/catalog/users/{user_id}/blueprints/accessible/")
+    assert response.status_code == 200
+    assert len(response.json()) == 2
+
+    response = catalog_client.get(f"/catalog/users/{user_id}/blueprints/accessible/?org_id={org_id}")
+    assert response.status_code == 200
+    assert len(response.json()) == 3
+    expected_blueprints = [public_bp_id, user_owned_bp_id, org_exposed_bp_id]
+    bp_ids = [bp["id"] for bp in response.json()]
+    assert set(bp_ids) == set(expected_blueprints)
+
+    share_response = catalog_client.post(
+        f"/catalog/blueprints/{org_exposed_bp_id2}/share/", json={"organization_id": org_id}
+    )
+    assert share_response.status_code == 204
+    response = catalog_client.get(f"/catalog/users/{user_id}/blueprints/accessible/?org_id={org_id}")
+    assert response.status_code == 200
+    assert len(response.json()) == 4
+    expected_blueprints.append(org_exposed_bp_id2)
+    bp_ids = [bp["id"] for bp in response.json()]
+    assert set(bp_ids) == set(expected_blueprints)
+
+    dummy_expected_blueprints = [public_bp_id, user_owned_bp_2_id, org_exposed_bp_id2]
+    response = catalog_client.get("/catalog/users/dummyuserid/blueprints/accessible/?org_id=anotherOrganization")
+    assert response.status_code == 200
+    assert len(response.json()) == 3
+    bp_ids = [bp["id"] for bp in response.json()]
+    assert set(bp_ids) == set(dummy_expected_blueprints)
 
 
 def test_add_user_to_guild(setup_data, catalog_client, org_id):
