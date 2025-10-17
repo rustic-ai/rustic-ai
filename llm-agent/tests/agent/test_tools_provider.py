@@ -56,6 +56,9 @@ class MockLLM(LLM):
 
     def get_config(self) -> dict:
         return {"model": self.model}
+    
+    def update_config(self, config: dict):
+        pass
 
 
 class TestToolsProvider:
