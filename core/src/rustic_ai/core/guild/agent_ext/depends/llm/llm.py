@@ -16,6 +16,10 @@ class LLM(ABC):
     async def async_completion(self, prompt: ChatCompletionRequest) -> ChatCompletionResponse:
         pass
 
+    @abstractmethod
+    def update_config(self, config: dict):
+        pass
+
     @property
     @abstractmethod
     def model(self) -> str:

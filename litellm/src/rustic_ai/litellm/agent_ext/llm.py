@@ -88,6 +88,10 @@ class LiteLLM(LLM):
     def get_config(self) -> dict:
         return self.client_props
 
+    def update_config(self, config: dict):
+        self._model = config.get("model", self._model)
+        self.client_props = config
+
 
 class LiteLLMResolver(DependencyResolver[LLM]):
     memoize_resolution: bool = False

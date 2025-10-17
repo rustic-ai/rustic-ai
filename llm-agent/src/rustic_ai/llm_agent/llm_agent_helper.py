@@ -46,6 +46,7 @@ class LLMAgentHelper:
 
         config_dict = config.get_llm_params()
         prompt_dict = prompt.model_dump(exclude_none=True)
+        llm.update_config(config_dict)
 
         final_prompt = {
             **config_dict,
