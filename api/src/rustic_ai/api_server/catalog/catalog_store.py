@@ -111,6 +111,28 @@ class CatalogStore:
                 return None
             return BlueprintDetailsResponse.from_table(blueprint)
 
+    def get_blueprint_with_exposure(self, blueprint_id: str, user_id: str, org_id: str) -> Optional[Blueprint]:
+        with Session(self.engine) as session:
+            blueprint = session.get(Blueprint, blueprint_id)
+            if not blueprint:
+                raise HTTPException(status_code=404, detail="Blueprint not found")
+            if blueprint.exposure == BlueprintExposure.PUBLIC:
+                return blueprint
+            if blueprint.exposure == BlueprintExposure.PRIVATE and blueprint.author_id == user_id:
+                return blueprint
+            if blueprint.exposure == BlueprintExposure.ORGANIZATION and blueprint.organization_id == org_id:
+                return blueprint
+            if blueprint.exposure == BlueprintExposure.SHARED and org_id:
+                statement = (
+                    select(BlueprintSharedWithOrganization)
+                    .where(BlueprintSharedWithOrganization.organization_id == org_id)
+                    .where(BlueprintSharedWithOrganization.blueprint_id == blueprint_id)
+                )
+                entry = session.exec(statement).first()
+                if entry:
+                    return blueprint
+            return None
+
     def add_tag_to_blueprint(self, blueprint_id: str, tag: str):
         with Session(self.engine) as session:
             blueprint = session.get(Blueprint, blueprint_id)
