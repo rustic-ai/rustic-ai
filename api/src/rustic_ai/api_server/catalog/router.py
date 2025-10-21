@@ -456,9 +456,11 @@ def get_message_schema(message_format: str, engine: Engine = Depends(Metastore.g
 async def launch_guild_from_blueprint(
     blueprint_id: str, launch_request: LaunchGuildFromBlueprintRequest, engine: Engine = Depends(Metastore.get_engine)
 ):
-    blueprint = CatalogStore(engine).get_blueprint(blueprint_id)
+    blueprint = CatalogStore(engine).get_blueprint_with_exposure(
+        blueprint_id, launch_request.user_id, launch_request.org_id
+    )
     if not blueprint:
-        raise HTTPException(status_code=404, detail="Blueprint not found")
+        raise HTTPException(status_code=403, detail="Insufficient permissions to launch")
 
     spec = deepcopy(blueprint.spec)  # deepcopy to prevent modification of the original spec
     try:

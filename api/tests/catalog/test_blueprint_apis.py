@@ -919,3 +919,18 @@ def test_launch_guild_from_blueprint(setup_data, catalog_client):
 
     assert invalid_response.status_code == 404
     assert "Blueprint not found" in invalid_response.json()["detail"]
+
+    # Test error case: user without access cannot launch guild
+    launch_request = LaunchGuildFromBlueprintRequest(
+        guild_name="My New Guild",
+        user_id="dummyuserid",
+        org_id=setup_data["organization_id"],
+        description="A custom guild description",
+    )
+
+    launch_fail_response = catalog_client.post(
+        f"/catalog/blueprints/{blueprint_id}/guilds",
+        json=launch_request.model_dump(),
+        headers={"Content-Type": "application/json"},
+    )
+    assert launch_fail_response.status_code == 403
