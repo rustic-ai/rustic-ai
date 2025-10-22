@@ -847,7 +847,7 @@ class ProcessContext[MDT]:
                 processor=self.method_name,
                 origin=self._origin_message.id,
                 result=msg_id.to_int(),
-                reason=reason,
+                reason=[reason] if reason else None,
             )
         )
 
