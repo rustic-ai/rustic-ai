@@ -16,6 +16,7 @@ python = ">=3.12,<3.13"
 rusticai-core = { path = "./core", develop = true }
 rusticai-redis = { path = "./redis", develop = true }
 rusticai-ray = { path = "./ray", develop = true }
+rusticai-k8s = { path = "./k8s", develop = true }
 rusticai-api = { path = "./api", develop = true }
 rusticai-litellm = { path = "./litellm", develop = true }
 rusticai-chroma = { path = "./chroma", develop = true }
