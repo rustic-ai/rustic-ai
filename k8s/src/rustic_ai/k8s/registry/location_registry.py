@@ -38,6 +38,9 @@ class AgentLocationRegistry:
         """
         Register an agent's location with TTL.
 
+        If the agent is already registered on a different host,
+        it will be removed from the old host's set.
+
         Args:
             agent_id: The agent ID
             host_address: The host address in format "hostname:port"
@@ -45,11 +48,20 @@ class AgentLocationRegistry:
         Example:
             >>> registry.register("agent-123", "agent-host-2:50051")
         """
-        # Set agent location with TTL
+        # Check if agent already has a location
         key = f"agent_location:{agent_id}"
+        old_location = self.redis.get(key)
+
+        # If re-registering on a different host, remove from old host's set
+        if old_location and old_location != host_address:
+            old_hostname = old_location.split(":")[0]
+            old_host_key = f"host_agents:{old_hostname}"
+            self.redis.srem(old_host_key, agent_id)
+
+        # Set agent location with TTL
         self.redis.setex(key, self.TTL_SECONDS, host_address)
 
-        # Add to host's agent set
+        # Add to new host's agent set
         hostname = host_address.split(":")[0]
         host_key = f"host_agents:{hostname}"
         self.redis.sadd(host_key, agent_id)
