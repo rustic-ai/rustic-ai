@@ -1,0 +1,43 @@
+# Docker Compose for local development and testing of agent host
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - rustic-ai
+
+  agent-host:
+    build:
+      context: ..
+      dockerfile: k8s/Dockerfile
+    ports:
+      - "50051:50051"
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - GRPC_PORT=50051
+      - MAX_PROCESSES=10
+      - HEARTBEAT_INTERVAL=10
+      - HOSTNAME=agent-host-0
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import grpc; from rustic_ai.k8s.proto import agent_host_pb2, agent_host_pb2_grpc; channel = grpc.insecure_channel('localhost:50051'); stub = agent_host_pb2_grpc.AgentHostServiceStub(channel); request = agent_host_pb2.HealthRequest(); response = stub.Health(request, timeout=2); exit(0 if response.healthy else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - rustic-ai
+
+networks:
+  rustic-ai:
+    driver: bridge
