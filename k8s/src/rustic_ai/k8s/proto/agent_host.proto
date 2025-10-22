@@ -1,0 +1,120 @@
+syntax = "proto3";
+
+package rustic_ai.k8s.agent_host;
+
+// Service for managing agents on an agent host pod
+service AgentHostService {
+  // Create and start a new agent process
+  rpc CreateAgent(CreateAgentRequest) returns (CreateAgentResponse);
+
+  // Stop a running agent process
+  rpc StopAgent(StopAgentRequest) returns (StopAgentResponse);
+
+  // Get information about a specific agent
+  rpc GetAgentInfo(GetAgentInfoRequest) returns (AgentInfo);
+
+  // List all agents running on this host
+  rpc ListAgents(ListAgentsRequest) returns (ListAgentsResponse);
+
+  // Health check
+  rpc Health(HealthRequest) returns (HealthResponse);
+}
+
+message CreateAgentRequest {
+  // JSON-serialized AgentSpec
+  bytes agent_spec = 1;
+
+  // JSON-serialized GuildSpec
+  bytes guild_spec = 2;
+
+  // JSON-serialized MessagingConfig
+  bytes messaging_config = 3;
+
+  // Machine ID for ID generation
+  int32 machine_id = 4;
+
+  // Client type name (e.g., "MessageTrackingClient")
+  string client_type = 5;
+
+  // JSON-serialized client properties
+  bytes client_properties = 6;
+}
+
+message CreateAgentResponse {
+  // ID of the created agent
+  string agent_id = 1;
+
+  // Process ID (for debugging)
+  int32 pid = 2;
+
+  // Success status
+  bool success = 3;
+
+  // Error message if not successful
+  string error = 4;
+}
+
+message StopAgentRequest {
+  // ID of the agent to stop
+  string agent_id = 1;
+
+  // Timeout in seconds (default: 10)
+  int32 timeout = 2;
+}
+
+message StopAgentResponse {
+  // Success status
+  bool success = 1;
+
+  // Error message if not successful
+  string error = 2;
+}
+
+message GetAgentInfoRequest {
+  // ID of the agent
+  string agent_id = 1;
+}
+
+message AgentInfo {
+  // Agent ID
+  string agent_id = 1;
+
+  // Guild ID
+  string guild_id = 2;
+
+  // Agent name
+  string agent_name = 3;
+
+  // Process ID
+  int32 pid = 4;
+
+  // Is process alive
+  bool is_alive = 5;
+
+  // Created timestamp (Unix epoch)
+  int64 created_at = 6;
+}
+
+message ListAgentsRequest {
+  // Optional guild_id filter
+  string guild_id = 1;
+}
+
+message ListAgentsResponse {
+  // List of agent information
+  repeated AgentInfo agents = 1;
+}
+
+message HealthRequest {
+}
+
+message HealthResponse {
+  // Overall health status
+  bool healthy = 1;
+
+  // Number of running agents
+  int32 agent_count = 2;
+
+  // Hostname
+  string hostname = 3;
+}
