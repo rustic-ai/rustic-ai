@@ -97,5 +97,5 @@ class MarvinAgent(Agent):
 
         ctx.send(
             response,
-            reason=f"Text classified as '{category}' and extracted {len(extracted_data) if hasattr(extracted_data, '__len__') else 'N/A'} entities",
+            reason=f"Text classified as '{category}' and extracted {len(extracted_data) if hasattr(extracted_data, '__len__') else '0'} entities",
         )
