@@ -1,0 +1,20 @@
+# Kustomize configuration for Rustic AI K8s execution engine
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: rustic-ai
+
+resources:
+  - namespace.yaml
+  - redis.yaml
+  - agent-host.yaml
+  - hpa.yaml
+
+images:
+  - name: rustic-ai/agent-host
+    newTag: latest
+
+commonLabels:
+  app.kubernetes.io/name: rustic-ai
+  app.kubernetes.io/component: execution-engine
+  app.kubernetes.io/managed-by: kustomize

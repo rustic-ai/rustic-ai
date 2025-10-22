@@ -1,0 +1,9 @@
+# Namespace for Rustic AI K8s execution engine
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: rustic-ai
+  labels:
+    name: rustic-ai
+    component: execution-engine
