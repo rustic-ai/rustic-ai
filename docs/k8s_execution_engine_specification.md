@@ -110,7 +110,7 @@ Implement a Kubernetes-native execution engine that:
 ### 2.2 Non-Functional Requirements
 
 **NFR1: Performance**
-- Agent creation: < 2s (vs Ray's 50-200ms, acceptable for long-lived agents)
+- Agent creation: 1-2s (competitive with Ray's real-world ~1s per actor)
 - Agent lookup: < 1ms (Redis GET)
 - gRPC communication latency: < 2ms
 
@@ -1656,18 +1656,81 @@ Add application-level health checks:
 
 ## Appendix A: Comparison with Ray
 
-| Feature | Ray | K8s Engine |
-|---------|-----|------------|
-| Process Isolation | ✅ Yes | ✅ Yes |
-| Fractional GPU | ✅ Yes (0.5 GPU) | ❌ No |
-| Agent Creation Latency | 50-200ms | 1-2s |
-| Agent Lookup Latency | 0.1-0.5ms | <1ms |
-| Operational Complexity | High (2 orchestrators) | Low (1 orchestrator) |
-| Auto-restart | ✅ Yes (max 3) | ⚠️ Via K8s pod restart |
-| Named Actors | ✅ Yes | ✅ Yes (via registry) |
-| Distributed State | ✅ Ray GCS | ✅ Redis |
+### Architecture Comparison
+
+**Important:** Both Ray actors and our K8s engine use the same fundamental architecture - **one dedicated process per agent**. Ray does NOT reuse worker processes for actors; each `Actor.remote()` call creates a new Python worker process.
+
+| Feature | Ray Actors | K8s Engine |
+|---------|------------|------------|
+| **Process Model** | Dedicated process per actor | Dedicated process per agent |
+| Process Isolation | ✅ Yes (process per actor) | ✅ Yes (process per agent) |
+| Process Reuse | ❌ No (new process each time) | ❌ No (new process each time) |
+| Python Startup Overhead | ✅ Yes (each actor) | ✅ Yes (each agent) |
+| **Performance** | | |
+| Agent Creation (Real-world) | ~1s typical, up to minutes | 1-2s |
+| Agent Creation (Best-case) | ~200ms (optimized) | ~500ms-1s (estimated) |
+| Agent Lookup Latency | 0.1-0.5ms (GCS) | <1ms (Redis) |
+| **Resource Management** | | |
+| Fractional GPU | ✅ Yes (0.5 GPU per actor) | ❌ No (K8s limitation) |
+| Fractional CPU | ✅ Yes (0.1 CPU per actor) | ✅ Yes (K8s requests) |
+| Memory Limits | ✅ Yes | ✅ Yes |
+| **Operational** | | |
+| Orchestration Layers | 2 (K8s + Ray) | 1 (K8s only) |
+| Cluster Management | Ray cluster + K8s | K8s native |
+| Auto-restart | ✅ Yes (max 3 retries) | ⚠️ Via K8s pod restart |
+| Named Discovery | ✅ Yes (namespace + name) | ✅ Yes (Redis registry) |
+| **State & Observability** | | |
+| Distributed State | Ray GCS (Global Control Service) | Redis |
 | Observability | Ray Dashboard | Prometheus + Grafana |
-| Multi-region | ✅ Yes | ⚠️ Requires setup |
+| Logging | Ray logs aggregation | K8s native logging |
+| **Deployment** | | |
+| Multi-region | ✅ Yes (native) | ⚠️ Requires setup |
+| Scaling | Ray autoscaler | K8s HPA |
+| Configuration | Ray cluster YAML | K8s manifests |
+
+### Performance Notes
+
+**Ray Actor Creation Performance:**
+- **Marketed**: 50-200ms (best-case, optimized scenarios)
+- **Real-world**: ~1 second per actor (GitHub issue #20244)
+- **Distributed clusters**: 5-7 minutes for actors on worker nodes (reported issues)
+- **Ray 2.3 improvement**: 8x faster worker startup (indicating previous slowness)
+
+**Why Both Are Similar:**
+1. Both spawn new Python processes (no process reuse for actors)
+2. Both incur Python interpreter startup overhead
+3. Both require library imports and dependency initialization
+4. Main difference: Ray has invested in worker startup optimizations
+
+**When Performance Difference Matters:**
+- **Very dynamic workloads**: Agents created/destroyed every few minutes
+- **Interactive development**: Frequent agent restarts during testing
+- **Serverless patterns**: Short-lived agents (not typical for Rustic AI)
+
+**When Performance Difference Doesn't Matter:**
+- **Long-lived agents**: Running for hours/days (typical for Rustic AI)
+- **Stable deployments**: Agents created once, run indefinitely
+- **1.5s overhead on 8-hour runtime = 0.005% impact**
+
+### Decision Matrix
+
+**Choose K8s Engine when:**
+- ✅ NOT using fractional GPU sharing
+- ✅ Want simpler operations (one orchestrator)
+- ✅ Agents are long-lived (hours/days)
+- ✅ Already running on Kubernetes
+- ✅ 1-2s creation latency is acceptable
+- ✅ Want K8s-native monitoring/logging
+
+**Choose Ray Engine when:**
+- ✅ Need fractional GPU sharing (0.5 GPU per agent)
+- ✅ Very dynamic workloads (frequent creation/deletion)
+- ✅ Already using other Ray features (Ray Data, Ray Serve)
+- ✅ Have Ray expertise/infrastructure
+- ✅ Need Ray's optimized worker startup (<1s)
+- ✅ Multi-region deployment out of the box
+
+**Key Insight:** The primary differentiator is **fractional GPU support**, not performance. For CPU-only workloads with long-lived agents, both engines perform similarly, but K8s engine is operationally simpler.
 
 ---
 
