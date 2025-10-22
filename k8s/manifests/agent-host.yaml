@@ -1,0 +1,162 @@
+# Agent Host Deployment and Service
+# Runs agent processes on Kubernetes pods
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: agent-host
+  namespace: rustic-ai
+  labels:
+    app: agent-host
+    component: execution-engine
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: agent-host
+  namespace: rustic-ai
+  labels:
+    app: agent-host
+    component: execution-engine
+rules:
+- apiGroups: [""]
+  resources: ["endpoints"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: agent-host
+  namespace: rustic-ai
+  labels:
+    app: agent-host
+    component: execution-engine
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: agent-host
+subjects:
+- kind: ServiceAccount
+  name: agent-host
+  namespace: rustic-ai
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agent-host
+  namespace: rustic-ai
+  labels:
+    app: agent-host
+    component: execution-engine
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: agent-host
+  template:
+    metadata:
+      labels:
+        app: agent-host
+        component: execution-engine
+    spec:
+      serviceAccountName: agent-host
+      containers:
+      - name: agent-host
+        image: rustic-ai/agent-host:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 50051
+          name: grpc
+          protocol: TCP
+        env:
+        - name: REDIS_URL
+          value: "redis://redis:6379/0"
+        - name: GRPC_PORT
+          value: "50051"
+        - name: MAX_PROCESSES
+          value: "100"
+        - name: HEARTBEAT_INTERVAL
+          value: "20"
+        - name: HOSTNAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        resources:
+          requests:
+            cpu: 500m
+            memory: 1Gi
+          limits:
+            cpu: 4000m
+            memory: 8Gi
+        livenessProbe:
+          exec:
+            command:
+            - python
+            - -c
+            - |
+              import grpc
+              from rustic_ai.k8s.proto import agent_host_pb2, agent_host_pb2_grpc
+              channel = grpc.insecure_channel('localhost:50051')
+              stub = agent_host_pb2_grpc.AgentHostServiceStub(channel)
+              request = agent_host_pb2.HealthRequest()
+              response = stub.Health(request, timeout=2)
+              exit(0 if response.healthy else 1)
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          exec:
+            command:
+            - python
+            - -c
+            - |
+              import grpc
+              from rustic_ai.k8s.proto import agent_host_pb2, agent_host_pb2_grpc
+              channel = grpc.insecure_channel('localhost:50051')
+              stub = agent_host_pb2_grpc.AgentHostServiceStub(channel)
+              request = agent_host_pb2.HealthRequest()
+              response = stub.Health(request, timeout=2)
+              exit(0 if response.healthy else 1)
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: false
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 60
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: agent-host
+  namespace: rustic-ai
+  labels:
+    app: agent-host
+    component: execution-engine
+spec:
+  type: ClusterIP
+  clusterIP: None  # Headless service for direct pod access
+  ports:
+  - port: 50051
+    targetPort: 50051
+    protocol: TCP
+    name: grpc
+  selector:
+    app: agent-host
+  publishNotReadyAddresses: false
