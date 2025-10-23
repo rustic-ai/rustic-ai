@@ -125,6 +125,8 @@ class LiteLLMConf(BaseAgentProps):
     If set to 0, the agent will not retry on tool parse error.
     """
 
+    vertex_location: str = "us-east1"
+
     def get_tools_manager(self) -> Optional[ToolsManager]:
         """
         Returns the tools manager for the agent.

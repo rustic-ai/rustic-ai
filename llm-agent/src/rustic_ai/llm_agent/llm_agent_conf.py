@@ -174,6 +174,8 @@ class LLMAgentConfig(BaseAgentProps):
     This is useful if the LLM response is only used for tool calls and not for direct responses.
     """
 
+    vertex_location: str = "us-east1"
+
     @field_validator("request_preprocessors", mode="before")
     @classmethod
     def _coerce_req(cls, v):
