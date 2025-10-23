@@ -125,7 +125,10 @@ class LiteLLMConf(BaseAgentProps):
     If set to 0, the agent will not retry on tool parse error.
     """
 
-    vertex_location: str = "us-east1"
+    vertex_location: Optional[str] = None
+    """
+    Place where vertex model is deployed (us-central1, asia-southeast1, etc.). Some models support the global location
+    """
 
     def get_tools_manager(self) -> Optional[ToolsManager]:
         """

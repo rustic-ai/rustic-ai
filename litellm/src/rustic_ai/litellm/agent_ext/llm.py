@@ -92,9 +92,9 @@ class LiteLLM(LLM):
 class LiteLLMResolver(DependencyResolver[LLM]):
     memoize_resolution: bool = False
 
-    def __init__(self, model: str, **conf):
+    def __init__(self, model: str, conf: dict = {}):
         super().__init__()
-        conf.setdefault("model", model)
+        conf["model"] = model
         self.props = LiteLLMConf.model_validate(conf)
         self.LiteLLM = LiteLLM(self.props)
 

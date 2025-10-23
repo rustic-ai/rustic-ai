@@ -174,7 +174,10 @@ class LLMAgentConfig(BaseAgentProps):
     This is useful if the LLM response is only used for tool calls and not for direct responses.
     """
 
-    vertex_location: str = "us-east1"
+    vertex_location: Optional[str] = None
+    """
+    Place where vertex model is deployed (us-central1, asia-southeast1, etc.). Some models support the global location
+    """
 
     @field_validator("request_preprocessors", mode="before")
     @classmethod
