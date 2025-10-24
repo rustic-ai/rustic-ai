@@ -125,6 +125,16 @@ class LiteLLMConf(BaseAgentProps):
     If set to 0, the agent will not retry on tool parse error.
     """
 
+    vertex_location: Optional[str] = None
+    """
+    Place where vertex model is deployed (us-central1, asia-southeast1, etc.). If None, attempts to use the VERTEXAI_LOCATION environment variable.
+    """
+
+    vertex_project: Optional[str] = None
+    """
+    The Google Cloud project ID. If None, attempts to use the VERTEXAI_PROJECT environment variable.
+    """
+
     def get_tools_manager(self) -> Optional[ToolsManager]:
         """
         Returns the tools manager for the agent.

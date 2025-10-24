@@ -174,6 +174,16 @@ class LLMAgentConfig(BaseAgentProps):
     This is useful if the LLM response is only used for tool calls and not for direct responses.
     """
 
+    vertex_location: Optional[str] = None
+    """
+    Place where vertex model is deployed (us-central1, asia-southeast1, etc.). If None, attempts to use the VERTEXAI_LOCATION environment variable.
+    """
+
+    vertex_project: Optional[str] = None
+    """
+    The Google Cloud project ID. If None, attempts to use the VERTEXAI_PROJECT environment variable.
+    """
+
     @field_validator("request_preprocessors", mode="before")
     @classmethod
     def _coerce_req(cls, v):
