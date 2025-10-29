@@ -115,6 +115,7 @@ class UserProxyAgent(Agent[UserProxyAgentProps], GuildRefreshMixin):
                 priority=unwrapped_message.priority,
                 recipient_list=unwrapped_message.recipient_list + tagged_users,
             ),
+            mark_forwarded=True,
         )
 
         ctx.add_routing_step(notification_rule)

@@ -178,18 +178,18 @@ class GuildCommunicationManager:
                         logging.error(f"Invalid JSON received: {e}")
                         continue
 
-                    id = data.get("id", None)
+                    msg_id = data.get("id", None)
+                    idg = None
 
-                    if id and isinstance(id, str):
-                        idg = self._gemstone.get_id_from_string(id)
-                    elif id and isinstance(id, int):
-                        idg = self._gemstone.get_id_from_int(id)
+                    if msg_id and isinstance(msg_id, str):
+                        idg = self._gemstone.get_id_from_string(msg_id)
+                    elif msg_id and isinstance(msg_id, int):
+                        idg = self._gemstone.get_id_from_int(msg_id)
 
                     priority = Priority(data.get("priority", Priority.NORMAL.value))
                     if not idg or idg.timestamp - (time.time_ns() // 1000000) > 1000:  # pragma: no cover
-                        data["id"] = self._gemstone.get_id(priority).to_int()
-                    else:
-                        data["id"] = idg.to_int()
+                        idg = self._gemstone.get_id(priority)
+                    data["id"] = idg.to_int()
 
                     with self.tracer.start_as_current_span(
                         "websocket:receive_message",
@@ -227,7 +227,7 @@ class GuildCommunicationManager:
                                 sender=user_agent_tag,
                                 format=get_qualified_class_name(Message),
                                 payload=data,
-                                thread=[data["id"]],
+                                thread=data["thread"],
                                 traceparent=traceparent,
                                 message_history=message_history,
                             )
