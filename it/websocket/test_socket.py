@@ -172,6 +172,11 @@ class TestServer:
 
             json0 = json.loads(wresp0[1])
 
+            initial_msg = json.loads(wresp0[0])
+
+            assert initial_msg["forward_header"]["origin_message_id"] == msg.id
+            assert initial_msg["thread"][0] == msg.id
+
             assert json0["payload"]["content"] == "Hello, guild!"
             assert json0["sender"]["id"] == UserProxyAgent.get_user_agent_id("user123")
             assert json0["sender"]["name"] == "user_name_123"
@@ -208,13 +213,15 @@ class TestServer:
             assert jsoni["sender"]["name"] == "user_name_123"
             assert jsoni["forward_header"]["on_behalf_of"]["name"] == "EchoAgent"
 
-            # Test sending a message without id
+            # Test sending a message without id but an existing thread
             msg = Message(
                 generator.get_id(Priority.NORMAL),
                 topics="default_topic",
                 sender={"id": "user123", "name": "user 123"},
                 format=MessageConstants.RAW_JSON_FORMAT.value,
                 payload={"content": "Hello, guild NOID!"},
+                thread=[initial_msg["id"]],
+                message_history=initial_msg["message_history"],
             )
 
             msg_dict = msg.model_dump()
@@ -232,6 +239,9 @@ class TestServer:
                     break
 
             assert len(wsrespx) == 2
+            user_msg = json.loads(wsrespx[0])
+            assert len(user_msg["thread"]) == 2
+            assert user_msg["thread"][0] == msg_dict["thread"][0]
 
             jsonx = json.loads(wsrespx[1])
 
