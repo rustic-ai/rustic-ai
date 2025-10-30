@@ -715,7 +715,7 @@ class TestGuildBuilder:
 
         assert len(user_notifications) == 2
 
-        user_response = [message for message in user_notifications if message.forward_header][0]
+        user_response = [message for message in user_notifications if message.forward_header][1]
 
         assert user_response.topics == user_message_topic
         assert user_response.payload["message"] == "Hello, world! @EchoAgent"

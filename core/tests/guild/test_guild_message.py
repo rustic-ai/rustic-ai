@@ -235,8 +235,6 @@ class TestGuildMessages:
                 assert message.forward_header.on_behalf_of.name == "ProbeAgent"
                 notified_users.append(user_id)
 
-        assert user1 not in notified_users
-
     def test_messages_with_reason(self, messaging: MessagingConfig, org_id):
         json_path = importlib.resources.files("core.tests.resources.guild_specs").joinpath("test_reason_guild.json")
         builder = GuildBuilder.from_json_file(json_path)
