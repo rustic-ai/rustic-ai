@@ -471,6 +471,10 @@ async def launch_guild_from_blueprint(
 
         guild_spec = GuildBuilder._from_spec_dict(spec).build_spec()
 
+        # Update the guild id if provided
+        if launch_request.guild_id is not None:
+            guild_spec.id = launch_request.guild_id
+
         # Update the guild name
         guild_spec.name = launch_request.guild_name
 

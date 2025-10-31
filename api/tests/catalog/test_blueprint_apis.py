@@ -906,6 +906,30 @@ def test_launch_guild_from_blueprint(setup_data, catalog_client):
     guild_ids = [guild["id"] for guild in user_guilds_response.json()]
     assert guild_id in guild_ids
 
+    # Test with custom guild_id: verify the returned guild_id matches the provided one
+    custom_guild_id = "custom-guild-id-123"
+    launch_request_with_id = LaunchGuildFromBlueprintRequest(
+        guild_name="Guild With Custom ID",
+        user_id=setup_data["user_id"],
+        org_id=setup_data["organization_id"],
+        description="A guild with a custom ID",
+        guild_id=custom_guild_id,
+    )
+
+    custom_id_response = catalog_client.post(
+        f"/catalog/blueprints/{blueprint_id}/guilds",
+        json=launch_request_with_id.model_dump(),
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert custom_id_response.status_code == 201
+    assert custom_id_response.json()["id"] == custom_guild_id
+
+    # Verify the guild with custom ID was created and associated with the blueprint
+    custom_guild_blueprint_response = catalog_client.get(f"/catalog/guilds/{custom_guild_id}/blueprints/")
+    assert custom_guild_blueprint_response.status_code == 200
+    assert custom_guild_blueprint_response.json()["id"] == blueprint_id
+
     # Test error case: blueprint not found
     invalid_launch_request = LaunchGuildFromBlueprintRequest(
         guild_name="Invalid Guild", user_id=setup_data["user_id"], org_id=setup_data["organization_id"]
