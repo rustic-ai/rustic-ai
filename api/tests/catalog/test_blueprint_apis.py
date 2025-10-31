@@ -292,6 +292,42 @@ def test_get_category_blueprints(setup_data, catalog_client):
     assert category0["name"] == category_name
 
 
+def test_get_blueprints_by_tag(setup_data, catalog_client):
+    # Create a blueprint with tags
+    blueprint_data = {
+        "name": "BlueprintWithSpecificTag",
+        "description": "blueprint for testing tag filtering",
+        "exposure": "private",
+        "author_id": setup_data["user_id"],
+        "organization_id": setup_data["organization_id"],
+        "version": "1.0.0",
+        "spec": {"name": "test blueprint spec", "description": "a guildspec for testing tag filtering"},
+        "category_id": setup_data["category"].id,
+        "icon": "icon.png",
+        "tags": ["tag1", "tag2", "tag3"],
+    }
+    blueprint_create = BlueprintCreate.model_validate(blueprint_data)
+    response = catalog_client.post("/catalog/blueprints/", json=blueprint_create.model_dump())
+    assert response.status_code == 201
+    blueprint_id = response.json()["id"]
+
+    # Test getting blueprints by a specific tag
+    tag_name = "tag1"
+    response = catalog_client.get(f"/catalog/tags/{tag_name}/blueprints/")
+    assert response.status_code == 200
+    assert len(response.json()) > 0
+
+    # Verify the created blueprint is in the results
+    blueprint_ids = [bp["id"] for bp in response.json()]
+    assert blueprint_id in blueprint_ids
+
+    # Verify tags list includes our tag
+    tags_list_res = catalog_client.get("/catalog/tags/")
+    assert tags_list_res.status_code == 200
+    assert len(tags_list_res.json()) > 0
+    assert tag_name in tags_list_res.json()
+
+
 def test_share_blueprint_with_organization(setup_data, catalog_client):
     blueprint_id = setup_data["blueprint"].id
     org2 = setup_data["org2_id"]
@@ -905,6 +941,30 @@ def test_launch_guild_from_blueprint(setup_data, catalog_client):
     assert user_guilds_response.status_code == 200
     guild_ids = [guild["id"] for guild in user_guilds_response.json()]
     assert guild_id in guild_ids
+
+    # Test with custom guild_id: verify the returned guild_id matches the provided one
+    custom_guild_id = "custom-guild-id-123"
+    launch_request_with_id = LaunchGuildFromBlueprintRequest(
+        guild_name="Guild With Custom ID",
+        user_id=setup_data["user_id"],
+        org_id=setup_data["organization_id"],
+        description="A guild with a custom ID",
+        guild_id=custom_guild_id,
+    )
+
+    custom_id_response = catalog_client.post(
+        f"/catalog/blueprints/{blueprint_id}/guilds",
+        json=launch_request_with_id.model_dump(),
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert custom_id_response.status_code == 201
+    assert custom_id_response.json()["id"] == custom_guild_id
+
+    # Verify the guild with custom ID was created and associated with the blueprint
+    custom_guild_blueprint_response = catalog_client.get(f"/catalog/guilds/{custom_guild_id}/blueprints/")
+    assert custom_guild_blueprint_response.status_code == 200
+    assert custom_guild_blueprint_response.json()["id"] == blueprint_id
 
     # Test error case: blueprint not found
     invalid_launch_request = LaunchGuildFromBlueprintRequest(

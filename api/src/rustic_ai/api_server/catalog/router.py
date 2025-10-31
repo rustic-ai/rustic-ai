@@ -220,6 +220,16 @@ async def get_category_blueprints(category_name: str, engine: Engine = Depends(M
     return CatalogStore(engine).get_blueprints_by_category(category_name)
 
 
+@catalog_router.get(
+    "/tags/{tag}/blueprints/",
+    response_model=List[BlueprintInfoResponse],
+    operation_id="getBlueprintsByTag",
+    tags=["blueprints"],
+)
+async def get_blueprints_by_tag(tag: str, engine: Engine = Depends(Metastore.get_engine)):
+    return CatalogStore(engine).get_blueprints_by_tag(tag)
+
+
 @catalog_router.post(
     "/blueprints/{blueprint_id}/reviews/",
     response_model=IdInfo,
@@ -470,6 +480,10 @@ async def launch_guild_from_blueprint(
             spec[KeyConstants.CONFIGURATION] = configuration
 
         guild_spec = GuildBuilder._from_spec_dict(spec).build_spec()
+
+        # Update the guild id if provided
+        if launch_request.guild_id is not None:
+            guild_spec.id = launch_request.guild_id
 
         # Update the guild name
         guild_spec.name = launch_request.guild_name
