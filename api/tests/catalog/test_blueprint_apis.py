@@ -292,6 +292,42 @@ def test_get_category_blueprints(setup_data, catalog_client):
     assert category0["name"] == category_name
 
 
+def test_get_blueprints_by_tag(setup_data, catalog_client):
+    # Create a blueprint with tags
+    blueprint_data = {
+        "name": "BlueprintWithSpecificTag",
+        "description": "blueprint for testing tag filtering",
+        "exposure": "private",
+        "author_id": setup_data["user_id"],
+        "organization_id": setup_data["organization_id"],
+        "version": "1.0.0",
+        "spec": {"name": "test blueprint spec", "description": "a guildspec for testing tag filtering"},
+        "category_id": setup_data["category"].id,
+        "icon": "icon.png",
+        "tags": ["tag1", "tag2", "tag3"],
+    }
+    blueprint_create = BlueprintCreate.model_validate(blueprint_data)
+    response = catalog_client.post("/catalog/blueprints/", json=blueprint_create.model_dump())
+    assert response.status_code == 201
+    blueprint_id = response.json()["id"]
+
+    # Test getting blueprints by a specific tag
+    tag_name = "tag1"
+    response = catalog_client.get(f"/catalog/tags/{tag_name}/blueprints/")
+    assert response.status_code == 200
+    assert len(response.json()) > 0
+
+    # Verify the created blueprint is in the results
+    blueprint_ids = [bp["id"] for bp in response.json()]
+    assert blueprint_id in blueprint_ids
+
+    # Verify tags list includes our tag
+    tags_list_res = catalog_client.get("/catalog/tags/")
+    assert tags_list_res.status_code == 200
+    assert len(tags_list_res.json()) > 0
+    assert tag_name in tags_list_res.json()
+
+
 def test_share_blueprint_with_organization(setup_data, catalog_client):
     blueprint_id = setup_data["blueprint"].id
     org2 = setup_data["org2_id"]

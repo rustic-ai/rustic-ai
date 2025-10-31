@@ -220,6 +220,16 @@ async def get_category_blueprints(category_name: str, engine: Engine = Depends(M
     return CatalogStore(engine).get_blueprints_by_category(category_name)
 
 
+@catalog_router.get(
+    "/tags/{tag}/blueprints/",
+    response_model=List[BlueprintInfoResponse],
+    operation_id="getBlueprintsByTag",
+    tags=["blueprints"],
+)
+async def get_blueprints_by_tag(tag: str, engine: Engine = Depends(Metastore.get_engine)):
+    return CatalogStore(engine).get_blueprints_by_tag(tag)
+
+
 @catalog_router.post(
     "/blueprints/{blueprint_id}/reviews/",
     response_model=IdInfo,
