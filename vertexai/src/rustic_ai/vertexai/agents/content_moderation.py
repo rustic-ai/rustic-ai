@@ -86,7 +86,7 @@ class ContentModerationAgent(Agent[ContentModeratorProps], VertexAIBase):
         reason = df.to_markdown(index=False, tablefmt="github", floatfmt=".2%")
 
         if requested_categories:
-            reason = f"**Checked categories:** {', '.join(requested_categories)}<br/><br/>{reason}"
+            reason = f"**Checked categories:** {', '.join(requested_categories)}\n\n{reason}"
 
         return ModerationResponseWithReason(
             response=ModerationResponse(
