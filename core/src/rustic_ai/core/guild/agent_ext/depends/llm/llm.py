@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import Optional
 
 from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     ChatCompletionRequest,
@@ -13,7 +14,9 @@ class LLM(ABC):
         pass
 
     @abstractmethod
-    async def async_completion(self, prompt: ChatCompletionRequest, model: Optional[str] = None) -> ChatCompletionResponse:
+    async def async_completion(
+        self, prompt: ChatCompletionRequest, model: Optional[str] = None
+    ) -> ChatCompletionResponse:
         pass
 
     @property
