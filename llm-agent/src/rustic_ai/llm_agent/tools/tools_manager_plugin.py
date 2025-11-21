@@ -3,7 +3,13 @@ from functools import cached_property
 import json
 from typing import List, Optional
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    Field,
+    field_serializer,
+    field_validator,
+    model_validator,
+)
 
 from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     ChatCompletionRequest,
@@ -161,3 +167,7 @@ class ToolsManagerPlugin(LLMCallWrapper):
 
         else:
             raise ValueError("Toolset must be a dict or an instance of ToolspecsProvider")
+
+    @field_serializer("toolset", mode="plain")
+    def _serialize_toolset(self, toolset):
+        return toolset.model_dump()
