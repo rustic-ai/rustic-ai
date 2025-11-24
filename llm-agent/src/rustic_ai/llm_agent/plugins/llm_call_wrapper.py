@@ -20,15 +20,15 @@ class LLMCallWrapper(BaseModel, ABC):
 
     kind: Optional[str] = Field(default=None, frozen=True, description="FQCN of the wrap processor class")
 
-    def model_post_init(self, __context) -> None:
-        if not self.kind:
-            object.__setattr__(self, "kind", f"{self.__class__.__module__}.{self.__class__.__qualname__}")
-
     @model_validator(mode="after")
     def _enforce_kind_matches_class(self):
         fqcn = f"{self.__class__.__module__}.{self.__class__.__qualname__}"
         if self.kind and self.kind != fqcn:
             raise ValueError(f"`kind` must be {fqcn!r}, got {self.kind!r}")
+
+        if not self.kind:
+            object.__setattr__(self, "kind", fqcn)
+
         return self
 
     @abstractmethod
