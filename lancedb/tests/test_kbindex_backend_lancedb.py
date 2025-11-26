@@ -1,6 +1,7 @@
 from typing import AsyncIterable
 
 import pytest
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from rustic_ai.core.knowledgebase.chunks import TextChunk
 from rustic_ai.core.knowledgebase.metadata import CommonMetaPart
@@ -166,3 +167,52 @@ async def test_lancedb_backend_unknown_vector_is_skipped(tmp_path):
         )
     )
     assert res == []
+
+
+@pytest.mark.asyncio
+async def test_upsert_batching(tmp_path):
+    schema = _schema_text()
+    be = LanceDBKBIndexBackend(uri=str(tmp_path / ".lancedb"))
+    await be.ensure_ready(schema=schema)
+
+    # Generate enough rows to trigger batching (BATCH_SIZE is 200)
+    count = 300
+    
+    async def _rows():
+        for i in range(count):
+            yield _row(f"batch_{i}", f"content {i}")
+
+    # We want to verify that _flush_batch is called multiple times.
+    # Since we can't easily spy on the internal method without mocking the whole class,
+    # we'll rely on the fact that it works if all rows are inserted.
+    
+    await be.upsert(table_name="text_chunks", rows=_rows())
+
+    # Verify all rows are there
+    table = await be._get_table("text_chunks")
+    assert await table.count_rows() == count
+
+
+@pytest.mark.asyncio
+async def test_index_creation_failure_logged(tmp_path, capsys):
+    schema = _schema_text()
+    be = LanceDBKBIndexBackend(uri=str(tmp_path / ".lancedb"))
+    
+    # Mock table.create_index to raise exception
+    with patch("rustic_ai.lancedb.kbindex_backend_lancedb.LanceDBKBIndexBackend._get_table", new_callable=AsyncMock) as mock_get_table:
+        mock_table = AsyncMock()
+        mock_table.create_index.side_effect = Exception("Index creation failed")
+        mock_table.schema.return_value = MagicMock() # Mock schema for ensure_table_ready
+        mock_get_table.return_value = mock_table
+        
+        # We need to mock lancedb.connect_async too because ensure_ready calls it
+        with patch("lancedb.connect_async", new_callable=AsyncMock) as mock_connect:
+             mock_conn = AsyncMock()
+             mock_connect.return_value = mock_conn
+             mock_conn.open_table.return_value = mock_table
+             
+             # This should not raise
+             await be.ensure_ready(schema=schema)
+             
+             captured = capsys.readouterr()
+             assert "Warning: Failed to create index" in captured.out
