@@ -216,3 +216,30 @@ async def test_index_creation_failure_logged(tmp_path, capsys):
              
              captured = capsys.readouterr()
              assert "Warning: Failed to create index" in captured.out
+
+
+@pytest.mark.asyncio
+async def test_search_returns_payload(tmp_path):
+    schema = _schema_text()
+    be = LanceDBKBIndexBackend(uri=str(tmp_path / ".lancedb"))
+    await be.ensure_ready(schema=schema)
+
+    # Insert a row with specific content
+    content = "This is some content that should be returned."
+    row = _row("k_payload", content, "en")
+    await be.upsert(table_name="text_chunks", rows=_aiter_one(row))
+
+    # Search for it
+    res = await be.search(
+        query=SearchQuery(
+            targets=[SearchTarget(table_name="text_chunks", vector_column="vs_a", query_vector=[1.0, 0.0])],
+            limit=1,
+        )
+    )
+
+    assert len(res) == 1
+    # Verify the payload contains the text content
+    # The schema defines: ColumnSpec(name="text", type="text", source="chunk", selector="text", nullable=True)
+    assert res[0].payload.get("text") == content
+    # Also verify other metadata
+    assert res[0].payload.get("knol_id") == "k_payload"
