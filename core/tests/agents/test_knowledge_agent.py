@@ -477,3 +477,35 @@ class TestKnowledgeAgent:
         assert len(results) >= 1
         # Last message should be an error envelope
         assert results[-1].format == get_qualified_class_name(ErrorMessage)
+
+    def test_agent_search_returns_payload(self, agent_spec, dependency_map, generator):
+        agent, results = wrap_agent_for_testing(agent_spec, dependency_map=dependency_map)
+
+        content = "This is the content that should be in the payload."
+        _prepare_media_on_fs(agent, dependency_map, "payload.txt", content.encode("utf-8"))
+
+        media = [MediaLink(id="m_payload", url="file:///payload.txt", name="payload.txt", mimetype="text/plain")]
+        agent._on_message(
+            _build_message(
+                generator,
+                IndexMediaLinks(media=media).model_dump(),
+                get_qualified_class_name(IndexMediaLinks),
+            )
+        )
+
+        # Search for it
+        agent._on_message(
+            _build_message(
+                generator,
+                KBSearchRequest(text="content", limit=1).model_dump(),
+                get_qualified_class_name(KBSearchRequest),
+            )
+        )
+
+        assert len(results) >= 2
+        sr = SearchResults.model_validate(results[-1].payload)
+        assert len(sr.results) == 1
+        # Verify payload contains the text content
+        # The default text config uses a chunker that puts text in the 'text' field
+        assert sr.results[0].payload.get("text") == content
+        assert sr.results[0].payload.get("knol_id") is not None

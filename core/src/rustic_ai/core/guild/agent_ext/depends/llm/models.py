@@ -413,6 +413,7 @@ class ChatCompletionToolChoiceOption(Enum):
 
     none = "none"
     auto = "auto"
+    required = "required"
 
 
 class ChatCompletionTool(LLMBaseModel):

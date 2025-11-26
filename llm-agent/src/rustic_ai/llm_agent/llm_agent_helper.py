@@ -1,5 +1,5 @@
 import logging
-from typing import List, Union
+from typing import List, Optional, Union
 
 import openai
 
@@ -64,6 +64,7 @@ class LLMAgentHelper:
             wrap_processors=wrap_processors,
             post_processors=post_processors,
             max_retries=max_retries,
+            model=config.model,
         )
 
     @staticmethod
@@ -75,9 +76,10 @@ class LLMAgentHelper:
         wrap_processors: List[LLMCallWrapper],
         post_processors: List[ResponsePostprocessor],
         max_retries: int,
+        model: Optional[str] = None,
     ) -> Union[ChatCompletionResponse, ChatCompletionError]:
 
-        response = llm.completion(cc_request)
+        response = llm.completion(cc_request, model)
 
         new_messages = []
 
