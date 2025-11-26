@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Any, List, Optional, Type, TypeVar, Union, cast
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, field_serializer
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator
 from typing_extensions import Annotated
 
 from rustic_ai.core.guild.dsl import BaseAgentProps
