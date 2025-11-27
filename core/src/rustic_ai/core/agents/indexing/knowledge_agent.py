@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from pydantic import BaseModel, Field
 
@@ -17,7 +17,12 @@ from rustic_ai.core.knowledgebase.pipeline_executor import (
     ResolvedPipeline,
     SimplePipelineExecutor,
 )
-from rustic_ai.core.knowledgebase.query import BoolFilter, HybridOptions, SearchQuery
+from rustic_ai.core.knowledgebase.query import (
+    BoolFilter,
+    HybridOptions,
+    SearchQuery,
+    SearchResults,
+)
 
 
 class CatalogMediaLinks(BaseModel):
@@ -37,6 +42,7 @@ class IndexMediaResult(BaseModel):
     knol_id: Optional[str] = None
     status: str = Field(description="indexed|failed")
     error: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
 
 
 class IndexMediaResults(BaseModel):
@@ -58,7 +64,11 @@ class KBSearchRequest(BaseModel):
     explain: bool = False
 
 
-class KnowledgeAgent(Agent):
+class KBSearchResults(SearchResults):
+    query_text: Optional[str] = None
+
+
+class KnowledgeAgent(Agent[KnowledgeAgentConfig]):
     """
     Agent that indexes MediaLink content into the KnowledgeBase and performs search.
     """
@@ -159,10 +169,16 @@ class KnowledgeAgent(Agent):
         for ml, st in zip(req.media, statuses):
             knol_obj = getattr(st, "knol", None)
             knol_id = knol_obj.id if isinstance(knol_obj, Knol) else None
+            metadata = ml.metadata
             if isinstance(st, CatalogStatusFailed) or not knol_id:
-                out.append(IndexMediaResult(media_id=ml.id, status="failed", error=getattr(st, "error", None)))
+                out.append(
+                    IndexMediaResult(
+                        media_id=ml.id, status="failed", error=getattr(st, "error", None), metadata=metadata
+                    )
+                )
             else:
-                out.append(IndexMediaResult(media_id=ml.id, knol_id=knol_id, status="indexed"))
+                out.append(IndexMediaResult(media_id=ml.id, knol_id=knol_id, status="indexed", metadata=metadata))
+
         ctx.send(IndexMediaResults(results=out))
 
     @agent.processor(
@@ -189,4 +205,19 @@ class KnowledgeAgent(Agent):
             offset=0,
             explain=bool(req.explain),
         )
-        ctx.send(await kb.search(query=query))
+        results = await kb.search(query=query)
+
+        # Sanitize payloads to ensure JSON compatibility
+        for res in results.results:
+            for k, v in res.payload.items():
+                if hasattr(v, "isoformat"):
+                    res.payload[k] = v.isoformat()
+
+        # Convert SearchResults to KBSearchResults and add query text
+        kb_results = KBSearchResults(
+            results=results.results,
+            explain=results.explain,
+            search_duration_ms=results.search_duration_ms,
+            query_text=req.text,
+        )
+        ctx.send(kb_results)
