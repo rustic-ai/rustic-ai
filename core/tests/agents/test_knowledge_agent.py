@@ -11,6 +11,7 @@ from rustic_ai.core.agents.indexing.knowledge_agent import (
     IndexMediaLinks,
     IndexMediaResults,
     KBSearchRequest,
+    KBSearchResults,
     KnowledgeAgent,
 )
 from rustic_ai.core.guild.agent_ext.depends.dependency_resolver import (
@@ -186,7 +187,7 @@ class TestKnowledgeAgent:
         )
 
         assert len(results) >= 2
-        sr = SearchResults.model_validate(results[-1].payload)
+        sr = KBSearchResults.model_validate(results[-1].payload)
         assert sr.search_duration_ms is not None
         assert isinstance(sr.results, list)
         assert len(sr.results) >= 1
@@ -215,7 +216,7 @@ class TestKnowledgeAgent:
         )
 
         assert len(results) >= 2
-        sr = SearchResults.model_validate(results[-1].payload)
+        sr = KBSearchResults.model_validate(results[-1].payload)
         assert sr.explain is not None
         assert sr.explain.targets_used is not None and len(sr.explain.targets_used) >= 1
         assert sr.search_duration_ms is not None
@@ -272,7 +273,7 @@ class TestKnowledgeAgent:
             )
         )
 
-        sr = SearchResults.model_validate(results[-1].payload)
+        sr = KBSearchResults.model_validate(results[-1].payload)
         assert sr.explain is not None
         # Fanout used: at least 2 targets recorded with timings
         assert sr.explain.targets_used is not None and len(sr.explain.targets_used) >= 2
@@ -395,7 +396,7 @@ class TestKnowledgeAgent:
         )
 
         assert len(results) >= 2
-        sr = SearchResults.model_validate(results[-1].payload)
+        sr = KBSearchResults.model_validate(results[-1].payload)
         assert len(sr.results) == 1
         # Validate message history processor
         assert (
@@ -415,7 +416,7 @@ class TestKnowledgeAgent:
                 get_qualified_class_name(KBSearchRequest),
             )
         )
-        sr2 = SearchResults.model_validate(results[-1].payload)
+        sr2 = KBSearchResults.model_validate(results[-1].payload)
         assert isinstance(sr2.results, list) and len(sr2.results) == 0
 
     def test_search_hybrid_rrf_explain_weighting(self, agent_spec, dependency_map, generator):
@@ -445,7 +446,7 @@ class TestKnowledgeAgent:
             )
         )
 
-        sr = SearchResults.model_validate(results[-1].payload)
+        sr = KBSearchResults.model_validate(results[-1].payload)
         assert sr.explain is not None
         assert sr.explain.fusion == FusionStrategy.RRF
         assert sr.explain.weighting is not None
