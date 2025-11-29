@@ -2,10 +2,10 @@ from abc import abstractmethod
 from enum import Enum
 import logging
 from typing import Dict, Literal, Optional, Union
+import uuid
 
 from jsonata import Jsonata
 from pydantic import BaseModel, Field
-import uuid
 
 from rustic_ai.core.guild import agent
 from rustic_ai.core.guild.agent import Agent, ProcessContext
@@ -186,7 +186,7 @@ class JsonataAggregator(BaseAggregator):
                 "correlation_id": correlation_id,
                 "count": len(messages),
                 "message_types": [msg.get("type") for msg in messages if "type" in msg],
-                "guild_state": guild_state
+                "guild_state": guild_state,
             }
             result = jsonata.evaluate(context)
             if result is None:

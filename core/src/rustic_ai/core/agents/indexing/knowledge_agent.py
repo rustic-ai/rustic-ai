@@ -7,7 +7,10 @@ from rustic_ai.core.guild import agent
 from rustic_ai.core.guild.agent import Agent, ProcessContext
 from rustic_ai.core.guild.agent_ext.depends.filesystem import FileSystem
 from rustic_ai.core.guild.metaprog.agent_registry import AgentDependency
-from rustic_ai.core.knowledgebase.agent_config import KnowledgeAgentConfig, KnowledgeAgentProps
+from rustic_ai.core.knowledgebase.agent_config import (
+    KnowledgeAgentConfig,
+    KnowledgeAgentProps,
+)
 from rustic_ai.core.knowledgebase.kbindex_backend import KBIndexBackend
 from rustic_ai.core.knowledgebase.knol_manager import CatalogStatus, CatalogStatusFailed
 from rustic_ai.core.knowledgebase.knowledge_base import KnowledgeBase
@@ -20,9 +23,9 @@ from rustic_ai.core.knowledgebase.pipeline_executor import (
 from rustic_ai.core.knowledgebase.query import (
     BoolFilter,
     HybridOptions,
+    RerankOptions,
     SearchQuery,
     SearchResults,
-    RerankOptions,
 )
 
 
@@ -90,7 +93,7 @@ class KnowledgeAgent(Agent[KnowledgeAgentProps]):
             search_defaults = getattr(props, "search_defaults", None)
             chunking = getattr(props, "chunking", None)
             embedder = getattr(props, "embedder", None)
-            
+
             self._cfg = KnowledgeAgentConfig.default_text(
                 search_defaults=search_defaults,
                 chunking=chunking,

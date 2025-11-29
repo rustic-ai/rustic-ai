@@ -3,8 +3,8 @@ from __future__ import annotations
 from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Field
-from rustic_ai.core.guild.dsl import BaseAgentProps
 
+from rustic_ai.core.guild.dsl import BaseAgentProps
 from rustic_ai.core.knowledgebase.chunkers.simple_text import SimpleTextChunker
 from rustic_ai.core.knowledgebase.config import KBConfig, PluginRegistry
 from rustic_ai.core.knowledgebase.embedders.feature_hash_text import (
@@ -48,27 +48,30 @@ class EmbedderDefaults(BaseModel):
 
 class KnowledgeAgentProps(BaseAgentProps):  # type: ignore
     """Serializable properties for KnowledgeAgent.
-    
+
     This is the type used in AgentSpec[KnowledgeAgentProps].
     Only contains JSON-serializable configuration.
     """
+
     search_defaults: SearchDefaults = Field(default_factory=SearchDefaults)
     chunking: ChunkingDefaults = Field(default_factory=ChunkingDefaults)
     embedder: EmbedderDefaults = Field(default_factory=EmbedderDefaults)
 
 
-def _default_plugins(chunking: Optional[ChunkingDefaults] = None, embedder: Optional[EmbedderDefaults] = None) -> PluginRegistry:
+def _default_plugins(
+    chunking: Optional[ChunkingDefaults] = None, embedder: Optional[EmbedderDefaults] = None
+) -> PluginRegistry:
     c_def = chunking or ChunkingDefaults()
     e_def = embedder or EmbedderDefaults()
-    
+
     chunker = SimpleTextChunker(id="text_chunker", chunk_size=c_def.chunk_size, chunk_overlap=c_def.chunk_overlap)
     embedder_plugin = FeatureHashingTextEmbedder(
-        id="text_embedder", 
-        dimension=e_def.dimension, 
+        id="text_embedder",
+        dimension=e_def.dimension,
         use_sign_hash=e_def.use_sign_hash,
         use_tf_log=e_def.use_tf_log,
-        distance="cosine", 
-        normalize=True
+        distance="cosine",
+        normalize=True,
     )
 
     return PluginRegistry(
@@ -143,10 +146,10 @@ class KnowledgeAgentConfig(BaseModel):
 
     @staticmethod
     def default_text(
-        id: str = "kb_default", 
-        chunking: Optional[ChunkingDefaults] = None, 
+        id: str = "kb_default",
+        chunking: Optional[ChunkingDefaults] = None,
         embedder: Optional[EmbedderDefaults] = None,
-        search_defaults: Optional[SearchDefaults] = None
+        search_defaults: Optional[SearchDefaults] = None,
     ) -> "KnowledgeAgentConfig":
         e_def = embedder or EmbedderDefaults()
         return KnowledgeAgentConfig(
