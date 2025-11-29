@@ -299,7 +299,7 @@ class AggregatingAgent(Agent[AggregatorConf]):
 
         # Use collector to generate state operations
         operations = self.collector.get_state_operations(correlation_id, payload_with_format)
-        print("xxx operations", operations)
+
         self.update_state(  # type: ignore[no-untyped-call]
             ctx,
             update_format=StateUpdateFormat.JSON_PATCH,

@@ -44,7 +44,6 @@ from rustic_ai.core.knowledgebase.query import (
     RerankOptions,
     RerankStrategy,
     SearchQuery,
-    SearchResults,
 )
 from rustic_ai.core.messaging.core.message import AgentTag, Message
 from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
