@@ -7,7 +7,7 @@ from rustic_ai.core.guild import agent
 from rustic_ai.core.guild.agent import Agent, ProcessContext
 from rustic_ai.core.guild.agent_ext.depends.filesystem import FileSystem
 from rustic_ai.core.guild.metaprog.agent_registry import AgentDependency
-from rustic_ai.core.knowledgebase.agent_config import KnowledgeAgentConfig
+from rustic_ai.core.knowledgebase.agent_config import KnowledgeAgentConfig, KnowledgeAgentProps
 from rustic_ai.core.knowledgebase.kbindex_backend import KBIndexBackend
 from rustic_ai.core.knowledgebase.knol_manager import CatalogStatus, CatalogStatusFailed
 from rustic_ai.core.knowledgebase.knowledge_base import KnowledgeBase
@@ -22,6 +22,7 @@ from rustic_ai.core.knowledgebase.query import (
     HybridOptions,
     SearchQuery,
     SearchResults,
+    RerankOptions,
 )
 
 
@@ -60,6 +61,7 @@ class KBSearchRequest(BaseModel):
     targets: Optional[List[KBTarget]] = None
     limit: Optional[int] = None
     hybrid: Optional[HybridOptions] = None
+    rerank: Optional[RerankOptions] = None
     filter: Optional[BoolFilter] = None
     explain: bool = False
 
@@ -68,7 +70,7 @@ class KBSearchResults(SearchResults):
     query_text: Optional[str] = None
 
 
-class KnowledgeAgent(Agent[KnowledgeAgentConfig]):
+class KnowledgeAgent(Agent[KnowledgeAgentProps]):
     """
     Agent that indexes MediaLink content into the KnowledgeBase and performs search.
     """
@@ -83,8 +85,17 @@ class KnowledgeAgent(Agent[KnowledgeAgentConfig]):
         if self._cfg is not None:
             return self._cfg
         try:
-            raw = self.config or {}
-            self._cfg = KnowledgeAgentConfig(**raw) if raw else KnowledgeAgentConfig.default_text()
+            props = self.config
+            # Extract properties if available
+            search_defaults = getattr(props, "search_defaults", None)
+            chunking = getattr(props, "chunking", None)
+            embedder = getattr(props, "embedder", None)
+            
+            self._cfg = KnowledgeAgentConfig.default_text(
+                search_defaults=search_defaults,
+                chunking=chunking,
+                embedder=embedder,
+            )
         except Exception:
             self._cfg = KnowledgeAgentConfig.default_text()
         return self._cfg
@@ -200,6 +211,7 @@ class KnowledgeAgent(Agent[KnowledgeAgentConfig]):
             text=req.text or "",
             targets=targets,
             hybrid=req.hybrid or cfg.search_defaults.hybrid,
+            rerank=req.rerank or cfg.search_defaults.rerank or RerankOptions(),
             filter=req.filter,
             limit=req.limit or cfg.search_defaults.limit,
             offset=0,

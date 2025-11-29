@@ -5,6 +5,7 @@ from typing import Dict, Literal, Optional, Union
 
 from jsonata import Jsonata
 from pydantic import BaseModel, Field
+import uuid
 
 from rustic_ai.core.guild import agent
 from rustic_ai.core.guild.agent import Agent, ProcessContext
@@ -62,12 +63,19 @@ class ListCollector(BaseCollector):
     collector_type: Literal["list"] = "list"  # Discriminator value
 
     def get_state_operations(self, correlation_id: str, payload_with_format: PayloadWithFormat) -> list[JsonDict]:
-        # JSON Patch add with /- automatically handles initialization and appending
-        return [{"op": "add", "path": "/-", "value": payload_with_format.model_dump()}]
+        # Use a UUID as the key to store the message in the dictionary
+        # This effectively implements a list using a dictionary, which is robust
+        # regardless of whether the state is initialized as a list or a dict.
+        key = str(uuid.uuid4())
+        return [{"op": "add", "path": f"/{key}", "value": payload_with_format.model_dump()}]
 
     def get_messages(self, state: JsonDict) -> list[JsonDict]:
-        # For ListCollector, state is directly the list of messages
-        return state if isinstance(state, list) else []
+        # Handle both list (legacy/expected) and dict (actual) state formats
+        if isinstance(state, list):
+            return state
+        if isinstance(state, dict):
+            return list(state.values())  # type: ignore
+        return []
 
 
 class DictCollector(BaseCollector):
@@ -133,7 +141,7 @@ class BaseAggregator(BaseModel):
     aggregation_check: str
 
     @abstractmethod
-    def evaluate(self, correlation_id: str, messages: list[JsonDict]) -> bool:
+    def evaluate(self, correlation_id: str, messages: list[JsonDict], guild_state: JsonDict) -> bool:
         """Evaluate if aggregation is complete for the given messages."""
         pass
 
@@ -145,7 +153,7 @@ class CountingAggregator(BaseAggregator):
 
     count: int
 
-    def evaluate(self, correlation_id: str, messages: list[JsonDict]) -> bool:
+    def evaluate(self, correlation_id: str, messages: list[JsonDict], guild_state: JsonDict) -> bool:
         return len(messages) >= self.count
 
 
@@ -169,7 +177,7 @@ class JsonataAggregator(BaseAggregator):
 
     expression: str
 
-    def evaluate(self, correlation_id: str, messages: list[JsonDict]) -> bool:
+    def evaluate(self, correlation_id: str, messages: list[JsonDict], guild_state: JsonDict) -> bool:
         """Evaluate the messages against the JSONata expression."""
         try:
             jsonata = Jsonata(self.expression)
@@ -178,6 +186,7 @@ class JsonataAggregator(BaseAggregator):
                 "correlation_id": correlation_id,
                 "count": len(messages),
                 "message_types": [msg.get("type") for msg in messages if "type" in msg],
+                "guild_state": guild_state
             }
             result = jsonata.evaluate(context)
             if result is None:
@@ -207,7 +216,7 @@ class FormatCountAggregator(BaseAggregator):
 
     formats: list[FormatWithCount]
 
-    def evaluate(self, correlation_id: str, messages: list[JsonDict]) -> bool:
+    def evaluate(self, correlation_id: str, messages: list[JsonDict], guild_state: JsonDict) -> bool:
         """Evaluate the messages against the format count."""
         format_counts = {fmt.format: fmt.count for fmt in self.formats}
         actual_counts: Dict[str, int] = {}
@@ -290,7 +299,7 @@ class AggregatingAgent(Agent[AggregatorConf]):
 
         # Use collector to generate state operations
         operations = self.collector.get_state_operations(correlation_id, payload_with_format)
-
+        print("xxx operations", operations)
         self.update_state(  # type: ignore[no-untyped-call]
             ctx,
             update_format=StateUpdateFormat.JSON_PATCH,
@@ -310,8 +319,8 @@ class AggregatingAgent(Agent[AggregatorConf]):
         for correlation_id, correlation_state in aggregations.items():
             # Use collector to extract messages for evaluation (handles both list and dict states)
             messages = self.collector.get_messages(correlation_state)
-
-            if messages and self.aggregator.evaluate(correlation_id, messages):
+            guild_state = self.get_guild_state()
+            if messages and self.aggregator.evaluate(correlation_id, messages, guild_state):
                 # If the aggregator determines completion, we can process the aggregated messages
                 logging.info(f"Aggregation complete for correlation_id={correlation_id}, message_count={len(messages)}")
 

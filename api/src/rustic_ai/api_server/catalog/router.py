@@ -76,8 +76,8 @@ async def create_blueprint(blueprint: BlueprintCreate, engine: Engine = Depends(
                 CatalogStore(engine).get_agent_by_class_name(class_name)
             except Exception:
                 raise HTTPException(status_code=400, detail=f"Agent not found for class_name: {class_name}")
-    except ValidationError:
-        raise HTTPException(status_code=400, detail="Invalid GuildSpec")
+    except ValidationError as e:
+        raise HTTPException(status_code=400, detail=f"Invalid GuildSpec: {e}")
     blueprint_id = CatalogStore(engine).create_blueprint(blueprint)
     return IdInfo(id=blueprint_id)
 
