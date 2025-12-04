@@ -7,9 +7,8 @@ from rustic_ai.core import Agent
 from rustic_ai.core.guild import agent
 from rustic_ai.core.guild.dsl import BaseAgentProps
 from rustic_ai.core.ui_protocol.types import TextFormat
-from rustic_ai.vertexai.client import VertexAIBase, VertexAIConf
 from rustic_ai.serpapi.agent import SERPQuery
-
+from rustic_ai.vertexai.client import VertexAIBase, VertexAIConf
 
 
 class GoogleResearchAgentProps(BaseAgentProps, VertexAIConf):
