@@ -126,9 +126,9 @@ class KnowledgeAgentConfig(BaseModel):
     backend_profile: str = Field(default="memory")
 
     # Core KB pieces
-    schema_infer: SchemaInferConfig = Field(default_factory=lambda: _default_schema_infer())
+    schema_infer: SchemaInferConfig = Field(default_factory=_default_schema_infer)
     plugins: PluginRegistry = Field(default_factory=_default_plugins)
-    pipelines: List[PipelineSpec] = Field(default_factory=lambda: _default_pipelines())
+    pipelines: List[PipelineSpec] = Field(default_factory=_default_pipelines)
 
     # Search behavior
     search_defaults: SearchDefaults = Field(default_factory=SearchDefaults)
