@@ -200,7 +200,8 @@ class LanceDBKBIndexBackend(KBIndexBackend):
                 await table.create_index(column=vs.name, config=config, replace=True)
             except Exception as e:
                 # Log error but don't crash startup
-                print(f"Warning: Failed to create index for {table_spec.name}.{vs.name}: {e}")
+                import logging
+                logging.error(f"Warning: Failed to create index for {table_spec.name}.{vs.name}: {e}")
 
     async def _add_batch(self, *, table: Any, table_spec: TableSpec, batch: List[Dict[str, Any]]) -> None:
         """Add a batch using a typed Arrow Table matching the target schema.
