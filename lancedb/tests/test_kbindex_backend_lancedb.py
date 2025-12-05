@@ -194,7 +194,7 @@ async def test_upsert_batching(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_index_creation_failure_logged(tmp_path, capsys):
+async def test_index_creation_failure_logged(tmp_path, caplog):
     schema = _schema_text()
     be = LanceDBKBIndexBackend(uri=str(tmp_path / ".lancedb"))
 
@@ -216,8 +216,7 @@ async def test_index_creation_failure_logged(tmp_path, capsys):
             # This should not raise
             await be.ensure_ready(schema=schema)
 
-            captured = capsys.readouterr()
-            assert "Warning: Failed to create index" in captured.out
+            assert "Warning: Failed to create index" in caplog.text
 
 
 @pytest.mark.asyncio
