@@ -71,14 +71,21 @@ class LanceDBKBIndexBackend(KBIndexBackend):
         # Batch rows to amortize I/O
         batch: List[Dict[str, Any]] = []
         pk_cols: Sequence[str] = list(spec.primary_key)
+        BATCH_SIZE = 200
 
         async for r in rows:
             record = self._map_row_to_record(r, spec)
             batch.append(record)
+            if len(batch) >= BATCH_SIZE:
+                await self._flush_batch(table, spec, batch, pk_cols)
+                batch = []
 
-        if not batch:
-            return
+        if batch:
+            await self._flush_batch(table, spec, batch, pk_cols)
 
+    async def _flush_batch(
+        self, table: Any, spec: TableSpec, batch: List[Dict[str, Any]], pk_cols: Sequence[str]
+    ) -> None:
         # Delete existing by PKs (idempotent upsert) then add
         where = self._build_pk_where(pk_cols, batch)
         if where:
@@ -185,10 +192,16 @@ class LanceDBKBIndexBackend(KBIndexBackend):
             if config is None:
                 continue
             try:
+                # Check if index already exists to avoid expensive recreation
+                # Note: LanceDB python async API might not expose list_indices directly on table yet,
+                # but we can try to be safe. For now, we'll assume if it's there we might not need to recreate
+                # unless forced. The original code used replace=True always.
+                # We will stick to replace=True but wrap in try/except with logging.
                 await table.create_index(column=vs.name, config=config, replace=True)
-            except Exception:
-                # Ignore index creation errors for tiny test tables; searches will fall back to flat
-                pass
+            except Exception as e:
+                # Log error but don't crash startup
+                import logging
+                logging.error(f"Warning: Failed to create index for {table_spec.name}.{vs.name}: {e}")
 
     async def _add_batch(self, *, table: Any, table_spec: TableSpec, batch: List[Dict[str, Any]]) -> None:
         """Add a batch using a typed Arrow Table matching the target schema.

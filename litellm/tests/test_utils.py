@@ -295,8 +295,8 @@ def test_from_litellm_assistant_name_provider_fields_and_thinking_blocks():
 
     msg = converted.choices[0].message
     assert msg.name == "planner"
-    # provider_specific_fields is excluded by our models on dumps and is not preserved by LiteLLM round-trip
-    assert msg.provider_specific_fields is None
+    # provider_specific_fields is kept for downstream consumers even though our models exclude it on dumps
+    assert msg.provider_specific_fields == {"vendor": "openai", "latency_ms": 123}
     assert msg.reasoning_content == "Short chain of thought."
     assert msg.thinking_blocks is not None and len(msg.thinking_blocks) == 2
 

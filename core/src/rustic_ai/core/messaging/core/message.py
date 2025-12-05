@@ -851,9 +851,10 @@ class Message(BaseModel):
         *,
         strict: bool | None = None,
         from_attributes: bool | None = None,
-        context: dict[str, Any] | None = None,
+        context: Any | None = None,
         by_alias: bool | None = None,
         by_name: bool | None = None,
+        extra: Literal["allow", "ignore", "forbid"] | None = None,
     ) -> "Message":
         return cls._from_dict(obj)
 
@@ -863,9 +864,10 @@ class Message(BaseModel):
         json_data: str | bytes | bytearray,
         *,
         strict: bool | None = None,
-        context: dict[str, Any] | None = None,
+        context: Any | None = None,
         by_alias: bool | None = None,
         by_name: bool | None = None,
+        extra: Literal["allow", "ignore", "forbid"] | None = None,
     ) -> "Message":
         """
         Custom JSON decoder for the Message class that supports different GemstoneID implementations.
