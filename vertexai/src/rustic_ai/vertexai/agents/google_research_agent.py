@@ -1,10 +1,16 @@
-from typing import Any, Dict
+from datetime import datetime
 
 from google.genai import types
-from pydantic import BaseModel
+import shortuuid
 
 from rustic_ai.core import Agent
 from rustic_ai.core.guild import agent
+from rustic_ai.core.guild.agent_ext.depends.llm.models import (
+    AssistantMessage,
+    ChatCompletionResponse,
+    Choice,
+    FinishReason,
+)
 from rustic_ai.core.guild.dsl import BaseAgentProps
 from rustic_ai.core.ui_protocol.types import TextFormat
 from rustic_ai.serpapi.agent import SERPQuery
@@ -13,12 +19,12 @@ from rustic_ai.vertexai.client import VertexAIBase, VertexAIConf
 
 class GoogleResearchAgentProps(BaseAgentProps, VertexAIConf):
     model_id: str = "gemini-2.5-pro"
-    system_prompt: str | None = None
-
-
-class ResearchResponse(BaseModel):
-    query: str
-    response: str
+    system_prompt: str = (
+        "You are a Research Agent that uses web search to find current and reliable information. When needed, call the Google Search tool to retrieve facts, "
+        "statistics, or latest data. At the end, summarize your findings clearly with citations where possible."
+    )
+    temperature: float = 0.3
+    max_output_tokens: int = 2048
 
 
 class GoogleResearchAgent(Agent[GoogleResearchAgentProps], VertexAIBase):
@@ -28,49 +34,43 @@ class GoogleResearchAgent(Agent[GoogleResearchAgentProps], VertexAIBase):
     and returns structured findings.
     """
 
-    def __init__(self):
-        self.model = self.config.model_id
-        self.system_prompt = self.config.system_prompt
+    async def research(self, query: str) -> str:
         VertexAIBase.__init__(self, self.config.project_id, self.config.location)
-
-    async def research(self, query: str) -> Dict[str, Any]:
         if not self.genai_client:
-            raise RuntimeError("Client not initialized. Call startup() first.")
+            raise RuntimeError("GenAI Client not initialized.")
 
         google_search_tool = types.Tool(google_search=types.GoogleSearch())
 
         config = types.GenerateContentConfig(
             tools=[google_search_tool],
-            temperature=0.3,
-            max_output_tokens=2048,
+            temperature=self.config.temperature,
+            max_output_tokens=self.config.max_output_tokens,
         )
 
-        if self.system_prompt:
-            full_prompt = f"{self.system_prompt}\n\nResearch topic: {query}"
-        else:
-            full_prompt = (
-                "You are a Research Agent that uses web search to find current and reliable information. "
-                "When needed, call the Google Search tool to retrieve facts, statistics, or latest data. "
-                "At the end, summarize your findings clearly with citations where possible.\n\n"
-                f"Research topic: {query}"
-            )
-
+        full_prompt = f"{self.config.system_prompt}. Research topic: {query}"
         contents = [
             types.Content(role="user", parts=[types.Part.from_text(text=full_prompt)]),
         ]
 
         response = self.genai_client.models.generate_content(
-            model=self.model,
+            model=self.config.model_id,
             contents=contents,
             config=config,
         )
 
-        summary = getattr(response, "text", None) or "No summary available."
+        summary: str = getattr(response, "text", None) or "No summary available."
 
-        return {"query": query, "response": summary}
+        return summary
 
     @agent.processor(SERPQuery)
     async def on_message(self, ctx: agent.ProcessContext[TextFormat]):
         query = ctx.payload.query
         result = await self.research(query)
-        ctx.send(ResearchResponse(query=result["query"], response=result["response"]))
+        query_id = shortuuid.uuid()
+        ccr = ChatCompletionResponse(
+            id=f"chatcmpl-{query_id}",
+            choices=[Choice(index=0, message=AssistantMessage(content=result), finish_reason=FinishReason.stop)],
+            model=self.config.model_id,
+            created=int(datetime.now().timestamp()),
+        )
+        ctx.send(ccr)
