@@ -89,10 +89,10 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
         self._initialized = False
         self._chromium_installed = False
 
-    async def _ensure_browser(self):
+    async def _ensure_browser(self, force: bool = False):
         """Ensure browser is initialized and running."""
         async with self._browser_lock:
-            if not self._initialized or self._browser is None or not self._browser.is_connected():
+            if force or not self._initialized or self._browser is None or not self._browser.is_connected():
                 await self._initialize_browser()
             return self._browser
 
@@ -327,10 +327,23 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
         browser = await self._ensure_browser()
 
         # Create a new context for this scraping session
-        context = await browser.new_context(
-            viewport={"width": 1920, "height": 1080},
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        )
+        try:
+            context = await browser.new_context(
+                viewport={"width": 1920, "height": 1080},
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            )
+        except Exception as e:
+            # Check for specific error indicating browser connection loss
+            # "WriteUnixTransport closed" or "handler is closed"
+            if "closed" in str(e) or "transport" in str(e):
+                logging.warning(f"Browser context creation failed, re-initializing browser: {e}")
+                browser = await self._ensure_browser(force=True)
+                context = await browser.new_context(
+                    viewport={"width": 1920, "height": 1080},
+                    user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                )
+            else:
+                raise
 
         try:
             scraping_request = ctx.payload

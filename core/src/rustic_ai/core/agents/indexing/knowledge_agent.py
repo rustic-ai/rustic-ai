@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from pydantic import BaseModel, Field
 
@@ -7,7 +7,10 @@ from rustic_ai.core.guild import agent
 from rustic_ai.core.guild.agent import Agent, ProcessContext
 from rustic_ai.core.guild.agent_ext.depends.filesystem import FileSystem
 from rustic_ai.core.guild.metaprog.agent_registry import AgentDependency
-from rustic_ai.core.knowledgebase.agent_config import KnowledgeAgentConfig
+from rustic_ai.core.knowledgebase.agent_config import (
+    KnowledgeAgentConfig,
+    KnowledgeAgentProps,
+)
 from rustic_ai.core.knowledgebase.kbindex_backend import KBIndexBackend
 from rustic_ai.core.knowledgebase.knol_manager import CatalogStatus, CatalogStatusFailed
 from rustic_ai.core.knowledgebase.knowledge_base import KnowledgeBase
@@ -17,7 +20,13 @@ from rustic_ai.core.knowledgebase.pipeline_executor import (
     ResolvedPipeline,
     SimplePipelineExecutor,
 )
-from rustic_ai.core.knowledgebase.query import BoolFilter, HybridOptions, SearchQuery
+from rustic_ai.core.knowledgebase.query import (
+    BoolFilter,
+    HybridOptions,
+    RerankOptions,
+    SearchQuery,
+    SearchResults,
+)
 
 
 class CatalogMediaLinks(BaseModel):
@@ -37,6 +46,7 @@ class IndexMediaResult(BaseModel):
     knol_id: Optional[str] = None
     status: str = Field(description="indexed|failed")
     error: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
 
 
 class IndexMediaResults(BaseModel):
@@ -54,11 +64,16 @@ class KBSearchRequest(BaseModel):
     targets: Optional[List[KBTarget]] = None
     limit: Optional[int] = None
     hybrid: Optional[HybridOptions] = None
+    rerank: Optional[RerankOptions] = None
     filter: Optional[BoolFilter] = None
     explain: bool = False
 
 
-class KnowledgeAgent(Agent):
+class KBSearchResults(SearchResults):
+    query_text: Optional[str] = None
+
+
+class KnowledgeAgent(Agent[KnowledgeAgentProps]):
     """
     Agent that indexes MediaLink content into the KnowledgeBase and performs search.
     """
@@ -73,8 +88,17 @@ class KnowledgeAgent(Agent):
         if self._cfg is not None:
             return self._cfg
         try:
-            raw = self.config or {}
-            self._cfg = KnowledgeAgentConfig(**raw) if raw else KnowledgeAgentConfig.default_text()
+            props = self.config
+            # Extract properties if available
+            search_defaults = getattr(props, "search_defaults", None)
+            chunking = getattr(props, "chunking", None)
+            embedder = getattr(props, "embedder", None)
+
+            self._cfg = KnowledgeAgentConfig.default_text(
+                search_defaults=search_defaults,
+                chunking=chunking,
+                embedder=embedder,
+            )
         except Exception:
             self._cfg = KnowledgeAgentConfig.default_text()
         return self._cfg
@@ -159,10 +183,16 @@ class KnowledgeAgent(Agent):
         for ml, st in zip(req.media, statuses):
             knol_obj = getattr(st, "knol", None)
             knol_id = knol_obj.id if isinstance(knol_obj, Knol) else None
+            metadata = ml.metadata
             if isinstance(st, CatalogStatusFailed) or not knol_id:
-                out.append(IndexMediaResult(media_id=ml.id, status="failed", error=getattr(st, "error", None)))
+                out.append(
+                    IndexMediaResult(
+                        media_id=ml.id, status="failed", error=getattr(st, "error", None), metadata=metadata
+                    )
+                )
             else:
-                out.append(IndexMediaResult(media_id=ml.id, knol_id=knol_id, status="indexed"))
+                out.append(IndexMediaResult(media_id=ml.id, knol_id=knol_id, status="indexed", metadata=metadata))
+
         ctx.send(IndexMediaResults(results=out))
 
     @agent.processor(
@@ -184,9 +214,25 @@ class KnowledgeAgent(Agent):
             text=req.text or "",
             targets=targets,
             hybrid=req.hybrid or cfg.search_defaults.hybrid,
+            rerank=req.rerank or cfg.search_defaults.rerank or RerankOptions(),
             filter=req.filter,
             limit=req.limit or cfg.search_defaults.limit,
             offset=0,
             explain=bool(req.explain),
         )
-        ctx.send(await kb.search(query=query))
+        results = await kb.search(query=query)
+
+        # Sanitize payloads to ensure JSON compatibility
+        for res in results.results:
+            for k, v in res.payload.items():
+                if hasattr(v, "isoformat"):
+                    res.payload[k] = v.isoformat()
+
+        # Convert SearchResults to KBSearchResults and add query text
+        kb_results = KBSearchResults(
+            results=results.results,
+            explain=results.explain,
+            search_duration_ms=results.search_duration_ms,
+            query_text=req.text,
+        )
+        ctx.send(kb_results)

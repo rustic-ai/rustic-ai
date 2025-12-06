@@ -93,7 +93,7 @@ class SERPAgent(Agent):
 
         if metadata["status"] == "Success":
             # Get the search results
-            search_results = results["organic_results"]
+            search_results = results["organic_results"] if "organic_results" in results else []
 
             result_links = []
 
