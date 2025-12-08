@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Tuple
 
 from google.genai import types
 import shortuuid
@@ -34,7 +35,7 @@ class GoogleResearchAgent(Agent[GoogleResearchAgentProps], VertexAIBase):
     and returns structured findings.
     """
 
-    async def research(self, query: str) -> str:
+    async def research(self, query: str) -> Tuple[str, str]:
         VertexAIBase.__init__(self, self.config.project_id, self.config.location)
         if not self.genai_client:
             raise RuntimeError("GenAI Client not initialized.")
@@ -60,12 +61,39 @@ class GoogleResearchAgent(Agent[GoogleResearchAgentProps], VertexAIBase):
 
         summary: str = getattr(response, "text", None) or "No summary available."
 
-        return summary
+        # Extract grounding metadata properly
+        grounding_metadata = getattr(
+            response.candidates[0] if response.candidates else None, "grounding_metadata", None
+        )
+        if grounding_metadata:
+            grounding_parts = []
+
+            # Extract web sources from grounding chunks
+            if hasattr(grounding_metadata, "grounding_chunks") and grounding_metadata.grounding_chunks:
+                sources = []
+                for chunk in grounding_metadata.grounding_chunks:
+                    if hasattr(chunk, "web") and chunk.web:
+                        web_info = chunk.web
+                        source = f"- {web_info.title or web_info.domain}: {web_info.uri}"
+                        sources.append(source)
+                if sources:
+                    grounding_parts.append("**Sources:**\n" + "\n".join(sources))
+
+            # Extract search queries used
+            if hasattr(grounding_metadata, "web_search_queries") and grounding_metadata.web_search_queries:
+                queries = [f"- {q}" for q in grounding_metadata.web_search_queries]
+                grounding_parts.append("**Search Queries:**\n" + "\n".join(queries))
+
+            grounding = "\n\n".join(grounding_parts) if grounding_parts else "No grounding information available"
+        else:
+            grounding = "No grounding metadata found"
+
+        return summary, grounding
 
     @agent.processor(SERPQuery)
     async def on_message(self, ctx: agent.ProcessContext[TextFormat]):
         query = ctx.payload.query
-        result = await self.research(query)
+        result, grounding = await self.research(query)
         query_id = shortuuid.uuid()
         ccr = ChatCompletionResponse(
             id=f"chatcmpl-{query_id}",
@@ -73,4 +101,4 @@ class GoogleResearchAgent(Agent[GoogleResearchAgentProps], VertexAIBase):
             model=self.config.model_id,
             created=int(datetime.now().timestamp()),
         )
-        ctx.send(ccr)
+        ctx.send(payload=ccr, reason=grounding)
