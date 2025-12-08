@@ -79,7 +79,7 @@ class GoogleResearchAgent(Agent[GoogleResearchAgentProps], VertexAIBase):
                     for chunk in grounding_metadata.grounding_chunks:
                         if hasattr(chunk, "web") and chunk.web:
                             web_info = chunk.web
-                            source = f"- {web_info.title or web_info.domain}: {web_info.uri}"
+                            source = f"{web_info.title or web_info.domain}: {web_info.uri}"
                             sources.append(source)
                     if sources:
                         grounding_parts.append("**Sources:**\n" + "\n".join(sources))
