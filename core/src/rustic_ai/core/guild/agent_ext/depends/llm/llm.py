@@ -19,6 +19,10 @@ class LLM(ABC):
     ) -> ChatCompletionResponse:
         pass
 
+    @abstractmethod
+    def update_config(self, config: dict):
+        pass
+
     @property
     @abstractmethod
     def model(self) -> str:
