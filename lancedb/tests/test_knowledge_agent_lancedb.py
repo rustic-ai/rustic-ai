@@ -11,6 +11,7 @@ from rustic_ai.core.agents.indexing.knowledge_agent import (
     IndexMediaLinks,
     IndexMediaResults,
     KBSearchRequest,
+    KBSearchResults,
     KnowledgeAgent,
 )
 from rustic_ai.core.guild.agent_ext.depends.dependency_resolver import (
@@ -40,7 +41,6 @@ from rustic_ai.core.knowledgebase.query import (
     RerankOptions,
     RerankStrategy,
     SearchQuery,
-    SearchResults,
 )
 from rustic_ai.core.messaging.core.message import AgentTag, Message
 from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
@@ -142,7 +142,7 @@ class TestKnowledgeAgentLanceDB:
         )
 
         assert len(results) >= 2
-        sr = SearchResults.model_validate(results[-1].payload)
+        sr = KBSearchResults.model_validate(results[-1].payload)
         assert isinstance(sr.results, list)
         assert len(sr.results) >= 1
 
@@ -168,7 +168,7 @@ class TestKnowledgeAgentLanceDB:
             )
         )
 
-        sr = SearchResults.model_validate(results[-1].payload)
+        sr = KBSearchResults.model_validate(results[-1].payload)
         assert sr.explain is not None
         assert sr.explain.targets_used is not None and len(sr.explain.targets_used) >= 1
 
@@ -260,7 +260,7 @@ class TestKnowledgeAgentLanceDB:
             )
         )
 
-        sr = SearchResults.model_validate(results[-1].payload)
+        sr = KBSearchResults.model_validate(results[-1].payload)
         assert sr.explain is not None
         assert sr.explain.targets_used is not None and len(sr.explain.targets_used) >= 2
         assert all("t." in k or k == "total" for k in sr.explain.timings_ms.keys())
@@ -378,7 +378,7 @@ class TestKnowledgeAgentLanceDB:
         )
 
         assert len(results) >= 2
-        sr = SearchResults.model_validate(results[-1].payload)
+        sr = KBSearchResults.model_validate(results[-1].payload)
         assert len(sr.results) == 1
         assert (
             results[-1].message_history and results[-1].message_history[0].processor == KnowledgeAgent.search.__name__
@@ -395,7 +395,7 @@ class TestKnowledgeAgentLanceDB:
                 get_qualified_class_name(KBSearchRequest),
             )
         )
-        sr2 = SearchResults.model_validate(results[-1].payload)
+        sr2 = KBSearchResults.model_validate(results[-1].payload)
         assert isinstance(sr2.results, list) and len(sr2.results) == 0
 
     def test_search_hybrid_rrf_explain_weighting(self, agent_spec, dependency_map, generator):
@@ -425,7 +425,7 @@ class TestKnowledgeAgentLanceDB:
             )
         )
 
-        sr = SearchResults.model_validate(results[-1].payload)
+        sr = KBSearchResults.model_validate(results[-1].payload)
         assert sr.explain is not None
         assert sr.explain.fusion == FusionStrategy.RRF
         assert sr.explain.weighting is not None
@@ -481,7 +481,7 @@ class TestKnowledgeAgentLanceDB:
         )
 
         assert len(results) >= 2
-        sr = SearchResults.model_validate(results[-1].payload)
+        sr = KBSearchResults.model_validate(results[-1].payload)
         assert len(sr.results) == 1
         # Verify payload contains the text content
         # The default text config uses a chunker that puts text in the 'text' field
