@@ -30,8 +30,8 @@ export VERTEXAI_LOCATION=<location>
 For local development/use, ensure the account you are using has the roles/permissions of `Vertex AI User` and `Service Usage Consumer` at the minimum.
 Login using `gcloud CLI` in a terminal
 ```shell
-gcloud auth application-default set-quota-project <project-id>
 gcloud auth application-default login
+gcloud auth application-default set-quota-project <project-id>
 ```
 For more options/details, [refer Google Cloud docs](https://cloud.google.com/docs/authentication/set-up-adc-local-dev-environment).
 
