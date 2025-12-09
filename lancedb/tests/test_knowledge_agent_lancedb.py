@@ -481,7 +481,7 @@ class TestKnowledgeAgentLanceDB:
         )
 
         assert len(results) >= 2
-        sr = SearchResults.model_validate(results[-1].payload)
+        sr = KBSearchResults.model_validate(results[-1].payload)
         assert len(sr.results) == 1
         # Verify payload contains the text content
         # The default text config uses a chunker that puts text in the 'text' field
