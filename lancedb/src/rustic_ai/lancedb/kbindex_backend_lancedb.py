@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from typing import Any, AsyncIterable, Dict, List, Optional, Sequence, Tuple
 
 import pyarrow as pa
@@ -200,7 +201,7 @@ class LanceDBKBIndexBackend(KBIndexBackend):
                 await table.create_index(column=vs.name, config=config, replace=True)
             except Exception as e:
                 # Log error but don't crash startup
-                import logging
+
                 logging.error(f"Warning: Failed to create index for {table_spec.name}.{vs.name}: {e}")
 
     async def _add_batch(self, *, table: Any, table_spec: TableSpec, batch: List[Dict[str, Any]]) -> None:
