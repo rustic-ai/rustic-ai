@@ -1,35 +1,32 @@
-
-import pytest
+import asyncio
 import os
 import shutil
-import asyncio
+
+import pytest
 import shortuuid
-from rustic_ai.core.guild.builders import GuildBuilder, AgentBuilder
-from rustic_ai.core.guild.dsl import GuildSpec
-from rustic_ai.core.messaging.core.message import AgentTag
-from rustic_ai.core.guild.metastore import Metastore
-from rustic_ai.core.agents.testutils import ProbeAgent
-from rustic_ai.core.agents.utils import UserProxyAgent
+
 from rustic_ai.core import GuildTopics, Priority
-from rustic_ai.core.messaging.core.message import Message
 from rustic_ai.core.agents.system.models import (
     UserAgentCreationRequest,
     UserAgentCreationResponse,
 )
-from rustic_ai.mcp.models import (
-    MCPAgentConfig, 
-    MCPServerConfig, 
-    MCPClientType, 
-    CallToolRequest, 
-    CallToolResponse
-)
-from rustic_ai.mcp.agent import MCPAgent
+from rustic_ai.core.agents.testutils import ProbeAgent
+from rustic_ai.core.agents.utils import UserProxyAgent
+from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder
+from rustic_ai.core.guild.metastore import Metastore
+from rustic_ai.core.messaging.core.message import AgentTag, Message
 from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
+from rustic_ai.mcp.agent import MCPAgent
+from rustic_ai.mcp.models import (
+    CallToolRequest,
+    MCPAgentConfig,
+    MCPClientType,
+    MCPServerConfig,
+)
 
 # Check if npx is available
 npx_available = shutil.which("npx") is not None
 
-from rustic_ai.core.guild import agent
 
 @pytest.mark.skipif(not npx_available, reason="npx not found")
 class TestMCPPlaywrightIntegration:
@@ -54,14 +51,11 @@ class TestMCPPlaywrightIntegration:
         config = MCPAgentConfig(
             servers=[
                 MCPServerConfig(
-                    name="playwright",
-                    type=MCPClientType.STDIO,
-                    command="npx",
-                    args=["-y", "@playwright/mcp@latest"] 
+                    name="playwright", type=MCPClientType.STDIO, command="npx", args=["-y", "@playwright/mcp@latest"]
                 )
             ]
         )
-        
+
         return (
             AgentBuilder(MCPAgent)
             .set_id("PlaywrightMCPAgent")
@@ -80,18 +74,18 @@ class TestMCPPlaywrightIntegration:
             guild_name="MCPGuild",
             guild_description="Demonstrates playwright mcp",
         )
-        
+
         mcp_guild_builder.add_agent_spec(playwright_agent_spec)
-        
+
         # Use dummy_ord or similar organization ID
         mcp_guild = mcp_guild_builder.bootstrap(rgdatabase, "test_org")
-        
+
         yield mcp_guild
         mcp_guild.shutdown()
 
     @pytest.mark.asyncio
     async def test_playwright_navigate_and_read(self, mcp_guild, generator):
-        
+
         # Setup Probe Agent to interact
         probe_spec = (
             AgentBuilder(ProbeAgent)
@@ -99,11 +93,11 @@ class TestMCPPlaywrightIntegration:
             .set_name("Probe Agent")
             .set_description("Probe")
             .add_additional_topic(UserProxyAgent.BROADCAST_TOPIC)
-            .add_additional_topic(GuildTopics.SYSTEM_TOPIC) 
+            .add_additional_topic(GuildTopics.SYSTEM_TOPIC)
             .add_additional_topic("mcp_requests")
             .build_spec()
         )
-        
+
         probe_agent = mcp_guild._add_local_agent(probe_spec)
 
         probe_agent.publish_dict(
@@ -121,18 +115,15 @@ class TestMCPPlaywrightIntegration:
         assert user_created.format == get_qualified_class_name(UserAgentCreationResponse)
         assert user_created.payload["user_id"] == "test_user"
         assert user_created.payload["status_code"] == 201
-        
+
         # We need to wait a bit for the MCP agent to start and connect to the server
-        await asyncio.sleep(5) 
+        await asyncio.sleep(5)
 
         probe_agent.clear_messages()
-        
-        
+
         # Let's try to navigate to example.com
         navigate_payload = CallToolRequest(
-            server_name="playwright",
-            tool_name="browser_navigate",
-            arguments={"url": "https://example.com"}
+            server_name="playwright", tool_name="browser_navigate", arguments={"url": "https://example.com"}
         ).model_dump()
 
         id_obj = generator.get_id(Priority.NORMAL)
@@ -151,9 +142,10 @@ class TestMCPPlaywrightIntegration:
 
         await asyncio.sleep(8)
 
-
         messages = probe_agent.get_messages()
         messages = [msg for msg in messages if msg.topics == "mcp_requests"]
-        assert messages[-1].payload['results'][0]['type'] == 'text'
-        assert "This domain is for use in documentation examples without needing permission. Avoid use in operations." in messages[-1].payload['results'][0]['content']
-        
+        assert messages[-1].payload["results"][0]["type"] == "text"
+        assert (
+            "This domain is for use in documentation examples without needing permission. Avoid use in operations."
+            in messages[-1].payload["results"][0]["content"]
+        )

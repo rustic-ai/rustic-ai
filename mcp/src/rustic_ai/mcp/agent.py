@@ -1,11 +1,11 @@
 import asyncio
+from contextlib import AsyncExitStack
 from dataclasses import dataclass
 from typing import Dict, Optional
-from contextlib import AsyncExitStack
 
 from mcp import ClientSession, StdioServerParameters
-from mcp.client.stdio import stdio_client
 from mcp.client.sse import sse_client
+from mcp.client.stdio import stdio_client
 from rustic_ai.core.guild import agent
 from rustic_ai.core.guild.agent import Agent, ProcessContext
 from rustic_ai.core.guild.agent_ext.mixins.guild_refresher import GuildRefreshMixin
@@ -30,7 +30,7 @@ class MCPSessionContext:
 class MCPAgent(Agent[MCPAgentConfig], GuildRefreshMixin):
     """
     Agent that connects to MCP servers and exposes their capabilities.
-    
+
     This agent manages MCP client sessions. Due to asyncio event loop constraints,
     sessions must be created and used within the same event loop context.
     """
@@ -44,43 +44,34 @@ class MCPAgent(Agent[MCPAgentConfig], GuildRefreshMixin):
         return {s.name: s for s in self.config.servers}
 
     async def _initialize_session(
-        self, 
-        transport_context, 
-        config: MCPServerConfig, 
-        client_type: str
+        self, transport_context, config: MCPServerConfig, client_type: str
     ) -> MCPSessionContext:
         """Helper to initialize session from a transport context."""
         exit_stack = AsyncExitStack()
         try:
             # Enter the transport context
             read, write = await exit_stack.enter_async_context(transport_context)
-            
+
             # Enter the ClientSession context
-            session = await exit_stack.enter_async_context(
-                ClientSession(read, write)
-            )
-            
+            session = await exit_stack.enter_async_context(ClientSession(read, write))
+
             # Initialize the session
             await session.initialize()
-            
+
             # Verify connection by listing tools
             result = await session.list_tools()
             tool_names = [tool.name for tool in result.tools]
             self.logger.info(f"Connected to {config.name} ({client_type}). Available tools: {tool_names}")
-            
-            return MCPSessionContext(
-                session=session,
-                exit_stack=exit_stack,
-                client_type=client_type
-            )
-            
+
+            return MCPSessionContext(session=session, exit_stack=exit_stack, client_type=client_type)
+
         except Exception as e:
             await exit_stack.aclose()
             raise e
 
     async def _connect_server(self, server_name: str) -> Optional[ClientSession]:
         """Ensures connection to the specified server exists."""
-        
+
         # Fast path check
         if server_name in self._sessions:
             return self._sessions[server_name].session
@@ -107,18 +98,12 @@ class MCPAgent(Agent[MCPAgentConfig], GuildRefreshMixin):
                         args=config.args,
                         env=config.env,
                     )
-                    session_ctx = await self._initialize_session(
-                        stdio_client(server_params), 
-                        config, 
-                        'stdio'
-                    )
+                    session_ctx = await self._initialize_session(stdio_client(server_params), config, "stdio")
                 elif config.type == MCPClientType.SSE:
                     if not config.url:
                         raise ValueError(f"URL is required for SSE connection: {server_name}")
                     session_ctx = await self._initialize_session(
-                        sse_client(url=config.url, headers=config.headers),
-                        config,
-                        'sse'
+                        sse_client(url=config.url, headers=config.headers), config, "sse"
                     )
                 else:
                     self.logger.warning(f"Unsupported MCP client type: {config.type}")
@@ -134,11 +119,11 @@ class MCPAgent(Agent[MCPAgentConfig], GuildRefreshMixin):
     async def shutdown(self):
         """Clean up connections on shutdown."""
         self.logger.info("Closing MCP connections...")
-        
+
         # Copy items to avoid modification during iteration
         sessions = list(self._sessions.values())
         self._sessions.clear()
-        
+
         for ctx in sessions:
             try:
                 await ctx.exit_stack.aclose()
@@ -148,9 +133,9 @@ class MCPAgent(Agent[MCPAgentConfig], GuildRefreshMixin):
     @agent.processor(CallToolRequest)
     async def handle_tool_call(self, ctx: ProcessContext[CallToolRequest]):
         request = ctx.payload
-        
+
         session = await self._connect_server(request.server_name)
-        
+
         if not session:
             # Error logging is handled in _connect_server or specific cases
             ctx.send_error(CallToolResponse(results=[], is_error=True))
@@ -158,19 +143,19 @@ class MCPAgent(Agent[MCPAgentConfig], GuildRefreshMixin):
 
         try:
             result = await session.call_tool(request.tool_name, arguments=request.arguments)
-            
+
             tool_results = []
             for content in result.content:
-                 if content.type == "text":
-                     tool_results.append(ToolResult(type="text", content=content.text))
-                 elif content.type == "image":
-                     tool_results.append(ToolResult(type="image", content=content.data))
-                 elif content.type == "resource":
-                     tool_results.append(ToolResult(type="resource", content=content.resource.uri))
+                if content.type == "text":
+                    tool_results.append(ToolResult(type="text", content=content.text))
+                elif content.type == "image":
+                    tool_results.append(ToolResult(type="image", content=content.data))
+                elif content.type == "resource":
+                    tool_results.append(ToolResult(type="resource", content=content.resource.uri))
 
             response = CallToolResponse(results=tool_results)
             ctx.send(response)
-            
+
         except Exception as e:
             self.logger.error(f"Error calling tool {request.tool_name} on {request.server_name}: {e}", exc_info=True)
             ctx.send_error(CallToolResponse(results=[], is_error=True))
