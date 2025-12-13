@@ -65,6 +65,8 @@ RUN rm -rf ${APPDIR}/dist
 # System dependencies required for playwright
 RUN playwright install --with-deps chromium
 
+RUN python -m spacy download en_core_web_sm
+
 RUN apt-get update && apt-get install -y --no-install-recommends libpq-dev wget grep
 
 # Expose port

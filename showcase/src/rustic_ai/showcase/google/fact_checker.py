@@ -5,8 +5,7 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from pydantic import BaseModel
 import spacy
-from spacytextblob.spacytextblob import SpacyTextBlob
-
+from spacytextblob.spacytextblob import SpacyTextBlob  # noqa: F401
 
 from rustic_ai.core import Agent
 from rustic_ai.core.guild import agent
@@ -58,8 +57,6 @@ class FactCheckerAgent(Agent):
         if "spacytextblob" not in self.nlp.pipe_names:
             self.nlp.add_pipe("spacytextblob", last=True)
 
-
-
     def _classify_textual_rating(self, text: str) -> str:
         if not text:
             return "Unknown"
@@ -67,20 +64,50 @@ class FactCheckerAgent(Agent):
 
         # Terms that strongly indicate FALSE
         false_terms = [
-            "false", "fake", "incorrect", "not true", "untrue", "debunked", "scam",
-            "hoax", "baseless", "lie", "misleading", "exaggerated", "unsupported",
-            "pants on fire", "pinocchio", "inaccurate", "wrong", "altered", "distorted",
-            "rubbish", "nonsense", "bogus", "debunk",
+            "false",
+            "fake",
+            "incorrect",
+            "not true",
+            "untrue",
+            "debunked",
+            "scam",
+            "hoax",
+            "baseless",
+            "lie",
+            "misleading",
+            "exaggerated",
+            "unsupported",
+            "pants on fire",
+            "pinocchio",
+            "inaccurate",
+            "wrong",
+            "altered",
+            "distorted",
+            "rubbish",
+            "nonsense",
+            "bogus",
+            "debunk",
         ]
 
         # Terms that indicate MIXED or UNCERTAIN but might contain "True" as substring
         unknown_terms = [
-            "half true", "mixed", "unproven", "no evidence", "cherry picks",
+            "half true",
+            "mixed",
+            "unproven",
+            "no evidence",
+            "cherry picks",
         ]
 
         # Terms that indicate TRUE
         true_terms = [
-            "true", "correct", "accurate", "fact", "real", "verified", "confirmed", "supported",
+            "true",
+            "correct",
+            "accurate",
+            "fact",
+            "real",
+            "verified",
+            "confirmed",
+            "supported",
         ]
 
         # Check for False matches first
