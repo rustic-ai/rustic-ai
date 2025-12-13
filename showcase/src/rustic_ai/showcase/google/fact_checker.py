@@ -5,7 +5,8 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from pydantic import BaseModel
 import spacy
-from spacytextblob.spacytextblob import SpacyTextBlob  # noqa: F401
+from spacytextblob.spacytextblob import SpacyTextBlob
+
 
 from rustic_ai.core import Agent
 from rustic_ai.core.guild import agent
@@ -57,40 +58,108 @@ class FactCheckerAgent(Agent):
         if "spacytextblob" not in self.nlp.pipe_names:
             self.nlp.add_pipe("spacytextblob", last=True)
 
+
+
+    def _classify_textual_rating(self, text: str) -> str:
+        if not text:
+            return "Unknown"
+        text = text.lower()
+
+        # Terms that strongly indicate FALSE
+        false_terms = [
+            "false", "fake", "incorrect", "not true", "untrue", "debunked", "scam",
+            "hoax", "baseless", "lie", "misleading", "exaggerated", "unsupported",
+            "pants on fire", "pinocchio", "inaccurate", "wrong", "altered", "distorted",
+            "rubbish", "nonsense", "bogus", "debunk",
+        ]
+
+        # Terms that indicate MIXED or UNCERTAIN but might contain "True" as substring
+        unknown_terms = [
+            "half true", "mixed", "unproven", "no evidence", "cherry picks",
+        ]
+
+        # Terms that indicate TRUE
+        true_terms = [
+            "true", "correct", "accurate", "fact", "real", "verified", "confirmed", "supported",
+        ]
+
+        # Check for False matches first
+        for term in false_terms:
+            if term in text:
+                return "False"
+
+        # Check for Unknown/Mixed matches
+        for term in unknown_terms:
+            if term in text:
+                return "Unknown"
+
+        # Check for True matches
+        for term in true_terms:
+            if term in text:
+                return "True"
+
+        # NLP Fallback
+        if self.nlp:
+            try:
+                doc = self.nlp(text)
+                polarity = doc._.blob.polarity
+                # If polarity is strongly positive/negative, use it
+                if polarity >= 0.1:
+                    return "True"
+                elif polarity <= -0.1:
+                    return "False"
+            except Exception as e:
+                print(f"NLP error: {e}")
+
+        return "Unknown"
+
     def calculate_verdict_and_supporting_urls(
         self, claims_response: ClaimsResponse, top_n: int = 3
     ) -> Tuple[str, List[str]]:
         """
-        Analyzes sentiment of all textual ratings and:
-        - Returns 'True' or 'False' as final verdict.
-        - Returns URLs of top n reviews most strongly supporting that verdict.
+        Analyzes textual ratings and:
+        - Returns 'True', 'False', or 'Unknown' as final verdict.
+        - Returns URLs of top n reviews supporting that verdict.
         """
         rated_reviews = []
+        verdicts = []
 
         for claim in claims_response.claims:
             for review in claim.claimReview:
                 if review.textualRating and review.url:
-                    doc = self.nlp(review.textualRating.strip())
-                    polarity = doc._.blob.polarity
+                    verdict = self._classify_textual_rating(review.textualRating.strip())
+                    verdicts.append(verdict)
                     rated_reviews.append(
-                        {"url": review.url, "polarity": polarity, "textualRating": review.textualRating.strip()}
+                        {
+                            "url": review.url,
+                            "verdict": verdict,
+                            "textualRating": review.textualRating.strip(),
+                        }
                     )
 
         if not rated_reviews:
             return "Unknown", []
 
-        # Calculate average polarity
-        avg_polarity = sum(r["polarity"] for r in rated_reviews) / len(rated_reviews)
-        verdict = "True" if avg_polarity >= 0 else "False"
+        # Count True vs False.
+        true_count = verdicts.count("True")
+        false_count = verdicts.count("False")
 
-        if verdict == "True":
-            sorted_reviews = sorted(rated_reviews, key=lambda x: x["polarity"], reverse=True)
+        if false_count > true_count:
+            final_verdict = "False"
+        elif true_count > false_count:
+            final_verdict = "True"
         else:
-            sorted_reviews = sorted(rated_reviews, key=lambda x: x["polarity"])
+            final_verdict = "Unknown"
 
-        top_urls = [r["url"] for r in sorted_reviews[:top_n]]
+        # Filter reviews that match the final verdict
+        if final_verdict != "Unknown":
+            matching_reviews = [r for r in rated_reviews if r["verdict"] == final_verdict]
+            top_urls = [r["url"] for r in matching_reviews[:top_n]]
+        else:
+            # If unknown, just return any URLs (preferring ones that had some rating if possible, but here all have ratings)
+            top_urls = [r["url"] for r in rated_reviews[:top_n]]
 
-        return verdict, top_urls
+        return final_verdict, top_urls
 
     def get_claims(self, query):
         try:

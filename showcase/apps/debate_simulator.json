@@ -91,7 +91,7 @@
                 "id": "fact_checker",
                 "name": "Fact Checker Agent",
                 "description": "Checks the facts of the statements.",
-                "class_name": "rustic_ai.vertexai.agents.fact_checker.FactCheckerAgent",
+                "class_name": "rustic_ai.showcase.google.fact_checker.FactCheckerAgent",
                 "properties": {},
                 "additional_topics": [
                     "{{ actor_1 }}",
