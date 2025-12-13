@@ -2,7 +2,6 @@ from typing import Optional
 
 from rustic_ai.core.guild import agent
 from rustic_ai.core.guild.agent import Agent, ProcessContext
-from rustic_ai.core.guild.agent_ext.mixins.guild_refresher import GuildRefreshMixin
 
 from .client import MCPClient
 from .models import (
@@ -13,7 +12,7 @@ from .models import (
 )
 
 
-class MCPAgent(Agent[MCPAgentConfig], GuildRefreshMixin):
+class MCPAgent(Agent[MCPAgentConfig]):
     """
     Agent that connects to a single MCP server and exposes its capabilities.
     """
