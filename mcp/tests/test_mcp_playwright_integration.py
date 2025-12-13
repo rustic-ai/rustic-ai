@@ -49,11 +49,9 @@ class TestMCPPlaywrightIntegration:
     @pytest.fixture
     def playwright_agent_spec(self):
         config = MCPAgentConfig(
-            servers=[
-                MCPServerConfig(
-                    name="playwright", type=MCPClientType.STDIO, command="npx", args=["-y", "@playwright/mcp@latest"]
-                )
-            ]
+            server=MCPServerConfig(
+                name="playwright", type=MCPClientType.STDIO, command="npx", args=["-y", "@playwright/mcp@latest"]
+            )
         )
 
         return (

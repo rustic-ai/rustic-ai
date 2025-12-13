@@ -26,7 +26,7 @@ class MCPServerConfig(BaseModel):
 
 
 class MCPAgentConfig(BaseAgentProps):
-    servers: List[MCPServerConfig] = Field(default_factory=list, description="List of MCP servers to connect to")
+    server: MCPServerConfig = Field(description="MCP server configuration")
 
 
 class CallToolRequest(BaseModel):
