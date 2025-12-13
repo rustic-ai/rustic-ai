@@ -228,5 +228,10 @@ class FactCheckerAgent(Agent):
             response = self.render_verdict_markdown(query, final_verdict, urls)
 
             ctx.send(TextFormat(text=response))
+            ctx.send(
+                FactCheckRespones(
+                    query=query, claims=claims_response.claims, nextPageToken=claims_response.nextPageToken
+                )
+            )
         else:
             ctx.send(TextFormat(text=f"🔍 No claims found for this claim: {query}<br>"))

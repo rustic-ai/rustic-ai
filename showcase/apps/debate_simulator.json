@@ -142,7 +142,8 @@
                         "priority": null,
                         "recipient_list": []
                     },
-                    "route_times": 5
+                    "route_times": 5,
+                    "process_status": "completed"
                 },
                 {
                     "agent": {
@@ -202,7 +203,8 @@
                         "priority": null,
                         "recipient_list": []
                     },
-                    "route_times": 5
+                    "route_times": 5,
+                    "process_status": "completed"
                 },
                 {
                     "agent": {
@@ -229,7 +231,7 @@
                         "update_format": "json-merge-patch",
                         "state_update": "({\"claims\": $append($.guild_state.claims, $.untransformed.payload.text)})"
                     },
-                    "process_status": null
+                    "process_status": "completed"
                 }
             ]
         }

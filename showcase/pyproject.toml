@@ -26,6 +26,7 @@ rusticai-playwright = { path = "../playwright", develop = true }
 rusticai-serpapi = { path = "../serpapi", develop = true }
 rusticai-vertexai = { path = "../vertexai", develop = true }
 google-api-python-client = "^2.187.0"
+spacytextblob = "^5.1.0"
 
 [tool.poetry-monorepo.deps]
 
