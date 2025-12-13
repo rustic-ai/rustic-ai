@@ -1,5 +1,4 @@
-import asyncio
-from typing import Optional, Dict
+from typing import Optional
 
 from rustic_ai.core.guild import agent
 from rustic_ai.core.guild.agent import Agent, ProcessContext
@@ -59,11 +58,11 @@ class MCPAgent(Agent[MCPAgentConfig], GuildRefreshMixin):
 
         self._ensure_client()
         if not self._mcp_client:
-             ctx.send_error(CallToolResponse(results=[], is_error=True))
-             return
+            ctx.send_error(CallToolResponse(results=[], is_error=True))
+            return
 
         response = await self._mcp_client.call_tool(request)
         if response.is_error:
-             ctx.send_error(response)
+            ctx.send_error(response)
         else:
-             ctx.send(response)
+            ctx.send(response)

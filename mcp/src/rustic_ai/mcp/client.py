@@ -1,6 +1,5 @@
 import asyncio
 import logging
-from dataclasses import dataclass
 from typing import Optional
 
 from mcp import ClientSession, StdioServerParameters
@@ -51,24 +50,22 @@ class MCPClient:
                 return
 
             client_type = self.config.type
-            
+
             async with transport_context as (read, write):
                 async with ClientSession(read, write) as session:
                     await session.initialize()
-                    
+
                     # Verify connection by listing tools
                     result = await session.list_tools()
                     tool_names = [tool.name for tool in result.tools]
-                    logger.info(
-                        f"Connected to {self.config.name} ({client_type.value}). Available tools: {tool_names}"
-                    )
-                    
+                    logger.info(f"Connected to {self.config.name} ({client_type.value}). Available tools: {tool_names}")
+
                     self._session = session
                     self._ready_event.set()
-                    
+
                     # Wait until shutdown is requested
                     await self._shutdown_event.wait()
-                    
+
         except Exception as e:
             if not self._shutdown_event.is_set():
                 logger.error(f"MCP session error for {self.config.name}: {e}", exc_info=True)
@@ -84,7 +81,7 @@ class MCPClient:
         if not self._task or self._task.done():
             self._shutdown_event.clear()
             self._task = asyncio.create_task(self._run_session())
-            
+
         # Wait for session to be ready
         try:
             await asyncio.wait_for(self._ready_event.wait(), timeout=10.0)
@@ -98,7 +95,7 @@ class MCPClient:
                 except Exception:
                     pass
             return None
-            
+
         return self._session
 
     async def shutdown(self):
@@ -109,7 +106,7 @@ class MCPClient:
             try:
                 await self._task
             except Exception as e:
-                 logger.error(f"Error awaiting MCP task shutdown: {e}", exc_info=True)
+                logger.error(f"Error awaiting MCP task shutdown: {e}", exc_info=True)
             self._task = None
 
     async def call_tool(self, request: CallToolRequest) -> CallToolResponse:
@@ -119,9 +116,7 @@ class MCPClient:
             return CallToolResponse(results=[], is_error=True)
 
         try:
-            result = await session.call_tool(
-                request.tool_name, arguments=request.arguments
-            )
+            result = await session.call_tool(request.tool_name, arguments=request.arguments)
 
             tool_results = []
             for content in result.content:
@@ -130,9 +125,7 @@ class MCPClient:
                 elif content.type == "image":
                     tool_results.append(ToolResult(type="image", content=content.data))
                 elif content.type == "resource":
-                    tool_results.append(
-                        ToolResult(type="resource", content=content.resource.uri)
-                    )
+                    tool_results.append(ToolResult(type="resource", content=content.resource.uri))
 
             return CallToolResponse(results=tool_results)
 
