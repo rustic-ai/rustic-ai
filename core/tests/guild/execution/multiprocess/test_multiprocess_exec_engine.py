@@ -15,7 +15,7 @@ from rustic_ai.core.guild.execution.multiprocess.multiprocess_exec_engine import
 )
 from rustic_ai.core.messaging.core.messaging_config import MessagingConfig
 
-from rustic_ai.testing.execution.integration_agents import InitiatorProbeAgent
+from core.tests.integration.execution.integration_agents import InitiatorProbeAgent
 
 
 @pytest.fixture(scope="session", autouse=True)
