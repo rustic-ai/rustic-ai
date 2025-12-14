@@ -2838,7 +2838,7 @@ pyasn1 = ">=0.1.3"
 
 [[package]]
 name = "rusticai-core"
-version = "0.1.0"
+version = "1.0.0"
 description = "Rustic AI’s modular, agentic AI framework for building human-centered, multi-agent workflows"
 optional = false
 python-versions = ">=3.12,<3.13"

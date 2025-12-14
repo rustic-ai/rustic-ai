@@ -5,7 +5,7 @@ build-backend = "poetry.core.masonry.api"
 
 [project]
 name = "rusticai-chroma"
-version = "0.1.0"
+version = "1.0.0"
 description = "Rustic AI module for leveraging ChromaDB"
 authors = [{name = "Dragonscale Industries Inc.", email = "dev@dragonscale.ai"}]
 license = "Apache-2.0"

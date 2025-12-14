@@ -5,7 +5,7 @@ build-backend = "poetry.core.masonry.api"
 
 [project]
 name = "rusticai-lancedb"
-version = "0.0.1"
+version = "1.0.0"
 description = "Support for LanceDB backend KnowledgeBase"
 authors = [{name = "Dragonscale Industries Inc.", email = "dev@dragonscale.ai"}]
 license = "Apache-2.0"

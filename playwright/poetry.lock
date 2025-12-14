@@ -2021,7 +2021,7 @@ files = [
 
 [[package]]
 name = "rusticai-core"
-version = "0.1.0"
+version = "1.0.0"
 description = "Rustic AI’s modular, agentic AI framework for building human-centered, multi-agent workflows"
 optional = false
 python-versions = ">=3.12,<3.13"
@@ -2058,7 +2058,7 @@ url = "../core"
 
 [[package]]
 name = "rusticai-testing"
-version = "0.1.0"
+version = "1.0.0"
 description = "Test Utilities for Rustic AI Framework"
 optional = false
 python-versions = ">=3.12,<3.13"
