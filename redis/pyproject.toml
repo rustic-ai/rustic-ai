@@ -2,22 +2,23 @@
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
-[tool.poetry]
+
+[project]
 name = "rusticai-redis"
 version = "0.1.0"
 description = "Redis package for Rustic AI"
-authors = ["Dragonscale Industries Inc. <dev@dragonscale.ai>"]
+authors = [{name = "Dragonscale Industries Inc.", email = "dev@dragonscale.ai"}]
 license = "Apache-2.0"
 readme = "README.md"
-homepage = "https://www.rustic.ai/"
-repository = "https://github.com/rustic-ai/rustic-ai"
+requires-python = ">=3.12,<3.13"
+dynamic = ["dependencies"]
+urls = { Homepage = "https://www.rustic.ai/", Repository = "https://github.com/rustic-ai/rustic-ai", "Rustic AI Core" = "https://pypi.org/project/rusticai-core/" }
+
+
+[tool.poetry]
 packages = [{ include = "rustic_ai", from = "src" }]
 
-[tool.poetry.urls]
-"Rustic AI Core" = "https://pypi.org/project/rusticai-core/"
-
 [tool.poetry.dependencies]
-python = ">=3.12,<3.13"
 rusticai-core = { path = "../core", develop = true }
 redis = { extras = ["hiredis"], version = "^5.2.1" }
 
