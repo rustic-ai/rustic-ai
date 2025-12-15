@@ -19,7 +19,7 @@ from rustic_ai.core.guild.dsl import BaseAgentProps
 class ClaudeCodeAgentProps(BaseAgentProps):
     """Properties for the ClaudeCodeAgent."""
 
-    allowed_tools: list[str] = ["Bash", "Edit", "Read", "Write", "Glob", "Grep", "ListMcpResources", "ReadMcpResource"]
+    allowed_tools: list[str] = ["Bash", "Edit", "Read", "Write", "Glob", "Grep"]
     permission_mode: str = "acceptEdits"  # or "ask"
     session_id: str = "default"
 
