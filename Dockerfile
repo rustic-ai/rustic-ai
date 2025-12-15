@@ -67,6 +67,9 @@ RUN playwright install --with-deps chromium
 
 RUN apt-get update && apt-get install -y --no-install-recommends libpq-dev wget grep
 
+# install claude code
+curl -fsSL https://claude.ai/install.sh | bash
+
 # Expose port
 EXPOSE 8880
 
