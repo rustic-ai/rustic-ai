@@ -1,4 +1,5 @@
 import logging
+import os
 
 import pytest
 
@@ -18,6 +19,10 @@ from rustic_ai.testing.helpers import wrap_agent_for_testing
 
 @pytest.mark.asyncio
 class TestClaudeAgent:
+    @pytest.mark.skipif(
+        os.getenv("ANTHROPIC_VERTEX_PROJECT_ID") is None,
+        reason="ANTHROPIC_VERTEX_PROJECT_ID environment variable not set",
+    )
     async def test_claude_agent_integration(self):
         """
         Integration test for ClaudeCodeAgent.
