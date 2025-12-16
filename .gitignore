@@ -132,3 +132,6 @@ copilot-instructions.md
 .cursor/
 AGENTS.md
 debugger/
+
+# npm packages
+node_modules/
