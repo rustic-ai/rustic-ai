@@ -1,5 +1,3 @@
-from typing import Optional
-
 from rustic_ai.core.guild import agent
 from rustic_ai.core.guild.agent import Agent, ProcessContext
 
@@ -18,7 +16,7 @@ class MCPAgent(Agent[MCPAgentConfig]):
     """
 
     def __init__(self):
-        self._mcp_client: Optional[MCPClient] = None
+        self._mcp_client: MCPClient = MCPClient(self.server_config)
 
     @property
     def server_config(self) -> MCPServerConfig:
@@ -27,14 +25,6 @@ class MCPAgent(Agent[MCPAgentConfig]):
     def _ensure_client(self):
         if not self._mcp_client:
             self._mcp_client = MCPClient(self.server_config)
-
-    async def initialize(self):
-        """Initialize the agent."""
-        await super().initialize()
-        self._ensure_client()
-        # Pre-connect to verify configuration
-        if self._mcp_client:
-            await self._mcp_client.connect()
 
     async def shutdown(self):
         """Clean up connection on shutdown."""
