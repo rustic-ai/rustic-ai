@@ -65,6 +65,8 @@ RUN rm -rf ${APPDIR}/dist
 # System dependencies required for playwright
 RUN playwright install --with-deps chromium
 
+RUN python -m spacy download en_core_web_sm
+
 RUN apt-get update && apt-get install -y --no-install-recommends libpq-dev wget grep
 
 # Install Node.js 20 and MCP Playwright dependencies
@@ -73,6 +75,9 @@ RUN apt-get install -y --no-install-recommends curl ca-certificates gnupg \
     && apt-get install -y --no-install-recommends nodejs \
     && npx playwright install --with-deps chromium \
     && rm -rf /var/lib/apt/lists/*
+
+# install claude code
+curl -fsSL https://claude.ai/install.sh | bash
 
 # Expose port
 EXPOSE 8880

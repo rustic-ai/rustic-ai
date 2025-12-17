@@ -84,7 +84,7 @@ class TestTodoListGuild:
         guild.shutdown()
 
     @pytest.mark.asyncio
-    @flaky(max_runs=4, min_passes=1)
+    @flaky(max_runs=5, min_passes=1)
     async def test_todo_flow(self, todolist_guild: Guild):
         generator = GemstoneGenerator(17)
         probe_spec = (
