@@ -61,10 +61,10 @@ class TestPlaywrightAgent:
             payload=WebScrapingRequest(
                 id=request_id,
                 links=[
-                    MediaLink(url="https://example.com/index.html"),
-                    MediaLink(url="https://example.com/about.html"),
-                    MediaLink(url="https://example.com/contact.html"),
                     MediaLink(url="https://the-internet.herokuapp.com/"),
+                    MediaLink(url="https://the-internet.herokuapp.com/abtest"),
+                    MediaLink(url="https://the-internet.herokuapp.com/abtest"),
+                    MediaLink(url="https://www.rfc-editor.org/rfc/rfc2606.html"),
                 ],
             ).model_dump(),
             format=get_qualified_class_name(WebScrapingRequest),
@@ -82,14 +82,14 @@ class TestPlaywrightAgent:
             if len(results) >= 5 or (results and results[-1].format == wsc) or tries > 10:
                 break
 
-        assert len(results) == 5
+        assert len(results) == 4
 
         selected_result = [
             r
             for r in results
             if isinstance(r.payload, dict)
             and "metadata" in r.payload
-            and r.payload["metadata"]["scraped_url"] == "https://example.com/index.html"
+            and r.payload["metadata"]["scraped_url"] == "https://the-internet.herokuapp.com/abtest"
         ][0]
 
         assert selected_result.priority == Priority.NORMAL
@@ -103,8 +103,8 @@ class TestPlaywrightAgent:
         assert selected_result.payload["name"] is not None
 
         assert selected_result.payload["metadata"] is not None
-        assert selected_result.payload["metadata"]["scraped_url"] == "https://example.com/index.html"  # type: ignore
-        assert selected_result.payload["metadata"]["title"] == "Example Domain"  # type: ignore
+        assert selected_result.payload["metadata"]["scraped_url"] == "https://the-internet.herokuapp.com/abtest"  # type: ignore
+        assert selected_result.payload["metadata"]["title"] == "The Internet"  # type: ignore
         assert selected_result.payload["metadata"]["request_id"] == request_id  # type: ignore
 
         assert selected_result.payload["url"] is not None
@@ -117,7 +117,7 @@ class TestPlaywrightAgent:
         completed = WebScrapingCompleted.model_validate(results[-1].payload)
 
         assert completed.id == request_id
-        assert len(completed.links) == 2  # 2 links are duplicates
+        assert len(completed.links) == 3  # 2 links are duplicates
 
     # Test markdown output
     @flaky(max_runs=3, min_passes=1)
@@ -133,7 +133,7 @@ class TestPlaywrightAgent:
             payload=WebScrapingRequest(
                 id=request_id,
                 links=[
-                    MediaLink(url="https://example.com/index.html"),
+                    MediaLink(url="https://the-internet.herokuapp.com/abtest"),
                 ],
                 output_format=ScrapingOutputFormat.MARKDOWN,
                 force=True,
