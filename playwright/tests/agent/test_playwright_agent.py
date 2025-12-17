@@ -64,7 +64,7 @@ class TestPlaywrightAgent:
                     MediaLink(url="https://example.com/index.html"),
                     MediaLink(url="https://example.com/about.html"),
                     MediaLink(url="https://example.com/contact.html"),
-                    MediaLink(url="https://www.rfc-editor.org/rfc/rfc2606.html"),
+                    MediaLink(url="https://the-internet.herokuapp.com/"),
                 ],
             ).model_dump(),
             format=get_qualified_class_name(WebScrapingRequest),
