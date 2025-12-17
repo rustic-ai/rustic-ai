@@ -113,7 +113,7 @@ class MCPClient:
         session = await self.connect()
 
         if not session:
-            return CallToolResponse(results=[], is_error=True)
+            return CallToolResponse(results=[], is_error=True, error="mcp session not found!")
 
         try:
             result = await session.call_tool(request.tool_name, arguments=request.arguments)
@@ -134,4 +134,6 @@ class MCPClient:
                 f"Error calling tool {request.tool_name} on {self.config.name}: {e}",
                 exc_info=True,
             )
-            return CallToolResponse(results=[], is_error=True)
+            return CallToolResponse(
+                results=[], is_error=True, error=f"Error calling tool {request.tool_name} on {self.config.name}: {e}"
+            )

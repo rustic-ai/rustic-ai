@@ -43,3 +43,4 @@ class ToolResult(BaseModel):
 class CallToolResponse(BaseModel):
     results: List[ToolResult]
     is_error: bool = False
+    error: Optional[str] = None
