@@ -119,9 +119,11 @@ class TestMCPPlaywrightIntegration:
 
         probe_agent.clear_messages()
 
-        # Let's try to navigate to example.com
+        # Let's try to navigate to https://the-internet.herokuapp.com/abtest
         navigate_payload = CallToolRequest(
-            server_name="playwright", tool_name="browser_navigate", arguments={"url": "https://example.com"}
+            server_name="playwright",
+            tool_name="browser_navigate",
+            arguments={"url": "https://the-internet.herokuapp.com/abtest"},
         ).model_dump()
 
         id_obj = generator.get_id(Priority.NORMAL)
@@ -143,7 +145,4 @@ class TestMCPPlaywrightIntegration:
         messages = probe_agent.get_messages()
         messages = [msg for msg in messages if msg.topics == "mcp_requests"]
         assert messages[-1].payload["results"][0]["type"] == "text"
-        assert (
-            "This domain is for use in documentation examples without needing permission. Avoid use in operations."
-            in messages[-1].payload["results"][0]["content"]
-        )
+        assert "A/B Test Variation 1" in messages[-1].payload["results"][0]["content"]
