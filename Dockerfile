@@ -69,6 +69,9 @@ RUN python -m spacy download en_core_web_sm
 
 RUN apt-get update && apt-get install -y --no-install-recommends libpq-dev wget grep
 
+# install claude code
+curl -fsSL https://claude.ai/install.sh | bash
+
 # Expose port
 EXPOSE 8880
 

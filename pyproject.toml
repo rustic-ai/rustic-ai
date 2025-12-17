@@ -34,6 +34,7 @@ gcsfs = { version = "^2024.12.0", optional = true }
 rusticai-vertexai = { path = "./vertexai", develop = true }
 rusticai-llm-agent = { path = "./llm-agent", develop = true }
 rusticai-lancedb = {path = "./lancedb", develop = true}
+rusticai-claude = {path = "./claude", develop = true}
 
 [tool.poetry.group.dev]
 optional = true

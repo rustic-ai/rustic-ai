@@ -1035,6 +1035,28 @@ uvicorn = {version = ">=0.18.3", extras = ["standard"]}
 dev = ["chroma-hnswlib (==0.7.6)", "fastapi (>=0.115.9)", "opentelemetry-instrumentation-fastapi (>=0.41b0)"]
 
 [[package]]
+name = "claude-agent-sdk"
+version = "0.1.16"
+description = "Python SDK for Claude Code"
+optional = false
+python-versions = ">=3.10"
+groups = ["main"]
+files = [
+    {file = "claude_agent_sdk-0.1.16-py3-none-macosx_11_0_arm64.whl", hash = "sha256:1061ec27599876ff4138d798147f2776c609328632a939e17103fa45a13d086e"},
+    {file = "claude_agent_sdk-0.1.16-py3-none-manylinux_2_17_aarch64.whl", hash = "sha256:f287d7d003089cbe4da8f122ab7afd402d93c79bebbffa560f462dbbc4a78563"},
+    {file = "claude_agent_sdk-0.1.16-py3-none-manylinux_2_17_x86_64.whl", hash = "sha256:562a16bcf6f2d67eeb62c31f2500f0d3fd3e6349983c85537e83343bbdddaef7"},
+    {file = "claude_agent_sdk-0.1.16-py3-none-win_amd64.whl", hash = "sha256:48edca31d488a911248da0ba3c1bd1f4440ced2ab84e877040e4d8c31641c0eb"},
+    {file = "claude_agent_sdk-0.1.16.tar.gz", hash = "sha256:d38d361eaafb2599ab6ba1472ac797f0420a2481f2893ab0b102e64b1cadf78a"},
+]
+
+[package.dependencies]
+anyio = ">=4.0.0"
+mcp = ">=0.1.0"
+
+[package.extras]
+dev = ["anyio[trio] (>=4.0.0)", "mypy (>=1.0.0)", "pytest (>=7.0.0)", "pytest-asyncio (>=0.20.0)", "pytest-cov (>=4.0.0)", "ruff (>=0.1.0)"]
+
+[[package]]
 name = "click"
 version = "8.2.1"
 description = "Composable command line interface toolkit"
@@ -8276,6 +8298,27 @@ type = "directory"
 url = "chroma"
 
 [[package]]
+name = "rusticai-claude"
+version = "0.0.1"
+description = "Claude Integration"
+optional = false
+python-versions = ">=3.12,<3.13"
+groups = ["main"]
+files = []
+develop = true
+
+[package.dependencies]
+claude-agent-sdk = "^0.1.0"
+rusticai-core = {path = "../core", develop = true}
+
+[package.extras]
+test = []
+
+[package.source]
+type = "directory"
+url = "claude"
+
+[[package]]
 name = "rusticai-core"
 version = "0.1.0"
 description = "Rustic AI’s modular, agentic AI framework for building human-centered, multi-agent workflows"
@@ -11398,4 +11441,4 @@ google-cloud = ["gcsfs"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<3.13"
-content-hash = "e90533d93791ce8ab988361cff123392e1bf632143363f04d51b5ab24e128683"
+content-hash = "3da9fa5645811b04742b02f32441670ef10155fc7a8b7147641e1b09b9ef5902"
