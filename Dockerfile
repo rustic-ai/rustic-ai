@@ -77,7 +77,7 @@ RUN apt-get install -y --no-install-recommends curl ca-certificates gnupg \
     && rm -rf /var/lib/apt/lists/*
 
 # install claude code
-curl -fsSL https://claude.ai/install.sh | bash
+RUN curl -fsSL https://claude.ai/install.sh | bash
 
 # Expose port
 EXPOSE 8880
