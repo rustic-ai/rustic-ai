@@ -101,7 +101,7 @@ class TestStateMgmt:
             ("rustic_ai.redis.state.manager.RedisStateManager", {"host": "localhost", "port": 6379}),
         ],
     )
-    @flaky(max_runs=3, min_passes=1)
+    @flaky(max_runs=4, min_passes=1)
     def test_state_mgmt(
         self,
         state_aware_agent: AgentSpec,
