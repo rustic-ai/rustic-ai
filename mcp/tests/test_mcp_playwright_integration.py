@@ -2,9 +2,9 @@ import asyncio
 import os
 import shutil
 
+from flaky import flaky
 import pytest
 import shortuuid
-from flaky import flaky
 
 from rustic_ai.core import GuildTopics, Priority
 from rustic_ai.core.agents.system.models import (
@@ -80,7 +80,7 @@ class TestMCPPlaywrightIntegration:
         mcp_guild = mcp_guild_builder.bootstrap(rgdatabase, "test_org")
 
         yield mcp_guild
-        
+
         # Wait for any pending message handlers to complete before shutdown
         # This prevents "cannot schedule new futures after shutdown" errors
         await asyncio.sleep(1)

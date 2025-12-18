@@ -168,7 +168,9 @@ class TestStateMgmt:
                 break
             loop_count += 1
 
-        assert len(messages) == 1, f"Expected 1 message, got {len(messages)}"  # Second agent should not publish as data is empty
+        assert (
+            len(messages) == 1
+        ), f"Expected 1 message, got {len(messages)}"  # Second agent should not publish as data is empty
 
         assert messages[0].format == get_qualified_class_name(PublishedData)
         assert messages[0].payload["data"] == {}
