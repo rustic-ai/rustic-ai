@@ -27,6 +27,8 @@ jobs:
     steps:
       - name: Check out the repo
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-python@v5
         with:
@@ -53,12 +55,22 @@ jobs:
           restore-keys: |
             huggingface-rustic-ai-
 
+      - name: Determine Test Targets
+        id: targets
+        run: |
+          # Fetch the base branch to ensure we can diff against it
+          git fetch origin ${{ github.base_ref }}:origin/${{ github.base_ref }}
+          TARGETS=$(python scripts/determine_test_targets.py --base origin/${{ github.base_ref }} --head HEAD)
+          echo "Targets: $TARGETS"
+          echo "targets=$TARGETS" >> $GITHUB_OUTPUT
+
       - name: test with tox
+        if: steps.targets.outputs.targets != ''
         env:
           PYTEST_ADDOPTS: "--color=yes"
           SKIP_EXPENSIVE_TESTS: true
         run: |
-          tox
+          tox -- ${{ steps.targets.outputs.targets }}
 
       - name: Save Cache
         if: matrix.os == 'ubuntu-latest' && matrix.python-versions == '3.12.9'
