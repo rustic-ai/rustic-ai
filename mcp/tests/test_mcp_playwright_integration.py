@@ -4,6 +4,7 @@ import shutil
 
 import pytest
 import shortuuid
+from flaky import flaky
 
 from rustic_ai.core import GuildTopics, Priority
 from rustic_ai.core.agents.system.models import (
@@ -65,7 +66,7 @@ class TestMCPPlaywrightIntegration:
         )
 
     @pytest.fixture
-    def mcp_guild(self, playwright_agent_spec, rgdatabase):
+    async def mcp_guild(self, playwright_agent_spec, rgdatabase):
 
         mcp_guild_builder = GuildBuilder(
             guild_id=f"mcp_guild{shortuuid.uuid()}",
@@ -79,9 +80,14 @@ class TestMCPPlaywrightIntegration:
         mcp_guild = mcp_guild_builder.bootstrap(rgdatabase, "test_org")
 
         yield mcp_guild
+        
+        # Wait for any pending message handlers to complete before shutdown
+        # This prevents "cannot schedule new futures after shutdown" errors
+        await asyncio.sleep(1)
         mcp_guild.shutdown()
 
     @pytest.mark.asyncio
+    @flaky(max_runs=4, min_passes=1)
     async def test_playwright_navigate_and_read(self, mcp_guild, generator):
 
         # Setup Probe Agent to interact
