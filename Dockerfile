@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.4
-FROM python:3.12.11-slim AS base
+FROM python:3.12.12-slim AS base
 
 ARG RAY_UID=1000
 ARG RAY_GID=1000
@@ -34,7 +34,7 @@ ENV PYTHONUNBUFFERED=1
 
 RUN apt-get update && apt-get install -y --no-install-recommends libpq-dev
 
-RUN pip install poetry==2.1.3
+RUN pip install poetry==2.2.1
 
 ENV POETRY_NO_INTERACTION=1 \
     POETRY_VIRTUALENVS_IN_PROJECT=1 \
