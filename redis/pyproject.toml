@@ -20,7 +20,7 @@ packages = [{ include = "rustic_ai", from = "src" }]
 
 [tool.poetry.dependencies]
 rusticai-core = { path = "../core", develop = true }
-redis = { extras = ["hiredis"], version = "^5.2.1" }
+redis = { extras = ["hiredis"], version = "^6.4.0" }
 
 [tool.poetry-monorepo.deps]
 
