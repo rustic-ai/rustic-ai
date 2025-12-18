@@ -69,8 +69,15 @@ RUN python -m spacy download en_core_web_sm
 
 RUN apt-get update && apt-get install -y --no-install-recommends libpq-dev wget grep
 
+# Install Node.js 20 and MCP Playwright dependencies
+RUN apt-get install -y --no-install-recommends curl ca-certificates gnupg \
+    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
+    && npx playwright install --with-deps chromium \
+    && rm -rf /var/lib/apt/lists/*
+
 # install claude code
-curl -fsSL https://claude.ai/install.sh | bash
+RUN curl -fsSL https://claude.ai/install.sh | bash
 
 # Expose port
 EXPOSE 8880

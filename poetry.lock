@@ -8495,6 +8495,27 @@ type = "directory"
 url = "marvin"
 
 [[package]]
+name = "rusticai-mcp"
+version = "0.0.1"
+description = "support for mcps"
+optional = false
+python-versions = ">=3.12,<3.13"
+groups = ["main"]
+files = []
+develop = true
+
+[package.dependencies]
+mcp = "^1.0.0"
+rusticai-core = {path = "../core", develop = true}
+
+[package.extras]
+test = []
+
+[package.source]
+type = "directory"
+url = "mcp"
+
+[[package]]
 name = "rusticai-playwright"
 version = "0.1.0"
 description = "Rustic AI module for scraping using playwright"
@@ -11441,4 +11462,4 @@ google-cloud = ["gcsfs"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<3.13"
-content-hash = "3da9fa5645811b04742b02f32441670ef10155fc7a8b7147641e1b09b9ef5902"
+content-hash = "acfc7a92d97035d8256676cba556af566fe137713f4075dea215b60017609617"
