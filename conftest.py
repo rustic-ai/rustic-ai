@@ -1,7 +1,10 @@
+import asyncio
+import gc
 import hashlib
 import multiprocessing
 import os
 import socket
+import threading
 import time
 import uuid
 
@@ -26,6 +29,48 @@ from rustic_ai.core.utils.gemstone_id import GemstoneGenerator
 
 # Global counter for unique guild IDs
 TEST_GUILD_COUNT = 0
+
+
+@pytest.fixture(scope="session", autouse=True)
+def cleanup_aiosqlite():
+    """Auto-cleanup fixture that runs after all tests."""
+    yield  # Tests run here
+
+    # After all tests, cleanup aiosqlite connections
+    try:
+        import aiosqlite
+
+        gc.collect()
+        connections = [obj for obj in gc.get_objects() if isinstance(obj, aiosqlite.Connection)]
+
+        if connections:
+            print(f"\n[Cleanup] Closing {len(connections)} aiosqlite connection(s)...")
+
+            async def close_all():
+                for conn in connections:
+                    try:
+                        await conn.close()
+                    except Exception:
+                        pass
+                await asyncio.sleep(0.5)
+
+            asyncio.run(close_all())
+            print("[Cleanup] Done")
+    except ImportError:
+        pass
+
+
+def pytest_sessionfinish(session, exitstatus):
+    """Report any remaining blocked threads."""
+    main_thread = threading.main_thread()
+    blocked = [t for t in threading.enumerate() if not t.daemon and t != main_thread]
+
+    if blocked:
+        print(f"\n⚠ WARNING: {len(blocked)} thread(s) still blocking:")
+        for t in blocked:
+            print(f"  - {t.name}")
+    else:
+        print("\n✓ All threads cleaned up successfully")
 
 
 def derive_port_from_test_name(test_name: str, start_port: int = 31143) -> int:

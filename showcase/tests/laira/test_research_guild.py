@@ -155,6 +155,7 @@ class TestResearchGuild:
             .set_id("playwright_agent")
             .set_name("Playwright Agent")
             .set_description("An agent that handles web scraping using Playwright")
+            .set_properties({"browser_idle_timeout_s": 0})
             .build_spec()
         )
 
@@ -253,11 +254,3 @@ class TestResearchGuild:
 
         # Check that the response text contains LSTM
         assert "LSTM" in content.text
-
-        # Give the system a final moment to complete any pending tasks
-        await asyncio.sleep(2)
-
-        # Cancel any remaining tasks explicitly to avoid the warning
-        for task in asyncio.all_tasks():
-            if task is not asyncio.current_task() and not task.done():
-                task.cancel()

@@ -11,6 +11,7 @@ from rustic_ai.core.messaging.core.message import AgentTag, Message
 from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 from rustic_ai.core.utils.priority import Priority
 from rustic_ai.playwright.agent import (
+    BrowserLifecycle,
     PlaywrightScraperAgent,
     ScrapingOutputFormat,
     WebScrapingCompleted,
@@ -42,6 +43,7 @@ def agent_and_results(filesystem):
         .set_id("001")
         .set_name("WebScrapper")
         .set_description("A web scraping agent using Playwright")
+        .set_properties({"browser_lifecycle": BrowserLifecycle.PER_REQUEST})
         .build_spec(),
         {"filesystem": filesystem},
     )
@@ -49,6 +51,7 @@ def agent_and_results(filesystem):
 
 class TestPlaywrightAgent:
     @flaky(max_runs=3, min_passes=1)
+    @pytest.mark.asyncio
     async def test_scraping(self, generator, agent_and_results, filesystem):
         agent, results = agent_and_results
 
@@ -121,6 +124,7 @@ class TestPlaywrightAgent:
 
     # Test markdown output
     @flaky(max_runs=3, min_passes=1)
+    @pytest.mark.asyncio
     async def test_markdown_output(self, agent_and_results, generator):
         agent, results = agent_and_results
 
@@ -163,15 +167,8 @@ class TestPlaywrightAgent:
         assert result.payload["encoding"] == "utf-8"
         assert result.payload["name"] is not None
 
-        # Give the system a final moment to complete any pending tasks
-        await asyncio.sleep(2)
-
-        # Cancel any remaining tasks explicitly to avoid the warning
-        for task in asyncio.all_tasks():
-            if task is not asyncio.current_task() and not task.done():
-                task.cancel()
-
     @flaky(max_runs=3, min_passes=1)
+    @pytest.mark.asyncio
     async def test_recursive_scraping_with_depth(self, agent_and_results, filesystem, generator):
         agent, results = agent_and_results
 
@@ -211,7 +208,3 @@ class TestPlaywrightAgent:
             assert result.payload["url"].endswith(".html") or result.payload["url"].endswith(".txt")
             fs = filesystem.to_resolver().resolve(agent.guild_id, "GUILD_GLOBAL")
             assert fs.exists(result.payload["url"])
-
-        for task in asyncio.all_tasks():
-            if task is not asyncio.current_task() and not task.done():
-                task.cancel()
