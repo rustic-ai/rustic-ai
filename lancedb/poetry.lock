@@ -1326,7 +1326,7 @@ version = "2.3.5"
 description = "Fundamental package for array computing in Python"
 optional = false
 python-versions = ">=3.11"
-groups = ["main"]
+groups = ["main", "dev"]
 files = [
     {file = "numpy-2.3.5-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:de5672f4a7b200c15a4127042170a694d4df43c992948f5e1af57f0174beed10"},
     {file = "numpy-2.3.5-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:acfd89508504a19ed06ef963ad544ec6664518c863436306153e13e94605c218"},
@@ -2128,6 +2128,7 @@ json-merge-patch = "^0.2"
 jsonata-python = "^0.5.2"
 jsonpatch = "^1.33"
 jsonpath-ng = "^1.7.0"
+numpy = "^2.0.0"
 opentelemetry-api = "^1.31.1"
 pydantic = "^2.10.6"
 python-dateutil = "^2.9.0.post0"
