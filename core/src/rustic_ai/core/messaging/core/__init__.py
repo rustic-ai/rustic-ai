@@ -1,5 +1,15 @@
+from .boundary_client import BoundaryClient
 from .client import Client
-from .message import MDT, AgentTag, JsonDict, Message, MessageConstants, Priority
+from .message import (
+    MDT,
+    AgentTag,
+    ForwardHeader,
+    JsonDict,
+    Message,
+    MessageConstants,
+    Priority,
+    RoutingSlip,
+)
 from .messaging_backend import MessagingBackend
 from .messaging_config import MessagingConfig
 from .messaging_interface import MessagingInterface
@@ -9,10 +19,13 @@ __all__ = [
     "MessageConstants",
     "Priority",
     "Client",
+    "BoundaryClient",
     "MessagingInterface",
     "MessagingBackend",
     "MessagingConfig",
     "AgentTag",
     "MDT",
     "JsonDict",
+    "ForwardHeader",
+    "RoutingSlip",
 ]

@@ -33,6 +33,7 @@ class AgentWrapper(ABC):
         machine_id: int,
         client_type: Type[Client] = MessageTrackingClient,
         client_properties: Dict[str, Any] = {},
+        organization_id: Optional[str] = None,
     ):
         """
         Initializes a new instance of the AgentWrapper class.
@@ -63,6 +64,7 @@ class AgentWrapper(ABC):
         self.messaging_owned = False
         self.dependencies = guild_spec.dependency_map | self.agent_spec.dependency_map
         self.only_agent_class_name = self.agent_spec.class_name.split(".")[-1]
+        self.organization_id = organization_id
 
     def initialize_agent(self) -> Agent:
         """
@@ -95,7 +97,11 @@ class AgentWrapper(ABC):
             machine_id=self.machine_id,
         )
 
-        subscribe_agent_with_messaging(self.agent, self.messaging)
+        subscribe_agent_with_messaging(self.agent, self.messaging, self.organization_id)
+
+        # Set organization_id on agent for cross-guild communication
+        if self.organization_id:
+            self.agent._organization_id = self.organization_id
 
         # Notify the agent that it is ready to process messages
         self.logger.info(f"Agent {self.agent_spec.name} is ready to process messages")

@@ -17,7 +17,9 @@ from .client import (
 from .core import (
     MDT,
     AgentTag,
+    BoundaryClient,
     Client,
+    ForwardHeader,
     JsonDict,
     Message,
     MessageConstants,
@@ -25,6 +27,7 @@ from .core import (
     MessagingConfig,
     MessagingInterface,
     Priority,
+    RoutingSlip,
 )
 
 __all__ = [
@@ -32,6 +35,7 @@ __all__ = [
     "MessageConstants",
     "Priority",
     "Client",
+    "BoundaryClient",
     "MessageTrackingStore",
     "LastProcessedMsg",
     "SqlMessageTrackingStore",
@@ -53,4 +57,6 @@ __all__ = [
     "AgentTag",
     "MDT",
     "JsonDict",
+    "RoutingSlip",
+    "ForwardHeader",
 ]
