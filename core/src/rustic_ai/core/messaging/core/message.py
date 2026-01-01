@@ -745,6 +745,11 @@ class Message(BaseModel):
 
     process_status: Annotated[Optional[ProcessStatus], Field(default=None)]
 
+    # Cross-guild origin tracking stack - each guild in the chain pushes its ID.
+    # When a response returns, the stack is popped to route back through the chain.
+    # This enables multi-guild-hop scenarios: A -> B -> C -> B -> A
+    origin_guild_stack: Annotated[List[str], Field(default_factory=list)]
+
     _id: int  # Internal backend for id
     _priority: Priority  # Internal backend for priority
     _timestamp: float  # Internal backend for timestamp

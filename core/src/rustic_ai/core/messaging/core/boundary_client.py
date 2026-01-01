@@ -2,7 +2,7 @@ from rustic_ai.core.messaging.core.client import Client
 from rustic_ai.core.messaging.core.message import Message
 
 
-class BoundaryClient(Client):
+class BoundaryClient:
     """
     Wrapper around any Client that adds shared namespace capabilities for cross-guild communication.
 
@@ -38,10 +38,6 @@ class BoundaryClient(Client):
         """Delegate all unimplemented methods/attributes to the inner client."""
         return getattr(self._inner, name)
 
-    def notify_new_message(self, message: Message) -> None:
-        """Forward notifications to the wrapped client."""
-        self._inner.notify_new_message(message)
-
     # =========================================================================
     # Shared Namespace Operations
     # =========================================================================
@@ -61,6 +57,8 @@ class BoundaryClient(Client):
             message: The message to publish.
         """
         self._ensure_shared_namespace()
-        message_copy = message.model_copy(deep=True)
-        message_copy.topics = [f"guild_inbox:{target_guild_id}"]
+        message_copy = message.model_copy(
+            deep=True,
+            update={"topics": [f"guild_inbox:{target_guild_id}"]},
+        )
         self._inner._messaging.publish_to_shared(self._inner, message_copy)

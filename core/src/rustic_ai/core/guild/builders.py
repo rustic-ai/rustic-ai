@@ -134,9 +134,9 @@ class AgentBuilder(Generic[AT, APT]):  # type: ignore
         Initialize the AgentBuilder.
         """
         self.agent_type: Type[AT] = agent_type
-        self.agent_props_type: Type[APT] | dict = getattr(
-            agent_type, MetaclassConstants.AGENT_PROPS_TYPE, BaseAgentProps
-        )
+        # Get agent_props_type from __annotations__ where metaclass stores it
+        annotations = getattr(agent_type, "__annotations__", {})
+        self.agent_props_type: Type[APT] | dict = annotations.get(MetaclassConstants.AGENT_PROPS_TYPE, BaseAgentProps)
 
         self.agent_spec_dict: dict = {
             KeyConstants.ID: shortuuid.uuid(),

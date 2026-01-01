@@ -1,14 +1,15 @@
-from typing import Callable, List, Type
+from typing import Callable, List, Type, TypeVar
 
-from pydantic import BaseModel, Field
+from pydantic import Field
 
 from rustic_ai.core.guild.agent import Agent
+from rustic_ai.core.guild.dsl import BaseAgentProps
 from rustic_ai.core.guild.g2g.boundary_context import BoundaryContext
 from rustic_ai.core.messaging import Message
 from rustic_ai.core.messaging.core.message import MDT
 
 
-class BoundaryAgentProps(BaseModel):
+class BoundaryAgentProps(BaseAgentProps):
     """
     Base properties for boundary agents.
 
@@ -29,7 +30,11 @@ class BoundaryAgentProps(BaseModel):
     )
 
 
-class BoundaryAgent(Agent[BoundaryAgentProps]):
+# TypeVar for BoundaryAgent props, bounded to BoundaryAgentProps
+BAPT = TypeVar("BAPT", bound=BoundaryAgentProps)
+
+
+class BoundaryAgent(Agent[BAPT]):
     """
     Base class for agents that communicate across guild boundaries.
 
@@ -122,7 +127,8 @@ class BoundaryAgent(Agent[BoundaryAgentProps]):
         Returns:
             BoundaryContext: The boundary context with cross-guild send methods.
         """
-        pctx = super()._make_process_context(
+        boundary_ctx = BoundaryContext(
+            self,
             message,
             method_name,
             payload_type,
@@ -131,5 +137,4 @@ class BoundaryAgent(Agent[BoundaryAgentProps]):
             outgoing_message_modifiers,
         )
 
-        boundary_ctx = BoundaryContext(pctx)
         return boundary_ctx

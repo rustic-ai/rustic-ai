@@ -29,9 +29,15 @@ Example:
 
 from rustic_ai.core.guild.g2g.boundary_agent import BoundaryAgent, BoundaryAgentProps
 from rustic_ai.core.guild.g2g.boundary_context import BoundaryContext
+from rustic_ai.core.guild.g2g.envoy_agent import EnvoyAgent, EnvoyAgentProps
+from rustic_ai.core.guild.g2g.gateway_agent import GatewayAgent, GatewayAgentProps
 
 __all__ = [
     "BoundaryAgent",
     "BoundaryAgentProps",
     "BoundaryContext",
+    "EnvoyAgent",
+    "EnvoyAgentProps",
+    "GatewayAgent",
+    "GatewayAgentProps",
 ]

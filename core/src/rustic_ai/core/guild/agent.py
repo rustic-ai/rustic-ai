@@ -583,10 +583,21 @@ class ProcessContext[MDT]:
         forwarding: bool = False,
         error_message: bool = False,
         reason: Optional[str] = None,
+        clear_origin_stack: bool = False,
     ) -> List[GemstoneID]:
         """
         Sends a new message with the JsonDict payload using the routing rules from the routing slip of the origin message.
         If no routing rules are found, the message is sent using the default routing rule.
+
+        Args:
+            payload: The message payload.
+            format: The message format.
+            new_thread: Whether to start a new thread.
+            forwarding: Whether this is a forwarded message.
+            error_message: Whether this is an error message.
+            reason: Optional reason for the message.
+            clear_origin_stack: If True, clears origin_guild_stack on the new message. Used when
+                a cross-guild round-trip is complete and the message should be treated as local.
         """
 
         if error_message and self._on_error_fixtures:
@@ -646,7 +657,9 @@ class ProcessContext[MDT]:
         logging.debug(f"Agent [{self.agent.name}] from method [{self.method_name}] with rules :\n{next_steps}\n")
 
         for step in next_steps:
-            msgid = self._prepare_and_send_message(payload, format, new_thread, forwarding, error_message, step, reason)
+            msgid = self._prepare_and_send_message(
+                payload, format, new_thread, forwarding, error_message, step, reason, clear_origin_stack
+            )
             if msgid:
                 messages.append(msgid)
             self._remaining_routing_steps -= 1
@@ -662,6 +675,7 @@ class ProcessContext[MDT]:
         error_message: bool,
         step: RoutingRule,
         reason: Optional[str] = None,
+        clear_origin_stack: bool = False,
     ) -> Optional[GemstoneID]:
         self._current_routing_step = step
 
@@ -765,6 +779,10 @@ class ProcessContext[MDT]:
 
         routed_context = routed.context if routed.context else {}
 
+        # Determine origin_guild_stack for the new message
+        # If clear_origin_stack is True, the cross-guild round-trip is complete
+        new_origin_stack = [] if clear_origin_stack else list(self._origin_message.origin_guild_stack)
+
         new_message = Message(
             id_obj=msg_id,
             topics=routed.topics,
@@ -783,6 +801,7 @@ class ProcessContext[MDT]:
             session_state=self.get_context() | routed_context,
             enrich_with_history=routed.enrich_with_history,
             process_status=routed.process_status,
+            origin_guild_stack=new_origin_stack,
         )
 
         for modifier in self._outgoing_message_modifiers:
@@ -881,6 +900,7 @@ class ProcessContext[MDT]:
                 session_state=session_state,
                 enrich_with_history=enrich_with_history,
                 process_status=process_status,
+                origin_guild_stack=list(self._origin_message.origin_guild_stack),
             )
         )
 
