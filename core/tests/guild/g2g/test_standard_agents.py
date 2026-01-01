@@ -26,8 +26,6 @@ from rustic_ai.core.guild.g2g import (
     GatewayAgent,
     GatewayAgentProps,
 )
-from rustic_ai.core.guild.g2g.boundary_agent import BoundaryAgent
-from rustic_ai.core.guild.g2g.boundary_context import BoundaryContext
 from rustic_ai.core.messaging import MessagingConfig
 from rustic_ai.core.utils import JsonDict
 
@@ -50,6 +48,67 @@ class ResponderAgent(Agent):
                 "result": f"processed_{ctx.payload.get('data')}",
             },
             format="response/json",
+        )
+
+
+class SagaResponderAgent(Agent):
+    """Agent that processes requests with saga state and sends responses.
+
+    Used for testing session_state preservation across guild boundaries.
+    """
+
+    def __init__(self):
+        self.received_messages = []
+
+    @agent.processor(JsonDict, predicate=lambda self, msg: msg.format == "request_with_state/json")
+    def handle_request(self, ctx: agent.ProcessContext[JsonDict]) -> None:
+        """Process request and send response."""
+        self.received_messages.append(ctx.message)
+        ctx.send_dict(
+            payload={
+                "response_to": ctx.payload.get("request_id"),
+                "result": "success",
+            },
+            format="response_with_state/json",
+        )
+
+
+class SagaInitiatorAgent(Agent):
+    """Agent that sends requests with session_state and captures responses.
+
+    Used for testing session_state preservation across guild boundaries.
+    """
+
+    def __init__(self):
+        self.responses_with_session_state = []
+
+    @agent.processor(JsonDict, predicate=lambda self, msg: msg.format == "trigger")
+    def initiate_request(self, ctx: agent.ProcessContext[JsonDict]) -> None:
+        """Send a request with session_state."""
+        # Set session state before sending
+        session_state = {
+            "user_context": "important_data",
+            "step": 1,
+            "correlation_id": ctx.payload.get("correlation_id"),
+        }
+        ctx.send_dict(
+            payload={
+                "request_id": ctx.payload.get("correlation_id"),
+                "action": "process",
+            },
+            format="request_with_state/json",
+            topics=["outbound"],
+            session_state=session_state,
+        )
+
+    @agent.processor(JsonDict, predicate=lambda self, msg: msg.format == "response_with_state/json")
+    def handle_response(self, ctx: agent.ProcessContext[JsonDict]) -> None:
+        """Capture response with session_state."""
+        self.responses_with_session_state.append(
+            {
+                "payload": ctx.payload,
+                "session_state": ctx.message.session_state,
+            }
         )
 
 
@@ -192,20 +251,12 @@ class TestStandardAgents:
 
         # Add gateways and probes to both targets
         gateway_a_spec = (
-            AgentBuilder(GatewayAgent)
-            .set_id("gateway")
-            .set_name("Gateway")
-            .set_description("Gateway")
-            .build_spec()
+            AgentBuilder(GatewayAgent).set_id("gateway").set_name("Gateway").set_description("Gateway").build_spec()
         )
         target_a._add_local_agent(gateway_a_spec)
 
         gateway_b_spec = (
-            AgentBuilder(GatewayAgent)
-            .set_id("gateway")
-            .set_name("Gateway")
-            .set_description("Gateway")
-            .build_spec()
+            AgentBuilder(GatewayAgent).set_id("gateway").set_name("Gateway").set_description("Gateway").build_spec()
         )
         target_b._add_local_agent(gateway_b_spec)
 
@@ -430,20 +481,12 @@ class TestStandardAgents:
 
         # Add gateways and probes to both targets
         allowed_gateway_spec = (
-            AgentBuilder(GatewayAgent)
-            .set_id("gateway")
-            .set_name("Gateway")
-            .set_description("Gateway")
-            .build_spec()
+            AgentBuilder(GatewayAgent).set_id("gateway").set_name("Gateway").set_description("Gateway").build_spec()
         )
         allowed_target._add_local_agent(allowed_gateway_spec)
 
         blocked_gateway_spec = (
-            AgentBuilder(GatewayAgent)
-            .set_id("gateway")
-            .set_name("Gateway")
-            .set_description("Gateway")
-            .build_spec()
+            AgentBuilder(GatewayAgent).set_id("gateway").set_name("Gateway").set_description("Gateway").build_spec()
         )
         blocked_target._add_local_agent(blocked_gateway_spec)
 
@@ -804,10 +847,13 @@ class TestStandardAgents:
             "This verifies intermediate guilds can process responses."
         )
 
-        # Verify the response B saw has stack=["A"] (B was popped)
-        assert b_responses[0].origin_guild_stack == [guild_a.id], (
-            "Response at B should have stack with only A (B was popped)"
-        )
+        # Verify the response B saw has stack=[Entry(A)] (B was popped)
+        assert (
+            len(b_responses[0].origin_guild_stack) == 1
+        ), "Response at B should have stack with only A's entry (B was popped)"
+        assert (
+            b_responses[0].origin_guild_stack[0].guild_id == guild_a.id
+        ), "Response at B should have stack with only A (B was popped)"
 
         # Verify A received the response (the key test for multi-hop)
         a_messages = probe_a.get_messages()
@@ -820,10 +866,178 @@ class TestStandardAgents:
         assert responses[0].payload.get("result") == "processed_hello_world"
 
         # Verify the response has an empty origin_guild_stack (round-trip complete)
-        assert responses[0].origin_guild_stack == [], (
-            "Response should have empty origin_guild_stack after completing round-trip"
-        )
+        assert (
+            responses[0].origin_guild_stack == []
+        ), "Response should have empty origin_guild_stack after completing round-trip"
 
         guild_a.shutdown()
         guild_b.shutdown()
         guild_c.shutdown()
+
+    def test_saga_session_state_preservation(self, messaging: MessagingConfig, database, org_id):
+        """Test that session_state is preserved across guild boundaries via saga pattern.
+
+        When a message with session_state is forwarded to another guild:
+        1. EnvoyAgent saves session_state to guild_state with a saga_id
+        2. The saga_id is recorded in the GuildStackEntry
+        3. When the response returns, GatewayAgent restores session_state from guild_state
+        4. The restored session_state is available for continuation processing
+
+        Setup:
+        - Source guild sends a request WITH session_state
+        - Target guild has a responder that processes and responds
+        - Source guild verifies session_state is restored in the response
+        """
+        from rustic_ai.core.messaging import GuildStackEntry
+
+        # Create source guild
+        source_guild = (
+            GuildBuilder(guild_name="source_guild", guild_description="Source with session state")
+            .set_messaging(messaging.backend_module, messaging.backend_class, messaging.backend_config)
+            .bootstrap(database, org_id)
+        )
+
+        # Create target guild
+        target_guild = (
+            GuildBuilder(guild_name="target_guild", guild_description="Target for session state test")
+            .set_messaging(messaging.backend_module, messaging.backend_class, messaging.backend_config)
+            .bootstrap(database, org_id)
+        )
+
+        # Configure target guild with gateway
+        gateway_spec = (
+            AgentBuilder(GatewayAgent)
+            .set_id("gateway")
+            .set_name("Gateway")
+            .set_description("Gateway for target guild")
+            .set_properties(
+                GatewayAgentProps(
+                    input_formats=["request_with_state/json"],
+                    returned_formats=["response_with_state/json"],
+                )
+            )
+            .build_spec()
+        )
+        target_guild._add_local_agent(gateway_spec)
+
+        # Add responder to target guild
+        responder_spec = (
+            AgentBuilder(SagaResponderAgent)
+            .set_id("responder")
+            .set_name("SagaResponder")
+            .set_description("Responder in target guild")
+            .build_spec()
+        )
+        responder: SagaResponderAgent = target_guild._add_local_agent(responder_spec)  # type: ignore
+
+        # Configure source guild with gateway for receiving responses
+        source_gateway_spec = (
+            AgentBuilder(GatewayAgent)
+            .set_id("gateway")
+            .set_name("Gateway")
+            .set_description("Gateway for source guild")
+            .set_properties(
+                GatewayAgentProps(
+                    returned_formats=["response_with_state/json"],
+                )
+            )
+            .build_spec()
+        )
+        source_guild._add_local_agent(source_gateway_spec)
+
+        # Add envoy to source guild for sending requests
+        envoy_spec = (
+            AgentBuilder(EnvoyAgent)
+            .set_id("envoy")
+            .set_name("EnvoyToTarget")
+            .set_description("Envoy to target guild")
+            .set_properties(
+                EnvoyAgentProps(
+                    target_guild=target_guild.id,
+                    formats_to_forward=["request_with_state/json"],
+                )
+            )
+            .add_additional_topic("outbound")
+            .build_spec()
+        )
+        source_guild._add_local_agent(envoy_spec)
+
+        # Add initiator to source guild to handle response
+        initiator_spec = (
+            AgentBuilder(SagaInitiatorAgent)
+            .set_id("initiator")
+            .set_name("SagaInitiator")
+            .set_description("Initiator in source guild")
+            .build_spec()
+        )
+        initiator: SagaInitiatorAgent = source_guild._add_local_agent(initiator_spec)  # type: ignore
+
+        # Create probe to send the request directly (instead of triggering initiator)
+        probe_spec = (
+            AgentBuilder(ProbeAgent)
+            .set_id("probe")
+            .set_name("Probe")
+            .set_description("Probe in source guild")
+            .build_spec()
+        )
+        probe: ProbeAgent = source_guild._add_local_agent(probe_spec)  # type: ignore
+
+        # Allow agents to start
+        time.sleep(1.0)
+
+        # Send request directly from probe with session_state
+        # The envoy will forward this to the target guild
+        probe.publish_dict(
+            topic="outbound",
+            payload={"request_id": "saga_test_001", "action": "process"},
+            format="request_with_state/json",
+            session_state={
+                "user_context": "important_data",
+                "step": 1,
+                "correlation_id": "saga_test_001",
+            },
+        )
+
+        # Wait for the round-trip (longer wait time)
+        time.sleep(3.0)
+
+        # Verify the responder in target guild received the request
+        assert len(responder.received_messages) >= 1, "Target guild responder should receive request"
+        received_msg = responder.received_messages[0]
+
+        # Verify the session_state was NOT passed to the target guild (security)
+        # session_state should be None or empty dict
+        assert (
+            not received_msg.session_state
+        ), "Session state should NOT be passed across guild boundaries in the request"
+
+        # Verify the origin_guild_stack has a GuildStackEntry with saga_id
+        assert len(received_msg.origin_guild_stack) == 1, "Should have one entry in origin_guild_stack"
+        stack_entry = received_msg.origin_guild_stack[0]
+        assert isinstance(stack_entry, GuildStackEntry), "Stack entry should be GuildStackEntry"
+        assert stack_entry.guild_id == source_guild.id, "Stack entry should have source guild ID"
+        assert stack_entry.saga_id is not None, "Stack entry should have saga_id for session state preservation"
+
+        # Verify the initiator received the response with session_state restored
+        assert (
+            len(initiator.responses_with_session_state) >= 1
+        ), "Initiator should receive response with restored session_state"
+        response_data = initiator.responses_with_session_state[0]
+
+        # Verify payload
+        assert response_data["payload"]["response_to"] == "saga_test_001"
+        assert response_data["payload"]["result"] == "success"
+
+        # Verify session_state was restored!
+        restored_session_state = response_data["session_state"]
+        assert restored_session_state is not None, "Session state should be restored when response returns"
+        assert (
+            restored_session_state.get("user_context") == "important_data"
+        ), "Restored session_state should contain original user_context"
+        assert restored_session_state.get("step") == 1, "Restored session_state should contain original step"
+        assert (
+            restored_session_state.get("correlation_id") == "saga_test_001"
+        ), "Restored session_state should contain original correlation_id"
+
+        source_guild.shutdown()
+        target_guild.shutdown()

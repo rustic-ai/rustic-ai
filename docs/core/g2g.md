@@ -82,14 +82,16 @@ flowchart TB
 | Step | Action | Stack State |
 |------|--------|-------------|
 | 1 | Agent in Guild A sends request | `[]` |
-| 2 | Envoy A forwards to B's inbox, pushes A | `[A]` |
-| 3 | Gateway B receives, forwards internally to Envoy B | `[A]` |
-| 4 | Envoy B forwards to C's inbox, pushes B | `[A, B]` |
-| 5 | Gateway C receives, forwards to Responder | `[A, B]` |
-| 6 | Responder processes, sends response | `[A, B]` |
-| 7 | Gateway C forwards response to B's inbox | `[A, B]` |
-| 8 | Gateway B pops B, forwards internally, then to A | `[A]` |
-| 9 | Gateway A pops A, forwards internally | `[]` |
+| 2 | Envoy A forwards to B's inbox, pushes A | `[{A, saga_1}]` |
+| 3 | Gateway B receives, forwards internally to Envoy B | `[{A, saga_1}]` |
+| 4 | Envoy B forwards to C's inbox, pushes B | `[{A, saga_1}, {B, saga_2}]` |
+| 5 | Gateway C receives, forwards to Responder | `[{A, saga_1}, {B, saga_2}]` |
+| 6 | Responder processes, sends response | `[{A, saga_1}, {B, saga_2}]` |
+| 7 | Gateway C forwards response to B's inbox | `[{A, saga_1}, {B, saga_2}]` |
+| 8 | Gateway B pops B, restores B's state, then to A | `[{A, saga_1}]` |
+| 9 | Gateway A pops A, restores A's state | `[]` |
+
+*Note: `{A, saga_1}` represents `GuildStackEntry(guild_id="A", saga_id="saga_1")`*
 
 ### Key Concepts
 
@@ -97,7 +99,9 @@ flowchart TB
 |---------|-------------|
 | **Shared Namespace** | Organization-level namespace where guild inboxes exist |
 | **Guild Inbox** | Topic `guild_inbox:{guild_id}` where a guild receives cross-guild messages |
-| **Origin Guild Stack** | Tracks the chain of guilds for multi-hop response routing |
+| **Origin Guild Stack** | Stack of `GuildStackEntry` objects tracking the chain of guilds for multi-hop response routing |
+| **GuildStackEntry** | Contains `guild_id` for routing and optional `saga_id` for session state preservation |
+| **Saga Pattern** | Automatic preservation of `session_state` across G2G boundaries using saga IDs |
 | **Boundary Agent** | Base class for agents that communicate across guild boundaries |
 
 ## Core Components
@@ -224,18 +228,20 @@ The `origin_guild_stack` field on `Message` enables responses to route back thro
 
 ### How the Stack Works
 
+Each entry in the stack is a `GuildStackEntry` containing the guild ID and an optional saga ID for session state preservation:
+
 ```
 Forward Path (Request):
-  A sends to B  →  stack becomes ["A"]
-  B sends to C  →  stack becomes ["A", "B"]
+  A sends to B  →  stack becomes [{guild_id: A, saga_id: ...}]
+  B sends to C  →  stack becomes [{guild_id: A, saga_id: ...}, {guild_id: B, saga_id: ...}]
 
 Return Path (Response):
-  C responds    →  stack is ["A", "B"]
+  C responds    →  stack is [{guild_id: A, saga_id: ...}, {guild_id: B, saga_id: ...}]
   C's Gateway forwards to B (stack top)
-  B's Gateway pops B, forwards internally  →  stack becomes ["A"]
+  B's Gateway pops B, restores B's state  →  stack becomes [{guild_id: A, saga_id: ...}]
   B's Gateway forwards to A (stack top)
-  A's Gateway pops A, forwards internally  →  stack becomes []
-  Round-trip complete!
+  A's Gateway pops A, restores A's state  →  stack becomes []
+  Round-trip complete with session state preserved!
 ```
 
 ### Stack Operations
@@ -473,7 +479,25 @@ The `origin_guild_stack` provides visibility into message routing. Log this for 
 ```python
 @agent.processor(JsonDict)
 def handle_message(self, ctx: ProcessContext):
-    logger.info(f"Message from guild chain: {ctx.message.origin_guild_stack}")
+    stack_info = [(e.guild_id, e.saga_id) for e in ctx.message.origin_guild_stack]
+    logger.info(f"Message from guild chain: {stack_info}")
+```
+
+### 6. Use Session State for Request-Response Correlation
+
+Instead of manual correlation tracking, leverage the automatic saga pattern:
+
+```python
+# Good: Use session_state for automatic correlation
+ctx.send_dict(
+    payload={"query": "search term"},
+    format="request/json",
+    topics="outbound",
+    session_state={"correlation_id": "abc123", "user_context": user_data},
+)
+
+# Avoid: Manual correlation tracking
+# correlation_store[message_id] = {"correlation_id": "abc123", ...}
 ```
 
 ## Troubleshooting
@@ -498,6 +522,137 @@ def handle_message(self, ctx: ProcessContext):
 2. **Intermediate processing**: Each intermediate guild's Gateway must handle `returned_formats`
 3. **Stack inspection**: Log `origin_guild_stack` at each hop to trace routing
 
+## Saga Pattern: Session State Preservation
+
+When a message crosses guild boundaries, any `session_state` attached to the message is automatically preserved and restored when the response returns. This enables stateful request-response patterns without manual correlation tracking.
+
+### How It Works
+
+1. **EnvoyAgent** captures the outbound message's `session_state` and saves it with a unique `saga_id`
+2. The `saga_id` is stored in the `origin_guild_stack` alongside the guild ID
+3. **GatewayAgent** restores the saved `session_state` when the response returns
+
+```mermaid
+sequenceDiagram
+    participant A as Guild A Agent
+    participant E as Guild A Envoy
+    participant G as Guild B Gateway
+    participant P as Guild B Processor
+    
+    A->>E: Request with session_state
+    Note over E: Save session_state with saga_id
+    E->>G: Forward (stack includes saga_id)
+    G->>P: Process request
+    P->>G: Send response
+    G->>E: Response returns
+    Note over E: Restore session_state from saga_id
+    E->>A: Response with original session_state
+```
+
+### GuildStackEntry Structure
+
+The `origin_guild_stack` uses `GuildStackEntry` objects instead of plain strings:
+
+```python
+from rustic_ai.core.messaging import GuildStackEntry
+
+# Each entry in the stack contains:
+GuildStackEntry(
+    guild_id="source-guild-id",  # The guild ID for routing
+    saga_id="unique-saga-id",    # Optional: ID for session state lookup
+)
+```
+
+### Usage Example
+
+Session state is automatically preserved when you include it in your outbound message:
+
+```python
+@agent.processor(QueryRequest)
+def initiate_query(self, ctx: ProcessContext, request: QueryRequest):
+    # Save context that should be preserved across the G2G call
+    ctx.send_dict(
+        payload={"query": request.query},
+        format="request/json",
+        topics="outbound",
+        session_state={
+            "user_id": request.user_id,
+            "correlation_id": request.correlation_id,
+            "step": "awaiting_response",
+            "timestamp": time.time(),
+        }
+    )
+
+@agent.processor(QueryResponse)
+def handle_response(self, ctx: ProcessContext, response: QueryResponse):
+    # session_state is automatically restored!
+    state = ctx.message.session_state
+    user_id = state.get("user_id")
+    correlation_id = state.get("correlation_id")
+    
+    # Continue processing with original context
+    logger.info(f"Response for user {user_id}, correlation {correlation_id}")
+```
+
+### Key Points
+
+| Aspect | Behavior |
+|--------|----------|
+| **Automatic** | No explicit correlation tracking needed |
+| **Non-empty Only** | State is only saved if `session_state` is not empty |
+| **Restored on Return** | State is restored when response crosses back into origin guild |
+| **Multi-hop Support** | Each hop in the chain preserves its own session state |
+| **Cleanup** | Saga state is deleted after restoration (one-time use) |
+
+### Multi-Hop Saga State
+
+In multi-hop scenarios (A → B → C → B → A), each guild's session state is independently preserved:
+
+```
+Request A → B:
+  - A's Envoy saves A's session_state with saga_id_1
+  - Stack: [{guild_id: A, saga_id: saga_id_1}]
+
+Request B → C:
+  - B's Envoy saves B's session_state with saga_id_2
+  - Stack: [{guild_id: A, saga_id: saga_id_1}, {guild_id: B, saga_id: saga_id_2}]
+
+Response C → B:
+  - B's Gateway restores B's session_state from saga_id_2
+  - Stack: [{guild_id: A, saga_id: saga_id_1}]
+
+Response B → A:
+  - A's Gateway restores A's session_state from saga_id_1
+  - Stack: []
+```
+
+### Low-Level API
+
+For advanced use cases, the saga state functions are available:
+
+```python
+from rustic_ai.core.guild.g2g import (
+    get_saga_state,
+    set_saga_state,
+    delete_saga_state,
+    SAGA_STATE_PREFIX,
+)
+
+# Manually manage saga state (rarely needed)
+saga_id = "custom-saga-id"
+org_id = ctx.guild_spec.org_id
+guild_id = ctx.guild_spec.guild_id
+
+# Save state
+set_saga_state(org_id, guild_id, saga_id, {"custom": "data"})
+
+# Retrieve state
+state = get_saga_state(org_id, guild_id, saga_id)
+
+# Delete state
+delete_saga_state(org_id, guild_id, saga_id)
+```
+
 ## API Reference
 
 ### Classes
@@ -510,10 +665,11 @@ def handle_message(self, ctx: ProcessContext):
 - [`EnvoyAgentProps`](../api/g2g/envoy_agent.md#envoyagentprops) - Envoy properties
 - [`BoundaryContext`](../api/g2g/boundary_context.md) - Cross-guild context
 - [`BoundaryClient`](../api/g2g/boundary_client.md) - Shared namespace client
+- [`GuildStackEntry`](../api/g2g/message.md#guildstackentry) - Stack entry with guild ID and saga ID
 
 ### Message Fields
 
-- `origin_guild_stack: List[str]` - Stack tracking guild chain for response routing
+- `origin_guild_stack: List[GuildStackEntry]` - Stack tracking guild chain for response routing, with optional saga IDs for session state preservation
 
 ## See Also
 

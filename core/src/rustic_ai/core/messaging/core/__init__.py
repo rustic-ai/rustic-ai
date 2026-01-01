@@ -4,6 +4,7 @@ from .message import (
     MDT,
     AgentTag,
     ForwardHeader,
+    GuildStackEntry,
     JsonDict,
     Message,
     MessageConstants,
@@ -27,5 +28,6 @@ __all__ = [
     "MDT",
     "JsonDict",
     "ForwardHeader",
+    "GuildStackEntry",
     "RoutingSlip",
 ]

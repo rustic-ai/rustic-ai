@@ -4,6 +4,12 @@ EnvoyAgent for sending cross-guild messages.
 The EnvoyAgent represents a 1-1 connection to another guild. Each EnvoyAgent
 instance is configured with a specific target_guild and forwards all messages
 it receives to that guild via ctx.forward_out().
+
+Session state is automatically preserved across the cross-guild boundary using
+the saga pattern. When a message with session_state is forwarded, the state is
+saved to guild_state via StateRefresherMixin.update_guild_state() with a saga_id.
+When the response returns, GatewayAgent restores the session_state from guild_state,
+enabling continuations to resume with their original context.
 """
 
 from typing import List
@@ -47,6 +53,10 @@ class EnvoyAgent(BoundaryAgent[EnvoyAgentProps]):
     Does NOT subscribe to shared inbox. Listens to internal topics and forwards
     all received messages to the configured target guild via ctx.forward_out().
 
+    Session state is automatically preserved: if the incoming message has session_state,
+    it is saved to guild_state before forwarding. When the response returns, GatewayAgent
+    restores the session_state, enabling seamless continuation across guild boundaries.
+
     Optionally filter by message format using formats_to_forward property.
     """
 
@@ -65,10 +75,15 @@ class EnvoyAgent(BoundaryAgent[EnvoyAgentProps]):
         predicate=lambda self, msg: self._should_forward(msg),
     )
     def handle_outbound(self, ctx: BoundaryContext) -> None:
-        """Forward message to the configured target guild."""
+        """Forward message to the configured target guild.
+
+        If the message has session_state, it will be automatically preserved
+        via the saga pattern: saved to guild state and restored when the response returns.
+        """
         target_guild = self.config.target_guild
 
         if not self.is_target_guild_allowed(target_guild):
             return
 
+        # forward_out handles saga state persistence internally using ctx.get_context()
         ctx.forward_out(target_guild, ctx.message)

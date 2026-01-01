@@ -20,6 +20,7 @@ from .core import (
     BoundaryClient,
     Client,
     ForwardHeader,
+    GuildStackEntry,
     JsonDict,
     Message,
     MessageConstants,
@@ -59,4 +60,5 @@ __all__ = [
     "JsonDict",
     "RoutingSlip",
     "ForwardHeader",
+    "GuildStackEntry",
 ]

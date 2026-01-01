@@ -7,18 +7,23 @@ The GatewayAgent acts as a server that handles cross-guild messaging:
 - Returned: Handles responses from external guilds, routing back through the chain
 
 The origin_guild_stack tracks the chain of guilds for multi-hop routing.
-Each guild pushes its ID when forwarding out, and pops when routing back.
+Each guild pushes a GuildStackEntry when forwarding out, and pops when routing back.
+The GuildStackEntry contains guild_id and optional saga_id for session state preservation.
 """
 
-from typing import List
+from typing import List, Optional
 
 from pydantic import Field
 
 from rustic_ai.core.guild import agent
 from rustic_ai.core.guild.dsl import GuildTopics
 from rustic_ai.core.guild.g2g.boundary_agent import BoundaryAgent, BoundaryAgentProps
-from rustic_ai.core.guild.g2g.boundary_context import BoundaryContext
-from rustic_ai.core.messaging import ForwardHeader
+from rustic_ai.core.guild.g2g.boundary_context import (
+    BoundaryContext,
+    get_saga_state_key,
+)
+from rustic_ai.core.messaging import ForwardHeader, GuildStackEntry
+from rustic_ai.core.state.models import StateUpdateFormat
 from rustic_ai.core.utils import JsonDict
 
 
@@ -61,11 +66,15 @@ class GatewayAgent(BoundaryAgent[GatewayAgentProps]):
     - Outbound responses: Response messages are forwarded back to the previous guild in the chain
     - Returned responses: Results coming back are routed through the origin_guild_stack
 
-    The origin_guild_stack tracks the chain of guilds for multi-hop routing:
-    - When A -> B -> C: stack becomes ["A", "B"] at C
-    - When C responds: pop "B", route to B's inbox
-    - When B responds: pop "A", route to A's inbox
-    - When reaching origin (empty stack): forward internally, clear stack
+    The origin_guild_stack tracks the chain of guilds for multi-hop routing using GuildStackEntry:
+    - When A -> B -> C: stack becomes [{A, saga_a}, {B, saga_b}] at C
+    - When C responds: pop {B, saga_b}, restore B's session_state, route to B's inbox
+    - When B responds: pop {A, saga_a}, restore A's session_state, route to A's inbox
+    - When reaching origin (empty stack): forward internally (round-trip complete)
+
+    Session state is automatically preserved across guild boundaries via the saga pattern:
+    - EnvoyAgent saves session_state to guild_state (via StateRefresherMixin) and records saga_id in stack entry
+    - GatewayAgent restores session_state from _guild_state cache when response returns
 
     For client-side outbound-only communication, use EnvoyAgent.
     """
@@ -87,9 +96,14 @@ class GatewayAgent(BoundaryAgent[GatewayAgentProps]):
         """Check if message has an origin guild stack."""
         return bool(message.origin_guild_stack)
 
-    def _get_stack_top(self, message) -> str:
-        """Get the top of the origin guild stack (most recent forwarder)."""
+    def _get_stack_top(self, message) -> Optional[GuildStackEntry]:
+        """Get the top entry of the origin guild stack (most recent forwarder)."""
         return message.origin_guild_stack[-1] if message.origin_guild_stack else None
+
+    def _get_stack_top_guild_id(self, message) -> Optional[str]:
+        """Get the guild_id from the top of the origin guild stack."""
+        entry = self._get_stack_top(message)
+        return entry.guild_id if entry else None
 
     def _is_incoming_request(self, msg) -> bool:
         """Check if message is an incoming request from an external guild.
@@ -98,7 +112,7 @@ class GatewayAgent(BoundaryAgent[GatewayAgentProps]):
         """
         if not self._has_origin_stack(msg):
             return False
-        return self._get_stack_top(msg) != self.guild_id
+        return self._get_stack_top_guild_id(msg) != self.guild_id
 
     def _is_returned_response(self, msg) -> bool:
         """Check if message is a returned response (result from external guild).
@@ -108,7 +122,7 @@ class GatewayAgent(BoundaryAgent[GatewayAgentProps]):
         """
         if not self._has_origin_stack(msg):
             return False
-        return self._get_stack_top(msg) == self.guild_id
+        return self._get_stack_top_guild_id(msg) == self.guild_id
 
     def _should_accept_inbound_request(self, msg) -> bool:
         """Check if inbound request from external guild should be accepted."""
@@ -117,7 +131,7 @@ class GatewayAgent(BoundaryAgent[GatewayAgentProps]):
         if not self._is_incoming_request(msg):
             return False
         # Check allowed_source_guilds filter - use the immediate sender (stack top)
-        source_guild = self._get_stack_top(msg)
+        source_guild = self._get_stack_top_guild_id(msg)
         if not self.is_source_guild_allowed(source_guild):
             return False
         if not self.config.input_formats:
@@ -152,7 +166,7 @@ class GatewayAgent(BoundaryAgent[GatewayAgentProps]):
             return False
         # Only forward if this guild is NOT at the top of stack
         # (i.e., this is a response to an external request)
-        if self._get_stack_top(msg) == self.guild_id:
+        if self._get_stack_top_guild_id(msg) == self.guild_id:
             return False
         # Check output format filter
         if not self.config.output_formats:
@@ -179,9 +193,10 @@ class GatewayAgent(BoundaryAgent[GatewayAgentProps]):
     def handle_returned_response(self, ctx: BoundaryContext) -> None:
         """Receive returned response and route back through the chain.
 
-        Pops this guild from the stack and forwards internally. This allows
-        processors in this guild to see/transform the response before it
-        continues back through the chain.
+        Pops this guild from the stack and forwards internally. This also
+        restores session_state if a saga_id was recorded when the request
+        was originally sent, enabling continuations to resume with their
+        original context.
 
         If more guilds remain in the stack after popping, handle_outbound will
         pick up the internally-forwarded message and route it to the next guild.
@@ -189,7 +204,21 @@ class GatewayAgent(BoundaryAgent[GatewayAgentProps]):
         """
         # Pop this guild from the stack
         new_stack = list(ctx.message.origin_guild_stack)
-        new_stack.pop()  # Remove this guild (we're the top)
+        popped_entry = new_stack.pop()  # Remove this guild (we're the top)
+
+        # Restore session_state if a saga_id was recorded
+        # Read from _guild_state cache (updated via StateRefresherMixin when StateUpdateResponse arrives)
+        restored_session_state = None
+        if popped_entry.saga_id:
+            state_key = get_saga_state_key(popped_entry.saga_id)
+            restored_session_state = self._guild_state.get(state_key)
+            # Clean up saga state after restoration using StateRefresherMixin
+            if restored_session_state is not None:
+                self.update_guild_state(
+                    ctx,
+                    update_format=StateUpdateFormat.JSON_MERGE_PATCH,
+                    update={state_key: None},
+                )
 
         # Create forwarded message with updated stack, targeting default topic
         forwarded = ctx.message.model_copy(
@@ -201,7 +230,7 @@ class GatewayAgent(BoundaryAgent[GatewayAgentProps]):
                 ),
                 "origin_guild_stack": new_stack,
                 "topics": GuildTopics.DEFAULT_TOPICS,  # Target internal default topic
-                "session_state": None,
+                "session_state": restored_session_state or {},  # Restore saved session state
             },
         )
 
@@ -216,13 +245,17 @@ class GatewayAgent(BoundaryAgent[GatewayAgentProps]):
     )
     def handle_outbound(self, ctx: BoundaryContext) -> None:
         """Forward response back to the previous guild in the chain.
-        
+
         Unlike forward_out (used by Envoys for outbound requests), this does NOT
         push the current guild onto the stack. The stack already contains the
         return path and we're simply routing the response back.
         """
         # Get the guild to forward to (top of stack)
-        target_guild = self._get_stack_top(ctx.message)
+        # Predicate ensures stack is non-empty, but add guard for type safety
+        target_entry = self._get_stack_top(ctx.message)
+        if target_entry is None:
+            return
+        target_guild = target_entry.guild_id
 
         if not self.is_target_guild_allowed(target_guild):
             return

@@ -658,6 +658,25 @@ class ForwardHeader(BaseModel):
     on_behalf_of: AgentTag
 
 
+class GuildStackEntry(BaseModel):
+    """
+    Represents an entry in the origin_guild_stack for cross-guild routing.
+
+    When a message crosses guild boundaries, each guild in the chain pushes an entry
+    onto the stack. The entry contains the guild ID and optionally a saga_id that
+    references preserved session state in the guild's state store.
+
+    Attributes:
+        guild_id (str): The ID of the guild that forwarded the message.
+        saga_id (Optional[str]): Reference to preserved session state in guild_state.
+            When set, the gateway will restore the session state from
+            guild_state["g2g:saga:{saga_id}"] when the response returns.
+    """
+
+    guild_id: str
+    saga_id: Optional[str] = None
+
+
 class MessageRoutable(BaseModel):
     """
     Represents the fields of a message that can be modified by a router.
@@ -745,10 +764,11 @@ class Message(BaseModel):
 
     process_status: Annotated[Optional[ProcessStatus], Field(default=None)]
 
-    # Cross-guild origin tracking stack - each guild in the chain pushes its ID.
+    # Cross-guild origin tracking stack - each guild in the chain pushes an entry.
     # When a response returns, the stack is popped to route back through the chain.
     # This enables multi-guild-hop scenarios: A -> B -> C -> B -> A
-    origin_guild_stack: Annotated[List[str], Field(default_factory=list)]
+    # Each entry contains guild_id and optional saga_id for session state preservation.
+    origin_guild_stack: Annotated[List[GuildStackEntry], Field(default_factory=list)]
 
     _id: int  # Internal backend for id
     _priority: Priority  # Internal backend for priority
