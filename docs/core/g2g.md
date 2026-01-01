@@ -162,6 +162,40 @@ gateway_spec = (
 | `handle_returned_response` | Message from shared inbox, this guild at stack top | Pop stack, forward internally (allows processing), then `handle_outbound` routes it |
 | `handle_outbound` | Internal message with origin stack, this guild NOT at top | Forward to previous guild in chain |
 
+#### Automatic GatewayAgent via GatewayConfig
+
+Instead of manually creating a `GatewayAgent` with `AgentBuilder`, you can use `GatewayConfig` with `GuildBuilder.set_gateway()` for automatic gateway creation:
+
+```python
+from rustic_ai.core.guild.builders import GuildBuilder
+from rustic_ai.core.guild.dsl import GatewayConfig
+
+# Automatic gateway setup
+guild = (
+    GuildBuilder(guild_name="my_guild", guild_description="My Guild")
+    .set_messaging("rustic_ai.core.messaging.backend", "InMemoryMessagingBackend", {})
+    .set_gateway(GatewayConfig(
+        input_formats=["myapp.messages.Request"],
+        output_formats=["myapp.messages.Response"],
+        returned_formats=["myapp.messages.Result"],
+    ))
+    .bootstrap(database_url, org_id)
+)
+```
+
+This automatically creates a `GatewayAgent` with ID `"gateway"` when `build_spec()` is called.
+
+**GatewayConfig Properties:**
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `enabled` | `bool` | `True` | Whether to create the automatic gateway |
+| `input_formats` | `List[str]` | (required) | Formats to accept as inbound requests |
+| `output_formats` | `List[str]` | (required) | Formats to forward back as responses |
+| `returned_formats` | `List[str]` | `[]` | Formats to accept as returned responses |
+
+> **Note**: If a `GatewayAgent` already exists in the agents list, `GatewayConfig` will not create a duplicate.
+
 ### EnvoyAgent
 
 `EnvoyAgent` acts as the **client-side** sender for cross-guild communication. It:
@@ -674,6 +708,7 @@ self.update_guild_state(
 - `BoundaryAgentProps` - Marker base class for boundary agent properties
 - `GatewayAgent` - Server-side gateway
 - `GatewayAgentProps` - Gateway properties (includes `input_formats`, `output_formats`, `returned_formats`)
+- `GatewayConfig` (from `rustic_ai.core.guild.dsl`) - Configuration for automatic `GatewayAgent` creation via `GuildBuilder.set_gateway()`
 - `EnvoyAgent` - Client-side envoy
 - `EnvoyAgentProps` - Envoy properties (includes `target_guild`, `formats_to_forward`)
 - `BoundaryContext` - Cross-guild context with `forward_out()` method
