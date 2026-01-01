@@ -7,7 +7,7 @@ Guild-to-Guild (G2G) communication enables secure, structured messaging between 
 - **Service Composition**: Connect specialized guilds (e.g., a "Research Guild" calling a "Database Guild")
 - **Isolation**: Maintain guild boundaries while enabling collaboration
 - **Multi-Hop Routing**: Support complex workflows spanning multiple guilds (A → B → C → B → A)
-- **Security**: Control which guilds can communicate and what message types are allowed
+- **Security**: Control what message types are allowed across boundaries via format filtering
 - **Scalability**: Guilds can be deployed independently and communicate across process/network boundaries
 
 ## Architecture Overview
@@ -110,18 +110,19 @@ flowchart TB
 
 `BoundaryAgent` is the base class for agents that participate in cross-guild communication. It provides:
 
-- Access control via `allowed_source_guilds` and `allowed_target_guilds`
 - Optional subscription to the guild's shared inbox
-- Methods to check if source/target guilds are allowed
+- Base class for GatewayAgent and EnvoyAgent
 
 ```python
 from rustic_ai.core.guild.g2g import BoundaryAgent, BoundaryAgentProps
 
 class BoundaryAgentProps(BaseAgentProps):
-    """Base properties for boundary agents."""
+    """Base properties for boundary agents.
     
-    allowed_source_guilds: List[str] = []  # Empty = allow all
-    allowed_target_guilds: List[str] = []  # Empty = allow all
+    This is a marker base class. Subclasses (GatewayAgentProps, EnvoyAgentProps)
+    define their own format filtering properties.
+    """
+    pass
 ```
 
 ### GatewayAgent
@@ -144,10 +145,9 @@ gateway_spec = (
     .set_description("Receives cross-guild requests")
     .set_properties(
         GatewayAgentProps(
-            input_formats=["request/json"],      # Accept these formats as requests
-            output_formats=["response/json"],    # Forward these formats back
-            returned_formats=["response/json"],  # Accept these as returned responses
-            allowed_source_guilds=["guild-a"],   # Only accept from these guilds
+            input_formats=["myapp.messages.Request"],      # Accept these formats as requests
+            output_formats=["myapp.messages.Response"],    # Forward these formats back
+            returned_formats=["myapp.messages.Response"],  # Accept these as returned responses
         )
     )
     .build_spec()
@@ -170,6 +170,10 @@ gateway_spec = (
 2. Forwards matching messages to a target guild's inbox
 3. Pushes the current guild onto the `origin_guild_stack` for return routing
 
+`EnvoyAgentProps` has two properties:
+- `target_guild` (required): The destination guild ID
+- `formats_to_forward` (required): Message formats to forward
+
 ```python
 from rustic_ai.core.guild.g2g import EnvoyAgent, EnvoyAgentProps
 
@@ -181,9 +185,8 @@ envoy_spec = (
     .set_description("Sends requests to Guild B")
     .set_properties(
         EnvoyAgentProps(
-            target_guild="guild-b-id",           # Destination guild
-            formats_to_forward=["request/json"], # Only forward these formats
-            allowed_target_guilds=["guild-b-id"],# Security filter
+            target_guild="guild-b-id",           # Destination guild (required)
+            formats_to_forward=["myapp.messages.Request"], # Required: formats to forward
         )
     )
     .add_additional_topic("outbound")  # Listen on this topic
@@ -209,16 +212,19 @@ class BoundaryContext(ProcessContext):
 
 ### BoundaryClient
 
-`BoundaryClient` wraps a regular client with shared namespace publishing:
+`BoundaryClient` wraps a regular client with shared namespace publishing. It is used internally by `BoundaryContext` and is typically not used directly.
 
 ```python
+from rustic_ai.core.messaging.core.boundary_client import BoundaryClient
+
 class BoundaryClient:
-    """Client for publishing to the shared organization namespace."""
+    """Wrapper around Client that adds shared namespace capabilities."""
+    
+    def __init__(self, inner_client: Client, organization_id: str):
+        ...
     
     def publish_to_guild_inbox(self, target_guild_id: str, message: Message) -> None:
         """Publish a message to a guild's inbox in the shared namespace."""
-        topic = f"guild_inbox:{target_guild_id}"
-        # Publishes to shared namespace, not guild namespace
         ...
 ```
 
@@ -291,59 +297,57 @@ Gateways and Envoys support format-based filtering to control what types of mess
 
 ```python
 GatewayAgentProps(
-    input_formats=["request/json", "query/json"],   # Accept as inbound requests
-    output_formats=["response/json", "result/json"], # Forward back as responses
-    returned_formats=["response/json"],              # Accept as returned responses
+    input_formats=["myapp.messages.Request", "myapp.messages.Query"],   # Accept as inbound requests
+    output_formats=["myapp.messages.Response", "myapp.messages.Result"], # Forward back as responses
+    returned_formats=["myapp.messages.Response"],              # Accept as returned responses
 )
 ```
 
 | Property | Purpose | Empty Behavior |
 |----------|---------|----------------|
-| `input_formats` | Filter incoming requests from external guilds | Accept all formats |
-| `output_formats` | Filter outgoing responses back to origin | Forward all formats |
-| `returned_formats` | Filter responses coming back from external guilds | Accept all formats |
+| `input_formats` | Filter incoming requests from external guilds | **Deny all**. Explicit formats recommended. `["*"]` allows all (use with caution). |
+| `output_formats` | Filter outgoing responses back to origin | **Deny all**. Explicit formats recommended. `["*"]` allows all (use with caution). |
+| `returned_formats` | Filter responses coming back from external guilds | **Deny all**. Explicit formats recommended. `["*"]` allows all (use with caution). |
 
 ### EnvoyAgent Formats
 
 ```python
 EnvoyAgentProps(
     target_guild="guild-b-id",
-    formats_to_forward=["request/json"],  # Only forward these formats
+    formats_to_forward=["myapp.messages.Request"],  # Required. Explicit formats recommended.
 )
 ```
+
+| Property | Purpose | Empty Behavior |
+|----------|---------|----------------|
+| `formats_to_forward` | Filter messages to forward to target guild | **Validation Error** (Required field). Explicit formats recommended. `["*"]` allows all (use with caution). |
 
 ## Security & Access Control
 
-G2G provides multiple layers of security:
+G2G provides security through format filtering and namespace isolation:
 
-### 1. Source Guild Filtering (Gateway)
+### 1. Format Filtering
 
-Control which guilds can send requests to this guild:
+Restrict message types at boundaries. Empty format lists deny all messages by default:
 
 ```python
+# Gateway: Control inbound and outbound formats
 GatewayAgentProps(
-    allowed_source_guilds=["trusted-guild-1", "trusted-guild-2"],
-    # Empty list = accept from all guilds
+    input_formats=["myapp.messages.Request"],    # Accept these as inbound requests
+    output_formats=["myapp.messages.Response"],  # Forward these back as responses
+    returned_formats=["myapp.messages.Result"],  # Accept these as returned responses
 )
-```
 
-### 2. Target Guild Filtering (Envoy)
-
-Control which guilds this envoy can send to:
-
-```python
+# Envoy: Control what gets forwarded
 EnvoyAgentProps(
     target_guild="guild-b-id",
-    allowed_target_guilds=["guild-b-id", "guild-c-id"],
-    # Empty list = allow all targets
+    formats_to_forward=["myapp.messages.Request"],  # Required: explicit formats only
 )
 ```
 
-### 3. Format Filtering
+> **Important**: Empty format lists deny all messages. Always specify explicit formats.
 
-Restrict message types at boundaries (see above).
-
-### 4. Organization Namespace Isolation
+### 2. Organization Namespace Isolation
 
 Cross-guild communication only works within the same organization. The shared namespace is scoped to `organization_id`.
 
@@ -368,7 +372,7 @@ gateway_a = (
     .set_id("gateway_a")
     .set_name("GatewayA")
     .set_properties(GatewayAgentProps(
-        returned_formats=["response/json"],
+        returned_formats=["myapp.messages.Response"],
     ))
     .build_spec()
 )
@@ -381,7 +385,7 @@ envoy_a = (
     .set_name("EnvoyA")
     .set_properties(EnvoyAgentProps(
         target_guild=guild_b.id,
-        formats_to_forward=["request/json"],
+        formats_to_forward=["myapp.messages.Request"],
     ))
     .add_additional_topic("outbound")
     .build_spec()
@@ -405,8 +409,8 @@ gateway_b = (
     .set_id("gateway_b")
     .set_name("GatewayB")
     .set_properties(GatewayAgentProps(
-        input_formats=["request/json"],
-        output_formats=["response/json"],
+        input_formats=["myapp.messages.Request"],
+        output_formats=["myapp.messages.Response"],
     ))
     .build_spec()
 )
@@ -421,7 +425,7 @@ guild_b._add_local_agent(gateway_b)
 # From an agent in Guild A, publish to the outbound topic
 ctx.send_dict(
     payload={"request_id": "123", "query": "Hello"},
-    format="request/json",
+    format="myapp.messages.Request",
     topics="outbound",
 )
 
@@ -443,7 +447,7 @@ Instead of generic formats, use descriptive names that indicate the message purp
 
 ```python
 # Good
-formats_to_forward=["research/query", "research/result"]
+formats_to_forward=["research.messages.Query", "research.messages.Result"]
 
 # Avoid
 formats_to_forward=["json", "data"]
@@ -456,15 +460,22 @@ Ensure both the sending and receiving guilds have compatible configurations:
 - Envoy's `formats_to_forward` should match Gateway's `input_formats`
 - Gateway's `output_formats` should match what the origin expects in `returned_formats`
 
-### 3. Use Security Filters in Production
+### 3. Use Explicit Format Filters
 
-Always configure `allowed_source_guilds` and `allowed_target_guilds` in production:
+Always configure explicit format filters in production:
 
 ```python
 # Production gateway
 GatewayAgentProps(
-    allowed_source_guilds=["known-client-guild-1", "known-client-guild-2"],
-    input_formats=["api/request"],
+    input_formats=["api.v1.Request"],
+    output_formats=["api.v1.Response"],
+    returned_formats=["api.v1.Result"],
+)
+
+# Production envoy
+EnvoyAgentProps(
+    target_guild="backend-guild-id",
+    formats_to_forward=["api.v1.Request"],
 )
 ```
 
@@ -491,7 +502,7 @@ Instead of manual correlation tracking, leverage the automatic saga pattern:
 # Good: Use session_state for automatic correlation
 ctx.send_dict(
     payload={"query": "search term"},
-    format="request/json",
+    format="myapp.messages.Request",
     topics="outbound",
     session_state={"correlation_id": "abc123", "user_context": user_data},
 )
@@ -507,7 +518,6 @@ ctx.send_dict(
 1. **Check Envoy subscription**: Ensure Envoy is listening on the correct topic
 2. **Check format filtering**: Verify `formats_to_forward` includes the message format
 3. **Check target guild**: Verify `target_guild` ID is correct
-4. **Check security filters**: Ensure `allowed_target_guilds` allows the target
 
 ### Response Not Returning
 
@@ -573,7 +583,7 @@ def initiate_query(self, ctx: ProcessContext, request: QueryRequest):
     # Save context that should be preserved across the G2G call
     ctx.send_dict(
         payload={"query": request.query},
-        format="request/json",
+        format="myapp.messages.Request",
         topics="outbound",
         session_state={
             "user_id": request.user_id,
@@ -628,44 +638,64 @@ Response B → A:
 
 ### Low-Level API
 
-For advanced use cases, the saga state functions are available:
+Saga state is managed through the guild's state system using `StateRefresherMixin`. The key helper function is available:
 
 ```python
-from rustic_ai.core.guild.g2g import (
-    get_saga_state,
-    set_saga_state,
-    delete_saga_state,
-    SAGA_STATE_PREFIX,
+from rustic_ai.core.guild.g2g import SAGA_STATE_PREFIX, get_saga_state_key
+from rustic_ai.core.state.models import StateUpdateFormat
+
+# Generate the state key for a saga
+saga_id = "custom-saga-id"
+state_key = get_saga_state_key(saga_id)  # Returns "g2g_saga.custom-saga-id"
+
+# Save saga state (using StateRefresherMixin via agent)
+self.update_guild_state(
+    ctx,
+    update_format=StateUpdateFormat.JSON_MERGE_PATCH,
+    update={state_key: {"custom": "data"}},
 )
 
-# Manually manage saga state (rarely needed)
-saga_id = "custom-saga-id"
-org_id = ctx.guild_spec.org_id
-guild_id = ctx.guild_spec.guild_id
+# Retrieve saga state from agent's cached guild state
+state = self._guild_state.get(state_key)
 
-# Save state
-set_saga_state(org_id, guild_id, saga_id, {"custom": "data"})
-
-# Retrieve state
-state = get_saga_state(org_id, guild_id, saga_id)
-
-# Delete state
-delete_saga_state(org_id, guild_id, saga_id)
+# Delete saga state (set to None via merge patch)
+self.update_guild_state(
+    ctx,
+    update_format=StateUpdateFormat.JSON_MERGE_PATCH,
+    update={state_key: None},
+)
 ```
 
 ## API Reference
 
 ### Classes
 
-- [`BoundaryAgent`](../api/g2g/boundary_agent.md) - Base class for boundary agents
-- [`BoundaryAgentProps`](../api/g2g/boundary_agent.md#boundaryagentprops) - Base properties
-- [`GatewayAgent`](../api/g2g/gateway_agent.md) - Server-side gateway
-- [`GatewayAgentProps`](../api/g2g/gateway_agent.md#gatewayagentprops) - Gateway properties
-- [`EnvoyAgent`](../api/g2g/envoy_agent.md) - Client-side envoy
-- [`EnvoyAgentProps`](../api/g2g/envoy_agent.md#envoyagentprops) - Envoy properties
-- [`BoundaryContext`](../api/g2g/boundary_context.md) - Cross-guild context
-- [`BoundaryClient`](../api/g2g/boundary_client.md) - Shared namespace client
-- [`GuildStackEntry`](../api/g2g/message.md#guildstackentry) - Stack entry with guild ID and saga ID
+- `BoundaryAgent` - Base class for boundary agents
+- `BoundaryAgentProps` - Marker base class for boundary agent properties
+- `GatewayAgent` - Server-side gateway
+- `GatewayAgentProps` - Gateway properties (includes `input_formats`, `output_formats`, `returned_formats`)
+- `EnvoyAgent` - Client-side envoy
+- `EnvoyAgentProps` - Envoy properties (includes `target_guild`, `formats_to_forward`)
+- `BoundaryContext` - Cross-guild context with `forward_out()` method
+- `BoundaryClient` (from `rustic_ai.core.messaging.core.boundary_client`) - Shared namespace client
+- `GuildStackEntry` - Stack entry with `guild_id` and optional `saga_id`
+
+### Exported from `rustic_ai.core.guild.g2g`
+
+```python
+from rustic_ai.core.guild.g2g import (
+    BoundaryAgent,
+    BoundaryAgentProps,
+    BoundaryContext,
+    EnvoyAgent,
+    EnvoyAgentProps,
+    GatewayAgent,
+    GatewayAgentProps,
+    GuildStackEntry,
+    SAGA_STATE_PREFIX,
+    get_saga_state_key,
+)
+```
 
 ### Message Fields
 

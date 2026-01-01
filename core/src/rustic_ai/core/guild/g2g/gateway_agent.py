@@ -35,25 +35,25 @@ class GatewayAgentProps(BoundaryAgentProps):
     and sending responses back to the origin guild.
 
     Attributes:
-        input_formats: Message formats to accept as incoming requests. Empty = accept all.
-        output_formats: Message formats to forward back as responses. Empty = forward all.
+        input_formats: Message formats to accept as incoming requests. Empty = deny all. Use ["*"] to accept all.
+        output_formats: Message formats to forward back as responses. Empty = deny all. Use ["*"] to forward all.
         returned_formats: Message formats to accept as returned responses (results from
-            external guilds). Empty = accept all.
+            external guilds). Empty = deny all. Use ["*"] to accept all.
     """
 
     input_formats: List[str] = Field(
         default_factory=list,
-        description="Message formats to accept as incoming requests. Empty = accept all.",
+        description="Message formats to accept as incoming requests. Empty = deny all. Use ['*'] to accept all.",
     )
 
     output_formats: List[str] = Field(
         default_factory=list,
-        description="Message formats to forward back as responses. Empty = forward all.",
+        description="Message formats to forward back as responses. Empty = deny all. Use ['*'] to forward all.",
     )
 
     returned_formats: List[str] = Field(
         default_factory=list,
-        description="Message formats to accept as returned responses. Empty = accept all.",
+        description="Message formats to accept as returned responses. Empty = deny all. Use ['*'] to accept all.",
     )
 
 
@@ -130,12 +130,10 @@ class GatewayAgent(BoundaryAgent[GatewayAgentProps]):
             return False
         if not self._is_incoming_request(msg):
             return False
-        # Check allowed_source_guilds filter - use the immediate sender (stack top)
-        source_guild = self._get_stack_top_guild_id(msg)
-        if not self.is_source_guild_allowed(source_guild):
-            return False
         if not self.config.input_formats:
-            return True  # Empty = accept all
+            return False  # Empty = deny all
+        if "*" in self.config.input_formats:
+            return True  # Wildcard = accept all
         return msg.format in self.config.input_formats
 
     def _should_accept_returned_response(self, msg) -> bool:
@@ -145,7 +143,9 @@ class GatewayAgent(BoundaryAgent[GatewayAgentProps]):
         if not self._is_returned_response(msg):
             return False
         if not self.config.returned_formats:
-            return True  # Empty = accept all
+            return False  # Empty = deny all
+        if "*" in self.config.returned_formats:
+            return True  # Wildcard = accept all
         return msg.format in self.config.returned_formats
 
     def _should_forward_outbound(self, msg) -> bool:
@@ -170,7 +170,9 @@ class GatewayAgent(BoundaryAgent[GatewayAgentProps]):
             return False
         # Check output format filter
         if not self.config.output_formats:
-            return True  # Empty = forward all
+            return False  # Empty = deny all
+        if "*" in self.config.output_formats:
+            return True  # Wildcard = forward all
         return msg.format in self.config.output_formats
 
     @agent.processor(
@@ -256,9 +258,6 @@ class GatewayAgent(BoundaryAgent[GatewayAgentProps]):
         if target_entry is None:
             return
         target_guild = target_entry.guild_id
-
-        if not self.is_target_guild_allowed(target_guild):
-            return
 
         # Create forwarded message WITHOUT modifying the stack
         # (forward_out would push this guild, but we don't want that for responses)

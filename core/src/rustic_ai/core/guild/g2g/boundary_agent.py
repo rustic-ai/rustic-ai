@@ -1,7 +1,5 @@
 from typing import Callable, List, Type, TypeVar
 
-from pydantic import Field
-
 from rustic_ai.core.guild.agent import Agent
 from rustic_ai.core.guild.dsl import BaseAgentProps
 from rustic_ai.core.guild.g2g.boundary_context import BoundaryContext
@@ -13,21 +11,12 @@ class BoundaryAgentProps(BaseAgentProps):
     """
     Base properties for boundary agents.
 
-    Attributes:
-        allowed_source_guilds: List of guild IDs allowed to send messages to this guild.
-                              Empty list means all guilds are allowed.
-        allowed_target_guilds: List of guild IDs this agent can send messages to.
-                              Empty list means all guilds are allowed.
+    This is a marker base class for boundary agent properties.
+    Subclasses (GatewayAgentProps, EnvoyAgentProps) define their own
+    format filtering properties.
     """
 
-    allowed_source_guilds: List[str] = Field(
-        default_factory=list,
-        description="Guild IDs allowed to send messages. Empty = allow all.",
-    )
-    allowed_target_guilds: List[str] = Field(
-        default_factory=list,
-        description="Guild IDs this agent can send to. Empty = allow all.",
-    )
+    pass
 
 
 # TypeVar for BoundaryAgent props, bounded to BoundaryAgentProps
@@ -80,34 +69,6 @@ class BoundaryAgent(Agent[BAPT]):
             True to subscribe to shared inbox, False otherwise.
         """
         return False
-
-    def is_source_guild_allowed(self, source_guild_id: str) -> bool:
-        """
-        Check if a source guild is allowed to send messages.
-
-        Args:
-            source_guild_id: The ID of the guild sending the message.
-
-        Returns:
-            True if the guild is allowed, False otherwise.
-        """
-        if self.config and hasattr(self.config, "allowed_source_guilds") and self.config.allowed_source_guilds:
-            return source_guild_id in self.config.allowed_source_guilds
-        return True  # If no restrictions, allow all
-
-    def is_target_guild_allowed(self, target_guild_id: str) -> bool:
-        """
-        Check if a target guild is allowed to receive messages.
-
-        Args:
-            target_guild_id: The ID of the guild to send to.
-
-        Returns:
-            True if the guild is allowed, False otherwise.
-        """
-        if self.config and hasattr(self.config, "allowed_target_guilds") and self.config.allowed_target_guilds:
-            return target_guild_id in self.config.allowed_target_guilds
-        return True  # If no restrictions, allow all
 
     def _make_process_context(
         self,

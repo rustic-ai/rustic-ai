@@ -28,6 +28,7 @@ from rustic_ai.core.guild.dsl import (
     AgentSpec,
     BaseAgentProps,
     DependencySpec,
+    GatewayConfig,
     GuildSpec,
     GuildTopics,
 )
@@ -103,6 +104,7 @@ class KeyConstants:
     PREDICATES = "predicates"
     CONFIGURATION = "configuration"
     CONFIGURATION_SCHEMA = "configuration_schema"
+    GATEWAY = "gateway"
 
 
 class EnvConstants:
@@ -293,6 +295,7 @@ class GuildBuilder:
             KeyConstants.DEPENDENCY_MAP: {},
             KeyConstants.ROUTES: RoutingSlip(),
             KeyConstants.CONFIGURATION: {},
+            KeyConstants.GATEWAY: None,
         }
 
         self.required_fields_set = {
@@ -401,6 +404,19 @@ class GuildBuilder:
         self.guild_spec_dict[KeyConstants.DEPENDENCY_MAP] = dependency_map
         return self
 
+    def set_gateway(self, gateway_config: GatewayConfig) -> "GuildBuilder":
+        """
+        Set the gateway configuration for the Guild.
+
+        Args:
+            gateway_config (GatewayConfig): The gateway configuration to set.
+
+        Returns:
+            GuildBuilder: The current GuildBuilder instance.
+        """
+        self.guild_spec_dict[KeyConstants.GATEWAY] = gateway_config
+        return self
+
     @classmethod
     def _from_spec_dict(cls, spec_dict: dict) -> "GuildBuilder":
         """
@@ -423,6 +439,13 @@ class GuildBuilder:
         builder.guild_spec_dict[KeyConstants.PROPERTIES] = spec_dict.get(KeyConstants.PROPERTIES, {})
         builder.guild_spec_dict[KeyConstants.DEPENDENCY_MAP] = spec_dict.get(KeyConstants.DEPENDENCY_MAP, {})
         configuration = spec_dict.get(KeyConstants.CONFIGURATION, {})
+
+        if spec_dict.get(KeyConstants.GATEWAY):
+            gateway_data = spec_dict.get(KeyConstants.GATEWAY)
+            if isinstance(gateway_data, dict):
+                builder.guild_spec_dict[KeyConstants.GATEWAY] = GatewayConfig(**gateway_data)
+            elif isinstance(gateway_data, GatewayConfig):
+                builder.guild_spec_dict[KeyConstants.GATEWAY] = gateway_data
 
         if configuration:
             updated_agents = []
@@ -567,7 +590,40 @@ class GuildBuilder:
             GuildSpec: The built GuildSpec instance.
         """
         self.validate()
-        return GuildSpec(**self.guild_spec_dict)
+        spec_dict = self.guild_spec_dict.copy()
+
+        # Handle automatic GatewayAgent creation
+        gateway_config: Optional[GatewayConfig] = spec_dict.get(KeyConstants.GATEWAY)
+        if gateway_config and gateway_config.enabled:
+            # Check if a gateway agent already exists to avoid duplication
+            existing_gateway = next(
+                (
+                    a
+                    for a in spec_dict[KeyConstants.AGENTS]
+                    if a.class_name == "rustic_ai.core.guild.g2g.gateway_agent.GatewayAgent"
+                ),
+                None,
+            )
+
+            if not existing_gateway:
+                gateway_agent_spec = AgentSpec(  # type: ignore
+                    id="gateway",
+                    name="Gateway",
+                    description="Automatic Gateway Agent",
+                    class_name="rustic_ai.core.guild.g2g.gateway_agent.GatewayAgent",
+                    properties={
+                        "input_formats": gateway_config.input_formats,
+                        "output_formats": gateway_config.output_formats,
+                        "returned_formats": gateway_config.returned_formats,
+                    },
+                )
+                # We need to make sure we don't modify the original list in self.guild_spec_dict
+                # But spec_dict is a shallow copy, so spec_dict['agents'] points to the same list.
+                # We should copy the list.
+                spec_dict[KeyConstants.AGENTS] = list(spec_dict[KeyConstants.AGENTS])
+                spec_dict[KeyConstants.AGENTS].append(gateway_agent_spec)
+
+        return GuildSpec(**spec_dict)
 
     @classmethod
     def from_spec(cls, guild_spec: GuildSpec) -> "GuildBuilder":
@@ -594,6 +650,7 @@ class GuildBuilder:
         builder.guild_spec_dict[KeyConstants.AGENTS] = guild_spec.agents
         builder.guild_spec_dict[KeyConstants.DEPENDENCY_MAP] = guild_spec.dependency_map
         builder.guild_spec_dict[KeyConstants.ROUTES] = guild_spec.routes
+        builder.guild_spec_dict[KeyConstants.GATEWAY] = guild_spec.gateway
 
         return builder
 

@@ -4,7 +4,7 @@ Tests for standard Gateway and Envoy agents.
 These tests verify the standard GatewayAgent and EnvoyAgent implementations.
 
 GatewayAgent: Server-like agent that accepts messages from external guilds.
-- Receives messages from any source guild (subject to allowed_source_guilds filter)
+- Receives messages from external guilds
 - Source guild is extracted from message's origin_guild_stack
 - Forwards accepted messages internally
 - Routes returned responses back through the origin_guild_stack chain
@@ -36,7 +36,7 @@ class ResponderAgent(Agent):
     def __init__(self):
         self.received_requests = []
 
-    @agent.processor(JsonDict, predicate=lambda self, msg: msg.format == "request/json")
+    @agent.processor(JsonDict, predicate=lambda self, msg: msg.format == "MyRequest")
     def handle_request(self, ctx: agent.ProcessContext[JsonDict]) -> None:
         """Process request and send a response."""
         self.received_requests.append(ctx.payload)
@@ -47,7 +47,7 @@ class ResponderAgent(Agent):
                 "response_to": ctx.payload.get("request_id"),
                 "result": f"processed_{ctx.payload.get('data')}",
             },
-            format="response/json",
+            format="MyResponse",
         )
 
 
@@ -60,7 +60,7 @@ class SagaResponderAgent(Agent):
     def __init__(self):
         self.received_messages = []
 
-    @agent.processor(JsonDict, predicate=lambda self, msg: msg.format == "request_with_state/json")
+    @agent.processor(JsonDict, predicate=lambda self, msg: msg.format == "MyStateRequest")
     def handle_request(self, ctx: agent.ProcessContext[JsonDict]) -> None:
         """Process request and send response."""
         self.received_messages.append(ctx.message)
@@ -69,7 +69,7 @@ class SagaResponderAgent(Agent):
                 "response_to": ctx.payload.get("request_id"),
                 "result": "success",
             },
-            format="response_with_state/json",
+            format="MyStateResponse",
         )
 
 
@@ -96,12 +96,12 @@ class SagaInitiatorAgent(Agent):
                 "request_id": ctx.payload.get("correlation_id"),
                 "action": "process",
             },
-            format="request_with_state/json",
+            format="MyStateRequest",
             topics=["outbound"],
             session_state=session_state,
         )
 
-    @agent.processor(JsonDict, predicate=lambda self, msg: msg.format == "response_with_state/json")
+    @agent.processor(JsonDict, predicate=lambda self, msg: msg.format == "MyStateResponse")
     def handle_response(self, ctx: agent.ProcessContext[JsonDict]) -> None:
         """Capture response with session_state."""
         self.responses_with_session_state.append(
@@ -168,6 +168,13 @@ class TestStandardAgents:
             .set_id("gateway")
             .set_name("Gateway")
             .set_description("Gateway for cross-guild messages")
+            .set_properties(
+                GatewayAgentProps(
+                    input_formats=["*"],
+                    output_formats=["*"],
+                    returned_formats=["*"],
+                )
+            )
             .build_spec()
         )
         target_guild._add_local_agent(gateway_spec)
@@ -188,7 +195,12 @@ class TestStandardAgents:
             .set_id("envoy")
             .set_name("Envoy")
             .set_description("Standard envoy to target guild")
-            .set_properties(EnvoyAgentProps(target_guild=target_guild.id))
+            .set_properties(
+                EnvoyAgentProps(
+                    target_guild=target_guild.id,
+                    formats_to_forward=["*"],
+                )
+            )
             .add_additional_topic("outbound")
             .build_spec()
         )
@@ -209,7 +221,7 @@ class TestStandardAgents:
         source_probe.publish_dict(
             topic="outbound",
             payload={"data": "hello"},
-            format="test/json",
+            format="TestMessage",
         )
 
         time.sleep(1.0)
@@ -251,12 +263,34 @@ class TestStandardAgents:
 
         # Add gateways and probes to both targets
         gateway_a_spec = (
-            AgentBuilder(GatewayAgent).set_id("gateway").set_name("Gateway").set_description("Gateway").build_spec()
+            AgentBuilder(GatewayAgent)
+            .set_id("gateway")
+            .set_name("Gateway")
+            .set_description("Gateway")
+            .set_properties(
+                GatewayAgentProps(
+                    input_formats=["*"],
+                    output_formats=["*"],
+                    returned_formats=["*"],
+                )
+            )
+            .build_spec()
         )
         target_a._add_local_agent(gateway_a_spec)
 
         gateway_b_spec = (
-            AgentBuilder(GatewayAgent).set_id("gateway").set_name("Gateway").set_description("Gateway").build_spec()
+            AgentBuilder(GatewayAgent)
+            .set_id("gateway")
+            .set_name("Gateway")
+            .set_description("Gateway")
+            .set_properties(
+                GatewayAgentProps(
+                    input_formats=["*"],
+                    output_formats=["*"],
+                    returned_formats=["*"],
+                )
+            )
+            .build_spec()
         )
         target_b._add_local_agent(gateway_b_spec)
 
@@ -284,7 +318,12 @@ class TestStandardAgents:
             .set_id("envoy_to_a")
             .set_name("EnvoyToA")
             .set_description("Envoy to target A")
-            .set_properties(EnvoyAgentProps(target_guild=target_a.id))
+            .set_properties(
+                EnvoyAgentProps(
+                    target_guild=target_a.id,
+                    formats_to_forward=["*"],
+                )
+            )
             .add_additional_topic("to_target_a")
             .build_spec()
         )
@@ -295,7 +334,12 @@ class TestStandardAgents:
             .set_id("envoy_to_b")
             .set_name("EnvoyToB")
             .set_description("Envoy to target B")
-            .set_properties(EnvoyAgentProps(target_guild=target_b.id))
+            .set_properties(
+                EnvoyAgentProps(
+                    target_guild=target_b.id,
+                    formats_to_forward=["*"],
+                )
+            )
             .add_additional_topic("to_target_b")
             .build_spec()
         )
@@ -310,14 +354,14 @@ class TestStandardAgents:
         source_probe.publish_dict(
             topic="to_target_a",
             payload={"data": "for_a"},
-            format="test/json",
+            format="TestMessage",
         )
 
         # Send to target B via envoy_to_b
         source_probe.publish_dict(
             topic="to_target_b",
             payload={"data": "for_b"},
-            format="test/json",
+            format="TestMessage",
         )
 
         time.sleep(1.0)
@@ -338,236 +382,6 @@ class TestStandardAgents:
         source_guild.shutdown()
         target_a.shutdown()
         target_b.shutdown()
-
-    def test_gateway_allowed_source_guilds(self, messaging: MessagingConfig, database, org_id):
-        """Test GatewayAgent filters messages from unauthorized guilds.
-
-        Setup:
-        - Target guild has a GatewayAgent with allowed_source_guilds filter
-        - Two source guilds both have envoys to target, but only one is allowed
-        """
-        # Create source guilds first
-        allowed_source = (
-            GuildBuilder(guild_name="allowed_source", guild_description="Allowed")
-            .set_messaging(messaging.backend_module, messaging.backend_class, messaging.backend_config)
-            .bootstrap(database, org_id)
-        )
-
-        blocked_source = (
-            GuildBuilder(guild_name="blocked_source", guild_description="Blocked")
-            .set_messaging(messaging.backend_module, messaging.backend_class, messaging.backend_config)
-            .bootstrap(database, org_id)
-        )
-
-        # Create target guild
-        target_guild = (
-            GuildBuilder(guild_name="target_guild", guild_description="Target")
-            .set_messaging(messaging.backend_module, messaging.backend_class, messaging.backend_config)
-            .bootstrap(database, org_id)
-        )
-
-        # Add gateway that only allows specific source guild
-        gateway_spec = (
-            AgentBuilder(GatewayAgent)
-            .set_id("gateway")
-            .set_name("Gateway")
-            .set_description("Gateway for allowed source only")
-            .set_properties(
-                GatewayAgentProps(
-                    allowed_source_guilds=[allowed_source.id],
-                )
-            )
-            .build_spec()
-        )
-        target_guild._add_local_agent(gateway_spec)
-
-        target_probe_spec = (
-            AgentBuilder(ProbeAgent)
-            .set_id("target_probe")
-            .set_name("TargetProbe")
-            .set_description("Probe")
-            .build_spec()
-        )
-        target_probe: ProbeAgent = target_guild._add_local_agent(target_probe_spec)  # type: ignore
-
-        # Add envoys (configured for target) and probes to both source guilds
-        allowed_envoy_spec = (
-            AgentBuilder(EnvoyAgent)
-            .set_id("envoy")
-            .set_name("Envoy")
-            .set_description("Envoy to target")
-            .set_properties(EnvoyAgentProps(target_guild=target_guild.id))
-            .add_additional_topic("outbound")
-            .build_spec()
-        )
-        allowed_source._add_local_agent(allowed_envoy_spec)
-
-        allowed_probe_spec = (
-            AgentBuilder(ProbeAgent).set_id("probe").set_name("Probe").set_description("Probe").build_spec()
-        )
-        allowed_probe: ProbeAgent = allowed_source._add_local_agent(allowed_probe_spec)  # type: ignore
-
-        blocked_envoy_spec = (
-            AgentBuilder(EnvoyAgent)
-            .set_id("envoy")
-            .set_name("Envoy")
-            .set_description("Envoy to target")
-            .set_properties(EnvoyAgentProps(target_guild=target_guild.id))
-            .add_additional_topic("outbound")
-            .build_spec()
-        )
-        blocked_source._add_local_agent(blocked_envoy_spec)
-
-        blocked_probe_spec = (
-            AgentBuilder(ProbeAgent).set_id("probe").set_name("Probe").set_description("Probe").build_spec()
-        )
-        blocked_probe: ProbeAgent = blocked_source._add_local_agent(blocked_probe_spec)  # type: ignore
-
-        time.sleep(0.5)
-
-        # Send from both sources
-        allowed_probe.publish_dict(
-            topic="outbound",
-            payload={"source": "allowed"},
-            format="test/json",
-        )
-
-        blocked_probe.publish_dict(
-            topic="outbound",
-            payload={"source": "blocked"},
-            format="test/json",
-        )
-
-        time.sleep(1.5)
-
-        # Verify only allowed message was forwarded
-        messages = target_probe.get_messages()
-        allowed_msgs = [m for m in messages if m.payload.get("source") == "allowed"]
-        blocked_msgs = [m for m in messages if m.payload.get("source") == "blocked"]
-
-        assert len(allowed_msgs) >= 1, "Message from allowed source should be forwarded"
-        assert len(blocked_msgs) == 0, "Message from blocked source should be dropped"
-
-        allowed_source.shutdown()
-        blocked_source.shutdown()
-        target_guild.shutdown()
-
-    def test_envoy_allowed_target_guilds(self, messaging: MessagingConfig, database, org_id):
-        """Test EnvoyAgent filters messages when target guild is not in allowed list.
-
-        Setup:
-        - Source guild has two envoys, one to each target
-        - One envoy's target is in its allowed list, the other's is not
-        """
-        # Create source guild first
-        source_guild = (
-            GuildBuilder(guild_name="source_guild", guild_description="Source")
-            .set_messaging(messaging.backend_module, messaging.backend_class, messaging.backend_config)
-            .bootstrap(database, org_id)
-        )
-
-        # Create target guilds
-        allowed_target = (
-            GuildBuilder(guild_name="allowed_target", guild_description="Allowed Target")
-            .set_messaging(messaging.backend_module, messaging.backend_class, messaging.backend_config)
-            .bootstrap(database, org_id)
-        )
-
-        blocked_target = (
-            GuildBuilder(guild_name="blocked_target", guild_description="Blocked Target")
-            .set_messaging(messaging.backend_module, messaging.backend_class, messaging.backend_config)
-            .bootstrap(database, org_id)
-        )
-
-        # Add gateways and probes to both targets
-        allowed_gateway_spec = (
-            AgentBuilder(GatewayAgent).set_id("gateway").set_name("Gateway").set_description("Gateway").build_spec()
-        )
-        allowed_target._add_local_agent(allowed_gateway_spec)
-
-        blocked_gateway_spec = (
-            AgentBuilder(GatewayAgent).set_id("gateway").set_name("Gateway").set_description("Gateway").build_spec()
-        )
-        blocked_target._add_local_agent(blocked_gateway_spec)
-
-        allowed_probe_spec = (
-            AgentBuilder(ProbeAgent)
-            .set_id("allowed_probe")
-            .set_name("AllowedProbe")
-            .set_description("Probe in allowed target")
-            .build_spec()
-        )
-        allowed_probe: ProbeAgent = allowed_target._add_local_agent(allowed_probe_spec)  # type: ignore
-
-        blocked_probe_spec = (
-            AgentBuilder(ProbeAgent)
-            .set_id("blocked_probe")
-            .set_name("BlockedProbe")
-            .set_description("Probe in blocked target")
-            .build_spec()
-        )
-        blocked_probe: ProbeAgent = blocked_target._add_local_agent(blocked_probe_spec)  # type: ignore
-
-        # Add envoys to source guild
-        # Envoy to allowed target - should work (allowed_target is in allowed list)
-        envoy_allowed_spec = (
-            AgentBuilder(EnvoyAgent)
-            .set_id("envoy_allowed")
-            .set_name("EnvoyAllowed")
-            .set_description("Envoy to allowed target")
-            .set_properties(EnvoyAgentProps(target_guild=allowed_target.id, allowed_target_guilds=[allowed_target.id]))
-            .add_additional_topic("to_allowed")
-            .build_spec()
-        )
-        source_guild._add_local_agent(envoy_allowed_spec)
-
-        # Envoy to blocked target - should NOT work (blocked_target is not in allowed list)
-        envoy_blocked_spec = (
-            AgentBuilder(EnvoyAgent)
-            .set_id("envoy_blocked")
-            .set_name("EnvoyBlocked")
-            .set_description("Envoy to blocked target with restriction")
-            .set_properties(
-                EnvoyAgentProps(
-                    target_guild=blocked_target.id,
-                    allowed_target_guilds=[allowed_target.id],  # blocked_target not in list!
-                )
-            )
-            .add_additional_topic("to_blocked")
-            .build_spec()
-        )
-        source_guild._add_local_agent(envoy_blocked_spec)
-
-        probe_spec = AgentBuilder(ProbeAgent).set_id("probe").set_name("Probe").set_description("Probe").build_spec()
-        source_probe: ProbeAgent = source_guild._add_local_agent(probe_spec)  # type: ignore
-
-        time.sleep(0.5)
-
-        # Send via both envoys
-        source_probe.publish_dict(
-            topic="to_allowed",
-            payload={"destination": "allowed"},
-            format="test/json",
-        )
-
-        source_probe.publish_dict(
-            topic="to_blocked",
-            payload={"destination": "blocked"},
-            format="test/json",
-        )
-
-        time.sleep(1.5)
-
-        # Verify only allowed target received message
-        allowed_msgs = [m for m in allowed_probe.get_messages() if m.payload.get("destination") == "allowed"]
-        blocked_msgs = [m for m in blocked_probe.get_messages() if m.payload.get("destination") == "blocked"]
-
-        assert len(allowed_msgs) >= 1, "Message to allowed target should be sent"
-        assert len(blocked_msgs) == 0, "Message to blocked target should be dropped"
-
-        source_guild.shutdown()
-        allowed_target.shutdown()
-        blocked_target.shutdown()
 
     def test_gateway_input_format_filtering(self, messaging: MessagingConfig, database, org_id):
         """Test GatewayAgent filters by input_formats and output_formats.
@@ -598,7 +412,9 @@ class TestStandardAgents:
             .set_description("Gateway with format filter")
             .set_properties(
                 GatewayAgentProps(
-                    input_formats=["allowed/format"],
+                    input_formats=["AllowedMessage"],
+                    output_formats=["*"],
+                    returned_formats=["*"],
                 )
             )
             .build_spec()
@@ -620,7 +436,12 @@ class TestStandardAgents:
             .set_id("envoy")
             .set_name("Envoy")
             .set_description("Envoy to target")
-            .set_properties(EnvoyAgentProps(target_guild=target_guild.id))
+            .set_properties(
+                EnvoyAgentProps(
+                    target_guild=target_guild.id,
+                    formats_to_forward=["*"],
+                )
+            )
             .add_additional_topic("outbound")
             .build_spec()
         )
@@ -641,14 +462,14 @@ class TestStandardAgents:
         source_probe.publish_dict(
             topic="outbound",
             payload={"type": "allowed"},
-            format="allowed/format",
+            format="AllowedMessage",
         )
 
         # Send message with blocked format
         source_probe.publish_dict(
             topic="outbound",
             payload={"type": "blocked"},
-            format="blocked/format",
+            format="BlockedMessage",
         )
 
         time.sleep(1.5)
@@ -713,9 +534,9 @@ class TestStandardAgents:
             .set_description("Gateway for Guild A")
             .set_properties(
                 GatewayAgentProps(
-                    input_formats=["request/json"],  # Accept requests (shouldn't get any)
-                    output_formats=["response/json"],  # Forward responses back
-                    returned_formats=["response/json"],  # Accept returned responses
+                    input_formats=["MyRequest"],  # Accept requests (shouldn't get any)
+                    output_formats=["MyResponse"],  # Forward responses back
+                    returned_formats=["MyResponse"],  # Accept returned responses
                 )
             )
             .build_spec()
@@ -731,7 +552,7 @@ class TestStandardAgents:
             .set_properties(
                 EnvoyAgentProps(
                     target_guild=guild_b.id,
-                    formats_to_forward=["request/json"],
+                    formats_to_forward=["MyRequest"],
                 )
             )
             .add_additional_topic("outbound")
@@ -758,9 +579,9 @@ class TestStandardAgents:
             .set_description("Gateway for Guild B")
             .set_properties(
                 GatewayAgentProps(
-                    input_formats=["request/json"],  # Accept requests from A
-                    output_formats=["response/json"],  # Forward responses back to A
-                    returned_formats=["response/json"],  # Accept returned responses from C
+                    input_formats=["MyRequest"],  # Accept requests from A
+                    output_formats=["MyResponse"],  # Forward responses back to A
+                    returned_formats=["MyResponse"],  # Accept returned responses from C
                 )
             )
             .build_spec()
@@ -776,7 +597,7 @@ class TestStandardAgents:
             .set_properties(
                 EnvoyAgentProps(
                     target_guild=guild_c.id,
-                    formats_to_forward=["request/json"],
+                    formats_to_forward=["MyRequest"],
                 )
             )
             .build_spec()
@@ -802,8 +623,8 @@ class TestStandardAgents:
             .set_description("Gateway for Guild C")
             .set_properties(
                 GatewayAgentProps(
-                    input_formats=["request/json"],  # Accept requests from B
-                    output_formats=["response/json"],  # Forward responses back to B
+                    input_formats=["MyRequest"],  # Accept requests from B
+                    output_formats=["MyResponse"],  # Forward responses back to B
                 )
             )
             .build_spec()
@@ -826,7 +647,7 @@ class TestStandardAgents:
         probe_a.publish_dict(
             topic="outbound",
             payload={"request_id": "req_001", "data": "hello_world"},
-            format="request/json",
+            format="MyRequest",
         )
 
         # Wait for the full round-trip: A -> B -> C -> B -> A
@@ -838,8 +659,8 @@ class TestStandardAgents:
 
         # Verify B saw BOTH the request AND the response (intermediate processing)
         b_messages = probe_b.get_messages()
-        b_requests = [m for m in b_messages if m.format == "request/json"]
-        b_responses = [m for m in b_messages if m.format == "response/json"]
+        b_requests = [m for m in b_messages if m.format == "MyRequest"]
+        b_responses = [m for m in b_messages if m.format == "MyResponse"]
 
         assert len(b_requests) >= 1, "Guild B should see the request passing through"
         assert len(b_responses) >= 1, (
@@ -912,8 +733,9 @@ class TestStandardAgents:
             .set_description("Gateway for target guild")
             .set_properties(
                 GatewayAgentProps(
-                    input_formats=["request_with_state/json"],
-                    returned_formats=["response_with_state/json"],
+                    input_formats=["MyStateRequest"],
+                    output_formats=["MyStateResponse"],
+                    returned_formats=["MyStateResponse"],
                 )
             )
             .build_spec()
@@ -938,7 +760,9 @@ class TestStandardAgents:
             .set_description("Gateway for source guild")
             .set_properties(
                 GatewayAgentProps(
-                    returned_formats=["response_with_state/json"],
+                    input_formats=["*"],
+                    output_formats=["*"],
+                    returned_formats=["MyStateResponse"],
                 )
             )
             .build_spec()
@@ -954,7 +778,7 @@ class TestStandardAgents:
             .set_properties(
                 EnvoyAgentProps(
                     target_guild=target_guild.id,
-                    formats_to_forward=["request_with_state/json"],
+                    formats_to_forward=["MyStateRequest"],
                 )
             )
             .add_additional_topic("outbound")
@@ -990,7 +814,7 @@ class TestStandardAgents:
         probe.publish_dict(
             topic="outbound",
             payload={"request_id": "saga_test_001", "action": "process"},
-            format="request_with_state/json",
+            format="MyStateRequest",
             session_state={
                 "user_context": "important_data",
                 "step": 1,

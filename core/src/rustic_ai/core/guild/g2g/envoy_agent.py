@@ -30,7 +30,7 @@ class EnvoyAgentProps(BoundaryAgentProps):
 
     Attributes:
         target_guild: The ID of the guild this envoy forwards messages to. Required.
-        formats_to_forward: List of message format strings to forward. Empty = forward all.
+        formats_to_forward: List of message format strings to forward. Required.
     """
 
     target_guild: str = Field(
@@ -38,8 +38,8 @@ class EnvoyAgentProps(BoundaryAgentProps):
     )
 
     formats_to_forward: List[str] = Field(
-        default_factory=list,
-        description="List of message format strings to forward. Empty = forward all.",
+        min_length=1,
+        description="List of message format strings to forward. Required.",
     )
 
 
@@ -57,7 +57,7 @@ class EnvoyAgent(BoundaryAgent[EnvoyAgentProps]):
     it is saved to guild_state before forwarding. When the response returns, GatewayAgent
     restores the session_state, enabling seamless continuation across guild boundaries.
 
-    Optionally filter by message format using formats_to_forward property.
+    Filter by message format using formats_to_forward property.
     """
 
     @property
@@ -65,9 +65,13 @@ class EnvoyAgent(BoundaryAgent[EnvoyAgentProps]):
         return False
 
     def _should_forward(self, msg) -> bool:
-        """Check if message format matches the filter (empty list = forward all)."""
+        """Check if message format matches the filter."""
         if not self.config or not self.config.formats_to_forward:
+            return False
+
+        if "*" in self.config.formats_to_forward:
             return True
+
         return msg.format in self.config.formats_to_forward
 
     @agent.processor(
@@ -81,9 +85,6 @@ class EnvoyAgent(BoundaryAgent[EnvoyAgentProps]):
         via the saga pattern: saved to guild state and restored when the response returns.
         """
         target_guild = self.config.target_guild
-
-        if not self.is_target_guild_allowed(target_guild):
-            return
 
         # forward_out handles saga state persistence internally using ctx.get_context()
         ctx.forward_out(target_guild, ctx.message)
