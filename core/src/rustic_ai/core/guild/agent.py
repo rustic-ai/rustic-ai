@@ -74,6 +74,8 @@ class Agent(Generic[APT], metaclass=AgentMetaclass):  # type: ignore
     Base class for all agents
     """
 
+    DEFAULT_ORGANIZATION_ID = "default_organization"
+
     def __init__(
         self,
         agent_spec: AgentSpec[APT],
@@ -128,6 +130,7 @@ class Agent(Generic[APT], metaclass=AgentMetaclass):  # type: ignore
         self._state: JsonDict = {}
         self._guild_state: JsonDict = {}
         self._route_to_default_topic: bool = False
+        self._organization_id: Optional[str] = None
 
         self._client = self._init_client(client_class, client_props)
         self._id_generator = id_generator
@@ -305,6 +308,28 @@ class Agent(Generic[APT], metaclass=AgentMetaclass):  # type: ignore
     @property
     def guild_id(self) -> str:
         return self.guild_spec.id
+
+    def get_organization(self) -> str:
+        organization_id = getattr(self, "_organization_id", None)
+        if organization_id:
+            return organization_id
+
+        self.logger.warning(
+            "No organization_id configured for agent %s (%s); using default %s",
+            self.name,
+            self.id,
+            self.DEFAULT_ORGANIZATION_ID,
+        )
+        return self.DEFAULT_ORGANIZATION_ID
+
+    def require_organization(self) -> str:
+        organization_id = getattr(self, "_organization_id", None)
+        if not organization_id:
+            raise ValueError("No organization_id configured. Ensure the ExecutionEngine has organization_id set.")
+        return organization_id
+
+    def set_organization(self, organization_id: str) -> None:
+        self._organization_id = organization_id
 
     def _generate_id(self, priority: Priority) -> GemstoneID:
         """
