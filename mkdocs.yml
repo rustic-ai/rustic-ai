@@ -17,6 +17,7 @@ nav:
       - Architecture: core/architecture.md
       - Agents: core/agents.md
       - Guilds: core/guilds.md
+      - Guild-to-Guild (G2G): core/g2g.md
       - Messaging: core/messaging.md
       - Shared Memory Backend: core/shared_memory_backend.md
       - Execution: core/execution.md

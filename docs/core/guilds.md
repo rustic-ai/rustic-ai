@@ -322,6 +322,10 @@ Integrate with Grafana dashboards for a helicopter view of the system.
 ## Advanced Topics
 -   **Dynamic Guilds**: Guilds can be created, modified, and managed at runtime, especially when using a `GuildManagerAgent`.
 -   **State Propagation**: Guild-level state changes can be broadcast or made available to agents.
--   **Cross-Guild Communication**: While guilds provide encapsulation, advanced scenarios might involve routing messages between guilds.
+-   **Cross-Guild Communication**: Guilds can communicate with each other using the G2G (Guild-to-Guild) infrastructure. This enables microservice-style architectures where specialized guilds collaborate while maintaining isolation. See [Guild-to-Guild (G2G) Communication](g2g.md) for details on:
+    - **GatewayAgent**: Receives requests from external guilds
+    - **EnvoyAgent**: Sends requests to external guilds
+    - **Multi-hop routing**: Route messages through chains of guilds (A → B → C → B → A)
+    - **Security filters**: Control which guilds can communicate
 
-> See the [Agents](agents.md), [Messaging](messaging.md), [Execution](execution.md), and [Dependencies](dependencies.md) sections for more details on related components. 
+> See the [Agents](agents.md), [Messaging](messaging.md), [Execution](execution.md), [Dependencies](dependencies.md), and [G2G Communication](g2g.md) sections for more details on related components. 

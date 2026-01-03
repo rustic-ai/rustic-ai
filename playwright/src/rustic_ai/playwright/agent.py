@@ -28,9 +28,9 @@ class ScrapingOutputFormat(StrEnum):
 
 
 class BrowserLifecycle(StrEnum):
-    PER_REQUEST = "per_request"      # Close after each request
-    IDLE_TIMEOUT = "idle_timeout"    # Close after idle period (use browser_idle_timeout_s)
-    PERSISTENT = "persistent"        # Keep alive until agent shutdown
+    PER_REQUEST = "per_request"  # Close after each request
+    IDLE_TIMEOUT = "idle_timeout"  # Close after idle period (use browser_idle_timeout_s)
+    PERSISTENT = "persistent"  # Keep alive until agent shutdown
 
 
 class WebScrapingRequest(BaseModel):
