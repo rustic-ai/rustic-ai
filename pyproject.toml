@@ -2,17 +2,19 @@
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
-[tool.poetry]
+[project]
 name = "rusticai-python-framework"
 description = "Monorepo for Rustic AI Python Packages"
-authors = ["Dragonscale Industries Inc. <dev@dragonscale.ai>"]
+authors = [{name = "Dragonscale Industries Inc.", email = "dev@dragonscale.ai"}]
 readme = "README.md"
-homepage = "https://www.rustic.ai/"
-repository = "https://github.com/rustic-ai/rustic-ai"
+requires-python = ">=3.12,<3.13"
+urls = { Homepage = "https://www.rustic.ai/", Repository = "https://github.com/rustic-ai/rustic-ai" }
+dynamic = [ "dependencies" ]
+
+[tool.poetry]
 package-mode = false
 
 [tool.poetry.dependencies]
-python = ">=3.12,<3.13"
 rusticai-core = { path = "./core", develop = true }
 rusticai-redis = { path = "./redis", develop = true }
 rusticai-ray = { path = "./ray", develop = true }
@@ -23,7 +25,7 @@ rusticai-marvin = { path = "./marvin", develop = true }
 rusticai-serpapi = { path = "./serpapi", develop = true }
 rusticai-playwright = { path = "./playwright", develop = true }
 torch = [ # Adding torch dependency explicitly to avoid issues on macOS
-    { version = "^2.4.0", source = "pypi", platform = "darwin" },
+    { version = "^2.4.0", platform = "darwin" },
     { version = "^2.4.0", source = "pytorch-cpu", platform = "linux" },
 ]
 rusticai-huggingface = { path = "./huggingface", develop = true }
@@ -34,6 +36,7 @@ gcsfs = { version = "^2024.12.0", optional = true }
 rusticai-vertexai = { path = "./vertexai", develop = true }
 rusticai-llm-agent = { path = "./llm-agent", develop = true }
 rusticai-lancedb = {path = "./lancedb", develop = true}
+rusticai-mcp = {path = "./mcp", develop = true}
 rusticai-claude = {path = "./claude", develop = true}
 
 [tool.poetry.group.dev]

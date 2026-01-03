@@ -2,22 +2,21 @@
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
-[tool.poetry]
+[project]
 name = "rusticai-{{ cookiecutter.module_name }}"
 version = "{{ cookiecutter.version }}"
 description = "{{ cookiecutter.description }}"
-authors = ["{{ cookiecutter.author_name }} <{{ cookiecutter.author_email }}>"]
+authors = [{name = "{{ cookiecutter.author_name }}", email = "{{ cookiecutter.author_email }}"}]
 license = "Apache-2.0"
 readme = "README.md"
-homepage = "{{ cookiecutter.homepage }}"
-repository = "{{ cookiecutter.repository }}"
+requires-python = ">=3.12,<3.13"
+urls = { Homepage = "{{ cookiecutter.homepage }}", Repository = "{{ cookiecutter.repository }}", "Rustic AI Core" = "https://pypi.org/project/rusticai-core/" }
+
+
+[tool.poetry]
 packages = [{ include = "{{ cookiecutter.package_name }}", from = "src" }]
 
-[tool.poetry.urls]
-"Rustic AI Core" = "https://pypi.org/project/rusticai-core/"
-
 [tool.poetry.dependencies]
-python = ">=3.12,<3.13"
 rusticai-core = { path = "{{ cookiecutter.rusticai_location }}/core", develop = true }
 
 [tool.poetry-monorepo.deps]

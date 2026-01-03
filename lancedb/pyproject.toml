@@ -2,22 +2,23 @@
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
-[tool.poetry]
+
+[project]
 name = "rusticai-lancedb"
-version = "0.0.1"
+version = "1.0.0"
 description = "Support for LanceDB backend KnowledgeBase"
-authors = ["Dragonscale Industries Inc. <dev@dragonscale.ai>"]
+authors = [{name = "Dragonscale Industries Inc.", email = "dev@dragonscale.ai"}]
 license = "Apache-2.0"
 readme = "README.md"
-homepage = "https://www.rustic.ai/"
-repository = "https://github.com/dragonscale-ai/rustic-ai"
+requires-python = ">=3.12,<3.13"
+dynamic = ["dependencies"]
+urls = { Homepage = "https://www.rustic.ai/", Repository = "https://github.com/dragonscale-ai/rustic-ai", "Rustic AI Core" = "https://pypi.org/project/rusticai-core/" }
+
+
+[tool.poetry]
 packages = [{ include = "rustic_ai", from = "src" }]
 
-[tool.poetry.urls]
-"Rustic AI Core" = "https://pypi.org/project/rusticai-core/"
-
 [tool.poetry.dependencies]
-python = ">=3.12,<3.13"
 rusticai-core = { path = "../core", develop = true }
 lancedb = "^0.25.0"
 

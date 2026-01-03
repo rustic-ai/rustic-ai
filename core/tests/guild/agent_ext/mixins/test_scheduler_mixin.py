@@ -58,9 +58,9 @@ class TestSchedulerMixin:
     @pytest.fixture
     def messaging_config(self):
         return MessagingConfig(
-            backend_module="rustic_ai.redis.messaging.backend",
-            backend_class="RedisMessagingBackend",
-            backend_config={"redis_client": {"host": "localhost", "port": 6379}},
+            backend_module="rustic_ai.core.messaging.backend",
+            backend_class="InMemoryMessagingBackend",
+            backend_config={},
         )
 
     @pytest.fixture

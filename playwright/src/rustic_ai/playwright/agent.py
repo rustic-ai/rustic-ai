@@ -27,6 +27,12 @@ class ScrapingOutputFormat(StrEnum):
     MARKDOWN = "text/markdown"
 
 
+class BrowserLifecycle(StrEnum):
+    PER_REQUEST = "per_request"      # Close after each request
+    IDLE_TIMEOUT = "idle_timeout"    # Close after idle period (use browser_idle_timeout_s)
+    PERSISTENT = "persistent"        # Keep alive until agent shutdown
+
+
 class WebScrapingRequest(BaseModel):
     id: str = Field(default_factory=shortuuid.uuid, title="ID of the request")
     links: List[MediaLink] = Field(..., title="URL to scrape")
@@ -77,6 +83,22 @@ class PlaywrightScraperConfig(BaseAgentProps):
         title="Number of parallel pages to scrape",
         description="The number of pages to scrape in parallel.",
     )
+    browser_lifecycle: BrowserLifecycle = Field(
+        default=BrowserLifecycle.PERSISTENT,
+        title="Browser lifecycle strategy",
+        description=(
+            "Strategy for managing browser lifecycle: "
+            "PER_REQUEST - close after each request, "
+            "IDLE_TIMEOUT - close after idle period, "
+            "PERSISTENT - keep alive until shutdown."
+        ),
+    )
+    browser_idle_timeout_s: float = Field(
+        default=10.0,
+        title="Browser idle close timeout (seconds)",
+        description="How long to wait before closing browser when using IDLE_TIMEOUT lifecycle strategy.",
+        ge=0.0,
+    )
 
 
 class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
@@ -88,6 +110,8 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
         self._scraped_urls: Set[str] = set()
         self._initialized = False
         self._chromium_installed = False
+        # Shared-browser lifecycle management
+        self._active_ops: int = 0
 
     async def _ensure_browser(self, force: bool = False):
         """Ensure browser is initialized and running."""
@@ -323,7 +347,8 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
         async with self._scraped_urls_lock:
             self._scraped_urls.clear()
 
-        # Ensure browser is running
+        # Ensure browser is running; mark operation active and cancel idle close
+        self._active_ops += 1
         browser = await self._ensure_browser()
 
         # Create a new context for this scraping session
@@ -389,9 +414,19 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
         finally:
             # Always close the context
             await context.close()
+            self._active_ops -= 1
 
-    async def cleanup(self):
-        """Cleanup method to be called when agent is being destroyed."""
+            # Handle browser lifecycle based on configuration
+            if self.config.browser_lifecycle == BrowserLifecycle.PER_REQUEST:
+                await self._cleanup()
+            elif self.config.browser_lifecycle == BrowserLifecycle.IDLE_TIMEOUT:
+                await asyncio.sleep(self.config.browser_idle_timeout_s)
+                if self._active_ops == 0:
+                    await self._cleanup()
+            # PERSISTENT: do nothing, browser stays alive
+
+    async def _cleanup(self):
+        """Cleanup method to free up resources."""
         async with self._browser_lock:
             if self._browser:
                 try:
