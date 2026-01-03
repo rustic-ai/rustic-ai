@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 import pytest
 
@@ -14,6 +15,9 @@ from rustic_ai.core.guild.dsl import AgentSpec
 from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 from rustic_ai.llm_agent.llm_agent import LLMAgent
 from rustic_ai.llm_agent.llm_agent_conf import LLMAgentConfig
+from rustic_ai.llm_agent.memories.knowledge_memories_store import (
+    KnowledgeBasedMemoriesStore,
+)
 from rustic_ai.llm_agent.memories.queue_memories_store import QueueBasedMemoriesStore
 
 from rustic_ai.testing.helpers import wrap_agent_for_testing
@@ -53,7 +57,10 @@ class TestMemoryEnabledLLMAgent:
                 ChatCompletionRequest(
                     messages=[
                         UserMessage(
-                            content="Hello, We will name you Astro. What should be the name of your best friend? Reply only with the name."
+                            content=(
+                                "Hello, We will name you Astro. What should be the name of your "
+                                "best friend? Reply only with the name."
+                            )
                         ),
                     ],
                 ),
@@ -136,3 +143,138 @@ class TestMemoryEnabledLLMAgent:
         assert first_choice3.finish_reason == FinishReason.stop
         assert isinstance(first_choice3.message.content, str)
         assert friends_name in first_choice3.message.content
+
+    @pytest.mark.skipif(os.getenv("SKIP_EXPENSIVE_TESTS") == "true", reason="Skipping expensive tests")
+    def test_invoke_llm_with_kb_memory(self, tmp_path, generator, build_message_from_payload, dependency_map):
+        """Test LLMAgent with KnowledgeBasedMemoriesStore for semantic memory recall."""
+        # Create KB memory store with temp storage
+        kb_base = Path(tmp_path) / "kb_memory"
+        kb_store = KnowledgeBasedMemoriesStore(
+            context_window_size=5,
+            recall_limit=10,
+            path_base=str(kb_base),
+            protocol="file",
+            storage_options={"auto_mkdir": True},
+            asynchronous=True,
+        )
+
+        agent_spec: AgentSpec = (
+            AgentBuilder(LLMAgent)
+            .set_id("llm_agent_kb")
+            .set_name("LLM Agent with KB Memory")
+            .set_description("An agent that uses KB-based semantic memory")
+            .set_properties(
+                LLMAgentConfig(
+                    model="gpt-5-mini",
+                    default_system_prompt="You are a helpful assistant with semantic memory.",
+                    llm_request_wrappers=[kb_store],
+                )
+            )
+            .build_spec()
+        )
+
+        agent, results = wrap_agent_for_testing(
+            agent_spec,
+            dependency_map=dependency_map,
+        )
+
+        # First interaction: Store information about a favorite color
+        agent._on_message(
+            build_message_from_payload(
+                generator,
+                ChatCompletionRequest(
+                    messages=[
+                        UserMessage(
+                            content="My favorite color is blue. Remember this for later. Just acknowledge."
+                        ),
+                    ],
+                ),
+            )
+        )
+
+        assert len(results) > 0
+        result1 = results[0]
+        assert result1.format == get_qualified_class_name(ChatCompletionResponse)
+
+        payload1 = ChatCompletionResponse.model_validate(result1.payload)
+        assert len(payload1.choices) > 0
+        assert payload1.choices[0].finish_reason == FinishReason.stop
+
+        # Second interaction: Store information about a hobby
+        agent._on_message(
+            build_message_from_payload(
+                generator,
+                ChatCompletionRequest(
+                    messages=[
+                        UserMessage(
+                            content="I enjoy hiking in the mountains. Keep this in mind. Just acknowledge."
+                        ),
+                    ],
+                ),
+            )
+        )
+
+        assert len(results) > 1
+        result2 = results[1]
+        payload2 = ChatCompletionResponse.model_validate(result2.payload)
+        assert payload2.choices[0].finish_reason == FinishReason.stop
+
+        # Third interaction: Query about favorite color (should recall from KB)
+        agent._on_message(
+            build_message_from_payload(
+                generator,
+                ChatCompletionRequest(
+                    messages=[
+                        UserMessage(content="What is my favorite color?"),
+                    ],
+                ),
+            )
+        )
+
+        assert len(results) > 2
+        result3 = results[2]
+        payload3 = ChatCompletionResponse.model_validate(result3.payload)
+
+        # KB memory should have recalled the color information
+        first_choice3 = payload3.choices[0]
+        assert first_choice3.finish_reason == FinishReason.stop
+        assert isinstance(first_choice3.message.content, str)
+
+        # Verify that memories were recalled (input messages should include recalled context)
+        assert len(payload3.input_messages) > 2, (
+            f"Expected more than 2 input messages (system + recalled + user), got {len(payload3.input_messages)}"
+        )
+
+        # Should mention blue
+        assert "blue" in first_choice3.message.content.lower(), (
+            f"Expected 'blue' in response but got: {first_choice3.message.content}"
+        )
+
+        # Fourth interaction: Query about hobby (should recall from KB)
+        agent._on_message(
+            build_message_from_payload(
+                generator,
+                ChatCompletionRequest(
+                    messages=[
+                        UserMessage(content="What do I enjoy doing?"),
+                    ],
+                ),
+            )
+        )
+
+        assert len(results) > 3
+        result4 = results[3]
+        payload4 = ChatCompletionResponse.model_validate(result4.payload)
+
+        # KB memory should have recalled the hobby information
+        first_choice4 = payload4.choices[0]
+        assert first_choice4.finish_reason == FinishReason.stop
+        assert isinstance(first_choice4.message.content, str)
+        # Should mention hiking or mountains
+        content_lower = first_choice4.message.content.lower()
+        assert "hik" in content_lower or "mountain" in content_lower
+
+        # Verify that input messages include recalled memories
+        assert len(payload4.input_messages) > 1
+        # System prompt should be first
+        assert payload4.input_messages[0].role == Role.system

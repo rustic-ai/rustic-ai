@@ -4,11 +4,13 @@ import json
 from typing import List, Literal, Optional
 import uuid
 
-from pydantic import PrivateAttr
+from fsspec import filesystem
+from fsspec.implementations.asyn_wrapper import AsyncFileSystemWrapper
+from fsspec.implementations.dirfs import DirFileSystem as FileSystem
+from pydantic import Field, PrivateAttr
 
 from rustic_ai.core.agents.commons.media import MediaLink
 from rustic_ai.core.guild.agent import Agent, ProcessContext
-from rustic_ai.core.guild.agent_ext.depends.filesystem.filesystem import FileSystem
 from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     AssistantMessage,
     FunctionMessage,
@@ -19,6 +21,7 @@ from rustic_ai.core.guild.agent_ext.depends.llm.models import (
 )
 from rustic_ai.core.knowledgebase.agent_config import KnowledgeAgentConfig
 from rustic_ai.core.knowledgebase.kbindex_backend import KBIndexBackend
+from rustic_ai.core.knowledgebase.kbindex_backend_memory import InMemoryKBIndexBackend
 from rustic_ai.core.knowledgebase.knowledge_base import KnowledgeBase
 from rustic_ai.core.knowledgebase.pipeline_executor import SimplePipelineExecutor
 from rustic_ai.llm_agent.memories.memories_store import MemoriesStore
@@ -31,18 +34,25 @@ class KnowledgeBasedMemoriesStore(MemoriesStore):
     This memory store indexes conversation messages into a vector database using the
     KnowledgeBase infrastructure, enabling semantic search across conversation history.
 
-    Requires guild-scoped dependencies:
-    - filesystem: FileSystem for storing knowledge base data
-    - kb_backend: KBIndexBackend for vector storage
+    The store creates its own instances of FileSystem and KBIndexBackend, so agents
+    do not need to have these dependencies configured.
 
     Configuration:
     - context_window_size: Number of recent messages to use for building search queries
     - recall_limit: Maximum number of memories to retrieve during recall
+    - path_base: Base path for storing knowledge base data (defaults to "/tmp/kb_memories")
+    - protocol: Filesystem protocol (defaults to "file")
+    - storage_options: Additional storage options (defaults to {"auto_mkdir": True})
+    - asynchronous: Whether to use async filesystem (defaults to True)
     """
 
     memory_type: Literal["knowledge_based"] = "knowledge_based"
     context_window_size: int = 5
     recall_limit: int = 10
+    path_base: str = "/tmp/kb_memories"
+    protocol: str = "file"
+    storage_options: dict = Field(default_factory=lambda: {"auto_mkdir": True})
+    asynchronous: bool = True
 
     _kb: Optional[KnowledgeBase] = PrivateAttr(default=None)
     _message_counter: int = PrivateAttr(default=0)
@@ -53,23 +63,33 @@ class KnowledgeBasedMemoriesStore(MemoriesStore):
         """
         Lazily initialize and return the KnowledgeBase instance.
 
-        Uses guild-scoped dependencies for filesystem and kb_backend.
+        Creates new instances of FileSystem and KBIndexBackend instead of using
+        guild-scoped dependencies.
         """
         if self._kb is not None:
             return self._kb
 
-        # Get guild-scoped dependencies
+        # Create filesystem instance
         if self._filesystem is None:
-            fs_resolver = agent._dependency_resolvers.get("filesystem")
-            if not fs_resolver:
-                raise ValueError("KnowledgeBasedMemoriesStore requires 'filesystem' guild dependency")
-            self._filesystem = fs_resolver.get_or_resolve(agent.guild_id)
+            basefs = filesystem(
+                self.protocol,
+                asynchronous=self.asynchronous,
+                **self.storage_options,
+            )
 
+            if self.asynchronous and not basefs.__class__.async_impl:
+                basefs = AsyncFileSystemWrapper(basefs)
+
+            self._filesystem = FileSystem(
+                path=f"{self.path_base}/{agent.guild_id}",
+                fs=basefs,
+                asynchronous=self.asynchronous,
+                storage_options=self.storage_options,
+            )
+
+        # Create kb_backend instance
         if self._kb_backend is None:
-            kb_resolver = agent._dependency_resolvers.get("kb_backend")
-            if not kb_resolver:
-                raise ValueError("KnowledgeBasedMemoriesStore requires 'kb_backend' guild dependency")
-            self._kb_backend = kb_resolver.get_or_resolve(agent.guild_id)
+            self._kb_backend = InMemoryKBIndexBackend()
 
         # Create KnowledgeBase with default text configuration
         cfg = KnowledgeAgentConfig.default_text(id=f"kb_memory_{agent.guild_id}")
@@ -85,53 +105,35 @@ class KnowledgeBasedMemoriesStore(MemoriesStore):
         self._kb = kb
         return kb
 
-    def _serialize_message(self, message: LLMMessage) -> str:
+    def _serialize_message(self, message: LLMMessage) -> tuple[str, dict]:
         """
-        Convert an LLMMessage to a structured text format for indexing.
+        Convert an LLMMessage to text content and metadata.
 
-        Preserves all message metadata including role, content, and additional fields.
+        Returns:
+            tuple: (content_str, metadata_dict) where content is the message text
+                   and metadata contains role, timestamp, and other message fields.
         """
         timestamp = datetime.now(UTC).isoformat()
         self._message_counter += 1
-        message_id = f"msg_{self._message_counter}_{uuid.uuid4().hex[:8]}"
 
-        # Extract message data
-        data = {
-            "message_id": message_id,
-            "timestamp": timestamp,
+        # Build metadata dictionary with all message fields
+        metadata = {
             "role": message.role,
-            "content": message.content,
+            "timestamp": timestamp,
         }
 
         # Include optional fields if present
         if hasattr(message, "name") and message.name:
-            data["name"] = message.name
+            metadata["name"] = message.name
         if hasattr(message, "tool_calls") and message.tool_calls:
-            data["tool_calls"] = [tc.model_dump() if hasattr(tc, "model_dump") else tc for tc in message.tool_calls]
+            # Serialize tool calls to JSON
+            metadata["tool_calls"] = json.dumps(
+                [tc.model_dump() if hasattr(tc, "model_dump") else tc for tc in message.tool_calls]
+            )
         if hasattr(message, "tool_call_id") and message.tool_call_id:
-            data["tool_call_id"] = message.tool_call_id
+            metadata["tool_call_id"] = message.tool_call_id
 
-        # Serialize to JSON for storage (handle complex types)
-        def default_serializer(obj):
-            if hasattr(obj, "model_dump"):
-                return obj.model_dump()
-            elif hasattr(obj, "__dict__"):
-                return obj.__dict__
-            return str(obj)
-
-        json_data = json.dumps(data, indent=2, default=default_serializer)
-
-        # Create human-readable format
-        text_parts = [
-            f"Role: {message.role}",
-            f"Timestamp: {timestamp}",
-            f"MessageID: {message_id}",
-        ]
-
-        if message.name:
-            text_parts.append(f"Name: {message.name}")
-
-        # Handle content (can be string or list)
+        # Extract content as plain text
         content_str = ""
         if isinstance(message.content, str):
             content_str = message.content
@@ -142,35 +144,35 @@ class KnowledgeBasedMemoriesStore(MemoriesStore):
         else:
             content_str = str(message.content)
 
-        text_parts.append(f"Content: {content_str}")
+        return content_str, metadata
 
-        # Add separator and JSON
-        text_parts.append("---")
-        text_parts.append(json_data)
-
-        return "\n".join(text_parts)
-
-    def _deserialize_message(self, text: str) -> Optional[LLMMessage]:
+    def _deserialize_message(self, content: str, metadata: dict) -> Optional[LLMMessage]:
         """
-        Parse a stored message back into an LLMMessage object.
+        Reconstruct an LLMMessage from content and metadata.
 
-        Extracts the JSON portion after the '---' separator.
+        Args:
+            content: The message text content
+            metadata: Dictionary containing role, timestamp, and other fields
+
+        Returns:
+            LLMMessage object or None if deserialization fails
         """
         try:
-            # Find the JSON portion after the separator
-            if "---" in text:
-                json_part = text.split("---", 1)[1].strip()
-            else:
-                json_part = text
+            # Extract fields from metadata
+            role = metadata.get("role")
+            if not role:
+                return None
 
-            data = json.loads(json_part)
+            name = metadata.get("name")
+            tool_call_id = metadata.get("tool_call_id")
 
-            # Reconstruct message based on role
-            role = data["role"]
-            content = data["content"]
-            name = data.get("name")
-            tool_calls = data.get("tool_calls")
-            tool_call_id = data.get("tool_call_id")
+            # Deserialize tool_calls if present
+            tool_calls = None
+            if "tool_calls" in metadata:
+                try:
+                    tool_calls = json.loads(metadata["tool_calls"])
+                except (json.JSONDecodeError, TypeError):
+                    tool_calls = metadata["tool_calls"]
 
             # Create the appropriate message type based on role
             if role == "user":
@@ -188,7 +190,7 @@ class KnowledgeBasedMemoriesStore(MemoriesStore):
                 msg = UserMessage(content=content)
 
             return msg
-        except (json.JSONDecodeError, KeyError, ValueError) as e:
+        except (KeyError, ValueError, TypeError) as e:
             # Log warning but don't fail
             print(f"Warning: Failed to deserialize message: {e}")
             return None
@@ -197,10 +199,10 @@ class KnowledgeBasedMemoriesStore(MemoriesStore):
         """
         Store a memory message by indexing it in the KnowledgeBase.
 
-        The message is converted to a structured text format and indexed via the KB pipeline.
+        The message content is stored as text and metadata is attached to the MediaLink.
         """
-        # Serialize the message
-        serialized = self._serialize_message(message)
+        # Serialize the message to content and metadata
+        content_str, metadata = self._serialize_message(message)
 
         # Create a unique message ID
         msg_id = f"memory_{self._message_counter}_{uuid.uuid4().hex[:8]}"
@@ -209,28 +211,45 @@ class KnowledgeBasedMemoriesStore(MemoriesStore):
             kb = await self._get_kb(agent, ctx)
 
             # Create a temporary file content
-            content_bytes = serialized.encode("utf-8")
+            content_bytes = content_str.encode("utf-8")
 
-            # Write to filesystem using fsspec directly
-            file_path = f"{agent.guild_id}/guild/memories/{msg_id}.txt"
+            # Write to filesystem
+            # Note: filesystem is already rooted at {path_base}/{agent.guild_id}
+            file_path = "guild/memories/" + f"{msg_id}.txt"
 
-            # Ensure directory exists
-            dir_path = f"{agent.guild_id}/guild/memories"
-            if self._filesystem and not self._filesystem.exists(dir_path):
-                self._filesystem.makedirs(dir_path, exist_ok=True)
-
-            # Write file
+            # Ensure directory exists and write files
+            dir_path = "guild/memories"
             if self._filesystem:
-                with self._filesystem.open(file_path, "wb") as f:
+                # Get the underlying filesystem for operations
+                fs = getattr(self._filesystem, 'fs', self._filesystem)
+
+                # Build full paths (DirFileSystem prepends its path automatically)
+                full_file_path = file_path
+                full_meta_path = file_path + ".metadata"
+
+                # Create directory if needed (sync operation on local fs)
+                if not self._filesystem.exists(dir_path):
+                    self._filesystem.makedirs(dir_path, exist_ok=True)
+
+                # Write content file
+                with self._filesystem.open(full_file_path, "wb") as f:
                     f.write(content_bytes)
 
-            # Create MediaLink pointing to this content
+                # Write sidecar metadata file using KB naming convention
+                # Format: guild/memories/.memory_1_abc.txt.meta (not .metadata!)
+                dir_part, file_part = file_path.rsplit("/", 1)
+                full_meta_path = f"{dir_part}/.{file_part}.meta"
+
+                meta_json = json.dumps(metadata, indent=2).encode("utf-8")
+                with self._filesystem.open(full_meta_path, "wb") as f:
+                    f.write(meta_json)
+
+            # Create MediaLink (metadata is now in sidecar file)
             media = MediaLink(
                 id=msg_id,
                 url=f"file:///{file_path}",
                 name=f"{msg_id}.txt",
                 mimetype="text/plain",
-                metadata={"type": "memory", "role": message.role},
             )
 
             # Index via KB pipeline
@@ -239,24 +258,18 @@ class KnowledgeBasedMemoriesStore(MemoriesStore):
             except Exception as e:
                 print(f"Warning: Failed to index memory: {e}")
 
-        # Run the async indexing
+        # Run the async indexing and wait for completion
         try:
             loop = asyncio.get_running_loop()
-        except RuntimeError:
-            loop = None
+            # Event loop is running - we need to run in a thread to avoid blocking
+            import concurrent.futures
 
-        if loop is None:
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future = executor.submit(asyncio.run, _index_message())
+                future.result()  # Wait for completion
+        except RuntimeError:
             # No event loop running, create one
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            try:
-                loop.run_until_complete(_index_message())
-            finally:
-                loop.close()
-                asyncio.set_event_loop(None)
-        else:
-            # Event loop exists, run in it
-            asyncio.create_task(_index_message())
+            asyncio.run(_index_message())
 
     def recall(self, agent: Agent, ctx: ProcessContext, context: List[LLMMessage]) -> List[LLMMessage]:
         """
@@ -302,10 +315,22 @@ class KnowledgeBasedMemoriesStore(MemoriesStore):
             # Parse results back into LLMMessage objects
             recalled_messages = []
             for result in results.results:
-                # Extract text content from payload
+                # Extract text content and metadata from payload
                 text_content = result.payload.get("text", "")
-                if text_content:
-                    msg = self._deserialize_message(text_content)
+
+                # KB stores metadata from MediaLink in the "metadata" JSON column
+                # Try to get it from there first, otherwise use individual fields
+                metadata = result.payload.get("metadata", {})
+                if not metadata or not isinstance(metadata, dict):
+                    # Fallback: try to extract from denormalized fields
+                    metadata = {
+                        k: v
+                        for k, v in result.payload.items()
+                        if k not in ["text", "chunk_id", "_debug", "metadata"]
+                    }
+
+                if text_content and metadata:
+                    msg = self._deserialize_message(text_content, metadata)
                     if msg:
                         recalled_messages.append(msg)
 
@@ -313,12 +338,13 @@ class KnowledgeBasedMemoriesStore(MemoriesStore):
 
         # Run the async search
         try:
-            return asyncio.get_event_loop().run_until_complete(_search_memories())
+            loop = asyncio.get_running_loop()
+            # Event loop is running - we need to run in a thread to avoid blocking
+            import concurrent.futures
+
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future = executor.submit(asyncio.run, _search_memories())
+                return future.result()  # Wait for completion and return result
         except RuntimeError:
-            # If no event loop exists, create one
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            try:
-                return loop.run_until_complete(_search_memories())
-            finally:
-                loop.close()
+            # No event loop running, use asyncio.run
+            return asyncio.run(_search_memories())
