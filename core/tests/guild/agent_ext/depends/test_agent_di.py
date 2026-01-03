@@ -28,13 +28,13 @@ class FilepathDependencyResolver(DependencyResolver):
         super().__init__()
         self.prefix = prefix
 
-    def resolve(self, guild_id: str, agent_id: Optional[str] = None) -> str:
+    def resolve(self, org_id: str, guild_id: str, agent_id: Optional[str] = None) -> str:
         return f"{self.prefix}/filepath_{guild_id}_{agent_id}"
 
 
 class SearchIndexDependencyResolver(DependencyResolver):
 
-    def resolve(self, guild_id: str, agent_id: Optional[str] = None) -> str:
+    def resolve(self, org_id: str, guild_id: str, agent_id: Optional[str] = None) -> str:
         return f"searchindex_{guild_id}_{agent_id}"
 
 

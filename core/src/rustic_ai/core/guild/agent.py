@@ -998,13 +998,16 @@ class ProcessorHelper:
     def resolve_dependency(
         resolver: DependencyResolver,
         dep: AgentDependency,
+        org_id: str,
         guild_id: str,
         agent_id: str,
     ):
-        if dep.guild_level:
-            return resolver.get_or_resolve(guild_id=guild_id)
+        if dep.org_level:
+            return resolver.get_or_resolve(org_id=org_id)
+        elif dep.guild_level:
+            return resolver.get_or_resolve(org_id=org_id, guild_id=guild_id)
         else:
-            return resolver.get_or_resolve(guild_id=guild_id, agent_id=agent_id)
+            return resolver.get_or_resolve(org_id=org_id, guild_id=guild_id, agent_id=agent_id)
 
     @staticmethod
     def run_coroutine_blocking(self, func, dependencies, context):
@@ -1118,7 +1121,11 @@ def processor(
 
                 dependencies = {
                     dep.variable_name: ProcessorHelper.resolve_dependency(
-                        self._dependency_resolvers[dep.dependency_key], dep, self.guild_id, self.id
+                        self._dependency_resolvers[dep.dependency_key],
+                        dep,
+                        self.get_organization(),
+                        self.guild_id,
+                        self.id,
                     )
                     for dep in deps
                 }
