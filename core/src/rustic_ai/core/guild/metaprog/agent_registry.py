@@ -37,6 +37,10 @@ class AgentDependency(BaseModel):
     """
     Whether the dependency is at the guild level. This is shared across all agents in the guild.
     """
+    org_level: bool = False
+    """
+    Whether the dependency is at the org level. This is shared across all guilds in the organization.
+    """
 
     @computed_field  # type: ignore[misc]
     @property
@@ -44,7 +48,7 @@ class AgentDependency(BaseModel):
         """
         Whether the dependency is at the agent level.
         """
-        return not self.guild_level
+        return not self.guild_level and not self.org_level
 
     @computed_field  # type: ignore[misc]
     @property
@@ -57,12 +61,23 @@ class AgentDependency(BaseModel):
         if len(deps) == 1:
             return cls(dependency_key=deps[0])
         elif len(deps) == 2:
+            # "key:var" or "key:guild" or "key:org"
+            if deps[1].lower() == "guild":
+                return cls(dependency_key=deps[0], guild_level=True)
+            elif deps[1].lower() == "org":
+                return cls(dependency_key=deps[0], org_level=True)
             return cls(dependency_key=deps[0], dependency_var=deps[1])
         elif len(deps) >= 3:
+            # "key:var:guild" or "key:var:org" or "key:var:True" (legacy)
+            scope = deps[2].lower() if deps[2] else ""
+            # Support legacy "True"/"False" for guild_level
+            guild_level = scope == "guild" or scope == "true"
+            org_level = scope == "org"
             return cls(
                 dependency_key=deps[0],
                 dependency_var=deps[1] or None,
-                guild_level=bool(deps[2]),
+                guild_level=guild_level,
+                org_level=org_level,
             )
 
 

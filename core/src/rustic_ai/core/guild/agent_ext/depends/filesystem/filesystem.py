@@ -19,7 +19,7 @@ class FileSystemResolver(DependencyResolver[FileSystem]):
         self.storage_options = storage_options
         self.asynchronous = asynchronous
 
-    def resolve(self, guild_id: str, agent_id: str) -> FileSystem:
+    def resolve(self, org_id: str, guild_id: str, agent_id: str) -> FileSystem:
 
         basefs = filesystem(
             self.protocol,
@@ -31,7 +31,7 @@ class FileSystemResolver(DependencyResolver[FileSystem]):
             basefs = AsyncFileSystemWrapper(basefs)
 
         return FileSystem(
-            path=f"{self.path_base}/{guild_id}/{agent_id}",
+            path=f"{self.path_base}/{org_id}/{guild_id}/{agent_id}",
             fs=basefs,
             asynchronous=self.asynchronous,
             storage_options=self.storage_options,

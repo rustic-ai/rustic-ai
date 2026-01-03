@@ -47,5 +47,5 @@ class CharacterSplitterResolver(DependencyResolver[TextSplitter]):
         splitter_conf = CharacterSplitterConf.model_validate(conf)
         self.splitter = CharacterSplitter(splitter_conf)
 
-    def resolve(self, guild_id: str, agent_id: str) -> TextSplitter:
+    def resolve(self, org_id: str, guild_id: str, agent_id: str) -> TextSplitter:
         return self.splitter

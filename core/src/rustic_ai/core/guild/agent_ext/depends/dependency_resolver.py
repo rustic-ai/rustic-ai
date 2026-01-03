@@ -11,6 +11,7 @@ from rustic_ai.core.utils.basic_class_utils import get_class_from_name
 DT = TypeVar("DT")
 D = TypeVar("D")
 
+ORG_GLOBAL = "ORG_GLOBAL"
 GUILD_GLOBAL = "GUILD_GLOBAL"
 
 
@@ -31,45 +32,53 @@ class DependencyResolver(ABC, Generic[DT]):
     memoize_resolution: bool = True
 
     def __init__(self):
-        self.cache: Dict[str, Dict[str, DT]] = {}
+        self.cache: Dict[str, DT] = {}
         self._dependency_specs: Dict[str, DependencySpec] = {}
         self._injectors: Dict[str, DependencyResolver] = {}
 
     @abstractmethod
-    def resolve(self, guild_id: str, agent_id: str) -> DT:
+    def resolve(self, org_id: str, guild_id: str, agent_id: str) -> DT:
         """
         Resolve a dependency.
 
         Args:
-            guild_id: The ID of the guild.
-            agent_id: The ID of the agent. If this is None, resolve the dependency is guild-scoped.
+            org_id: The ID of the organization.
+            guild_id: The ID of the guild. ORG_GLOBAL for org-scoped dependencies.
+            agent_id: The ID of the agent. GUILD_GLOBAL for guild-scoped dependencies.
 
         Returns:
             The resolved dependency.
         """
         pass  # pragma: no cover
 
-    def get_or_resolve(self, guild_id: str, agent_id: Optional[str] = None) -> DT:
+    def get_or_resolve(
+        self,
+        org_id: str,
+        guild_id: Optional[str] = None,
+        agent_id: Optional[str] = None,
+    ) -> DT:
         """
         Get or resolve a dependency.
 
         Args:
-            guild_id: The ID of the guild.
-            agent_id: The ID of the agent. If this is None, resolve the dependency is guild-scoped.
+            org_id: The ID of the organization.
+            guild_id: The ID of the guild. If None, resolves as org-scoped.
+            agent_id: The ID of the agent. If None, resolves as guild-scoped.
 
         Returns:
             The resolved dependency.
         """
-        agent_id = agent_id or GUILD_GLOBAL
-        if self.memoize_resolution:
-            if guild_id not in self.cache:
-                self.cache[guild_id] = {}
+        resolved_guild_id = guild_id or ORG_GLOBAL
+        resolved_agent_id = agent_id or GUILD_GLOBAL
 
-            if agent_id not in self.cache[guild_id]:
-                self.cache[guild_id][agent_id] = self.resolve(guild_id, agent_id)
-            return self.cache[guild_id][agent_id]
+        cache_key = f"{org_id}:{resolved_guild_id}:{resolved_agent_id}"
+
+        if self.memoize_resolution:
+            if cache_key not in self.cache:
+                self.cache[cache_key] = self.resolve(org_id, resolved_guild_id, resolved_agent_id)
+            return self.cache[cache_key]
         else:
-            return self.resolve(guild_id, agent_id)
+            return self.resolve(org_id, resolved_guild_id, resolved_agent_id)
 
     @classmethod
     def get_qualified_class_name(cls) -> str:
@@ -90,13 +99,21 @@ class DependencyResolver(ABC, Generic[DT]):
         """
         self._dependency_specs = specs
 
-    def inject(self, cls: Type[D], name: str, guild_id: str, agent_id: Optional[str] = None) -> D:
+    def inject(
+        self,
+        cls: Type[D],
+        name: str,
+        org_id: str,
+        guild_id: str,
+        agent_id: Optional[str] = None,
+    ) -> D:
         """
         Inject a dependency into the resolver resolving it from the dependency specs.
 
         Args:
             cls: The class of the dependency.
             name: The name of the dependency.
+            org_id: The ID of the organization.
             guild_id: The ID of the guild.
             agent_id: The ID of the agent. If this is None, resolve the dependency is guild-scoped.
 
@@ -115,7 +132,7 @@ class DependencyResolver(ABC, Generic[DT]):
             injector.set_dependency_specs(self._dependency_specs)
             self._injectors[name] = injector
 
-        dep = self._injectors[name].get_or_resolve(guild_id, agent_id)
+        dep = self._injectors[name].get_or_resolve(org_id, guild_id, agent_id)
 
         if not issubclass(type(dep), cls):
             raise ValueError(f"Dependency {name} is not an instance of {cls}.")

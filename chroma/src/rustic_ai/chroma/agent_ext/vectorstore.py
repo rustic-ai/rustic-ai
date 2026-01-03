@@ -79,9 +79,9 @@ class ChromaResolver(DependencyResolver[VectorStore]):
         super().__init__()
         self.chroma_settings = chroma_settings
 
-    def resolve(self, guild_id: str, agent_id: str) -> VectorStore:
+    def resolve(self, org_id: str, guild_id: str, agent_id: str) -> VectorStore:
         try:
-            embeddings: Embeddings = self.inject(Embeddings, "embeddings", guild_id, agent_id)
+            embeddings: Embeddings = self.inject(Embeddings, "embeddings", org_id, guild_id, agent_id)
         except Exception as e:
             logging.error(f"Error creating embeddings: {e}")
             raise
@@ -96,6 +96,8 @@ class ChromaResolver(DependencyResolver[VectorStore]):
 
         ef = ChromaEmbeddingFunction(embeddings)
 
-        collection = client.get_or_create_collection(name=f"rusticai_{guild_id}_{agent_id}", embedding_function=ef)
+        collection = client.get_or_create_collection(
+            name=f"rusticai_{org_id}_{guild_id}_{agent_id}", embedding_function=ef
+        )
 
         return Chroma(collection)
