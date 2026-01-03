@@ -220,9 +220,6 @@ class KnowledgeBasedMemoriesStore(MemoriesStore):
             # Ensure directory exists and write files
             dir_path = "guild/memories"
             if self._filesystem:
-                # Get the underlying filesystem for operations
-                fs = getattr(self._filesystem, 'fs', self._filesystem)
-
                 # Build full paths (DirFileSystem prepends its path automatically)
                 full_file_path = file_path
                 full_meta_path = file_path + ".metadata"
@@ -324,9 +321,7 @@ class KnowledgeBasedMemoriesStore(MemoriesStore):
                 if not metadata or not isinstance(metadata, dict):
                     # Fallback: try to extract from denormalized fields
                     metadata = {
-                        k: v
-                        for k, v in result.payload.items()
-                        if k not in ["text", "chunk_id", "_debug", "metadata"]
+                        k: v for k, v in result.payload.items() if k not in ["text", "chunk_id", "_debug", "metadata"]
                     }
 
                 if text_content and metadata:

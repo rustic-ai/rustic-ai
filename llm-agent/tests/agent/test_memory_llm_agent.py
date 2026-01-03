@@ -184,9 +184,7 @@ class TestMemoryEnabledLLMAgent:
                 generator,
                 ChatCompletionRequest(
                     messages=[
-                        UserMessage(
-                            content="My favorite color is blue. Remember this for later. Just acknowledge."
-                        ),
+                        UserMessage(content="My favorite color is blue. Remember this for later. Just acknowledge."),
                     ],
                 ),
             )
@@ -206,9 +204,7 @@ class TestMemoryEnabledLLMAgent:
                 generator,
                 ChatCompletionRequest(
                     messages=[
-                        UserMessage(
-                            content="I enjoy hiking in the mountains. Keep this in mind. Just acknowledge."
-                        ),
+                        UserMessage(content="I enjoy hiking in the mountains. Keep this in mind. Just acknowledge."),
                     ],
                 ),
             )
@@ -241,14 +237,14 @@ class TestMemoryEnabledLLMAgent:
         assert isinstance(first_choice3.message.content, str)
 
         # Verify that memories were recalled (input messages should include recalled context)
-        assert len(payload3.input_messages) > 2, (
-            f"Expected more than 2 input messages (system + recalled + user), got {len(payload3.input_messages)}"
-        )
+        assert (
+            len(payload3.input_messages) > 2
+        ), f"Expected more than 2 input messages (system + recalled + user), got {len(payload3.input_messages)}"
 
         # Should mention blue
-        assert "blue" in first_choice3.message.content.lower(), (
-            f"Expected 'blue' in response but got: {first_choice3.message.content}"
-        )
+        assert (
+            "blue" in first_choice3.message.content.lower()
+        ), f"Expected 'blue' in response but got: {first_choice3.message.content}"
 
         # Fourth interaction: Query about hobby (should recall from KB)
         agent._on_message(
