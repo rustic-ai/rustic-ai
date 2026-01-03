@@ -27,7 +27,7 @@ async def _write_content(fs, library: str, knol: Knol, content: bytes) -> None:
 @pytest.mark.asyncio
 async def test_image_whole_and_bytes(tmp_path):
     fsr = FileSystemResolver(path_base=str(tmp_path), protocol="file", storage_options={}, asynchronous=True)
-    fs = fsr.resolve("test_guild", "test_agent")
+    fs = fsr.resolve("test_org", "test_guild", "test_agent")
     library = "library"
 
     # Minimal fake image bytes (we don't decode)
@@ -83,7 +83,7 @@ async def test_image_whole_and_bytes(tmp_path):
 @pytest.mark.asyncio
 async def test_audio_byte_and_wav_time(tmp_path):
     fsr = FileSystemResolver(path_base=str(tmp_path), protocol="file", storage_options={}, asynchronous=True)
-    fs = fsr.resolve("test_guild", "test_agent")
+    fs = fsr.resolve("test_org", "test_guild", "test_agent")
     library = "library"
 
     # Create a tiny in-memory WAV: 1 channel, 8kHz, 1s of silence
@@ -154,7 +154,7 @@ async def test_audio_byte_and_wav_time(tmp_path):
 @pytest.mark.asyncio
 async def test_video_whole_and_bytes(tmp_path):
     fsr = FileSystemResolver(path_base=str(tmp_path), protocol="file", storage_options={}, asynchronous=True)
-    fs = fsr.resolve("test_guild", "test_agent")
+    fs = fsr.resolve("test_org", "test_guild", "test_agent")
     library = "library"
 
     # Minimal fake video bytes (we don't decode)
