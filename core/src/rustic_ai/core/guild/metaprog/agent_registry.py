@@ -23,6 +23,19 @@ class HandlerEntry(BaseModel):
 class AgentDependency(BaseModel):
     """
     Represents a dependency for an agent.
+
+    Scope Precedence:
+        When resolving dependencies, the scope is determined by the following precedence
+        (highest to lowest):
+        1. org_level - If True, dependency is shared across all guilds in the organization.
+           The resolver receives org_id only (guild_id=ORG_GLOBAL, agent_id=ORG_GLOBAL).
+        2. guild_level - If True, dependency is shared across all agents in the guild.
+           The resolver receives org_id and guild_id (agent_id=GUILD_GLOBAL).
+        3. agent_level - Default. Dependency is scoped to the specific agent.
+           The resolver receives org_id, guild_id, and agent_id.
+
+        Note: If both org_level and guild_level are True, org_level takes precedence
+        and guild_level is ignored.
     """
 
     dependency_key: str
@@ -36,10 +49,12 @@ class AgentDependency(BaseModel):
     guild_level: bool = False
     """
     Whether the dependency is at the guild level. This is shared across all agents in the guild.
+    If both org_level and guild_level are True, org_level takes precedence.
     """
     org_level: bool = False
     """
     Whether the dependency is at the org level. This is shared across all guilds in the organization.
+    Takes precedence over guild_level if both are True.
     """
 
     @computed_field  # type: ignore[misc]
