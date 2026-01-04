@@ -62,14 +62,21 @@ class DependencyResolver(ABC, Generic[DT]):
 
         Args:
             org_id: The ID of the organization.
-            guild_id: The ID of the guild. If None, resolves as org-scoped.
-            agent_id: The ID of the agent. If None, resolves as guild-scoped.
+            guild_id: The ID of the guild. If None, resolves as org-scoped (ORG_GLOBAL).
+            agent_id: The ID of the agent. If None, resolves as guild-scoped (GUILD_GLOBAL).
+                      If guild_id is also None, resolves as org-scoped (ORG_GLOBAL).
 
         Returns:
             The resolved dependency.
         """
-        resolved_guild_id = guild_id or ORG_GLOBAL
-        resolved_agent_id = agent_id or GUILD_GLOBAL
+        # If guild_id is None, this is an org-scoped dependency
+        # Use ORG_GLOBAL for both guild_id and agent_id
+        if guild_id is None:
+            resolved_guild_id = ORG_GLOBAL
+            resolved_agent_id = ORG_GLOBAL
+        else:
+            resolved_guild_id = guild_id
+            resolved_agent_id = agent_id or GUILD_GLOBAL
 
         cache_key = f"{org_id}:{resolved_guild_id}:{resolved_agent_id}"
 
