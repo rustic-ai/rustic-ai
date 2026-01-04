@@ -615,8 +615,19 @@ class ProcessContext[MDT]:
                     logging.exception(f"Error in on send fixture {fixture.__name__}: {e}")
 
         next_steps: List[RoutingRule] = []
-        if self._origin_message.routing_slip:
-            next_steps = self._origin_message.routing_slip.get_next_steps(
+
+        # For cross-guild messages (origin_guild_stack is non-empty), use local guild's routing rules
+        # instead of the external guild's routing slip
+        is_cross_guild_message = len(self._origin_message.origin_guild_stack) > 0
+
+        # Use guild spec routes for cross-guild messages, otherwise use the message's routing slip
+        routing_slip_to_use = (
+            self._agent.guild_spec.routes if is_cross_guild_message
+            else self._origin_message.routing_slip
+        )
+
+        if routing_slip_to_use:
+            next_steps = routing_slip_to_use.get_next_steps(
                 self._agent.get_agent_tag(),
                 self._agent.get_qualified_class_name(),
                 self._method_name,
@@ -773,9 +784,19 @@ class ProcessContext[MDT]:
             )
         )
 
-        routing_slip = (
-            self._origin_message.routing_slip.model_copy(deep=True) if self._origin_message.routing_slip else None
-        )
+        # For cross-guild messages, use local guild's routing slip instead of external guild's
+        is_cross_guild_message = len(self._origin_message.origin_guild_stack) > 0
+
+        if is_cross_guild_message:
+            # Use local guild's routing rules for cross-guild messages
+            routing_slip = (
+                self._agent.guild_spec.routes.model_copy(deep=True) if self._agent.guild_spec.routes else None
+            )
+        else:
+            # Preserve routing slip for messages within the same guild
+            routing_slip = (
+                self._origin_message.routing_slip.model_copy(deep=True) if self._origin_message.routing_slip else None
+            )
 
         routed_context = routed.context if routed.context else {}
 
