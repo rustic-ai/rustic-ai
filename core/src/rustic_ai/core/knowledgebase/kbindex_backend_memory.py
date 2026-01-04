@@ -435,5 +435,5 @@ class InMemoryKBIndexBackendResolver(DependencyResolver[KBIndexBackend]):
         self.backend_profile = (backend_profile or "memory").lower()
         self.kwargs = kwargs
 
-    def resolve(self, guild_id: str, agent_id: str) -> KBIndexBackend:  # type: ignore[override]
+    def resolve(self, org_id: str, guild_id: str, agent_id: str) -> KBIndexBackend:  # type: ignore[override]
         return InMemoryKBIndexBackend()

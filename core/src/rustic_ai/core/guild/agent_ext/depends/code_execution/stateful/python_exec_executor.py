@@ -251,7 +251,7 @@ class PythonExecExecutorResolver(DependencyResolver[CodeExecutor]):
 
     This resolver can be configured with whitelisted imports and default imports
     that will be passed to each created executor instance. Each agent gets its
-    own cached executor instance through the guild_id/agent_id cache structure.
+    own cached executor instance through the org_id/guild_id/agent_id cache structure.
     """
 
     memoize_resolution = True  # Cache per agent since the cache structure already provides isolation
@@ -263,12 +263,13 @@ class PythonExecExecutorResolver(DependencyResolver[CodeExecutor]):
         self.whitelisted_imports = whitelisted_imports
         self.default_imports = default_imports
 
-    def resolve(self, guild_id: str, agent_id: str) -> CodeExecutor:
-        """Create a new PythonExecExecutor instance for the given guild/agent.
+    def resolve(self, org_id: str, guild_id: str, agent_id: str) -> CodeExecutor:
+        """Create a new PythonExecExecutor instance for the given org/guild/agent.
         The instance will be cached and reused for subsequent calls from the
         same agent, but different agents get different instances.
 
         Args:
+            org_id: The ID of the organization requesting the executor
             guild_id: The ID of the guild requesting the executor
             agent_id: The ID of the agent requesting the executor
 

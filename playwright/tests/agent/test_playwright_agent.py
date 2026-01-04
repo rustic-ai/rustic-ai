@@ -113,7 +113,7 @@ class TestPlaywrightAgent:
         assert selected_result.payload["url"] is not None
         assert selected_result.payload["on_filesystem"] is True
 
-        fs = filesystem.to_resolver().resolve(agent.guild_id, "GUILD_GLOBAL")
+        fs = filesystem.to_resolver().resolve(agent.get_organization(), agent.guild_id, "GUILD_GLOBAL")
 
         assert fs.exists(selected_result.payload["url"])
 
@@ -206,5 +206,5 @@ class TestPlaywrightAgent:
 
         for result in results[:-1]:
             assert result.payload["url"].endswith(".html") or result.payload["url"].endswith(".txt")
-            fs = filesystem.to_resolver().resolve(agent.guild_id, "GUILD_GLOBAL")
+            fs = filesystem.to_resolver().resolve(agent.get_organization(), agent.guild_id, "GUILD_GLOBAL")
             assert fs.exists(result.payload["url"])

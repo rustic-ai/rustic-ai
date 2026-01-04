@@ -56,12 +56,13 @@ class TestPix2PixAgent:
 
         fs = filesystem(protocol, **protocol_props)
 
-        dfs = FileSystem(path="/tmp/pix2pix_guild/GUILD_GLOBAL/", fs=fs)
+        dfs = FileSystem(path=f"/tmp/{org_id}/pix2pix_guild/GUILD_GLOBAL/", fs=fs)
 
         image_name = "image_gen_prompt.png"
         data_file_path = importlib.resources.files("huggingface.tests.resources").joinpath(image_name)
         print(f"resource file is {data_file_path}")
-        data_file_in_fs_path = "/tmp/pix2pix_guild/GUILD_GLOBAL/"
+        data_file_in_fs_path = f"/tmp/{org_id}/pix2pix_guild/GUILD_GLOBAL/"
+        fs.mkdirs(data_file_in_fs_path, exist_ok=True)
         fs.copy(data_file_path, data_file_in_fs_path)
         assert fs.exists(data_file_in_fs_path)
 

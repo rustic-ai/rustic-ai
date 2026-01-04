@@ -58,7 +58,7 @@ class TestImagenAgent:
 
         fs = filesystem(protocol, **protocol_props)
 
-        dfs = FileSystem(path="/tmp/imagen_guild/GUILD_GLOBAL", fs=fs)
+        dfs = FileSystem(path=f"/tmp/{org_id}/imagen_guild/GUILD_GLOBAL", fs=fs)
 
         guild = guild_builder.launch(organization_id=org_id)
         probe_agent: ProbeAgent = guild._add_local_agent(probe_spec)  # type: ignore

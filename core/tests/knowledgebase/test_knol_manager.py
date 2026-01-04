@@ -36,7 +36,7 @@ def filesystem(tmp_path):
         asynchronous=True,
     )
 
-    return fsr.resolve("test_guild", "test_agent")
+    return fsr.resolve("test_org", "test_guild", "test_agent")
 
 
 @pytest.fixture

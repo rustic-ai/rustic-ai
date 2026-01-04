@@ -23,6 +23,19 @@ class HandlerEntry(BaseModel):
 class AgentDependency(BaseModel):
     """
     Represents a dependency for an agent.
+
+    Scope Precedence:
+        When resolving dependencies, the scope is determined by the following precedence
+        (highest to lowest):
+        1. org_level - If True, dependency is shared across all guilds in the organization.
+           The resolver receives org_id only (guild_id=ORG_GLOBAL, agent_id=ORG_GLOBAL).
+        2. guild_level - If True, dependency is shared across all agents in the guild.
+           The resolver receives org_id and guild_id (agent_id=GUILD_GLOBAL).
+        3. agent_level - Default. Dependency is scoped to the specific agent.
+           The resolver receives org_id, guild_id, and agent_id.
+
+        Note: If both org_level and guild_level are True, org_level takes precedence
+        and guild_level is ignored.
     """
 
     dependency_key: str
@@ -36,6 +49,12 @@ class AgentDependency(BaseModel):
     guild_level: bool = False
     """
     Whether the dependency is at the guild level. This is shared across all agents in the guild.
+    If both org_level and guild_level are True, org_level takes precedence.
+    """
+    org_level: bool = False
+    """
+    Whether the dependency is at the org level. This is shared across all guilds in the organization.
+    Takes precedence over guild_level if both are True.
     """
 
     @computed_field  # type: ignore[misc]
@@ -44,7 +63,7 @@ class AgentDependency(BaseModel):
         """
         Whether the dependency is at the agent level.
         """
-        return not self.guild_level
+        return not self.guild_level and not self.org_level
 
     @computed_field  # type: ignore[misc]
     @property
@@ -57,12 +76,23 @@ class AgentDependency(BaseModel):
         if len(deps) == 1:
             return cls(dependency_key=deps[0])
         elif len(deps) == 2:
+            # "key:var" or "key:guild" or "key:org"
+            if deps[1].lower() == "guild":
+                return cls(dependency_key=deps[0], guild_level=True)
+            elif deps[1].lower() == "org":
+                return cls(dependency_key=deps[0], org_level=True)
             return cls(dependency_key=deps[0], dependency_var=deps[1])
         elif len(deps) >= 3:
+            # "key:var:guild" or "key:var:org" or "key:var:True" (legacy)
+            scope = deps[2].lower() if deps[2] else ""
+            # Support legacy "True"/"False" for guild_level
+            guild_level = scope == "guild" or scope == "true"
+            org_level = scope == "org"
             return cls(
                 dependency_key=deps[0],
                 dependency_var=deps[1] or None,
-                guild_level=bool(deps[2]),
+                guild_level=guild_level,
+                org_level=org_level,
             )
 
 

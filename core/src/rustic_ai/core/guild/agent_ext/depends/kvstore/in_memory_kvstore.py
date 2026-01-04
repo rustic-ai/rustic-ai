@@ -27,5 +27,5 @@ class InMemoryKVStoreResolver(DependencyResolver[InMemoryKVStore]):
     def __init__(self) -> None:
         super().__init__()
 
-    def resolve(self, guild_id: str, agent_id: str) -> InMemoryKVStore:
+    def resolve(self, org_id: str, guild_id: str, agent_id: str) -> InMemoryKVStore:
         return InMemoryKVStore()

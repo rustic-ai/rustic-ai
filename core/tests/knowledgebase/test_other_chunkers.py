@@ -24,7 +24,7 @@ async def _write_knol(fs, library: str, knol: Knol, content_bytes: bytes) -> Non
 @pytest.mark.asyncio
 async def test_sentence_chunker(tmp_path):
     fsr = FileSystemResolver(path_base=str(tmp_path), protocol="file", storage_options={}, asynchronous=True)
-    fs = fsr.resolve("test_guild", "test_agent")
+    fs = fsr.resolve("test_org", "test_guild", "test_agent")
     library = "library"
     text = "Hello world. How are you? Great!"
     knol = Knol(id="s1", name="t.txt", mimetype="text/plain", size_in_bytes=0)
@@ -40,7 +40,7 @@ async def test_sentence_chunker(tmp_path):
 @pytest.mark.asyncio
 async def test_recursive_character_chunker(tmp_path):
     fsr = FileSystemResolver(path_base=str(tmp_path), protocol="file", storage_options={}, asynchronous=True)
-    fs = fsr.resolve("test_guild", "test_agent")
+    fs = fsr.resolve("test_org", "test_guild", "test_agent")
     library = "library"
     text = "ABCD" * 100
     knol = Knol(id="r1", name="t.txt", mimetype="text/plain", size_in_bytes=0)
@@ -55,7 +55,7 @@ async def test_recursive_character_chunker(tmp_path):
 @pytest.mark.asyncio
 async def test_markdown_header_chunker(tmp_path):
     fsr = FileSystemResolver(path_base=str(tmp_path), protocol="file", storage_options={}, asynchronous=True)
-    fs = fsr.resolve("test_guild", "test_agent")
+    fs = fsr.resolve("test_org", "test_guild", "test_agent")
     library = "library"
     md = """# Title\n\nBody\n\n## Sub\n\nMore"""
     knol = Knol(id="m1", name="d.md", mimetype="text/markdown", size_in_bytes=0)
@@ -70,7 +70,7 @@ async def test_markdown_header_chunker(tmp_path):
 @pytest.mark.asyncio
 async def test_code_language_chunker(tmp_path):
     fsr = FileSystemResolver(path_base=str(tmp_path), protocol="file", storage_options={}, asynchronous=True)
-    fs = fsr.resolve("test_guild", "test_agent")
+    fs = fsr.resolve("test_org", "test_guild", "test_agent")
     library = "library"
     code = """
 def foo():
@@ -91,7 +91,7 @@ class Bar:
 @pytest.mark.asyncio
 async def test_json_path_chunker(tmp_path):
     fsr = FileSystemResolver(path_base=str(tmp_path), protocol="file", storage_options={}, asynchronous=True)
-    fs = fsr.resolve("test_guild", "test_agent")
+    fs = fsr.resolve("test_org", "test_guild", "test_agent")
     library = "library"
     import json
 
@@ -108,7 +108,7 @@ async def test_json_path_chunker(tmp_path):
 @pytest.mark.asyncio
 async def test_noop_chunker_text_only(tmp_path):
     fsr = FileSystemResolver(path_base=str(tmp_path), protocol="file", storage_options={}, asynchronous=True)
-    fs = fsr.resolve("test_guild", "test_agent")
+    fs = fsr.resolve("test_org", "test_guild", "test_agent")
     library = "library"
     text = "noop"
     knol = Knol(id="n1", name="t.txt", mimetype="text/plain", size_in_bytes=0)
@@ -124,7 +124,7 @@ async def test_noop_chunker_text_only(tmp_path):
 async def test_recursive_character_chunker_custom_separators(tmp_path):
     """Test RecursiveCharacterChunker with custom separators."""
     fsr = FileSystemResolver(path_base=str(tmp_path), protocol="file", storage_options={}, asynchronous=True)
-    fs = fsr.resolve("test_guild", "test_agent")
+    fs = fsr.resolve("test_org", "test_guild", "test_agent")
     library = "library"
     text = "First.Second.Third|Fourth|Fifth"
     knol = Knol(id="rc1", name="custom.txt", mimetype="text/plain", size_in_bytes=0)
@@ -147,7 +147,7 @@ async def test_recursive_character_chunker_custom_separators(tmp_path):
 async def test_recursive_character_chunker_keep_separator(tmp_path):
     """Test RecursiveCharacterChunker with keep_separator=True."""
     fsr = FileSystemResolver(path_base=str(tmp_path), protocol="file", storage_options={}, asynchronous=True)
-    fs = fsr.resolve("test_guild", "test_agent")
+    fs = fsr.resolve("test_org", "test_guild", "test_agent")
     library = "library"
     text = "First.Second.Third"
     knol = Knol(id="rc2", name="keep_sep.txt", mimetype="text/plain", size_in_bytes=0)
@@ -169,7 +169,7 @@ async def test_recursive_character_chunker_keep_separator(tmp_path):
 async def test_recursive_character_chunker_empty_separators(tmp_path):
     """Test RecursiveCharacterChunker with empty separators list."""
     fsr = FileSystemResolver(path_base=str(tmp_path), protocol="file", storage_options={}, asynchronous=True)
-    fs = fsr.resolve("test_guild", "test_agent")
+    fs = fsr.resolve("test_org", "test_guild", "test_agent")
     library = "library"
     text = "Hello world"
     knol = Knol(id="rc3", name="empty_sep.txt", mimetype="text/plain", size_in_bytes=0)
@@ -188,7 +188,7 @@ async def test_recursive_character_chunker_empty_separators(tmp_path):
 async def test_recursive_character_chunker_character_fallback(tmp_path):
     """Test RecursiveCharacterChunker character-level fallback."""
     fsr = FileSystemResolver(path_base=str(tmp_path), protocol="file", storage_options={}, asynchronous=True)
-    fs = fsr.resolve("test_guild", "test_agent")
+    fs = fsr.resolve("test_org", "test_guild", "test_agent")
     library = "library"
     text = "ABCDEFGHIJ"  # No separators
     knol = Knol(id="rc4", name="no_sep.txt", mimetype="text/plain", size_in_bytes=0)
@@ -215,7 +215,7 @@ async def test_recursive_character_chunker_character_fallback(tmp_path):
 async def test_sentence_chunker_no_sentences(tmp_path):
     """Test SentenceChunker with text containing no sentence endings."""
     fsr = FileSystemResolver(path_base=str(tmp_path), protocol="file", storage_options={}, asynchronous=True)
-    fs = fsr.resolve("test_guild", "test_agent")
+    fs = fsr.resolve("test_org", "test_guild", "test_agent")
     library = "library"
     text = "This has no sentence endings just words"
     knol = Knol(id="s2", name="no_sent.txt", mimetype="text/plain", size_in_bytes=0)
@@ -234,7 +234,7 @@ async def test_sentence_chunker_no_sentences(tmp_path):
 async def test_sentence_chunker_single_sentence(tmp_path):
     """Test SentenceChunker with single sentence."""
     fsr = FileSystemResolver(path_base=str(tmp_path), protocol="file", storage_options={}, asynchronous=True)
-    fs = fsr.resolve("test_guild", "test_agent")
+    fs = fsr.resolve("test_org", "test_guild", "test_agent")
     library = "library"
     text = "This is a single sentence."
     knol = Knol(id="s3", name="single_sent.txt", mimetype="text/plain", size_in_bytes=0)
@@ -253,7 +253,7 @@ async def test_sentence_chunker_single_sentence(tmp_path):
 async def test_markdown_header_chunker_nested_headers(tmp_path):
     """Test MarkdownHeaderChunker with deeply nested headers."""
     fsr = FileSystemResolver(path_base=str(tmp_path), protocol="file", storage_options={}, asynchronous=True)
-    fs = fsr.resolve("test_guild", "test_agent")
+    fs = fsr.resolve("test_org", "test_guild", "test_agent")
     library = "library"
     md = """# Main Title
 
@@ -293,7 +293,7 @@ Content under section 2."""
 async def test_markdown_header_chunker_no_code_blocks(tmp_path):
     """Test MarkdownHeaderChunker with include_code_blocks=False."""
     fsr = FileSystemResolver(path_base=str(tmp_path), protocol="file", storage_options={}, asynchronous=True)
-    fs = fsr.resolve("test_guild", "test_agent")
+    fs = fsr.resolve("test_org", "test_guild", "test_agent")
     library = "library"
     md = """# Title
 
@@ -322,7 +322,7 @@ More content."""
 async def test_code_language_chunker_unknown_language(tmp_path):
     """Test CodeLanguageChunker with unknown language."""
     fsr = FileSystemResolver(path_base=str(tmp_path), protocol="file", storage_options={}, asynchronous=True)
-    fs = fsr.resolve("test_guild", "test_agent")
+    fs = fsr.resolve("test_org", "test_guild", "test_agent")
     library = "library"
     code = """def hello():
     print("world")
@@ -348,7 +348,7 @@ class Test:
 async def test_code_language_chunker_cpp_language(tmp_path):
     """Test CodeLanguageChunker with C++ code."""
     fsr = FileSystemResolver(path_base=str(tmp_path), protocol="file", storage_options={}, asynchronous=True)
-    fs = fsr.resolve("test_guild", "test_agent")
+    fs = fsr.resolve("test_org", "test_guild", "test_agent")
     library = "library"
     code = """namespace myns {
     class MyClass {
@@ -376,7 +376,7 @@ async def test_code_language_chunker_cpp_language(tmp_path):
 async def test_json_path_chunker_invalid_json(tmp_path):
     """Test JSONPathChunker with invalid JSON."""
     fsr = FileSystemResolver(path_base=str(tmp_path), protocol="file", storage_options={}, asynchronous=True)
-    fs = fsr.resolve("test_guild", "test_agent")
+    fs = fsr.resolve("test_org", "test_guild", "test_agent")
     library = "library"
     invalid_json = '{"a": {"b": [1, 2, {"c": 3'  # Missing closing braces
     knol = Knol(id="j2", name="invalid.json", mimetype="application/json", size_in_bytes=0)
@@ -394,7 +394,7 @@ async def test_json_path_chunker_invalid_json(tmp_path):
 async def test_json_path_chunker_empty_paths(tmp_path):
     """Test JSONPathChunker with empty include_paths."""
     fsr = FileSystemResolver(path_base=str(tmp_path), protocol="file", storage_options={}, asynchronous=True)
-    fs = fsr.resolve("test_guild", "test_agent")
+    fs = fsr.resolve("test_org", "test_guild", "test_agent")
     library = "library"
     import json
 
@@ -414,7 +414,7 @@ async def test_json_path_chunker_empty_paths(tmp_path):
 async def test_json_path_chunker_complex_nested(tmp_path):
     """Test JSONPathChunker with complex nested structures."""
     fsr = FileSystemResolver(path_base=str(tmp_path), protocol="file", storage_options={}, asynchronous=True)
-    fs = fsr.resolve("test_guild", "test_agent")
+    fs = fsr.resolve("test_org", "test_guild", "test_agent")
     library = "library"
     import json
 
@@ -446,7 +446,7 @@ async def test_json_path_chunker_complex_nested(tmp_path):
 async def test_noop_chunker_non_text_mimetype(tmp_path):
     """Test NoOpChunker with non-text mimetype (should return empty)."""
     fsr = FileSystemResolver(path_base=str(tmp_path), protocol="file", storage_options={}, asynchronous=True)
-    fs = fsr.resolve("test_guild", "test_agent")
+    fs = fsr.resolve("test_org", "test_guild", "test_agent")
     library = "library"
     knol = Knol(id="n2", name="image.png", mimetype="image/png", size_in_bytes=0)
     await _write_knol(fs, library, knol, b"\x89PNG\r\n\x1a\n")
@@ -463,7 +463,7 @@ async def test_noop_chunker_non_text_mimetype(tmp_path):
 async def test_noop_chunker_application_mimetype(tmp_path):
     """Test NoOpChunker with application mimetype (should work)."""
     fsr = FileSystemResolver(path_base=str(tmp_path), protocol="file", storage_options={}, asynchronous=True)
-    fs = fsr.resolve("test_guild", "test_agent")
+    fs = fsr.resolve("test_org", "test_guild", "test_agent")
     library = "library"
     text = "application content"
     knol = Knol(id="n3", name="doc.pdf", mimetype="application/pdf", size_in_bytes=0)

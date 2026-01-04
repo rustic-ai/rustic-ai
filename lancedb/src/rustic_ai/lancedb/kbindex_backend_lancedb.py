@@ -516,5 +516,5 @@ class LanceDBKBIndexBackendResolver(DependencyResolver[KBIndexBackend]):
         self.uri: str = uri
         self.kwargs: dict = kwargs
 
-    def resolve(self, guild_id: str, agent_id: str) -> KBIndexBackend:  # type: ignore[override]
+    def resolve(self, org_id: str, guild_id: str, agent_id: str) -> KBIndexBackend:  # type: ignore[override]
         return LanceDBKBIndexBackend(uri=self.uri)

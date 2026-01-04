@@ -73,11 +73,10 @@ class BoundaryContext(ProcessContext[MDT]):
         )
 
         # Get organization_id from agent
-        if not hasattr(agent, "_organization_id") or not agent._organization_id:
-            raise ValueError("No organization_id configured. Ensure the ExecutionEngine has organization_id set.")
+        organization_id = agent.require_organization()
 
         # Create BoundaryClient for cross-guild operations
-        self._boundary_client = BoundaryClient(self._client, agent._organization_id)
+        self._boundary_client = BoundaryClient(self._client, organization_id)
 
     def forward_out(
         self,
