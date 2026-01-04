@@ -5,9 +5,9 @@ import uuid
 from rustic_ai.core.agents.testutils.probe_agent import ProbeAgent
 from rustic_ai.core.guild.agent import Agent, ProcessContext, processor
 from rustic_ai.core.guild.agent_ext.depends.dependency_resolver import (
-    DependencyResolver,
     GUILD_GLOBAL,
     ORG_GLOBAL,
+    DependencyResolver,
 )
 from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder
 from rustic_ai.core.guild.dsl import AgentSpec, DependencySpec
@@ -53,13 +53,15 @@ class AgentWithAllScopes(Agent):
 
     @processor(clz=JsonDict, depends_on=["org_dep:org", "guild_dep:guild", "agent_dep"])
     def process_all_scopes(self, ctx: ProcessContext, org_dep: str, guild_dep: str, agent_dep: str):
-        ctx.send_dict({
-            "org_dep": org_dep,
-            "guild_dep": guild_dep,
-            "agent_dep": agent_dep,
-            "guild_id": self.guild_id,
-            "agent_id": self.id,
-        })
+        ctx.send_dict(
+            {
+                "org_dep": org_dep,
+                "guild_dep": guild_dep,
+                "agent_dep": agent_dep,
+                "guild_id": self.guild_id,
+                "agent_id": self.id,
+            }
+        )
 
 
 class FilepathDependencyResolver(DependencyResolver):
@@ -190,12 +192,14 @@ class TestOrganizationScopedDependencies:
         guild_builder = (
             GuildBuilder(guild_id, "Test Org Dep Guild", "Guild to test org-level dependency")
             .add_agent_spec(agent_spec)
-            .set_dependency_map({
-                "shared_resource": DependencySpec(
-                    class_name=ScopeTrackingResolver.get_qualified_class_name(),
-                    properties={"prefix": "org_resource"},
-                )
-            })
+            .set_dependency_map(
+                {
+                    "shared_resource": DependencySpec(
+                        class_name=ScopeTrackingResolver.get_qualified_class_name(),
+                        properties={"prefix": "org_resource"},
+                    )
+                }
+            )
         )
 
         guild = guild_builder.launch(organization_id=org_id)
@@ -236,12 +240,14 @@ class TestOrganizationScopedDependencies:
         guild_builder = (
             GuildBuilder(guild_id, "Test Guild Dep Guild", "Guild to test guild-level dependency")
             .add_agent_spec(agent_spec)
-            .set_dependency_map({
-                "guild_resource": DependencySpec(
-                    class_name=ScopeTrackingResolver.get_qualified_class_name(),
-                    properties={"prefix": "guild_resource"},
-                )
-            })
+            .set_dependency_map(
+                {
+                    "guild_resource": DependencySpec(
+                        class_name=ScopeTrackingResolver.get_qualified_class_name(),
+                        properties={"prefix": "guild_resource"},
+                    )
+                }
+            )
         )
 
         guild = guild_builder.launch(organization_id=org_id)
@@ -282,16 +288,18 @@ class TestOrganizationScopedDependencies:
         guild_builder = (
             GuildBuilder(guild_id, "Test Agent Dep Guild", "Guild to test agent-level dependency")
             .add_agent_spec(agent_spec)
-            .set_dependency_map({
-                "filepath": DependencySpec(
-                    class_name=ScopeTrackingResolver.get_qualified_class_name(),
-                    properties={"prefix": "agent_resource"},
-                ),
-                "searchindex": DependencySpec(
-                    class_name=ScopeTrackingResolver.get_qualified_class_name(),
-                    properties={"prefix": "search"},
-                ),
-            })
+            .set_dependency_map(
+                {
+                    "filepath": DependencySpec(
+                        class_name=ScopeTrackingResolver.get_qualified_class_name(),
+                        properties={"prefix": "agent_resource"},
+                    ),
+                    "searchindex": DependencySpec(
+                        class_name=ScopeTrackingResolver.get_qualified_class_name(),
+                        properties={"prefix": "search"},
+                    ),
+                }
+            )
         )
 
         guild = guild_builder.launch(organization_id=org_id)
@@ -335,20 +343,22 @@ class TestOrganizationScopedDependencies:
         guild_builder = (
             GuildBuilder(guild_id, "Test All Scopes Guild", "Guild to test all scope levels")
             .add_agent_spec(agent_spec)
-            .set_dependency_map({
-                "org_dep": DependencySpec(
-                    class_name=ScopeTrackingResolver.get_qualified_class_name(),
-                    properties={"prefix": "org"},
-                ),
-                "guild_dep": DependencySpec(
-                    class_name=ScopeTrackingResolver.get_qualified_class_name(),
-                    properties={"prefix": "guild"},
-                ),
-                "agent_dep": DependencySpec(
-                    class_name=ScopeTrackingResolver.get_qualified_class_name(),
-                    properties={"prefix": "agent"},
-                ),
-            })
+            .set_dependency_map(
+                {
+                    "org_dep": DependencySpec(
+                        class_name=ScopeTrackingResolver.get_qualified_class_name(),
+                        properties={"prefix": "org"},
+                    ),
+                    "guild_dep": DependencySpec(
+                        class_name=ScopeTrackingResolver.get_qualified_class_name(),
+                        properties={"prefix": "guild"},
+                    ),
+                    "agent_dep": DependencySpec(
+                        class_name=ScopeTrackingResolver.get_qualified_class_name(),
+                        properties={"prefix": "agent"},
+                    ),
+                }
+            )
         )
 
         guild = guild_builder.launch(organization_id=org_id)
@@ -600,12 +610,14 @@ class TestDependencyScopePrecedence:
         guild_builder = (
             GuildBuilder(guild_id, "Test Precedence Guild", "Guild to test scope precedence")
             .add_agent_spec(agent_spec)
-            .set_dependency_map({
-                "shared_resource": DependencySpec(
-                    class_name=ScopeTrackingResolver.get_qualified_class_name(),
-                    properties={"prefix": "precedence"},
-                )
-            })
+            .set_dependency_map(
+                {
+                    "shared_resource": DependencySpec(
+                        class_name=ScopeTrackingResolver.get_qualified_class_name(),
+                        properties={"prefix": "precedence"},
+                    )
+                }
+            )
         )
 
         guild = guild_builder.launch(organization_id=org_id)
