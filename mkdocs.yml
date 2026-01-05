@@ -26,6 +26,7 @@ nav:
       - State Management: core/state_management.md
   - Agents:
       - Overview: agents/index.md
+      - LLM Agent & Plugins: agents/llm_agent.md
       - Core:
           - Overview: agents/core/index.md
           - Guild Manager Agent: agents/core/guild_manager_agent.md

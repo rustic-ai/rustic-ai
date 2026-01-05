@@ -24,12 +24,17 @@ def build_agent_from_spec(
 
     agent_class = get_agent_class(agent_spec.class_name)
 
-    # Initialize the agent's dependencies
+    # Initialize the agent's dependencies from processors
     agent_deps = agent_class.list_all_dependencies()
 
     dependency_resolvers = {
         dep.dependency_key: load_dependency_resolver(dependencies, dep.dependency_key) for dep in agent_deps
     }
+
+    # Also load additional dependencies from agent spec (for plugins)
+    for dep_key in agent_spec.additional_dependencies:
+        if dep_key not in dependency_resolvers:
+            dependency_resolvers[dep_key] = load_dependency_resolver(dependencies, dep_key)
 
     # Create the agent instance
     new_agent = agent_class.__new__(agent_class)

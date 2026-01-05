@@ -99,6 +99,7 @@ class KeyConstants:
     AGENTS = "agents"
     LISTEN_TO_DEFAULT_TOPIC = "listen_to_default_topic"
     DEPENDENCY_MAP = "dependency_map"
+    ADDITIONAL_DEPENDENCIES = "additional_dependencies"
     ROUTES = "routes"
     ACT_ONLY_WHEN_TAGGED = "act_only_when_tagged"
     PREDICATES = "predicates"
@@ -149,6 +150,7 @@ class AgentBuilder(Generic[AT, APT]):  # type: ignore
             KeyConstants.PROPERTIES: {},
             KeyConstants.LISTEN_TO_DEFAULT_TOPIC: True,
             KeyConstants.DEPENDENCY_MAP: {},
+            KeyConstants.ADDITIONAL_DEPENDENCIES: [],
             KeyConstants.PREDICATES: {},
         }
 
@@ -255,6 +257,24 @@ class AgentBuilder(Generic[AT, APT]):  # type: ignore
         Add a predicate for the Agent.
         """
         self.agent_spec_dict[KeyConstants.PREDICATES][method_name] = predicate
+        return self
+
+    def set_additional_dependencies(self, dependencies: List[str]) -> Self:
+        """
+        Set additional dependencies for the Agent.
+        These are dependency keys that will be loaded for the agent beyond what the agent class declares.
+        Useful for plugins that require dependencies not declared on the agent's processors.
+        """
+        self.agent_spec_dict[KeyConstants.ADDITIONAL_DEPENDENCIES] = dependencies
+        return self
+
+    def add_additional_dependency(self, dependency_key: str) -> Self:
+        """
+        Add an additional dependency for the Agent.
+        This is a dependency key that will be loaded for the agent beyond what the agent class declares.
+        Useful for plugins that require dependencies not declared on the agent's processors.
+        """
+        self.agent_spec_dict[KeyConstants.ADDITIONAL_DEPENDENCIES].append(dependency_key)
         return self
 
     def build_spec(self) -> AgentSpec[APT]:

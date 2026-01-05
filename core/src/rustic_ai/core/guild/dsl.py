@@ -205,6 +205,11 @@ class AgentSpec(BaseModel, Generic[APT]):
     # A mapping for guild's dependency to resolver class
     dependency_map: Dict[str, DependencySpec] = {}
 
+    # Additional dependencies to load for this agent beyond what the agent class declares.
+    # Useful for plugins that require dependencies not declared on the agent's processors.
+    # The resolvers must be defined in either the agent's or guild's dependency_map.
+    additional_dependencies: List[str] = Field(default_factory=list)
+
     # Resource configuration for the agent useful for execution engines that support it
     resources: ResourceSpec = Field(default_factory=ResourceSpec)
 
