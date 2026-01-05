@@ -391,7 +391,7 @@ class LoggerResolver(DependencyResolver[Logger]):
         super().__init__()
         self.prefix = prefix
     
-    def resolve(self, org_id: str, guild_id: str, agent_id: str = None) -> Logger:
+    def resolve(self, org_id: str, guild_id: str, agent_id: Optional[str] = None) -> Logger:
         return Logger(prefix=self.prefix)
 
 
@@ -411,7 +411,7 @@ class ConfigResolver(DependencyResolver[AppConfig]):
         self.name = name
         self.debug = debug
     
-    def resolve(self, org_id: str, guild_id: str, agent_id: str = None) -> AppConfig:
+    def resolve(self, org_id: str, guild_id: str, agent_id: Optional[str] = None) -> AppConfig:
         return AppConfig(name=self.name, debug=self.debug)
 ```
 
