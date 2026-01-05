@@ -538,6 +538,18 @@ class ProcessContext[MDT]:
     def get_context(self) -> JsonDict:
         return deepcopy(self._msg_context)  # deepcopy to prevent modification of the original context
 
+    def set_routing_slip(self, routing_slip: RoutingSlip) -> None:
+        """
+        Sets the routing slip of the message.
+        """
+        self._origin_message.routing_slip = routing_slip
+
+    def set_origin_stack(self, origin_stack: List[str]) -> None:
+        """
+        Sets the origin guild stack of the message.
+        """
+        self._origin_message.origin_guild_stack = origin_stack
+
     def add_routing_step(self, routing_entry: RoutingRule) -> None:
         """
         Adds a new routing step to the routing slip of the message.

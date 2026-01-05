@@ -9,8 +9,8 @@ boundaries in production-like configurations.
 import os
 import time
 
-import pytest
 from flaky import flaky
+import pytest
 
 from rustic_ai.core.agents.testutils import ProbeAgent
 from rustic_ai.core.guild import Agent, agent
@@ -292,9 +292,7 @@ class TestSagaIntegration:
             stack_entry = received_msg.origin_guild_stack[0]
             assert isinstance(stack_entry, GuildStackEntry), "Stack entry should be GuildStackEntry"
             assert stack_entry.guild_id == source_guild.id, "Stack entry should have source guild ID"
-            assert (
-                stack_entry.saga_id is not None
-            ), "Stack entry should have saga_id for session state preservation"
+            assert stack_entry.saga_id is not None, "Stack entry should have saga_id for session state preservation"
 
             # Verify the initiator received the response with session_state restored
             assert (

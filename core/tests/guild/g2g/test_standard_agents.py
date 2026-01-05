@@ -51,6 +51,40 @@ class ResponderAgent(Agent):
         )
 
 
+class MiddleGuildRequestProcessor(Agent):
+    """Processor in middle guild that handles incoming requests and forwards them."""
+
+    def __init__(self):
+        self.processed_requests = []
+
+    @agent.processor(JsonDict, predicate=lambda self, msg: msg.format == "MyRequest")
+    def handle_request(self, ctx: agent.ProcessContext[JsonDict]) -> None:
+        """Process incoming request and forward to next guild."""
+        self.processed_requests.append(ctx.payload)
+        # Forward the request - EnvoyB will pick this up and send to Guild C
+        ctx.send_dict(
+            payload=ctx.payload,
+            format="MyRequest",
+        )
+
+
+class MiddleGuildResponseProcessor(Agent):
+    """Processor in middle guild that handles returned responses and forwards them."""
+
+    def __init__(self):
+        self.processed_responses = []
+
+    @agent.processor(JsonDict, predicate=lambda self, msg: msg.format == "MyResponse")
+    def handle_response(self, ctx: agent.ProcessContext[JsonDict]) -> None:
+        """Process returned response and forward back to origin guild."""
+        self.processed_responses.append(ctx.payload)
+        # Forward the response - GatewayB will pick this up and send back to Guild A
+        ctx.send_dict(
+            payload=ctx.payload,
+            format="MyResponse",
+        )
+
+
 class SagaResponderAgent(Agent):
     """Agent that processes requests with saga state and sends responses.
 
@@ -493,16 +527,22 @@ class TestStandardAgents:
 
         Setup:
         - Guild A (client): Has Envoy to B and Gateway to receive responses
-        - Guild B (middle): Has Gateway (receives from A), Envoy to C, and Gateway for responses
+        - Guild B (middle): Has Gateway, RequestProcessor, ResponseProcessor, and Envoy to C
         - Guild C (backend): Has Gateway and ResponderAgent that sends responses
 
         Flow:
-        1. A sends request to B (stack becomes ["A"])
-        2. B forwards to C (stack becomes ["A", "B"])
-        3. C processes and responds (stack still ["A", "B"])
-        4. C's Gateway forwards response to B (based on stack top)
-        5. B's Gateway receives, pops stack (now ["A"]), forwards to A
-        6. A's Gateway receives, pops stack (now []), forwards internally
+        1. Probe sends MyRequest in Guild A
+        2. EnvoyA forwards to Guild B (stack becomes ["A"])
+        3. GatewayB receives and forwards internally
+        4. RequestProcessorB processes and sends MyRequest
+        5. EnvoyB forwards to Guild C (stack becomes ["A", "B"])
+        6. GatewayC receives and forwards internally
+        7. ResponderC processes and sends MyResponse (stack still ["A", "B"])
+        8. GatewayC forwards response to B (based on stack top)
+        9. GatewayB receives returned response, pops stack (now ["A"]), forwards internally
+        10. ResponseProcessorB processes and sends MyResponse
+        11. GatewayB forwards response to A (based on stack top)
+        12. GatewayA receives returned response, pops stack (now []), forwards internally
         """
         # Create Guild A (client)
         guild_a = (
@@ -587,6 +627,26 @@ class TestStandardAgents:
             .build_spec()
         )
         guild_b._add_local_agent(gateway_b_spec)
+
+        # Processor to handle incoming requests and forward to C
+        request_processor_b_spec = (
+            AgentBuilder(MiddleGuildRequestProcessor)
+            .set_id("request_processor_b")
+            .set_name("RequestProcessorB")
+            .set_description("Processes requests in Guild B and forwards to C")
+            .build_spec()
+        )
+        request_processor_b: MiddleGuildRequestProcessor = guild_b._add_local_agent(request_processor_b_spec)  # type: ignore
+
+        # Processor to handle returned responses and forward to A
+        response_processor_b_spec = (
+            AgentBuilder(MiddleGuildResponseProcessor)
+            .set_id("response_processor_b")
+            .set_name("ResponseProcessorB")
+            .set_description("Processes responses in Guild B and forwards to A")
+            .build_spec()
+        )
+        response_processor_b: MiddleGuildResponseProcessor = guild_b._add_local_agent(response_processor_b_spec)  # type: ignore
 
         # Envoy to forward to Guild C
         envoy_b_spec = (
