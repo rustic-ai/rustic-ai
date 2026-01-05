@@ -1,3 +1,6 @@
-from .kbindex_backend_lancedb import LanceDBKBIndexBackend
+from .kbindex_backend_lancedb import (
+    LanceDBKBIndexBackend,
+    LanceDBKBIndexBackendResolver,
+)
 
-__all__ = ["LanceDBKBIndexBackend"]
+__all__ = ["LanceDBKBIndexBackend", "LanceDBKBIndexBackendResolver"]

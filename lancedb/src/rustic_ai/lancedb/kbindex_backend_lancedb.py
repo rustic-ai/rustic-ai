@@ -4,7 +4,10 @@ import json
 import logging
 from typing import Any, AsyncIterable, Dict, List, Optional, Sequence, Tuple
 
+from fsspec.implementations.dirfs import DirFileSystem as FileSystem
 import pyarrow as pa
+
+from rustic_ai.core.guild.agent_ext.depends.filesystem.utils import get_uri
 
 try:
     import lancedb
@@ -37,15 +40,16 @@ class LanceDBKBIndexBackend(KBIndexBackend):
         - Always persists a "chunk_id" scalar column (if missing) to return it in results
     """
 
-    def __init__(self, *, uri: str) -> None:
+    def __init__(self, *, uri: Optional[str], filesystem: FileSystem) -> None:
         if lancedb is None:  # pragma: no cover - surfaced in tests if dependency missing
             raise RuntimeError("lancedb package is not available; please install it")
-        self._uri: str = uri
+        self._uri: Optional[str] = uri
         self._schema: Optional[KBSchema] = None
         self._table_by_name: Dict[str, TableSpec] = {}
         self._vector_specs: Dict[Tuple[str, str], VectorSpec] = {}
         self._conn: Optional[Any] = None
         self._tables: Dict[str, Any] = {}
+        self._fs: FileSystem = filesystem
 
     # ---------------------- lifecycle ----------------------
     async def ensure_ready(self, *, schema: KBSchema) -> None:  # type: ignore[override]
@@ -55,6 +59,9 @@ class LanceDBKBIndexBackend(KBIndexBackend):
         for t in schema.tables:
             for vs in t.vector_columns:
                 self._vector_specs[(t.name, vs.name)] = vs
+
+        if not self._uri:
+            self._uri = get_uri(self._fs, f"knowledgebase/{schema.id}")
 
         self._conn = await lancedb.connect_async(self._uri)  # type: ignore[attr-defined]
 
@@ -505,16 +512,21 @@ def _quote(s: str) -> str:
 
 
 class LanceDBKBIndexBackendResolver(DependencyResolver[KBIndexBackend]):
-    """Resolver for LanceDBKBIndexBackend.
+    """
+    Resolver for LanceDBKBIndexBackend.
 
     Properties:
-        uri: Optional[str] database URI for LanceDB (e.g., file path). Defaults to env or .lancedb
+        uri: Optional[str] database URI for LanceDB. If None, automatically
+            generated from the injected filesystem and schema ID.
+
+        Recomended: DO NOT set the uri and let the system set the correct path.
     """
 
-    def __init__(self, uri: str, **kwargs):
+    def __init__(self, uri: Optional[str] = None, **kwargs):
         super().__init__()
         self.uri: str = uri
         self.kwargs: dict = kwargs
 
     def resolve(self, org_id: str, guild_id: str, agent_id: str) -> KBIndexBackend:  # type: ignore[override]
-        return LanceDBKBIndexBackend(uri=self.uri)
+        fs: FileSystem = self.inject(FileSystem, "filesystem", org_id, guild_id, agent_id)
+        return LanceDBKBIndexBackend(uri=self.uri, filesystem=fs)
