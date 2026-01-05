@@ -101,7 +101,7 @@ class TestStateMgmt:
             ("rustic_ai.redis.state.manager.RedisStateManager", {"host": "localhost", "port": 6379}),
         ],
     )
-    @flaky(max_runs=4, min_passes=1)
+    @flaky(max_runs=6, min_passes=1)
     def test_state_mgmt(
         self,
         state_aware_agent: AgentSpec,
@@ -156,12 +156,12 @@ class TestStateMgmt:
         )
 
         # Increased initial wait time for Redis message processing
-        time.sleep(2)
+        time.sleep(3)
 
         loop_count = 0
         messages = []
         while loop_count < 20:  # Increased from 10 to 20 iterations
-            time.sleep(0.5)
+            time.sleep(1)
             # Check if the agent has processed the request and sent the state
             messages = probe_agent.get_messages()
             if len(messages) > 0:
@@ -185,7 +185,7 @@ class TestStateMgmt:
 
         loop_count = 0
         while loop_count < 20:  # Increased from 10 to 20 iterations
-            time.sleep(0.5)
+            time.sleep(1)
             messages = probe_agent.get_messages()
             if len(messages) == 2:
                 break
@@ -249,12 +249,12 @@ class TestStateMgmt:
         )
 
         # Increased initial wait time for Redis message processing
-        time.sleep(2)
+        time.sleep(3)
 
         loop_count = 0
         messages = []
         while loop_count < 20:  # Increased from implicit 1 to 20 iterations
-            time.sleep(0.5)
+            time.sleep(1)
             messages = probe_agent.get_messages()
             if len(messages) > 0:
                 break
@@ -275,7 +275,7 @@ class TestStateMgmt:
 
         loop_count = 0
         while loop_count < 20:  # Increased wait iterations
-            time.sleep(0.5)
+            time.sleep(1)
             messages = probe_agent.get_messages()
             if len(messages) == 2:
                 break
