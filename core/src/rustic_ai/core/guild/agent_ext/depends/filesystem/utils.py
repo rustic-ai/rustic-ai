@@ -1,7 +1,7 @@
 from fsspec.implementations.dirfs import DirFileSystem as FileSystem
 
 
-def get_root_uri(dirfs) -> str:
+def get_root_uri(dirfs: FileSystem) -> str:
     """Get the fully-qualified root URI of the DirFileSystem.
 
     Args:
@@ -13,7 +13,7 @@ def get_root_uri(dirfs) -> str:
     return dirfs.fs.unstrip_protocol(dirfs.path)
 
 
-def get_uri(dirfs, p: str) -> str:
+def get_uri(dirfs: FileSystem, p: str) -> str:
     """Get the fully-qualified URI for a path within the DirFileSystem.
 
     Args:

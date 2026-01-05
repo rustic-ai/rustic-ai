@@ -40,7 +40,7 @@ class LanceDBKBIndexBackend(KBIndexBackend):
         - Always persists a "chunk_id" scalar column (if missing) to return it in results
     """
 
-    def __init__(self, *, uri: Optional[str], filesystem: FileSystem) -> None:
+    def __init__(self, *, uri: Optional[str], filesystem: Optional[FileSystem]) -> None:
         if lancedb is None:  # pragma: no cover - surfaced in tests if dependency missing
             raise RuntimeError("lancedb package is not available; please install it")
         self._uri: Optional[str] = uri
@@ -49,7 +49,7 @@ class LanceDBKBIndexBackend(KBIndexBackend):
         self._vector_specs: Dict[Tuple[str, str], VectorSpec] = {}
         self._conn: Optional[Any] = None
         self._tables: Dict[str, Any] = {}
-        self._fs: FileSystem = filesystem
+        self._fs: Optional[FileSystem] = filesystem
 
     # ---------------------- lifecycle ----------------------
     async def ensure_ready(self, *, schema: KBSchema) -> None:  # type: ignore[override]
@@ -60,7 +60,7 @@ class LanceDBKBIndexBackend(KBIndexBackend):
             for vs in t.vector_columns:
                 self._vector_specs[(t.name, vs.name)] = vs
 
-        if not self._uri:
+        if not self._uri and self._fs:
             self._uri = get_uri(self._fs, f"knowledgebase/{schema.id}")
 
         self._conn = await lancedb.connect_async(self._uri)  # type: ignore[attr-defined]
@@ -519,12 +519,12 @@ class LanceDBKBIndexBackendResolver(DependencyResolver[KBIndexBackend]):
         uri: Optional[str] database URI for LanceDB. If None, automatically
             generated from the injected filesystem and schema ID.
 
-        Recomended: DO NOT set the uri and let the system set the correct path.
+        Recommended: DO NOT set the uri and let the system set the correct path.
     """
 
     def __init__(self, uri: Optional[str] = None, **kwargs):
         super().__init__()
-        self.uri: str = uri
+        self.uri: Optional[str] = uri
         self.kwargs: dict = kwargs
 
     def resolve(self, org_id: str, guild_id: str, agent_id: str) -> KBIndexBackend:  # type: ignore[override]

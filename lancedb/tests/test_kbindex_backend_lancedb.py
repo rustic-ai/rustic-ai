@@ -1,9 +1,9 @@
 from typing import AsyncIterable
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
 from fsspec import filesystem
 from fsspec.implementations.dirfs import DirFileSystem
+import pytest
 
 from rustic_ai.core.knowledgebase.chunks import TextChunk
 from rustic_ai.core.knowledgebase.metadata import CommonMetaPart
@@ -32,10 +32,12 @@ from rustic_ai.lancedb import LanceDBKBIndexBackend
 @pytest.fixture
 def make_dirfs(tmp_path):
     """Factory fixture to create a DirFileSystem for tests."""
+
     def _make_dirfs(subdir: str = ".lancedb"):
         base_path = str(tmp_path / subdir)
         fs = filesystem("file", auto_mkdir=True)
         return DirFileSystem(path=base_path, fs=fs)
+
     return _make_dirfs
 
 

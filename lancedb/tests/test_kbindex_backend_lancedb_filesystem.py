@@ -1,9 +1,10 @@
 """Integration tests for filesystem-aware LanceDB backend."""
+
 from typing import AsyncIterable
 
-import pytest
 from fsspec import filesystem
 from fsspec.implementations.dirfs import DirFileSystem
+import pytest
 
 from rustic_ai.core.knowledgebase.chunks import TextChunk
 from rustic_ai.core.knowledgebase.metadata import CommonMetaPart
@@ -143,7 +144,7 @@ class TestLanceDBFilesystemIntegration:
         # Test operations
         row1 = _row("mem1", "memory test 1", "en")
         row2 = _row("mem2", "memory test 2", "fr")
-        
+
         async def _rows():
             yield row1
             yield row2
