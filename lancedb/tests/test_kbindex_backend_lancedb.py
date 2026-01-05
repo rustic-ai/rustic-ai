@@ -1,6 +1,8 @@
 from typing import AsyncIterable
 from unittest.mock import AsyncMock, MagicMock, patch
 
+from fsspec import filesystem
+from fsspec.implementations.dirfs import DirFileSystem
 import pytest
 
 from rustic_ai.core.knowledgebase.chunks import TextChunk
@@ -25,6 +27,18 @@ from rustic_ai.core.knowledgebase.schema import (
     VectorSpec,
 )
 from rustic_ai.lancedb import LanceDBKBIndexBackend
+
+
+@pytest.fixture
+def make_dirfs(tmp_path):
+    """Factory fixture to create a DirFileSystem for tests."""
+
+    def _make_dirfs(subdir: str = ".lancedb"):
+        base_path = str(tmp_path / subdir)
+        fs = filesystem("file", auto_mkdir=True)
+        return DirFileSystem(path=base_path, fs=fs)
+
+    return _make_dirfs
 
 
 def _schema_text() -> KBSchema:
@@ -82,9 +96,10 @@ async def _aiter_one(r: EmittedRow) -> AsyncIterable[EmittedRow]:
 
 
 @pytest.mark.asyncio
-async def test_lancedb_backend_upsert_and_search(tmp_path):
+async def test_lancedb_backend_upsert_and_search(tmp_path, make_dirfs):
     schema = _schema_text()
-    be = LanceDBKBIndexBackend(uri=str(tmp_path / ".lancedb"))
+    dirfs = make_dirfs()
+    be = LanceDBKBIndexBackend(uri=str(tmp_path / ".lancedb"), filesystem=dirfs)
     await be.ensure_ready(schema=schema)
 
     row = _row("k1", "hello world", "en")
@@ -114,9 +129,10 @@ async def test_lancedb_backend_upsert_and_search(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_lancedb_backend_delete(tmp_path):
+async def test_lancedb_backend_delete(tmp_path, make_dirfs):
     schema = _schema_text()
-    be = LanceDBKBIndexBackend(uri=str(tmp_path / ".lancedb"))
+    dirfs = make_dirfs()
+    be = LanceDBKBIndexBackend(uri=str(tmp_path / ".lancedb"), filesystem=dirfs)
     await be.ensure_ready(schema=schema)
 
     row = _row("k2", "goodbye")
@@ -140,9 +156,10 @@ async def test_lancedb_backend_delete(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_lancedb_backend_unknown_vector_is_skipped(tmp_path):
+async def test_lancedb_backend_unknown_vector_is_skipped(tmp_path, make_dirfs):
     schema = _schema_text()
-    be = LanceDBKBIndexBackend(uri=str(tmp_path / ".lancedb"))
+    dirfs = make_dirfs()
+    be = LanceDBKBIndexBackend(uri=str(tmp_path / ".lancedb"), filesystem=dirfs)
     await be.ensure_ready(schema=schema)
 
     knol = Knol(id="k3", name="k3.txt", mimetype="text/plain", language="en")
@@ -170,9 +187,10 @@ async def test_lancedb_backend_unknown_vector_is_skipped(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_upsert_batching(tmp_path):
+async def test_upsert_batching(tmp_path, make_dirfs):
     schema = _schema_text()
-    be = LanceDBKBIndexBackend(uri=str(tmp_path / ".lancedb"))
+    dirfs = make_dirfs()
+    be = LanceDBKBIndexBackend(uri=str(tmp_path / ".lancedb"), filesystem=dirfs)
     await be.ensure_ready(schema=schema)
 
     # Generate enough rows to trigger batching (BATCH_SIZE is 200)
@@ -194,9 +212,10 @@ async def test_upsert_batching(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_index_creation_failure_logged(tmp_path, caplog):
+async def test_index_creation_failure_logged(tmp_path, make_dirfs, caplog):
     schema = _schema_text()
-    be = LanceDBKBIndexBackend(uri=str(tmp_path / ".lancedb"))
+    dirfs = make_dirfs()
+    be = LanceDBKBIndexBackend(uri=str(tmp_path / ".lancedb"), filesystem=dirfs)
 
     # Mock table.create_index to raise exception
     with patch(
@@ -220,9 +239,10 @@ async def test_index_creation_failure_logged(tmp_path, caplog):
 
 
 @pytest.mark.asyncio
-async def test_search_returns_payload(tmp_path):
+async def test_search_returns_payload(tmp_path, make_dirfs):
     schema = _schema_text()
-    be = LanceDBKBIndexBackend(uri=str(tmp_path / ".lancedb"))
+    dirfs = make_dirfs()
+    be = LanceDBKBIndexBackend(uri=str(tmp_path / ".lancedb"), filesystem=dirfs)
     await be.ensure_ready(schema=schema)
 
     # Insert a row with specific content
