@@ -56,10 +56,6 @@ class AgentDependency(BaseModel):
     Whether the dependency is at the org level. This is shared across all guilds in the organization.
     Takes precedence over guild_level if both are True.
     """
-    org_level: bool = False
-    """
-    Whether the dependency is at the org level. This is shared across all guilds in the organization.
-    """
 
     @computed_field  # type: ignore[misc]
     @property

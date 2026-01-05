@@ -34,20 +34,15 @@ class DependencyResolver(ABC, Generic[DT]):
 
     def __init__(self):
         self.cache: Dict[str, DT] = {}
-        self.cache: Dict[str, DT] = {}
         self._dependency_specs: Dict[str, DependencySpec] = {}
         self._injectors: Dict[str, DependencyResolver] = {}
 
     @abstractmethod
     def resolve(self, org_id: str, guild_id: str, agent_id: str) -> DT:
-    def resolve(self, org_id: str, guild_id: str, agent_id: str) -> DT:
         """
         Resolve a dependency.
 
         Args:
-            org_id: The ID of the organization.
-            guild_id: The ID of the guild. ORG_GLOBAL for org-scoped dependencies.
-            agent_id: The ID of the agent. GUILD_GLOBAL for guild-scoped dependencies.
             org_id: The ID of the organization.
             guild_id: The ID of the guild. ORG_GLOBAL for org-scoped dependencies.
             agent_id: The ID of the agent. GUILD_GLOBAL for guild-scoped dependencies.
@@ -57,12 +52,6 @@ class DependencyResolver(ABC, Generic[DT]):
         """
         pass  # pragma: no cover
 
-    def get_or_resolve(
-        self,
-        org_id: str,
-        guild_id: Optional[str] = None,
-        agent_id: Optional[str] = None,
-    ) -> DT:
     def get_or_resolve(
         self,
         org_id: str,
@@ -96,11 +85,7 @@ class DependencyResolver(ABC, Generic[DT]):
             if cache_key not in self.cache:
                 self.cache[cache_key] = self.resolve(org_id, resolved_guild_id, resolved_agent_id)
             return self.cache[cache_key]
-            if cache_key not in self.cache:
-                self.cache[cache_key] = self.resolve(org_id, resolved_guild_id, resolved_agent_id)
-            return self.cache[cache_key]
         else:
-            return self.resolve(org_id, resolved_guild_id, resolved_agent_id)
             return self.resolve(org_id, resolved_guild_id, resolved_agent_id)
 
     @classmethod
@@ -130,21 +115,12 @@ class DependencyResolver(ABC, Generic[DT]):
         guild_id: str,
         agent_id: Optional[str] = None,
     ) -> D:
-    def inject(
-        self,
-        cls: Type[D],
-        name: str,
-        org_id: str,
-        guild_id: str,
-        agent_id: Optional[str] = None,
-    ) -> D:
         """
         Inject a dependency into the resolver resolving it from the dependency specs.
 
         Args:
             cls: The class of the dependency.
             name: The name of the dependency.
-            org_id: The ID of the organization.
             org_id: The ID of the organization.
             guild_id: The ID of the guild.
             agent_id: The ID of the agent. If this is None, resolve the dependency is guild-scoped.
