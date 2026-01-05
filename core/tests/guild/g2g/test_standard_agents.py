@@ -636,7 +636,7 @@ class TestStandardAgents:
             .set_description("Processes requests in Guild B and forwards to C")
             .build_spec()
         )
-        request_processor_b: MiddleGuildRequestProcessor = guild_b._add_local_agent(request_processor_b_spec)  # type: ignore
+        guild_b._add_local_agent(request_processor_b_spec)  # type: ignore
 
         # Processor to handle returned responses and forward to A
         response_processor_b_spec = (
@@ -646,7 +646,7 @@ class TestStandardAgents:
             .set_description("Processes responses in Guild B and forwards to A")
             .build_spec()
         )
-        response_processor_b: MiddleGuildResponseProcessor = guild_b._add_local_agent(response_processor_b_spec)  # type: ignore
+        guild_b._add_local_agent(response_processor_b_spec)  # type: ignore
 
         # Envoy to forward to Guild C
         envoy_b_spec = (

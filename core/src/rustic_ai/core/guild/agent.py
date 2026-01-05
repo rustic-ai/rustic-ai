@@ -26,6 +26,7 @@ from rustic_ai.core.guild.metaprog.constants import MetaclassConstants
 from rustic_ai.core.messaging import MDT, AgentTag, Client, Message, Priority
 from rustic_ai.core.messaging.core.message import (
     ForwardHeader,
+    GuildStackEntry,
     MessageConstants,
     MessageRoutable,
     ProcessEntry,
@@ -540,13 +541,43 @@ class ProcessContext[MDT]:
 
     def set_routing_slip(self, routing_slip: RoutingSlip) -> None:
         """
-        Sets the routing slip of the message.
+        Set the full routing slip for the origin message.
+
+        This replaces any existing routing slip on the message with the
+        provided one. Use this when you want to explicitly define or reset
+        the complete routing path (e.g. when constructing a new message or
+        re-routing an existing one).
+
+        For adding a single routing step to the current routing slip, prefer
+        :meth:`add_routing_step`, which appends a new :class:`RoutingRule`
+        instead of replacing the entire slip.
+
+        :param routing_slip: The full :class:`RoutingSlip` to associate with
+            the origin message, defining its complete routing path.
         """
         self._origin_message.routing_slip = routing_slip
 
-    def set_origin_stack(self, origin_stack: List[str]) -> None:
+    def set_origin_stack(self, origin_stack: List[GuildStackEntry]) -> None:
         """
-        Sets the origin guild stack of the message.
+        Set the origin guild stack associated with the underlying origin message.
+
+        Parameters
+        ----------
+        origin_stack : List[str]
+            Ordered list of guild identifiers (from outermost to innermost) that
+            represents the chain of guilds that have handled or originated the
+            message so far. This is typically aligned with the
+            ``origin_guild_stack`` / guild stack metadata used by the routing
+            layer for cross-guild routing decisions.
+
+        Notes
+        -----
+        This method is intended for routing components that perform cross-guild
+        forwarding (e.g. gateways, bridges, or routers) and need to adjust the
+        recorded origin chain before re-emitting the message into another guild.
+        Regular agents that only process messages within a single guild usually
+        do not need to modify the origin stack directly; they should rely on the
+        routing slip and guild stack managed by the messaging infrastructure.
         """
         self._origin_message.origin_guild_stack = origin_stack
 
