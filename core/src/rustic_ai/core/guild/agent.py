@@ -74,6 +74,8 @@ class Agent(Generic[APT], metaclass=AgentMetaclass):  # type: ignore
     Base class for all agents
     """
 
+    DEFAULT_ORGANIZATION_ID = "default_organization"
+
     def __init__(
         self,
         agent_spec: AgentSpec[APT],
@@ -128,6 +130,7 @@ class Agent(Generic[APT], metaclass=AgentMetaclass):  # type: ignore
         self._state: JsonDict = {}
         self._guild_state: JsonDict = {}
         self._route_to_default_topic: bool = False
+        self._organization_id: Optional[str] = None
 
         self._client = self._init_client(client_class, client_props)
         self._id_generator = id_generator
@@ -305,6 +308,28 @@ class Agent(Generic[APT], metaclass=AgentMetaclass):  # type: ignore
     @property
     def guild_id(self) -> str:
         return self.guild_spec.id
+
+    def get_organization(self) -> str:
+        organization_id = getattr(self, "_organization_id", None)
+        if organization_id:
+            return organization_id
+
+        self.logger.warning(
+            "No organization_id configured for agent %s (%s); using default %s",
+            self.name,
+            self.id,
+            self.DEFAULT_ORGANIZATION_ID,
+        )
+        return self.DEFAULT_ORGANIZATION_ID
+
+    def require_organization(self) -> str:
+        organization_id = getattr(self, "_organization_id", None)
+        if not organization_id:
+            raise ValueError("No organization_id configured. Ensure the ExecutionEngine has organization_id set.")
+        return organization_id
+
+    def set_organization(self, organization_id: str) -> None:
+        self._organization_id = organization_id
 
     def _generate_id(self, priority: Priority) -> GemstoneID:
         """
@@ -973,13 +998,16 @@ class ProcessorHelper:
     def resolve_dependency(
         resolver: DependencyResolver,
         dep: AgentDependency,
+        org_id: str,
         guild_id: str,
         agent_id: str,
     ):
-        if dep.guild_level:
-            return resolver.get_or_resolve(guild_id=guild_id)
+        if dep.org_level:
+            return resolver.get_or_resolve(org_id=org_id)
+        elif dep.guild_level:
+            return resolver.get_or_resolve(org_id=org_id, guild_id=guild_id)
         else:
-            return resolver.get_or_resolve(guild_id=guild_id, agent_id=agent_id)
+            return resolver.get_or_resolve(org_id=org_id, guild_id=guild_id, agent_id=agent_id)
 
     @staticmethod
     def run_coroutine_blocking(self, func, dependencies, context):
@@ -1093,7 +1121,11 @@ def processor(
 
                 dependencies = {
                     dep.variable_name: ProcessorHelper.resolve_dependency(
-                        self._dependency_resolvers[dep.dependency_key], dep, self.guild_id, self.id
+                        self._dependency_resolvers[dep.dependency_key],
+                        dep,
+                        self.get_organization(),
+                        self.guild_id,
+                        self.id,
                     )
                     for dep in deps
                 }

@@ -101,7 +101,7 @@ class AgentWrapper(ABC):
 
         # Set organization_id on agent for cross-guild communication
         if self.organization_id:
-            self.agent._organization_id = self.organization_id
+            self.agent.set_organization(self.organization_id)
 
         # Notify the agent that it is ready to process messages
         self.logger.info(f"Agent {self.agent_spec.name} is ready to process messages")

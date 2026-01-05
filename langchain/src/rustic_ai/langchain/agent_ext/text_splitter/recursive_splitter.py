@@ -84,5 +84,5 @@ class RecursiveSplitterResolver(DependencyResolver[TextSplitter]):
         splitter_conf = RecursiveSplitterConf.model_validate(conf)
         self.splitter = RecursiveSplitter(splitter_conf)
 
-    def resolve(self, guild_id: str, agent_id: str) -> TextSplitter:
+    def resolve(self, org_id: str, guild_id: str, agent_id: str) -> TextSplitter:
         return self.splitter

@@ -93,7 +93,9 @@ def _build_message(generator, payload, fmt):
 
 def _prepare_media_on_fs(agent, dependency_map, relative_path: str, content: bytes) -> None:
     base_path = Path(dependency_map["filesystem"].properties["path_base"])  # type: ignore[index]
-    root = base_path / agent.guild_id / GUILD_GLOBAL
+    # Path now includes org_id/guild_id/agent_id (agent_id is GUILD_GLOBAL for guild-level deps)
+    org_id = agent.get_organization()
+    root = base_path / org_id / agent.guild_id / GUILD_GLOBAL
     os.makedirs(root, exist_ok=True)
     (root / relative_path).write_bytes(content)
 
