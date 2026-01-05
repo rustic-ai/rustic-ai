@@ -16,7 +16,6 @@ from typing import List, Optional
 from pydantic import Field
 
 from rustic_ai.core.guild import agent
-from rustic_ai.core.guild.dsl import GuildTopics
 from rustic_ai.core.guild.g2g.boundary_agent import BoundaryAgent, BoundaryAgentProps
 from rustic_ai.core.guild.g2g.boundary_context import (
     BoundaryContext,
@@ -186,6 +185,7 @@ class GatewayAgent(BoundaryAgent[GatewayAgentProps]):
         """
         # Forward internally - routing determined by guild configuration
         # Stack is preserved automatically via normal message copying
+        ctx.set_routing_slip(self.guild_spec.routes.model_copy(deep=True))
         ctx.send_dict(ctx.payload, ctx.message.format, forwarding=True)
 
     @agent.processor(
@@ -222,24 +222,12 @@ class GatewayAgent(BoundaryAgent[GatewayAgentProps]):
                     update={state_key: None},
                 )
 
-        # Create forwarded message with updated stack, targeting default topic
-        forwarded = ctx.message.model_copy(
-            deep=True,
-            update={
-                "forward_header": ForwardHeader(
-                    origin_message_id=ctx.message.id,
-                    on_behalf_of=ctx.message.sender,
-                ),
-                "origin_guild_stack": new_stack,
-                "topics": GuildTopics.DEFAULT_TOPICS,  # Target internal default topic
-                "session_state": restored_session_state or {},  # Restore saved session state
-            },
-        )
+        # Create forwarded message with updated stack and restored session state
+        ctx.set_routing_slip(self.guild_spec.routes.model_copy(deep=True))
+        ctx.set_origin_stack(new_stack)
+        ctx.update_context(restored_session_state or {})
 
-        # Forward internally to default topic
-        # This allows processors in this guild to see/transform the response
-        # If stack is not empty, handle_outbound will pick it up and forward to next guild
-        ctx._client.publish(forwarded)
+        ctx.send_dict(ctx.payload, ctx.message.format, forwarding=True)
 
     @agent.processor(
         JsonDict,
@@ -270,6 +258,7 @@ class GatewayAgent(BoundaryAgent[GatewayAgentProps]):
                 ),
                 # Don't modify origin_guild_stack - keep it as-is
                 "session_state": None,  # Never cross guild boundaries
+                "routing_slip": None,  # Clear internal routing info
             },
         )
 
