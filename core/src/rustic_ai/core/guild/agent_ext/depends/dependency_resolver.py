@@ -12,7 +12,6 @@ DT = TypeVar("DT")
 D = TypeVar("D")
 
 ORG_GLOBAL = "ORG_GLOBAL"
-ORG_GLOBAL = "ORG_GLOBAL"
 GUILD_GLOBAL = "GUILD_GLOBAL"
 
 
@@ -140,7 +139,6 @@ class DependencyResolver(ABC, Generic[DT]):
             injector.set_dependency_specs(self._dependency_specs)
             self._injectors[name] = injector
 
-        dep = self._injectors[name].get_or_resolve(org_id, guild_id, agent_id)
         dep = self._injectors[name].get_or_resolve(org_id, guild_id, agent_id)
 
         if not issubclass(type(dep), cls):
