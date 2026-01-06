@@ -4,8 +4,6 @@ import json
 from typing import List, Literal, Optional
 import uuid
 
-from fsspec import filesystem
-from fsspec.implementations.asyn_wrapper import AsyncFileSystemWrapper
 from fsspec.implementations.dirfs import DirFileSystem as FileSystem
 from pydantic import Field, PrivateAttr
 
@@ -21,7 +19,6 @@ from rustic_ai.core.guild.agent_ext.depends.llm.models import (
 )
 from rustic_ai.core.knowledgebase.agent_config import KnowledgeAgentConfig
 from rustic_ai.core.knowledgebase.kbindex_backend import KBIndexBackend
-from rustic_ai.core.knowledgebase.kbindex_backend_memory import InMemoryKBIndexBackend
 from rustic_ai.core.knowledgebase.knowledge_base import KnowledgeBase
 from rustic_ai.core.knowledgebase.pipeline_executor import SimplePipelineExecutor
 from rustic_ai.llm_agent.memories.memories_store import MemoriesStore
@@ -34,71 +31,50 @@ class KnowledgeBasedMemoriesStore(MemoriesStore):
     This memory store indexes conversation messages into a vector database using the
     KnowledgeBase infrastructure, enabling semantic search across conversation history.
 
-    The store creates its own instances of FileSystem and KBIndexBackend, so agents
-    do not need to have these dependencies configured.
+    This plugin uses the guild-level filesystem and kb_backend dependencies, which must
+    be configured in the guild's dependency_map and listed in the agent's additional_dependencies.
 
     Configuration:
     - context_window_size: Number of recent messages to use for building search queries
     - recall_limit: Maximum number of memories to retrieve during recall
-    - path_base: Base path for storing knowledge base data (defaults to "/tmp/kb_memories")
-    - protocol: Filesystem protocol (defaults to "file")
-    - storage_options: Additional storage options (defaults to {"auto_mkdir": True})
-    - asynchronous: Whether to use async filesystem (defaults to True)
+
+    Dependencies (must be configured at guild level):
+    - filesystem:guild: Filesystem for storing knowledge base data
+    - kb_backend:guild: KBIndexBackend for vector search
     """
 
     memory_type: Literal["knowledge_based"] = "knowledge_based"
     context_window_size: int = 5
     recall_limit: int = 10
-    path_base: str = "/tmp/kb_memories"
-    protocol: str = "file"
-    storage_options: dict = Field(default_factory=lambda: {"auto_mkdir": True})
-    asynchronous: bool = True
+
+    # Declare plugin dependencies
+    depends_on: List[str] = Field(default=["filesystem:guild", "kb_backend:guild"])
 
     _kb: Optional[KnowledgeBase] = PrivateAttr(default=None)
     _message_counter: int = PrivateAttr(default=0)
-    _filesystem: Optional[FileSystem] = PrivateAttr(default=None)
-    _kb_backend: Optional[KBIndexBackend] = PrivateAttr(default=None)
 
     async def _get_kb(self, agent: Agent, ctx: ProcessContext) -> KnowledgeBase:
         """
         Lazily initialize and return the KnowledgeBase instance.
 
-        Creates new instances of FileSystem and KBIndexBackend instead of using
-        guild-scoped dependencies.
+        Uses guild-scoped filesystem and kb_backend dependencies retrieved via
+        self.get_dep(agent, name).
         """
         if self._kb is not None:
             return self._kb
 
-        # Create filesystem instance
-        if self._filesystem is None:
-            basefs = filesystem(
-                self.protocol,
-                asynchronous=self.asynchronous,
-                **self.storage_options,
-            )
-
-            if self.asynchronous and not basefs.__class__.async_impl:
-                basefs = AsyncFileSystemWrapper(basefs)
-
-            self._filesystem = FileSystem(
-                path=f"{self.path_base}/{agent.guild_id}",
-                fs=basefs,
-                asynchronous=self.asynchronous,
-                storage_options=self.storage_options,
-            )
-
-        # Create kb_backend instance
-        if self._kb_backend is None:
-            self._kb_backend = InMemoryKBIndexBackend()
+        # Get filesystem and kb_backend from guild dependencies
+        filesystem: FileSystem = self.get_dep(agent, "filesystem:guild")
+        kb_backend: KBIndexBackend = self.get_dep(agent, "kb_backend:guild")
 
         # Create KnowledgeBase with default text configuration
         cfg = KnowledgeAgentConfig.default_text(id=f"kb_memory_{agent.guild_id}")
         kb = KnowledgeBase(
             config=cfg.to_kb_config(),
-            filesystem=self._filesystem,
+            filesystem=filesystem,
             library_path=cfg.library_path,
             executor=SimplePipelineExecutor(),
-            index_backend=self._kb_backend,
+            index_backend=kb_backend,
         )
         await kb.ensure_ready()
 
@@ -210,36 +186,38 @@ class KnowledgeBasedMemoriesStore(MemoriesStore):
         async def _index_message():
             kb = await self._get_kb(agent, ctx)
 
+            # Get filesystem from guild dependencies
+            filesystem: FileSystem = self.get_dep(agent, "filesystem:guild")
+
             # Create a temporary file content
             content_bytes = content_str.encode("utf-8")
 
             # Write to filesystem
-            # Note: filesystem is already rooted at {path_base}/{agent.guild_id}
             file_path = "guild/memories/" + f"{msg_id}.txt"
 
             # Ensure directory exists and write files
             dir_path = "guild/memories"
-            if self._filesystem:
-                # Build full paths (DirFileSystem prepends its path automatically)
-                full_file_path = file_path
-                full_meta_path = file_path + ".metadata"
 
-                # Create directory if needed (sync operation on local fs)
-                if not self._filesystem.exists(dir_path):
-                    self._filesystem.makedirs(dir_path, exist_ok=True)
+            # Build full paths (DirFileSystem prepends its path automatically)
+            full_file_path = file_path
+            full_meta_path = file_path + ".metadata"
 
-                # Write content file
-                with self._filesystem.open(full_file_path, "wb") as f:
-                    f.write(content_bytes)
+            # Create directory if needed (sync operation on local fs)
+            if not filesystem.exists(dir_path):
+                filesystem.makedirs(dir_path, exist_ok=True)
 
-                # Write sidecar metadata file using KB naming convention
-                # Format: guild/memories/.memory_1_abc.txt.meta (not .metadata!)
-                dir_part, file_part = file_path.rsplit("/", 1)
-                full_meta_path = f"{dir_part}/.{file_part}.meta"
+            # Write content file
+            with filesystem.open(full_file_path, "wb") as f:
+                f.write(content_bytes)
 
-                meta_json = json.dumps(metadata, indent=2).encode("utf-8")
-                with self._filesystem.open(full_meta_path, "wb") as f:
-                    f.write(meta_json)
+            # Write sidecar metadata file using KB naming convention
+            # Format: guild/memories/.memory_1_abc.txt.meta (not .metadata!)
+            dir_part, file_part = file_path.rsplit("/", 1)
+            full_meta_path = f"{dir_part}/.{file_part}.meta"
+
+            meta_json = json.dumps(metadata, indent=2).encode("utf-8")
+            with filesystem.open(full_meta_path, "wb") as f:
+                f.write(meta_json)
 
             # Create MediaLink (metadata is now in sidecar file)
             media = MediaLink(
@@ -257,7 +235,7 @@ class KnowledgeBasedMemoriesStore(MemoriesStore):
 
         # Run the async indexing and wait for completion
         try:
-            loop = asyncio.get_running_loop()
+            loop = asyncio.get_running_loop()  # noqa: F841
             # Event loop is running - we need to run in a thread to avoid blocking
             import concurrent.futures
 
@@ -333,7 +311,7 @@ class KnowledgeBasedMemoriesStore(MemoriesStore):
 
         # Run the async search
         try:
-            loop = asyncio.get_running_loop()
+            loop = asyncio.get_running_loop()  # noqa: F841
             # Event loop is running - we need to run in a thread to avoid blocking
             import concurrent.futures
 

@@ -3,6 +3,10 @@ from pathlib import Path
 
 import pytest
 
+from rustic_ai.core.guild.agent_ext.depends.dependency_resolver import DependencySpec
+from rustic_ai.core.guild.agent_ext.depends.filesystem.filesystem import (
+    FileSystemResolver,
+)
 from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     ChatCompletionRequest,
     ChatCompletionResponse,
@@ -12,6 +16,9 @@ from rustic_ai.core.guild.agent_ext.depends.llm.models import (
 )
 from rustic_ai.core.guild.builders import AgentBuilder
 from rustic_ai.core.guild.dsl import AgentSpec
+from rustic_ai.core.knowledgebase.kbindex_backend_memory import (
+    InMemoryKBIndexBackendResolver,
+)
 from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 from rustic_ai.llm_agent.llm_agent import LLMAgent
 from rustic_ai.llm_agent.llm_agent_conf import LLMAgentConfig
@@ -147,16 +154,29 @@ class TestMemoryEnabledLLMAgent:
     @pytest.mark.skipif(os.getenv("SKIP_EXPENSIVE_TESTS") == "true", reason="Skipping expensive tests")
     def test_invoke_llm_with_kb_memory(self, tmp_path, generator, build_message_from_payload, dependency_map):
         """Test LLMAgent with KnowledgeBasedMemoriesStore for semantic memory recall."""
-        # Create KB memory store with temp storage
-        kb_base = Path(tmp_path) / "kb_memory"
+        # Create KB memory store (dependencies will be injected from guild)
         kb_store = KnowledgeBasedMemoriesStore(
             context_window_size=5,
             recall_limit=10,
-            path_base=str(kb_base),
-            protocol="file",
-            storage_options={"auto_mkdir": True},
-            asynchronous=True,
         )
+
+        # Add filesystem and kb_backend dependencies to the dependency map
+        kb_base = Path(tmp_path) / "kb_memory"
+        enhanced_dependency_map = {
+            **dependency_map,
+            "filesystem:guild": DependencySpec(
+                class_name=get_qualified_class_name(FileSystemResolver),
+                properties={
+                    "path_base": str(kb_base),
+                    "protocol": "file",
+                    "storage_options": {"auto_mkdir": True},
+                    "asynchronous": True,
+                },
+            ),
+            "kb_backend:guild": DependencySpec(
+                class_name=get_qualified_class_name(InMemoryKBIndexBackendResolver),
+            ),
+        }
 
         agent_spec: AgentSpec = (
             AgentBuilder(LLMAgent)
@@ -170,12 +190,13 @@ class TestMemoryEnabledLLMAgent:
                     llm_request_wrappers=[kb_store],
                 )
             )
+            .set_additional_dependencies(["filesystem:guild", "kb_backend:guild"])
             .build_spec()
         )
 
         agent, results = wrap_agent_for_testing(
             agent_spec,
-            dependency_map=dependency_map,
+            dependency_map=enhanced_dependency_map,
         )
 
         # First interaction: Store information about a favorite color

@@ -1,16 +1,27 @@
 from collections import deque
 from pathlib import Path
 from types import SimpleNamespace
+from typing import Optional
 
+from fsspec import filesystem
+from fsspec.implementations.asyn_wrapper import AsyncFileSystemWrapper
+from fsspec.implementations.dirfs import DirFileSystem as FileSystem
 import pytest
 
 from rustic_ai.core.guild.agent import Agent
+from rustic_ai.core.guild.agent_ext.depends.dependency_resolver import (
+    DependencyResolver,
+    DependencySpec,
+)
 from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     AssistantMessage,
     UserMessage,
 )
 from rustic_ai.core.guild.agent_ext.mixins.state_refresher import StateRefresherMixin
 from rustic_ai.core.guild.builders import AgentBuilder
+from rustic_ai.core.knowledgebase.kbindex_backend import KBIndexBackend
+from rustic_ai.core.knowledgebase.kbindex_backend_memory import InMemoryKBIndexBackend
+from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 from rustic_ai.llm_agent.memories.history_memories_store import (
     HistoryBasedMemoriesStore,
 )
@@ -25,6 +36,44 @@ from rustic_ai.llm_agent.memories.state_memories_store import (
 )
 
 from rustic_ai.testing.helpers import wrap_agent_for_testing
+
+# ------------------------------
+# Dependency Resolvers for KB Memory Store
+# ------------------------------
+
+
+class FilesystemResolver(DependencyResolver[FileSystem]):
+    """Resolver for creating FileSystem instances for testing."""
+
+    def __init__(self, path_base: str, protocol: str = "file", asynchronous: bool = True):
+        super().__init__()
+        self.path_base = path_base
+        self.protocol = protocol
+        self.asynchronous = asynchronous
+
+    def resolve(self, org_id: str, guild_id: str, agent_id: Optional[str] = None) -> FileSystem:
+        basefs = filesystem(
+            self.protocol,
+            asynchronous=self.asynchronous,
+            auto_mkdir=True,
+        )
+
+        if self.asynchronous and not basefs.__class__.async_impl:
+            basefs = AsyncFileSystemWrapper(basefs)
+
+        return FileSystem(
+            path=f"{self.path_base}/{guild_id}",
+            fs=basefs,
+            asynchronous=self.asynchronous,
+            storage_options={"auto_mkdir": True},
+        )
+
+
+class KBBackendResolver(DependencyResolver[KBIndexBackend]):
+    """Resolver for creating KBIndexBackend instances for testing."""
+
+    def resolve(self, org_id: str, guild_id: str, agent_id: Optional[str] = None) -> KBIndexBackend:
+        return InMemoryKBIndexBackend()
 
 
 class FakeLLMMessage:
@@ -276,29 +325,38 @@ class DummyKBContext:
 @pytest.fixture
 def kb_memory_store(tmp_path):
     """Create a KnowledgeBasedMemoriesStore instance with temp storage."""
-    base = Path(tmp_path) / "kb_memory_tests"
     return KnowledgeBasedMemoriesStore(
         context_window_size=5,
         recall_limit=10,
-        path_base=str(base),
-        protocol="file",
-        storage_options={"auto_mkdir": True},
-        asynchronous=True,
     )
 
 
 @pytest.fixture
 def kb_agent(tmp_path, generator):
     """Create a dummy agent for KB memory testing."""
+    base = Path(tmp_path) / "kb_memory_tests"
+
+    # Create dependency specs for filesystem and kb_backend
+    dependency_map = {
+        "filesystem:guild": DependencySpec(
+            class_name=get_qualified_class_name(FilesystemResolver),
+            properties={"path_base": str(base), "protocol": "file", "asynchronous": True},
+        ),
+        "kb_backend:guild": DependencySpec(
+            class_name=get_qualified_class_name(KBBackendResolver),
+        ),
+    }
+
     spec = (
         AgentBuilder(DummyKBAgent)
         .set_id("kb_test_agent")
         .set_name("KB Test Agent")
         .set_description("Test agent for KB memory")
+        .set_additional_dependencies(["filesystem:guild", "kb_backend:guild"])
         .build_spec()
     )
 
-    agent, _ = wrap_agent_for_testing(spec)
+    agent, _ = wrap_agent_for_testing(spec, dependency_map)
     return agent
 
 
@@ -309,6 +367,9 @@ def test_kb_memory_store_initialization(kb_memory_store):
     assert kb_memory_store.recall_limit == 10
     assert kb_memory_store._kb is None
     assert kb_memory_store._message_counter == 0
+    # Verify plugin dependencies are declared
+    assert "filesystem:guild" in kb_memory_store.depends_on
+    assert "kb_backend:guild" in kb_memory_store.depends_on
 
 
 def test_kb_memory_store_serialize_deserialize(kb_memory_store):
@@ -474,20 +535,16 @@ def test_kb_memory_store_message_counter_increments(kb_memory_store, kb_agent):
 
 def test_kb_memory_store_configuration_options(tmp_path):
     """Test creating memory store with different configurations."""
-    base1 = Path(tmp_path) / "test1"
     store1 = KnowledgeBasedMemoriesStore(
         context_window_size=3,
         recall_limit=5,
-        path_base=str(base1),
     )
     assert store1.context_window_size == 3
     assert store1.recall_limit == 5
 
-    base2 = Path(tmp_path) / "test2"
     store2 = KnowledgeBasedMemoriesStore(
         context_window_size=10,
         recall_limit=20,
-        path_base=str(base2),
     )
     assert store2.context_window_size == 10
     assert store2.recall_limit == 20
