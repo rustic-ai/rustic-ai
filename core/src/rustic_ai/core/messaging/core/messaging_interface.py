@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Set
 
 from rustic_ai.core.guild.dsl import GuildTopics
 from rustic_ai.core.messaging.core.client import Client
@@ -22,6 +22,8 @@ class MessagingInterface:
         backend (MessagingBackend): The storage backend used to persist messages and client information.
         clients (Dict[str, Client]): A dictionary mapping client IDs to Client instances.
         subscribers (Dict[str, Set[str]]): A dictionary mapping topics to sets of client IDs.
+        shared_namespace (Optional[str]): The shared namespace for cross-guild communication (organization ID).
+        shared_subscribers (Dict[str, Set[str]]): Subscribers for shared namespace topics.
     """
 
     def __init__(self, namespace: str, messaging_config: MessagingConfig):
@@ -40,8 +42,12 @@ class MessagingInterface:
         logging.info(f"Using Backend: {messaging_config}")
 
         self.clients: Dict[str, Client] = {}
-        self.subscribers = self.backend.load_subscribers(namespace)
+        self.subscribers: Dict[str, Set[str]] = self.backend.load_subscribers(namespace)
         self.namespace = namespace
+
+        # Shared namespace for cross-guild communication (lazy initialized)
+        self.shared_namespace: Optional[str] = None
+        self.shared_subscribers: Dict[str, Set[str]] = {}
 
     def _get_namespaced_topics(self, topics: List[str]) -> Dict[str, str]:
         """
@@ -298,3 +304,139 @@ class MessagingInterface:
         self.backend.cleanup()
         self.clients = {}
         self.subscribers = {}
+        self.shared_subscribers = {}
+
+    # =========================================================================
+    # Shared Namespace Methods (for cross-guild communication)
+    # =========================================================================
+
+    def activate_shared_namespace(self, shared_namespace: str) -> None:
+        """
+        Activate shared namespace for cross-guild communication.
+        Called by BoundaryClient when needed.
+
+        Args:
+            shared_namespace: The organization ID to use as shared namespace.
+
+        Raises:
+            RuntimeError: If shared namespace is already activated with a different value.
+        """
+        if self.shared_namespace is not None:
+            if self.shared_namespace != shared_namespace:
+                raise RuntimeError(
+                    f"Shared namespace already activated as '{self.shared_namespace}', "
+                    f"cannot change to '{shared_namespace}'"
+                )
+            return  # Already activated with same namespace
+
+        logging.info(f"Activating shared namespace: {shared_namespace}")
+        self.shared_namespace = shared_namespace
+        self.shared_subscribers = self.backend.load_subscribers(shared_namespace)
+
+    def _get_shared_namespaced_topic(self, topic: str) -> str:
+        """
+        Get the fully qualified topic name in the shared namespace.
+
+        Args:
+            topic: The topic to namespace.
+
+        Returns:
+            The namespaced topic string.
+
+        Raises:
+            RuntimeError: If shared namespace is not activated.
+        """
+        if self.shared_namespace is None:
+            raise RuntimeError("Shared namespace not activated")
+        if topic.startswith(f"{self.shared_namespace}:"):
+            return topic
+        return f"{self.shared_namespace}:{topic}"
+
+    def publish_to_shared(self, sender: Client, message: Message) -> None:
+        """
+        Publish a message to the shared namespace.
+
+        Args:
+            sender: The client that published the message.
+            message: The message instance to publish.
+
+        Raises:
+            RuntimeError: If shared namespace is not activated.
+        """
+        if self.shared_namespace is None:
+            raise RuntimeError("Shared namespace not activated")
+
+        topics = message.topics if isinstance(message.topics, list) else [message.topics]
+        for topic in topics:
+            ntopic = self._get_shared_namespaced_topic(topic)
+            logging.debug(f"[Messaging] Publishing message to shared namespace topic {ntopic}")
+            message_copy = message.model_copy(deep=True)
+            message_copy.topic_published_to = topic
+            self.backend.store_message(self.shared_namespace, ntopic, message_copy)
+            if not self.backend.supports_subscription():  # pragma: no cover
+                self._notify_shared_message(message_copy.model_copy(deep=True))
+
+    def subscribe_shared(self, topic: str, client: Client) -> None:
+        """
+        Subscribe a client to a topic in the shared namespace.
+
+        Args:
+            topic: The topic to subscribe to.
+            client: The client instance to subscribe.
+
+        Raises:
+            RuntimeError: If shared namespace is not activated.
+        """
+        if self.shared_namespace is None:
+            raise RuntimeError("Shared namespace not activated")
+
+        namespaced_topic = self._get_shared_namespaced_topic(topic)
+        logging.debug(f"[Messaging] Subscribing client {client.id} to shared topic {namespaced_topic}")
+
+        if namespaced_topic not in self.shared_subscribers:
+            self.shared_subscribers[namespaced_topic] = set()
+            self.backend.subscribe(namespaced_topic, self._shared_backend_subscription_handler)
+        self.shared_subscribers[namespaced_topic].add(client.id)
+
+    def unsubscribe_shared(self, topic: str, client: Client) -> None:
+        """
+        Unsubscribe a client from a topic in the shared namespace.
+
+        Args:
+            topic: The topic to unsubscribe from.
+            client: The client instance to unsubscribe.
+        """
+        if self.shared_namespace is None:
+            return
+
+        namespaced_topic = self._get_shared_namespaced_topic(topic)
+        if namespaced_topic in self.shared_subscribers:
+            self.shared_subscribers[namespaced_topic].discard(client.id)
+            if not self.shared_subscribers[namespaced_topic]:
+                self.backend.unsubscribe(namespaced_topic)
+                self.shared_subscribers.pop(namespaced_topic, None)
+
+    def _shared_backend_subscription_handler(self, message: Message) -> None:
+        """
+        Handle new messages from the shared namespace backend.
+
+        Args:
+            message: The message instance that was published.
+        """
+        self._notify_shared_message(message)
+
+    def _notify_shared_message(self, message: Message) -> None:
+        """
+        Notify all subscribers of a new message in the shared namespace.
+
+        Args:
+            message: The message instance that was published.
+        """
+        assert message.topic_published_to is not None
+        namespaced_topic = self._get_shared_namespaced_topic(message.topic_published_to)
+        recipients = self.shared_subscribers.get(namespaced_topic, set())
+        recipients_map = {r: r.split("$")[-1] for r in recipients}
+
+        for recipient_client, recipient_id in recipients_map.items():
+            if recipient_client in self.clients and recipient_id != message.sender.id:
+                self.clients[recipient_client].notify_new_message(message)

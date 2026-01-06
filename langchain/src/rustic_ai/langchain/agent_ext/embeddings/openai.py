@@ -68,5 +68,5 @@ class OpenAIEmbeddingsResolver(DependencyResolver[Embeddings]):
             conf=mconf,
         )
 
-    def resolve(self, guild_id: str, agent_id: str) -> Embeddings:
+    def resolve(self, org_id: str, guild_id: str, agent_id: str) -> Embeddings:
         return self.embedding

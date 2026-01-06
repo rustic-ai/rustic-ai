@@ -17,6 +17,7 @@ nav:
       - Architecture: core/architecture.md
       - Agents: core/agents.md
       - Guilds: core/guilds.md
+      - Guild-to-Guild (G2G): core/g2g.md
       - Messaging: core/messaging.md
       - Shared Memory Backend: core/shared_memory_backend.md
       - Execution: core/execution.md
@@ -25,6 +26,7 @@ nav:
       - State Management: core/state_management.md
   - Agents:
       - Overview: agents/index.md
+      - LLM Agent & Plugins: agents/llm_agent.md
       - Core:
           - Overview: agents/core/index.md
           - Guild Manager Agent: agents/core/guild_manager_agent.md

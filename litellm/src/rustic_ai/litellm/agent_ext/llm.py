@@ -105,5 +105,5 @@ class LiteLLMResolver(DependencyResolver[LLM]):
         self.props = LiteLLMConf.model_validate(conf)
         self.LiteLLM = LiteLLM(self.props)
 
-    def resolve(self, guild_id: str, agent_id: str) -> LLM:
+    def resolve(self, org_id: str, guild_id: str, agent_id: str) -> LLM:
         return self.LiteLLM  # We can always return the same instance of LiteLLM

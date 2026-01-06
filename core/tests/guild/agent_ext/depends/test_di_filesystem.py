@@ -167,7 +167,7 @@ class TestFileSystem:
 
         fs = filesystem(protocol, **protocol_props)
 
-        dfs = FileSystem(path=f"/tmp/{guild_id}/file_manager", fs=fs)
+        dfs = FileSystem(path=f"/tmp/{org_id}/{guild_id}/file_manager", fs=fs)
         guild = guild_builder.launch(organization_id=org_id)
 
         probe_agent: ProbeAgent = guild._add_local_agent(probe_spec)  # type: ignore
@@ -231,7 +231,7 @@ class TestFileSystem:
 
         probe_agent.clear_messages()
 
-        gdfs = FileSystem(path=f"/tmp/{guild_id}/GUILD_GLOBAL", fs=fs)
+        gdfs = FileSystem(path=f"/tmp/{org_id}/{guild_id}/GUILD_GLOBAL", fs=fs)
 
         with gdfs.open("test_file", "rb") as f:
             content = f.readline()

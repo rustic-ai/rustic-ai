@@ -29,7 +29,7 @@ async def write_test_knol(
     )
 
 
-def create_test_filesystem(tmp_path, guild: str = "test_guild", agent: str = "test_agent"):
+def create_test_filesystem(tmp_path, org: str = "test_org", guild: str = "test_guild", agent: str = "test_agent"):
     """Create a test filesystem resolver."""
     fsr = FileSystemResolver(
         path_base=str(tmp_path),
@@ -37,7 +37,7 @@ def create_test_filesystem(tmp_path, guild: str = "test_guild", agent: str = "te
         storage_options={},
         asynchronous=True,
     )
-    return fsr.resolve(guild, agent)
+    return fsr.resolve(org, guild, agent)
 
 
 def create_test_knol(

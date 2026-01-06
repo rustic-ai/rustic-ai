@@ -1,4 +1,4 @@
-from typing import Any, Dict, Type
+from typing import Any, Dict, Optional, Type
 
 from rustic_ai.core.guild.agent import Agent
 from rustic_ai.core.guild.agent_ext.depends.dependency_resolver import (
@@ -6,6 +6,7 @@ from rustic_ai.core.guild.agent_ext.depends.dependency_resolver import (
     DependencySpec,
 )
 from rustic_ai.core.guild.dsl import AgentSpec, GuildSpec
+from rustic_ai.core.guild.g2g.boundary_agent import BoundaryAgent
 from rustic_ai.core.messaging.core.client import Client
 from rustic_ai.core.messaging.core.messaging_interface import MessagingInterface
 from rustic_ai.core.utils.class_utils import get_agent_class
@@ -23,12 +24,17 @@ def build_agent_from_spec(
 
     agent_class = get_agent_class(agent_spec.class_name)
 
-    # Initialize the agent's dependencies
+    # Initialize the agent's dependencies from processors
     agent_deps = agent_class.list_all_dependencies()
 
     dependency_resolvers = {
         dep.dependency_key: load_dependency_resolver(dependencies, dep.dependency_key) for dep in agent_deps
     }
+
+    # Also load additional dependencies from agent spec (for plugins)
+    for dep_key in agent_spec.additional_dependencies:
+        if dep_key not in dependency_resolvers:
+            dependency_resolvers[dep_key] = load_dependency_resolver(dependencies, dep_key)
 
     # Create the agent instance
     new_agent = agent_class.__new__(agent_class)
@@ -70,16 +76,40 @@ def load_dependency_resolver(dependencies: Dict[str, DependencySpec], name: str)
 def subscribe_agent_with_messaging(
     agent: Agent,
     messaging: MessagingInterface,
+    organization_id: Optional[str] = None,
 ) -> None:
     """
     Subscribes the agent's client to the messaging system and registers it.
 
+    For BoundaryAgents with subscribe_to_shared_inbox=True, also subscribes to
+    the guild's inbox in the shared (organization) namespace.
+
     Args:
         agent (Agent): The agent whose client is being subscribed.
         messaging (MessagingInterface): The messaging interface to use.
+        organization_id (Optional[str]): The organization ID for shared namespace subscriptions.
     """
     client = agent._client
     messaging.register_client(client)
+
+    # Subscribe to guild-namespace topics
     for topic in agent.subscribed_topics:
         messaging.subscribe(topic, client)
         agent.logger.debug(f"Client [{agent.name}:{agent.id}] registered and subscribed to topic: {topic}")
+
+    if isinstance(agent, BoundaryAgent) and agent.subscribe_to_shared_inbox:
+        if not organization_id:
+            agent.logger.warning(
+                f"BoundaryAgent [{agent.name}] has subscribe_to_shared_inbox=True but no organization_id provided. "
+                "Skipping shared namespace subscription."
+            )
+            return
+
+        # Activate shared namespace and subscribe to guild inbox
+        inbox_topic = f"guild_inbox:{agent.guild_id}"
+        messaging.activate_shared_namespace(organization_id)
+        messaging.subscribe_shared(inbox_topic, client)
+        agent.logger.debug(
+            f"Client [{agent.name}:{agent.id}] subscribed to shared inbox: {inbox_topic} "
+            f"in namespace: {organization_id}"
+        )

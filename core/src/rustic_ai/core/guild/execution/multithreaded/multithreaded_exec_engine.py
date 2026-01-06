@@ -50,6 +50,7 @@ class MultiThreadedEngine(ExecutionEngine):
             machine_id=machine_id,
             client_type=client_type,
             client_properties=client_properties,
+            organization_id=self.organization_id,
         )
 
         self.agent_wrappers[agent_spec.id] = agent_wrapper

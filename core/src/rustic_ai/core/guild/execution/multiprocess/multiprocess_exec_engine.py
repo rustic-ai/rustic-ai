@@ -22,6 +22,7 @@ def multiprocess_wrapper_runner(
     client_properties: Dict[str, Any],
     process_ready_event: EventType,
     shutdown_event: EventType,
+    organization_id: Optional[str] = None,
 ):
     """
     Function that runs in the child process to execute the wrapper.
@@ -51,6 +52,7 @@ def multiprocess_wrapper_runner(
             machine_id=machine_id,
             client_type=client_type,
             client_properties=client_properties,
+            organization_id=organization_id,
         )
 
         # Set the shutdown event for the wrapper
@@ -163,6 +165,7 @@ class MultiProcessExecutionEngine(ExecutionEngine):
                     client_properties,
                     process_ready_event,
                     shutdown_event,
+                    self.organization_id,
                 ),
                 name=f"Agent-{actual_spec.id}",
             )
@@ -190,6 +193,7 @@ class MultiProcessExecutionEngine(ExecutionEngine):
                 machine_id=machine_id,
                 client_type=client_type,
                 client_properties=client_properties,
+                organization_id=self.organization_id,
             )
             tracking_wrapper.process = process
 
