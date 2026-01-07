@@ -1,0 +1,108 @@
+{
+  "name": "Semantic Memory Assistant",
+  "description": "An AI assistant with long-term semantic memory that can recall relevant information from past conversations using vector search, even from months ago.",
+  "version": "v1",
+  "icon": null,
+  "intro_msg": "Hi! I'm your Semantic Memory Assistant. I can remember important details from our past conversations and use that information to help you better. Just ask me anything, and I'll do my best to assist you with the knowledge I've gathered over time.",
+  "exposure": "private",
+  "author_id": "dummyuserid",
+  "organization_id": null,
+  "category_id": null,
+  "spec": {
+    "name": "Semantic Memory Guild",
+    "description": "A guild featuring an LLM agent with knowledge-based semantic memory capabilities",
+    "properties": {},
+    "agents": [
+      {
+        "name": "Memory Assistant",
+        "description": "An intelligent assistant with semantic long-term memory that can recall relevant context from your entire conversation history, not just recent messages",
+        "class_name": "rustic_ai.llm_agent.llm_agent.LLMAgent",
+        "additional_topics": [
+          "memory_agent"
+        ],
+        "additional_dependencies": [
+          "filesystem:guild",
+          "kb_backend:guild"
+        ],
+        "properties": {
+          "model": "gpt-4.1",
+          "default_system_prompt": "You are a helpful AI assistant with semantic long-term memory. You can recall relevant information from past conversations, even if they happened a long time ago. When answering questions, use your memory to provide personalized and context-aware responses. If you recall relevant information from previous conversations, mention it naturally in your response.",
+          "llm_request_wrappers": [
+            {
+              "kind": "rustic_ai.llm_agent.memories.knowledge_memories_store.KnowledgeBasedMemoriesStore",
+              "memory_type": "knowledge_based",
+              "context_window_size": 3,
+              "recall_limit": 10
+            }
+          ]
+        },
+        "listen_to_default_topic": false,
+        "predicates": {},
+        "dependency_map": {}
+      }
+    ],
+    "dependency_map": {
+      "filesystem:guild": {
+        "class_name": "rustic_ai.core.guild.agent_ext.depends.filesystem.filesystem.FileSystemResolver",
+        "properties": {
+          "path_base": "/tmp/semantic_memory_assistant",
+          "protocol": "file",
+          "storage_options": {
+            "auto_mkdir": true
+          },
+          "asynchronous": true
+        }
+      },
+      "kb_backend:guild": {
+        "class_name": "rustic_ai.core.knowledgebase.kbindex_backend_memory.InMemoryKBIndexBackendResolver",
+        "properties": {}
+      },
+      "llm": {
+        "class_name": "rustic_ai.litellm.agent_ext.llm.LiteLLMResolver",
+        "properties": {
+          "model": "gpt-4.1"
+        }
+      }
+    },
+    "routes": {
+      "steps": [
+        {
+          "agent": null,
+          "agent_type": "rustic_ai.core.agents.utils.user_proxy_agent.UserProxyAgent",
+          "method_name": "unwrap_and_forward_message",
+          "origin_filter": null,
+          "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest",
+          "destination": {
+            "topics": "memory_agent",
+            "recipient_list": [],
+            "priority": null
+          },
+          "mark_forwarded": false,
+          "route_times": -1
+        },
+        {
+          "agent": {
+            "id": null,
+            "name": "Memory Assistant"
+          },
+          "agent_type": null,
+          "method_name": null,
+          "origin_filter": null,
+          "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+          "destination": {
+            "topics": "user_message_broadcast",
+            "recipient_list": [],
+            "priority": null
+          },
+          "mark_forwarded": false,
+          "route_times": 1,
+          "transformer": null,
+          "agent_state_update": null,
+          "guild_state_update": null,
+          "process_status": "completed",
+          "reason": null
+        }
+      ]
+    }
+  }
+}
