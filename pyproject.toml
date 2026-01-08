@@ -76,7 +76,7 @@ google-cloud = ["gcsfs"]
 [tool.black]
 line-length = 120
 target-version = ['py312']
-include = '(\\.pyi?$|.*/src/|.*/tests/|it/)'
+include = '\\.pyi?$'
 exclude = '''
 /(
     \.git

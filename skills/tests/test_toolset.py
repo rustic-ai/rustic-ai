@@ -4,7 +4,6 @@ import pytest
 
 from rustic_ai.skills.executor import ExecutionConfig
 from rustic_ai.skills.toolset import (
-    MultiSkillToolset,
     ScriptToolParams,
     SkillToolset,
     create_skill_toolset,
@@ -153,7 +152,7 @@ class TestSkillToolset:
         data = toolset.model_dump()
 
         assert "kind" in data
-        assert "skill" in data
+        assert "skill_paths" in data
         assert "tool_prefix" in data
 
     def test_chat_tools(self, sample_skill_dir):
@@ -173,11 +172,11 @@ class TestSkillToolset:
         assert "setup" in names
 
 
-class TestMultiSkillToolset:
-    """Tests for MultiSkillToolset class."""
+class TestSkillToolsetWithMultipleSkills:
+    """Tests for SkillToolset handling multiple skills."""
 
-    def test_combines_skills(self, temp_dir):
-        """Test combining multiple skills."""
+    def test_combines_multiple_skills(self, temp_dir):
+        """Test that SkillToolset can combine multiple skills."""
         # Create two skill directories
         skill1 = temp_dir / "skill1"
         skill1.mkdir()
@@ -209,19 +208,19 @@ Instructions for skill two.
         scripts2.mkdir()
         (scripts2 / "action2.py").write_text('print("action2")')
 
-        # Create multi-skill toolset
-        multi = MultiSkillToolset.from_paths([skill1, skill2])
+        # Create toolset with multiple skills
+        toolset = SkillToolset.from_paths([skill1, skill2])
 
-        specs = multi.get_toolspecs()
+        specs = toolset.get_toolspecs()
         assert len(specs) == 2
 
         # Both skills' tools should be available
-        names = multi.tool_names
+        names = toolset.tool_names
         assert "skill_one_action1" in names
         assert "skill_two_action2" in names
 
-    def test_execute_routes_correctly(self, temp_dir):
-        """Test that execute routes to correct skill."""
+    def test_execute_routes_to_correct_skill(self, temp_dir):
+        """Test that SkillToolset routes execution to the correct skill when handling multiple skills."""
         # Create two skills
         skill1 = temp_dir / "skill1"
         skill1.mkdir()
@@ -253,16 +252,16 @@ Instructions.
         scripts2.mkdir()
         (scripts2 / "greet.py").write_text('print("Hello from skill 2")')
 
-        multi = MultiSkillToolset.from_paths([skill1, skill2])
+        toolset = SkillToolset.from_paths([skill1, skill2])
 
-        result1 = multi.execute("skill_one_greet", ScriptToolParams())
+        result1 = toolset.execute("skill_one_greet", ScriptToolParams())
         assert "Hello from skill 1" in result1
 
-        result2 = multi.execute("skill_two_greet", ScriptToolParams())
+        result2 = toolset.execute("skill_two_greet", ScriptToolParams())
         assert "Hello from skill 2" in result2
 
-    def test_execute_unknown_tool(self, temp_dir):
-        """Test error for unknown tool in multi-skill toolset."""
+    def test_execute_unknown_tool_with_multiple_skills(self, temp_dir):
+        """Test error handling for unknown tool when using multiple skills."""
         skill = temp_dir / "skill"
         skill.mkdir()
         (skill / "SKILL.md").write_text(
@@ -275,13 +274,13 @@ Instructions.
 """
         )
 
-        multi = MultiSkillToolset.from_paths([skill])
+        toolset = SkillToolset.from_paths([skill])
 
         with pytest.raises(ValueError, match="Unknown tool"):
-            multi.execute("nonexistent", ScriptToolParams())
+            toolset.execute("nonexistent", ScriptToolParams())
 
-    def test_get_combined_system_prompt(self, temp_dir):
-        """Test getting combined system prompt."""
+    def test_system_prompt_combines_multiple_skills(self, temp_dir):
+        """Test that system prompt includes instructions from all skills."""
         skill1 = temp_dir / "skill1"
         skill1.mkdir()
         (skill1 / "SKILL.md").write_text(
@@ -306,8 +305,8 @@ Instructions for skill two.
 """
         )
 
-        multi = MultiSkillToolset.from_paths([skill1, skill2])
-        prompt = multi.get_combined_system_prompt()
+        toolset = SkillToolset.from_paths([skill1, skill2])
+        prompt = toolset.get_combined_system_prompt()
 
         assert "skill-one" in prompt
         assert "skill-two" in prompt

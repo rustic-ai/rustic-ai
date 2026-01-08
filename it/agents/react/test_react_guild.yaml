@@ -1,0 +1,29 @@
+id: react_skill_guild
+name: ReAct Skill Test Guild
+description: Guild for testing ReActAgent with CompositeToolset combining local and marketplace skills
+properties: {}
+agents:
+  - class_name: rustic_ai.llm_agent.react.ReActAgent
+    id: react_agent
+    name: ReAct Agent
+    description: A ReAct agent that uses skills to solve problems
+    additional_topics: []
+    properties:
+      model: gpt-4o-mini
+      max_iterations: 10
+      temperature: 0.7
+      toolset:
+        kind: rustic_ai.llm_agent.react.toolset.CompositeToolset
+        toolsets:
+          - kind: rustic_ai.skills.toolset.SkillToolset
+            skill_paths:
+              - /tmp/test_skills/calculator
+            tool_prefix: calc_
+            execution_config:
+              timeout_seconds: 30
+              capture_stderr: true
+          - kind: rustic_ai.skills.toolset.MarketplaceSkillToolset
+            source: anthropic
+            skill_names:
+              - pdf
+            force: true

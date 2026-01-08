@@ -1,5 +1,5 @@
 import json
-from typing import List, Optional
+from typing import Any, List, Optional
 from unittest.mock import patch
 
 from pydantic import BaseModel
@@ -58,7 +58,7 @@ class CalculatorToolset(ReActToolset):
             )
         ]
 
-    def execute(self, tool_name: str, args: BaseModel) -> str:
+    def execute(self, tool_name: str, args: Any) -> str:
         if tool_name == "calculate":
             assert isinstance(args, CalculateParams)
             # Safe evaluation for testing
@@ -82,7 +82,7 @@ class SearchToolset(ReActToolset):
             )
         ]
 
-    def execute(self, tool_name: str, args: BaseModel) -> str:
+    def execute(self, tool_name: str, args: Any) -> str:
         if tool_name == "search":
             assert isinstance(args, SearchParams)
             return f"Search results for: {args.query}"

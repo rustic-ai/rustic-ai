@@ -58,7 +58,7 @@ from rustic_ai.skills import SkillToolset
 from rustic_ai.llm_agent.react import ReActAgent, ReActAgentConfig
 
 # Create toolset from installed skill
-toolset = SkillToolset.from_path(Path(".claude/skills/pdf"))
+toolset = SkillToolset.from_path(Path("/tmp/rustic-skills/pdf"))
 
 # Configure ReActAgent with the skill
 config = ReActAgentConfig(
@@ -71,13 +71,13 @@ config = ReActAgentConfig(
 ### Use Multiple Skills
 
 ```python
-from rustic_ai.skills import MultiSkillToolset
+from rustic_ai.skills import SkillToolset
 
 # Load multiple skills at once
-toolset = MultiSkillToolset.from_paths([
-    Path(".claude/skills/pdf"),
-    Path(".claude/skills/csv"),
-    Path(".claude/skills/web-search"),
+toolset = SkillToolset.from_paths([
+    Path("/tmp/rustic-skills/pdf"),
+    Path("/tmp/rustic-skills/csv"),
+    Path("/tmp/rustic-skills/web-search"),
 ])
 
 # Get combined system prompt
@@ -197,8 +197,8 @@ Instructions for how to use this skill...
 
 ### Toolset
 
-- `SkillToolset`: Convert skills to ReActToolset for use with ReActAgent
-- `MultiSkillToolset`: Combine multiple skills into one toolset
+- `SkillToolset`: Convert skills to ReActToolset for use with ReActAgent (supports single or multiple skills)
+- `MarketplaceSkillToolset`: Auto-install skills from marketplace
 - `ScriptToolParams`: Parameters for script-based tools
 
 ## Testing

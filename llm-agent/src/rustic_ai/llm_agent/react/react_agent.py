@@ -112,7 +112,12 @@ class ReActAgentConfig(BaseAgentProps):
     @field_serializer("toolset", mode="plain")
     def _serialize_toolset(self, toolset):
         """Serialize toolset to dict for JSON/YAML output."""
-        return toolset.model_dump()
+        data = toolset.model_dump()
+        # Add kind for deserialization
+        from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
+
+        data["kind"] = get_qualified_class_name(type(toolset))
+        return data
 
 
 class ReActAgent(Agent[ReActAgentConfig]):

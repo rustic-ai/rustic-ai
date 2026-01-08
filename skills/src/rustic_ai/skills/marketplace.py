@@ -66,7 +66,7 @@ class SkillMarketplace:
     }
 
     # Default installation directory
-    DEFAULT_INSTALL_PATH = Path(".claude/skills")
+    DEFAULT_INSTALL_PATH = Path("/tmp/rustic-skills")
 
     def __init__(
         self,
@@ -77,7 +77,7 @@ class SkillMarketplace:
         Initialize the marketplace.
 
         Args:
-            install_path: Where to install skills (default: .claude/skills)
+            install_path: Where to install skills (default: /tmp/rustic-skills)
             cache_path: Where to cache downloaded repos (default: temp directory)
         """
         self.install_path = Path(install_path) if install_path else self.DEFAULT_INSTALL_PATH

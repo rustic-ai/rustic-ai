@@ -18,7 +18,6 @@ from .models import (
 )
 from .parser import SkillParseError, SkillParser, parse_skill, parse_skill_metadata
 from .toolset import (
-    MultiSkillToolset,
     ScriptToolParams,
     SkillToolset,
     create_skill_toolset,
@@ -42,7 +41,6 @@ __all__ = [
     "SkillParser",
     "parse_skill",
     "parse_skill_metadata",
-    "MultiSkillToolset",
     "ScriptToolParams",
     "SkillToolset",
     "create_skill_toolset",

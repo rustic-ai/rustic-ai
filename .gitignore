@@ -136,3 +136,5 @@ debugger/
 
 # npm packages
 node_modules/
+.claude/
+skills/.claude/

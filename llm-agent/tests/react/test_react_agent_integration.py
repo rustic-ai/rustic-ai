@@ -6,7 +6,7 @@ Set OPENAI_API_KEY environment variable and unset SKIP_EXPENSIVE_TESTS to run.
 """
 
 import os
-from typing import List
+from typing import Any, List
 
 from flaky import flaky
 from pydantic import BaseModel
@@ -72,7 +72,7 @@ class CalculatorToolset(ReActToolset):
             )
         ]
 
-    def execute(self, tool_name: str, args: BaseModel) -> str:
+    def execute(self, tool_name: str, args: Any) -> str:
         if tool_name == "calculate":
             assert isinstance(args, CalculateParams)
             try:
@@ -101,7 +101,7 @@ class MockWeatherToolset(ReActToolset):
             )
         ]
 
-    def execute(self, tool_name: str, args: BaseModel) -> str:
+    def execute(self, tool_name: str, args: Any) -> str:
         if tool_name == "get_weather":
             assert isinstance(args, GetWeatherParams)
             # Return mock weather data based on city
@@ -132,7 +132,7 @@ class MockSearchToolset(ReActToolset):
             )
         ]
 
-    def execute(self, tool_name: str, args: BaseModel) -> str:
+    def execute(self, tool_name: str, args: Any) -> str:
         if tool_name == "search":
             assert isinstance(args, SearchParams)
             query_lower = args.query.lower()
@@ -319,6 +319,7 @@ class TestReActAgentIntegration:
             build_message_from_payload(
                 generator,
                 ReActRequest(query="When was the Eiffel Tower built? Calculate how many years old it is as of 2025."),
+                ReActRequest(query="When was the Eiffel Tower built? Calculate how many years old it is as of 2025."),
             )
         )
 
@@ -467,7 +468,7 @@ class TestReActAgentIntegration:
                     )
                 ]
 
-            def execute(self, tool_name: str, args: BaseModel) -> str:
+            def execute(self, tool_name: str, args: Any) -> str:
                 if tool_name == "divide":
                     assert isinstance(args, CalculateParams)
                     try:

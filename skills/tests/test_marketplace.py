@@ -19,7 +19,7 @@ class TestSkillMarketplace:
         """Test initialization with defaults."""
         marketplace = SkillMarketplace()
 
-        assert marketplace.install_path == Path(".claude/skills")
+        assert marketplace.install_path == Path("/tmp/rustic-skills")
         assert "anthropic" in marketplace.registry.sources
 
     def test_init_custom_paths(self, temp_dir):

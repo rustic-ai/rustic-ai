@@ -1,11 +1,12 @@
 from abc import ABC, abstractmethod
 from functools import cached_property
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from rustic_ai.core.guild.agent_ext.depends.llm.models import ChatCompletionTool
 from rustic_ai.core.guild.agent_ext.depends.llm.tools_manager import ToolSpec
+from rustic_ai.core.utils.basic_class_utils import get_class_from_name
 
 
 class ReActToolset(BaseModel, ABC):
@@ -131,9 +132,65 @@ class CompositeToolset(ReActToolset):
                 SearchToolset(api_key="...")
             ]
         )
+
+    YAML serialization example:
+        toolset:
+          kind: rustic_ai.llm_agent.react.toolset.CompositeToolset
+          toolsets:
+            - kind: rustic_ai.skills.toolset.SkillToolset
+              skill_paths:
+                - /path/to/skill
+            - kind: rustic_ai.skills.toolset.MarketplaceSkillToolset
+              source: anthropic
+              skill_names:
+                - pdf
     """
 
-    toolsets: List[ReActToolset] = Field(min_length=1, description="List of toolsets to combine")
+    toolsets: List[Union[ReActToolset, Dict[str, Any]]] = Field(
+        min_length=1, description="List of toolsets to combine"
+    )
+
+    @field_validator("toolsets", mode="before")
+    @classmethod
+    def _deserialize_toolsets(cls, value: Any) -> List[ReActToolset]:
+        """
+        Deserialize toolsets from YAML/JSON dicts using the 'kind' field.
+
+        This validator handles polymorphic deserialization of nested toolsets.
+        Each toolset dict must have a 'kind' field with the FQCN of the toolset class.
+        """
+        if not isinstance(value, list):
+            raise ValueError("toolsets must be a list")
+
+        deserialized = []
+        for item in value:
+            if isinstance(item, ReActToolset):
+                # Already a toolset instance
+                deserialized.append(item)
+            elif isinstance(item, dict):
+                # Dict representation from YAML/JSON
+                kind = item.get("kind")
+                if not kind:
+                    raise ValueError("Each toolset dict must have a 'kind' field with the class FQCN")
+
+                try:
+                    toolset_class = get_class_from_name(kind)
+                except Exception as e:
+                    raise ValueError(f"Failed to load toolset class '{kind}': {e}") from e
+
+                if not issubclass(toolset_class, ReActToolset):
+                    raise ValueError(f"Class '{kind}' is not a ReActToolset subclass")
+
+                # Instantiate the toolset with the remaining fields
+                try:
+                    toolset_instance = toolset_class(**item)
+                    deserialized.append(toolset_instance)
+                except Exception as e:
+                    raise ValueError(f"Failed to instantiate toolset '{kind}': {e}") from e
+            else:
+                raise ValueError(f"Invalid toolset type: {type(item)}. Must be ReActToolset or dict.")
+
+        return deserialized
 
     def get_toolspecs(self) -> List[ToolSpec]:
         """Return combined tool specifications from all toolsets."""
