@@ -1,7 +1,7 @@
 """Pytest fixtures for skills module tests."""
 
-import tempfile
 from pathlib import Path
+import tempfile
 
 import pytest
 
@@ -68,28 +68,34 @@ def sample_skill_dir(temp_dir, sample_skill_md):
     scripts_dir.mkdir()
 
     # Python script
-    (scripts_dir / "process.py").write_text('''"""Process input data and return result."""
+    (scripts_dir / "process.py").write_text(
+        '''"""Process input data and return result."""
 import json
 import os
 
 args = json.loads(os.environ.get("SKILL_ARGS", "{}"))
 print(f"Processing: {args}")
-''')
+'''
+    )
 
     # Shell script
-    (scripts_dir / "setup.sh").write_text("""#!/bin/bash
+    (scripts_dir / "setup.sh").write_text(
+        """#!/bin/bash
 # Setup the environment
 echo "Setting up..."
 echo "Done"
-""")
+"""
+    )
 
     # Create references directory
     refs_dir = skill_path / "references"
     refs_dir.mkdir()
-    (refs_dir / "api-docs.md").write_text("""# API Documentation
+    (refs_dir / "api-docs.md").write_text(
+        """# API Documentation
 
 This is the API documentation for the test skill.
-""")
+"""
+    )
 
     # Create assets directory
     assets_dir = skill_path / "assets"

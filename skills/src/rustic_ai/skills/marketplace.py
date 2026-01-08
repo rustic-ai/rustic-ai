@@ -8,16 +8,16 @@ Supports:
 """
 
 import logging
+from pathlib import Path
 import shutil
 import tempfile
-from pathlib import Path
 from typing import List, Optional
 
 from git import Repo
 from git.exc import GitCommandError, InvalidGitRepositoryError
 
 from .models import SkillMetadata, SkillRegistry, SkillSource
-from .parser import SkillParser, SkillParseError
+from .parser import SkillParseError, SkillParser
 
 logger = logging.getLogger(__name__)
 
@@ -128,11 +128,7 @@ class SkillMarketplace:
         Returns:
             List of discovered skill metadata
         """
-        sources = (
-            [self.registry.sources[source_name]]
-            if source_name
-            else list(self.registry.sources.values())
-        )
+        sources = [self.registry.sources[source_name]] if source_name else list(self.registry.sources.values())
 
         discovered = []
         for source in sources:

@@ -304,13 +304,15 @@ class TestSkillMarketplace:
             skills_dir.mkdir()
             skill_dir = skills_dir / "test-skill"
             skill_dir.mkdir()
-            (skill_dir / "SKILL.md").write_text("""---
+            (skill_dir / "SKILL.md").write_text(
+                """---
 name: test-skill
 description: A GitHub skill
 ---
 
 Instructions
-""")
+"""
+            )
             return MagicMock()
 
         mock_repo.clone_from.side_effect = mock_clone_from

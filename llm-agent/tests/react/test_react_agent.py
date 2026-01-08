@@ -1,5 +1,5 @@
 import json
-from typing import List
+from typing import List, Optional
 from unittest.mock import patch
 
 from pydantic import BaseModel
@@ -60,6 +60,7 @@ class CalculatorToolset(ReActToolset):
 
     def execute(self, tool_name: str, args: BaseModel) -> str:
         if tool_name == "calculate":
+            assert isinstance(args, CalculateParams)
             # Safe evaluation for testing
             try:
                 result = eval(args.expression)  # noqa: S307
@@ -83,13 +84,14 @@ class SearchToolset(ReActToolset):
 
     def execute(self, tool_name: str, args: BaseModel) -> str:
         if tool_name == "search":
+            assert isinstance(args, SearchParams)
             return f"Search results for: {args.query}"
         raise ValueError(f"Unknown tool: {tool_name}")
 
 
 def create_mock_response(
     content: str,
-    tool_calls: List[ChatCompletionMessageToolCall] = None,
+    tool_calls: Optional[List[ChatCompletionMessageToolCall]] = None,
     finish_reason: FinishReason = FinishReason.stop,
 ) -> ChatCompletionResponse:
     """Helper to create mock LLM responses."""

@@ -1,8 +1,8 @@
 """Parser for Agent Skills SKILL.md format."""
 
 import logging
-import re
 from pathlib import Path
+import re
 from typing import List, Optional, Tuple
 
 import yaml

@@ -3,7 +3,12 @@
 import pytest
 
 from rustic_ai.skills.executor import ExecutionConfig
-from rustic_ai.skills.toolset import MultiSkillToolset, ScriptToolParams, SkillToolset, create_skill_toolset
+from rustic_ai.skills.toolset import (
+    MultiSkillToolset,
+    ScriptToolParams,
+    SkillToolset,
+    create_skill_toolset,
+)
 
 
 class TestScriptToolParams:
@@ -176,26 +181,30 @@ class TestMultiSkillToolset:
         # Create two skill directories
         skill1 = temp_dir / "skill1"
         skill1.mkdir()
-        (skill1 / "SKILL.md").write_text("""---
+        (skill1 / "SKILL.md").write_text(
+            """---
 name: skill-one
 description: First skill
 ---
 
 Instructions for skill one.
-""")
+"""
+        )
         scripts1 = skill1 / "scripts"
         scripts1.mkdir()
         (scripts1 / "action1.py").write_text('print("action1")')
 
         skill2 = temp_dir / "skill2"
         skill2.mkdir()
-        (skill2 / "SKILL.md").write_text("""---
+        (skill2 / "SKILL.md").write_text(
+            """---
 name: skill-two
 description: Second skill
 ---
 
 Instructions for skill two.
-""")
+"""
+        )
         scripts2 = skill2 / "scripts"
         scripts2.mkdir()
         (scripts2 / "action2.py").write_text('print("action2")')
@@ -216,26 +225,30 @@ Instructions for skill two.
         # Create two skills
         skill1 = temp_dir / "skill1"
         skill1.mkdir()
-        (skill1 / "SKILL.md").write_text("""---
+        (skill1 / "SKILL.md").write_text(
+            """---
 name: skill-one
 description: First skill
 ---
 
 Instructions.
-""")
+"""
+        )
         scripts1 = skill1 / "scripts"
         scripts1.mkdir()
         (scripts1 / "greet.py").write_text('print("Hello from skill 1")')
 
         skill2 = temp_dir / "skill2"
         skill2.mkdir()
-        (skill2 / "SKILL.md").write_text("""---
+        (skill2 / "SKILL.md").write_text(
+            """---
 name: skill-two
 description: Second skill
 ---
 
 Instructions.
-""")
+"""
+        )
         scripts2 = skill2 / "scripts"
         scripts2.mkdir()
         (scripts2 / "greet.py").write_text('print("Hello from skill 2")')
@@ -252,13 +265,15 @@ Instructions.
         """Test error for unknown tool in multi-skill toolset."""
         skill = temp_dir / "skill"
         skill.mkdir()
-        (skill / "SKILL.md").write_text("""---
+        (skill / "SKILL.md").write_text(
+            """---
 name: test-skill
 description: Test skill
 ---
 
 Instructions.
-""")
+"""
+        )
 
         multi = MultiSkillToolset.from_paths([skill])
 
@@ -269,23 +284,27 @@ Instructions.
         """Test getting combined system prompt."""
         skill1 = temp_dir / "skill1"
         skill1.mkdir()
-        (skill1 / "SKILL.md").write_text("""---
+        (skill1 / "SKILL.md").write_text(
+            """---
 name: skill-one
 description: First skill
 ---
 
 Instructions for skill one.
-""")
+"""
+        )
 
         skill2 = temp_dir / "skill2"
         skill2.mkdir()
-        (skill2 / "SKILL.md").write_text("""---
+        (skill2 / "SKILL.md").write_text(
+            """---
 name: skill-two
 description: Second skill
 ---
 
 Instructions for skill two.
-""")
+"""
+        )
 
         multi = MultiSkillToolset.from_paths([skill1, skill2])
         prompt = multi.get_combined_system_prompt()

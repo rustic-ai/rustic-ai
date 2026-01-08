@@ -74,13 +74,14 @@ class CalculatorToolset(ReActToolset):
 
     def execute(self, tool_name: str, args: BaseModel) -> str:
         if tool_name == "calculate":
+            assert isinstance(args, CalculateParams)
             try:
                 # Safely evaluate arithmetic expressions
                 # Only allow basic math operations
                 allowed_chars = set("0123456789+-*/(). ")
                 expression = args.expression
                 if not all(c in allowed_chars for c in expression):
-                    return f"Error: Expression contains invalid characters. Only arithmetic operations are allowed."
+                    return f"Error: Expression contains invalid characters. Only arithmetic operations are allowed {args.expression}."
                 result = eval(expression)  # noqa: S307
                 return str(result)
             except Exception as e:
@@ -102,6 +103,7 @@ class MockWeatherToolset(ReActToolset):
 
     def execute(self, tool_name: str, args: BaseModel) -> str:
         if tool_name == "get_weather":
+            assert isinstance(args, GetWeatherParams)
             # Return mock weather data based on city
             weather_data = {
                 "paris": "72°F (22°C), Partly Cloudy",
@@ -132,6 +134,7 @@ class MockSearchToolset(ReActToolset):
 
     def execute(self, tool_name: str, args: BaseModel) -> str:
         if tool_name == "search":
+            assert isinstance(args, SearchParams)
             query_lower = args.query.lower()
 
             # Provide relevant mock search results
@@ -466,6 +469,7 @@ class TestReActAgentIntegration:
 
             def execute(self, tool_name: str, args: BaseModel) -> str:
                 if tool_name == "divide":
+                    assert isinstance(args, CalculateParams)
                     try:
                         result = eval(args.expression)  # noqa: S307
                         return str(result)

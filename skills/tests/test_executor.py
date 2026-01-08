@@ -99,13 +99,15 @@ class TestScriptExecutor:
     def test_execute_with_args(self, temp_dir):
         """Test executing script with arguments."""
         script_path = temp_dir / "args_test.py"
-        script_path.write_text("""
+        script_path.write_text(
+            """
 import json
 import os
 
 args = json.loads(os.environ.get("SKILL_ARGS", "{}"))
 print(f"Got args: {args}")
-""")
+"""
+        )
 
         script = SkillScript(
             name="args_test",
@@ -174,10 +176,12 @@ print(f"Got args: {args}")
     def test_execute_with_env_vars(self, temp_dir):
         """Test executing script with custom environment variables."""
         script_path = temp_dir / "env_test.py"
-        script_path.write_text("""
+        script_path.write_text(
+            """
 import os
 print(f"MY_VAR={os.environ.get('MY_VAR', 'not set')}")
-""")
+"""
+        )
 
         script = SkillScript(
             name="env_test",
