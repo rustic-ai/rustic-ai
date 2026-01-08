@@ -11,11 +11,10 @@ import logging
 import shutil
 import tempfile
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import List, Optional
 
-import httpx
 from git import Repo
-from git.exc import GitCommandError
+from git.exc import GitCommandError, InvalidGitRepositoryError
 
 from .models import SkillMetadata, SkillRegistry, SkillSource
 from .parser import SkillParser, SkillParseError
@@ -168,8 +167,10 @@ class SkillMarketplace:
     def _discover_from_local(self, source: SkillSource) -> List[SkillMetadata]:
         """Discover skills from a local directory."""
         skills_dir = Path(source.location)
+        if source.skills_path:
+            skills_dir = skills_dir / source.skills_path
         if not skills_dir.exists():
-            raise MarketplaceError(f"Local source not found: {source.location}")
+            raise MarketplaceError(f"Local source not found: {skills_dir}")
         return self._discover_from_directory(skills_dir, source.name)
 
     def _discover_from_git(self, source: SkillSource) -> List[SkillMetadata]:
@@ -222,21 +223,26 @@ class SkillMarketplace:
                 repo = Repo(repo_path)
                 repo.remotes.origin.pull()
                 logger.debug(f"Updated repo: {name}")
-            except GitCommandError as e:
-                logger.warning(f"Failed to update {name}, using cached version: {e}")
-        else:
-            # Clone new repo (shallow clone for efficiency)
-            repo_path.parent.mkdir(parents=True, exist_ok=True)
-            try:
-                Repo.clone_from(
-                    url,
-                    repo_path,
-                    branch=branch,
-                    depth=1,
-                )
-                logger.info(f"Cloned repo: {name}")
-            except GitCommandError as e:
-                raise MarketplaceError(f"Failed to clone {url}: {e}")
+                return repo_path
+            except (GitCommandError, InvalidGitRepositoryError) as e:
+                logger.warning(f"Failed to update {name}, recloning: {e}")
+                try:
+                    shutil.rmtree(repo_path)
+                except OSError as err:
+                    raise MarketplaceError(f"Failed to remove invalid repo at {repo_path}: {err}") from err
+
+        # Clone new repo (shallow clone for efficiency)
+        repo_path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            Repo.clone_from(
+                url,
+                repo_path,
+                branch=branch,
+                depth=1,
+            )
+            logger.info(f"Cloned repo: {name}")
+        except GitCommandError as e:
+            raise MarketplaceError(f"Failed to clone {url}: {e}")
 
         return repo_path
 

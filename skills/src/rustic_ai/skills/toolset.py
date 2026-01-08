@@ -4,8 +4,6 @@ Bridges Agent Skills with the ReActAgent by converting skill scripts
 into executable tools and providing skill instructions.
 """
 
-import json
-import logging
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -15,10 +13,8 @@ from rustic_ai.core.guild.agent_ext.depends.llm.tools_manager import ToolSpec
 from rustic_ai.llm_agent.react.toolset import ReActToolset
 
 from .executor import ExecutionConfig, ExecutionResult, ScriptExecutor
-from .models import SkillDefinition, SkillScript
+from .models import SkillDefinition
 from .parser import SkillParser
-
-logger = logging.getLogger(__name__)
 
 
 class ScriptToolParams(BaseModel):

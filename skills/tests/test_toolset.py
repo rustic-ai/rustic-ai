@@ -1,23 +1,9 @@
 """Tests for skills toolset."""
 
-from pathlib import Path
-
 import pytest
 
 from rustic_ai.skills.executor import ExecutionConfig
-from rustic_ai.skills.models import (
-    SkillAsset,
-    SkillDefinition,
-    SkillMetadata,
-    SkillReference,
-    SkillScript,
-)
-from rustic_ai.skills.toolset import (
-    MultiSkillToolset,
-    ScriptToolParams,
-    SkillToolset,
-    create_skill_toolset,
-)
+from rustic_ai.skills.toolset import MultiSkillToolset, ScriptToolParams, SkillToolset, create_skill_toolset
 
 
 class TestScriptToolParams:

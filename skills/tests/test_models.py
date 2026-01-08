@@ -1,9 +1,5 @@
 """Tests for skills models."""
 
-from pathlib import Path
-
-import pytest
-
 from rustic_ai.skills.models import (
     SkillAsset,
     SkillDefinition,

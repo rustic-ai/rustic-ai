@@ -8,8 +8,9 @@ Set OPENAI_API_KEY environment variable and unset SKIP_EXPENSIVE_TESTS to run.
 import os
 from typing import List
 
-import pytest
+from flaky import flaky
 from pydantic import BaseModel
+import pytest
 
 from rustic_ai.core.guild.agent_ext.depends.llm.tools_manager import ToolSpec
 from rustic_ai.core.guild.builders import AgentBuilder
@@ -25,7 +26,6 @@ from rustic_ai.llm_agent.react import (
 )
 
 from rustic_ai.testing.helpers import wrap_agent_for_testing
-
 
 # ---------------------------------------------------------------------------
 # Tool Parameter Models
@@ -165,6 +165,7 @@ class MockSearchToolset(ReActToolset):
 class TestReActAgentIntegration:
     """Integration tests for ReActAgent using actual LLM calls."""
 
+    @flaky(max_runs=3, min_passes=1)
     def test_simple_calculation(self, generator, build_message_from_payload, dependency_map):
         """Test ReActAgent with a simple calculation query."""
         agent_spec: AgentSpec = (
@@ -314,9 +315,7 @@ class TestReActAgentIntegration:
         agent._on_message(
             build_message_from_payload(
                 generator,
-                ReActRequest(
-                    query="When was the Eiffel Tower built? Calculate how many years old it is as of 2025."
-                ),
+                ReActRequest(query="When was the Eiffel Tower built? Calculate how many years old it is as of 2025."),
             )
         )
 

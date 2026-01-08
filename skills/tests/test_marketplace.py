@@ -1,6 +1,5 @@
 """Tests for skills marketplace."""
 
-import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -80,6 +79,28 @@ class TestSkillMarketplace:
         names = [s.name for s in discovered]
         assert "test-skill" in names
         assert "minimal-skill" in names
+
+    def test_discover_from_local_with_skills_path(self, temp_dir, sample_skill_md):
+        """Test discovering skills from local source with skills_path."""
+        repo_dir = temp_dir / "repo"
+        skills_dir = repo_dir / "skills"
+        skill_dir = skills_dir / "test-skill"
+
+        skill_dir.mkdir(parents=True)
+        (skill_dir / "SKILL.md").write_text(sample_skill_md)
+
+        marketplace = SkillMarketplace()
+        marketplace.add_source(
+            name="local",
+            source_type="local",
+            location=str(repo_dir),
+            skills_path="skills",
+        )
+
+        discovered = marketplace.discover("local")
+
+        assert len(discovered) == 1
+        assert discovered[0].name == "test-skill"
 
     def test_discover_from_local_not_found(self, temp_dir):
         """Test error when local source doesn't exist."""
