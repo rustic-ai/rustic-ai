@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from functools import cached_property
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -146,7 +146,7 @@ class CompositeToolset(ReActToolset):
                 - pdf
     """
 
-    toolsets: List[Union[ReActToolset, Dict[str, Any]]] = Field(
+    toolsets: List[ReActToolset] = Field(
         min_length=1, description="List of toolsets to combine"
     )
 
@@ -194,7 +194,7 @@ class CompositeToolset(ReActToolset):
 
     def get_toolspecs(self) -> List[ToolSpec]:
         """Return combined tool specifications from all toolsets."""
-        specs = []
+        specs: List[ToolSpec] = []
         for toolset in self.toolsets:
             specs.extend(toolset.get_toolspecs())
         return specs

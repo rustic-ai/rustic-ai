@@ -319,7 +319,6 @@ class TestReActAgentIntegration:
             build_message_from_payload(
                 generator,
                 ReActRequest(query="When was the Eiffel Tower built? Calculate how many years old it is as of 2025."),
-                ReActRequest(query="When was the Eiffel Tower built? Calculate how many years old it is as of 2025."),
             )
         )
 
