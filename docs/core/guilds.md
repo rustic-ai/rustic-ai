@@ -27,6 +27,15 @@ Key fields in a `GuildSpec`:
 -   `dependency_map` (Dict[str, DependencySpec]): A mapping of dependency keys to [Dependency Specifications (`DependencySpec`)](dependencies.md) available to all agents in the guild. These can be overridden at the agent level.
 -   `routes` (RoutingSlip): Defines the message routing rules within the guild. This is a powerful mechanism for orchestrating agent interactions.
 
+### Modular specs
+- Guild specs can be split across multiple YAML files and recomposed with `!include` (structure) and `!code` (file contents, e.g., prompts or JSONata scripts).
+- Paths in `!include` / `!code` are resolved relative to the YAML file that declares them; keep prompts in `.md`/`.txt` and route logic in dedicated files.
+- Example root layout:
+    - `guild.yaml` (root spec)
+    - `agents/*.yaml` (agent snippets)
+    - `routes.yaml` (routing slip)
+    - `prompts/*.md` (LLM prompts)
+
 ### Example `GuildSpec` (Conceptual JSON)
 
 ```json
