@@ -1,3 +1,3 @@
 #!/bin/sh
 
-MODULES="core testing redis ray api litellm chroma marvin serpapi playwright huggingface langchain showcase vertexai llm-agent lancedb claude mcp"
+MODULES="core testing redis ray api litellm chroma marvin serpapi playwright huggingface langchain showcase vertexai llm-agent lancedb claude mcp skills"

@@ -76,9 +76,11 @@ docker buildx build --platform linux/amd64 -t rusticai-api .
 
 **Messaging System** (`core/src/rustic_ai/core/messaging/`): Guild-scoped pub/sub message bus with pluggable backends (Redis for production, in-memory for testing). Messages use `GemstoneID` for globally sortable identifiers and maintain full routing history. Topics are automatically namespaced per guild (e.g., `"system"` becomes `"<guild-id>:system"`).
 
-**Dependency Injection** (`core/src/rustic_ai/core/guild/agent_ext/depends/`): Agents declare dependencies via `DependencySpec` in their spec or via `AgentDependency` strings in `@processor` decorators. Dependencies can be scoped at agent level or guild level. Common dependencies include LLMs, databases, filesystems, and knowledge bases.
+**Dependency Injection** (`core/src/rustic_ai/core/guild/agent_ext/depends/`): Agents declare dependencies via `DependencySpec` in their spec or via `AgentDependency` strings in `@processor` decorators. Dependencies can be scoped at agent, guild, or organization level. Common dependencies include LLMs, databases, filesystems, and knowledge bases.
 
-**Execution Engines** (`core/src/rustic_ai/core/guild/execution/`): Manage agent lifecycle and runtime. `SyncExecutionEngine` runs agents in threads, while `RayExecutionEngine` (`ray/`) enables distributed execution across clusters.
+**Execution Engines** (`core/src/rustic_ai/core/guild/execution/`): Manage agent lifecycle and runtime. Available engines: `SyncExecutionEngine` (single-threaded), `MultiThreadedExecutionEngine` (thread-pool), `MultiProcessExecutionEngine` (process-pool), and `RayExecutionEngine` (`ray/`) for distributed execution across clusters.
+
+**Guild-to-Guild Communication** (`core/src/rustic_ai/core/guild/g2g/`): Cross-guild message routing via `GatewayAgent` and `EnvoyAgent`. Uses organization ID for shared namespace, enabling multi-guild workflows with session state preservation via saga pattern.
 
 ### Message Flow
 
@@ -121,6 +123,7 @@ The repository follows a consistent structure per module:
 - `llm-agent/`: Pluggable LLM agent with tool calling
 - `huggingface/`: HuggingFace models (diffusion, TTS, etc.)
 - `vertexai/`: Google Vertex AI integration
+- `claude/`: Claude integration via Vertex AI
 
 **Data & tools:**
 - `chroma/`: Chroma vector database integration
@@ -128,6 +131,7 @@ The repository follows a consistent structure per module:
 - `langchain/`: LangChain integration
 - `serpapi/`: SerpAPI search integration
 - `playwright/`: Web automation agents
+- `mcp/`: Model Context Protocol support
 
 **Other:**
 - `showcase/`: Example guilds and demos
@@ -193,7 +197,7 @@ def handle(self, ctx: ProcessContext[MyMessage], llm, db):
     pass
 ```
 
-Dependency string format: `"<key>"` (agent-scoped) or `"<key>:guild"` (guild-scoped)
+Dependency string format: `"<key>"` (agent-scoped), `"<key>:guild"` (guild-scoped), or `"<key>:org"` (organization-scoped)
 
 ### Testing Agents
 

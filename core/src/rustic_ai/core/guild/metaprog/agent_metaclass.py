@@ -173,7 +173,7 @@ class AgentMetaclass(ABCMeta):
             # Collect handlers defined directly on the subclass and their dependencies
             handler_entries, agent_dependencies = MetaclassHelper.collect_direct_handlers_from_dict(name, dct, call_map)
 
-            # Include base-class advertised dependencies (backward compatibility)
+            # Include base-class advertised dependencies
             agent_dependencies.extend(MetaclassHelper.collect_base_dependencies(bases))
 
             # Register inherited handlers (not directly defined on subclass) and collect their dependencies
