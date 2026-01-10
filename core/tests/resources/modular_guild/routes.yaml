@@ -1,0 +1,6 @@
+steps:
+  - agent:
+      name: Modular Agent
+    transformer:
+      style: content_based_router
+      handler: !code script.jsonata

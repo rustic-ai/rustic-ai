@@ -58,6 +58,7 @@ from rustic_ai.core.state.manager.state_manager import (
 from rustic_ai.core.utils import class_utils
 from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 from rustic_ai.core.utils.jexpr import JxScript
+from rustic_ai.core.utils.yaml_utils import load_yaml
 
 
 class OriginFilterKeys(StrEnum):
@@ -534,8 +535,10 @@ class GuildBuilder:
             GuildBuilder: The built GuildBuilder instance.
         """
         # Load the YAML file, parse it and build the GuildBuilder instance.
-        with open(file_path, "r") as file:
-            return cls.from_spec_yaml(file.read())
+        abs_path = os.path.abspath(file_path)
+        base_dir = os.path.dirname(abs_path)
+        with open(abs_path, "r") as file:
+            return cls._from_spec_dict(load_yaml(file, base_dir=base_dir))
 
     @classmethod
     def from_json_file(cls, file_path: str) -> "GuildBuilder":
@@ -946,8 +949,9 @@ class GuildHelper:
             return {}
 
         deps_config = {}
-        with open(filepath) as depsfile:
-            deps_config = yaml.safe_load(depsfile)
+        abs_path = os.path.abspath(filepath)
+        with open(abs_path) as depsfile:
+            deps_config = load_yaml(depsfile, base_dir=os.path.dirname(abs_path))
 
         deps = {k: DependencySpec.model_validate(v) for k, v in deps_config.items()}
 
