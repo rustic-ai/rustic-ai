@@ -1,0 +1,10 @@
+id: research_assistant_agent
+name: Research Assistant
+description: An LLM agent that helps with research tasks
+class_name: rustic_ai.llm_agent.llm_agent.LLMAgent
+additional_topics: []
+properties:
+  model: gpt-4o
+  temperature: 0.7
+  max_tokens: 2000
+  default_system_prompt: !code prompts/research_assistant.md

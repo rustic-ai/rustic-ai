@@ -97,6 +97,71 @@ with open("my_guild.yaml", "r") as f:
 guild_spec = GuildSpec.parse_obj(guild_data)
 ```
 
+## Modular Guild Specifications (recommended)
+
+Guild specs can be split across multiple YAML files and stitched together with the `!include` and `!code` tags. This keeps large guilds organized and lets you reuse common pieces (agents, routes, prompts) across specs.
+
+### When to use modular specs
+- You have several agents with shared defaults
+- Routes or dependencies are reused across guilds
+- LLM prompts or tool configs live in separate files (markdown, json, etc.)
+
+### Minimal modular layout
+```
+guilds/
+    research/
+        guild.yaml          # root spec
+        agents/
+            llm.yaml
+            orchestrator.yaml
+        routes.yaml
+        prompts/
+            llm_system_prompt.md
+```
+
+### Root guild.yaml example
+```yaml
+id: research_guild
+name: Research Guild
+description: Modular guild with reusable pieces
+agents:
+    - !include agents/llm.yaml
+    - !include agents/orchestrator.yaml
+routes: !include routes.yaml
+```
+
+### Agent with external prompt
+```yaml
+id: research_llm
+class_name: rustic_ai.llm_agent.llm_agent.LLMAgent
+properties:
+    model: gpt-4o
+    default_system_prompt: !code ../prompts/llm_system_prompt.md
+```
+
+### Route with JSONata transformer
+```yaml
+steps:
+    - agent:
+            name: Orchestrator
+        transformer:
+            style: content_based_router
+            handler: !code routes/decision.jsonata
+```
+
+### Loading a modular spec
+```python
+from rustic_ai.core.guild.builders import GuildBuilder
+
+builder = GuildBuilder.from_yaml_file("guilds/research/guild.yaml")
+guild = builder.launch(org_id="myorg")
+```
+
+**Tips**
+- Paths in `!include` and `!code` are resolved relative to the YAML file that declares them.
+- Keep prompts and long strings in `.md`/`.txt` files; keep routes/logic in separate `.yaml` or `.jsonata` files.
+- Validate with `poetry run pytest core/tests/guild/test_llm_prompt_loading.py` if you change prompt file extensions.
+
 ## Key Components of a GuildSpec
 
 A complete `GuildSpec` includes:
