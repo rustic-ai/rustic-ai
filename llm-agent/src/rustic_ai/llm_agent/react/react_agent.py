@@ -17,6 +17,8 @@ from rustic_ai.core.guild.agent_ext.depends.llm.models import (
 from rustic_ai.core.guild.dsl import BaseAgentProps
 from rustic_ai.core.utils.basic_class_utils import get_class_from_name
 from rustic_ai.llm_agent.llm_agent_conf import Models
+from rustic_ai.llm_agent.llm_agent_helper import LLMAgentHelper
+from rustic_ai.llm_agent.llm_plugin_mixin import LLMPluginMixin
 
 from .models import ReActRequest, ReActResponse, ReActStep
 from .toolset import ReActToolset
@@ -43,12 +45,18 @@ Important guidelines:
 """
 
 
-class ReActAgentConfig(BaseAgentProps):
+class ReActAgentConfig(BaseAgentProps, LLMPluginMixin):
     """
     Configuration for the ReActAgent.
 
-    This config mirrors relevant fields from LLMAgentConfig while adding
-    ReAct-specific settings like max_iterations and toolset.
+    This config extends LLMPluginMixin to support the same plugin pipeline
+    as LLMAgent, while adding ReAct-specific settings like max_iterations
+    and toolset.
+
+    Plugin execution for ReActAgent:
+    - Preprocessors run ONCE before the ReAct loop starts
+    - Postprocessors run ONCE after the loop completes (on final response)
+    - Plugins do NOT run on intermediate LLM calls within the loop
     """
 
     model_config = ConfigDict(extra="ignore")
@@ -119,6 +127,23 @@ class ReActAgentConfig(BaseAgentProps):
         data["kind"] = get_qualified_class_name(type(toolset))
         return data
 
+    # Fields that should not be passed to the LLM
+    _non_llm_fields = {
+        "max_retries",
+        "request_preprocessors",
+        "llm_request_wrappers",
+        "response_postprocessors",
+        "max_iterations",
+        "toolset",
+        "system_prompt",
+    }
+
+    def get_llm_params(self) -> dict:
+        """
+        Get the LLM parameters from the config, excluding non-LLM fields.
+        """
+        return self.model_dump(exclude={*self._non_llm_fields})
+
 
 class ReActAgent(Agent[ReActAgentConfig]):
     """
@@ -128,6 +153,11 @@ class ReActAgent(Agent[ReActAgentConfig]):
     1. Calls the LLM with the current conversation and available tools
     2. If the LLM requests a tool call, executes the tool and adds the result
     3. Repeats until the LLM provides a final answer or max iterations is reached
+
+    Plugin execution model:
+    - Preprocessors wrap the entire ReAct loop (run once before loop starts)
+    - Postprocessors wrap the entire ReAct loop (run once after loop ends)
+    - Individual LLM calls within the loop do NOT trigger plugins
 
     This agent is suitable for simple, self-contained ReAct use cases where
     tools are executed synchronously within the agent. For more complex
@@ -147,8 +177,15 @@ class ReActAgent(Agent[ReActAgentConfig]):
         request = ctx.payload
 
         try:
-            result = self._run_react_loop(request.query, llm, request.context)
+            result, plugin_messages = self._run_react_loop(ctx, request.query, llm, request.context)
+
+            # Send plugin-generated messages first
+            for msg in plugin_messages:
+                ctx.send(msg)
+
+            # Send the final ReActResponse
             ctx.send(result)
+
         except Exception as e:
             logger.error(f"Error in ReAct loop: {e}", exc_info=True)
             ctx.send(
@@ -161,43 +198,65 @@ class ReActAgent(Agent[ReActAgentConfig]):
 
     def _run_react_loop(
         self,
+        ctx: ProcessContext[ReActRequest],
         query: str,
         llm: LLM,
         context: Optional[dict] = None,
-    ) -> ReActResponse:
+    ) -> tuple[ReActResponse, list]:
         """
-        Execute the ReAct reasoning loop.
+        Execute the ReAct reasoning loop with plugin support.
+
+        Plugins wrap the entire loop:
+        - Preprocessors run once before the loop
+        - Postprocessors run once on the final response
 
         Args:
+            ctx: The process context (needed for plugin execution).
             query: The user's query to process.
             llm: The LLM to use for completions.
             context: Optional additional context.
 
         Returns:
-            ReActResponse with the final answer and trace.
+            Tuple of (ReActResponse, plugin_messages)
         """
-        # Build initial messages
-        messages: List[DiscriminatedLLMMessage] = [
-            SystemMessage(content=self._get_system_prompt()),
-            UserMessage(content=self._format_query(query, context)),
-        ]
+        # Build initial request with tools
+        initial_request = ChatCompletionRequest(
+            messages=[
+                SystemMessage(content=self._get_system_prompt()),
+                UserMessage(content=self._format_query(query, context)),
+            ],
+            tools=self.config.toolset.chat_tools if self.config.toolset.tool_count > 0 else None,
+            temperature=self.config.temperature,
+            max_tokens=self.config.max_tokens,
+        )
+
+        # PREPROCESS (once, before loop) - create a temporary context for the helper
+        prepared_request = self._preprocess_if_needed(ctx, llm, initial_request)
+
+        # Extract messages and tools from prepared request
+        messages: List[DiscriminatedLLMMessage] = list(prepared_request.messages)
+        tools = prepared_request.tools
 
         trace: List[ReActStep] = []
         toolset = self.config.toolset
+        final_response: Optional[ChatCompletionResponse] = None
+        iterations_completed = 0
 
         for iteration in range(self.config.max_iterations):
-            # Call LLM with tools
-            response = self._call_llm(llm, messages)
+            iterations_completed = iteration + 1
+
+            # Call LLM directly (no plugins inside loop)
+            response = self._call_llm(llm, messages, tools)
 
             if isinstance(response, str):
                 # Error occurred
                 return ReActResponse(
                     answer=response,
                     trace=trace,
-                    iterations=iteration + 1,
+                    iterations=iterations_completed,
                     success=False,
                     error=response,
-                )
+                ), []
 
             choice = response.choices[0]
             assistant_message = choice.message
@@ -208,12 +267,8 @@ class ReActAgent(Agent[ReActAgentConfig]):
             # Check if we have tool calls
             if not assistant_message.tool_calls:
                 # No tool calls - this is the final answer
-                return ReActResponse(
-                    answer=assistant_message.content or "",
-                    trace=trace,
-                    iterations=iteration + 1,
-                    success=True,
-                )
+                final_response = response
+                break
 
             # Process each tool call
             for tool_call in assistant_message.tool_calls:
@@ -268,13 +323,66 @@ class ReActAgent(Agent[ReActAgentConfig]):
                     )
                 )
 
-        # Max iterations reached
-        return ReActResponse(
-            answer="Maximum iterations reached. Unable to complete the task.",
-            trace=trace,
-            iterations=self.config.max_iterations,
-            success=False,
-            error="Max iterations reached",
+        # POSTPROCESS (once, after loop)
+        plugin_messages = self._postprocess_if_needed(ctx, llm, prepared_request, final_response)
+
+        # Build final response
+        if final_response:
+            return ReActResponse(
+                answer=final_response.choices[0].message.content or "",
+                trace=trace,
+                iterations=iterations_completed,
+                success=True,
+            ), plugin_messages
+        else:
+            # Max iterations reached
+            return ReActResponse(
+                answer="Maximum iterations reached. Unable to complete the task.",
+                trace=trace,
+                iterations=self.config.max_iterations,
+                success=False,
+                error="Max iterations reached",
+            ), plugin_messages
+
+    def _preprocess_if_needed(
+        self,
+        ctx: ProcessContext[ReActRequest],
+        llm: LLM,
+        request: ChatCompletionRequest,
+    ) -> ChatCompletionRequest:
+        """Run preprocessing if plugins are configured."""
+        if not self.config.has_plugins():
+            return request
+
+        # Create a temporary context wrapper for the helper
+        # The helper expects ProcessContext[ChatCompletionRequest]
+        return LLMAgentHelper.preprocess_request(
+            agent=self,
+            config=self.config,
+            llm=llm,
+            ctx=ctx,  # type: ignore[arg-type]
+            request=request,
+            llm_params=self.config.get_llm_params(),
+        )
+
+    def _postprocess_if_needed(
+        self,
+        ctx: ProcessContext[ReActRequest],
+        llm: LLM,
+        request: ChatCompletionRequest,
+        response: Optional[ChatCompletionResponse],
+    ) -> list:
+        """Run postprocessing if plugins are configured and we have a response."""
+        if not self.config.has_plugins() or response is None:
+            return []
+
+        return LLMAgentHelper.postprocess_response(
+            agent=self,
+            config=self.config,
+            llm=llm,
+            ctx=ctx,  # type: ignore[arg-type]
+            final_request=request,
+            response=response,
         )
 
     def _get_system_prompt(self) -> str:
@@ -294,6 +402,7 @@ class ReActAgent(Agent[ReActAgentConfig]):
         self,
         llm: LLM,
         messages: List[DiscriminatedLLMMessage],
+        tools: Optional[list] = None,
     ) -> Union[ChatCompletionResponse, str]:
         """
         Call the LLM with the given messages and tools.
@@ -301,13 +410,17 @@ class ReActAgent(Agent[ReActAgentConfig]):
         Args:
             llm: The LLM to use.
             messages: The conversation messages.
+            tools: Optional tools list (uses toolset if not provided).
 
         Returns:
             ChatCompletionResponse on success, error string on failure.
         """
+        if tools is None:
+            tools = self.config.toolset.chat_tools if self.config.toolset.tool_count > 0 else None
+
         request = ChatCompletionRequest(
             messages=messages,
-            tools=self.config.toolset.chat_tools if self.config.toolset.tool_count > 0 else None,
+            tools=tools,
             temperature=self.config.temperature,
             max_tokens=self.config.max_tokens,
         )
