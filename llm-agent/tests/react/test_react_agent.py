@@ -389,7 +389,7 @@ class TestReActAgent:
 
         call_count = [0]
 
-        def mock_call_llm(llm, messages):
+        def mock_call_llm(llm, messages, tools=None):
             response = responses[call_count[0]]
             call_count[0] += 1
             return response
