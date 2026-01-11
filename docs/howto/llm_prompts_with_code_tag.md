@@ -117,7 +117,7 @@ properties:
 
 ## File Format Recommendations
 
-### Markdown (.md, .md)
+### Markdown (.md)
 Best for rich prompts with formatting, structure, and documentation:
 - Headers for sections
 - Lists for capabilities or guidelines
