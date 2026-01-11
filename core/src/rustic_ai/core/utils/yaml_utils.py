@@ -64,9 +64,26 @@ def _validate_path(filename: str, loader_root: str) -> None:
     # Basic security check - this is intentionally permissive since the module
     # is designed for trusted configuration files. More restrictive validation
     # can be added at the application level if needed for untrusted inputs.
-    pass
+    #
+    # Ensure that the target file remains within the loader's root directory.
+    if not loader_root:
+        return
 
+    abs_root = os.path.abspath(loader_root)
+    abs_filename = os.path.abspath(filename)
 
+    try:
+        common = os.path.commonpath([abs_root, abs_filename])
+    except ValueError as exc:
+        # Raised if paths are on different drives or otherwise incomparable
+        raise ValueError(
+            f"Invalid include path '{filename}' relative to root '{loader_root}': {exc}"
+        ) from exc
+
+    if common != abs_root:
+        raise ValueError(
+            f"Included file '{filename}' is outside the allowed root directory '{loader_root}'."
+        )
 def construct_include(loader: YamlLoader, node: yaml.ScalarNode) -> Any:
     """Read a YAML file and return the parsed object.
 
