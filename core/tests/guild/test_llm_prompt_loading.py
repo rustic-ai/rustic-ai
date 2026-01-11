@@ -37,7 +37,7 @@ class TestLLMAgentPromptLoading:
         assert hasattr(agent_spec.properties, "default_system_prompt")
         prompt = agent_spec.properties.default_system_prompt
 
-        # Verify the prompt content was loaded from the .mmd file
+        # Verify the prompt content was loaded from the .md file
         assert isinstance(prompt, str)
         assert "Research Assistant System Prompt" in prompt
         assert "Your Capabilities" in prompt
