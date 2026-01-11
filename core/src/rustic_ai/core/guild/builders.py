@@ -41,6 +41,7 @@ from rustic_ai.core.guild.metaprog.constants import MetaclassConstants
 from rustic_ai.core.messaging import Client, MessageTrackingClient, MessagingConfig
 from rustic_ai.core.messaging.core.message import (
     AgentTag,
+    ExpressionType,
     FunctionalTransformer,
     PayloadTransformer,
     ProcessStatus,
@@ -1128,23 +1129,27 @@ class RouteBuilder:
         return self
 
     def set_payload_transformer(
-        self, output_type: Type[BaseModel], payload_xform: Union[JxScript, str]
+        self, output_type: Type[BaseModel], payload_xform: Union[JxScript, str], expression_type=ExpressionType.JSONATA
     ) -> "RouteBuilder":
         if RoutingKeys.TRANSFORMER.value in self.rule_dict:
             raise ValueError("Transformer can only be set once.")
 
         self.rule_dict[RoutingKeys.TRANSFORMER.value] = PayloadTransformer(
+            expression_type=expression_type,
             style=TransformationType.SIMPLE,
             output_format=get_qualified_class_name(output_type),
             expression=payload_xform.serialize() if isinstance(payload_xform, JxScript) else payload_xform,
         )
         return self
 
-    def set_functional_transformer(self, functional_xform: Union[JxScript, str]) -> "RouteBuilder":
+    def set_functional_transformer(
+        self, functional_xform: Union[JxScript, str], expression_type=ExpressionType.JSONATA
+    ) -> "RouteBuilder":
         if RoutingKeys.TRANSFORMER.value in self.rule_dict:
             raise ValueError("Transformer can only be set once.")
 
         self.rule_dict[RoutingKeys.TRANSFORMER.value] = FunctionalTransformer(
+            expression_type=expression_type,
             style=TransformationType.CBR,
             handler=functional_xform.serialize() if isinstance(functional_xform, JxScript) else functional_xform,
         )
@@ -1154,8 +1159,10 @@ class RouteBuilder:
         self,
         update_agent_state: Union[JxScript, str],
         update_format: StateUpdateFormat = StateUpdateFormat.JSON_MERGE_PATCH,
+        expression_type: Optional[str] = ExpressionType.JSONATA,
     ) -> "RouteBuilder":
         state_transformer = StateTransformer(
+            expression_type=expression_type,
             update_format=update_format,
             state_update=(
                 update_agent_state.serialize() if isinstance(update_agent_state, JxScript) else update_agent_state
@@ -1168,8 +1175,10 @@ class RouteBuilder:
         self,
         update_guild_state: Union[JxScript, str],
         update_format: StateUpdateFormat = StateUpdateFormat.JSON_MERGE_PATCH,
+        expression_type: Optional[str] = ExpressionType.JSONATA,
     ) -> "RouteBuilder":
         state_transformer = StateTransformer(
+            expression_type=expression_type,
             update_format=update_format,
             state_update=(
                 update_guild_state.serialize() if isinstance(update_guild_state, JxScript) else update_guild_state

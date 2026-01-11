@@ -36,6 +36,21 @@ Rustic AI is built around these core components:
 - [State Management](core/state_management.md): Managing persistence across agent interactions
 - [Dependencies](dependencies/index.md): Resources and services that agents can access through dependency injection
 
+## Message Transformation: JSONata and CEL Support
+
+Rustic AI supports both **JSONata** and **CEL (Common Expression Language)** for message and state transformations in routing rules and transformers. Specify the desired type using the `expression_type` field (e.g., `JSONATA` or `CEL`).
+
+**Example:**
+```yaml
+transformer:
+  expression_type: CEL
+  style: SIMPLE
+  output_format: MyOutputType
+  expression: "payload.value > 10 ? 'high' : 'low'"
+```
+
+CEL is a fast, safe expression language from Google, suitable for validation, filtering, and transformation logic. JSONata remains supported for advanced JSON querying and transformation.
+
 ## Integrations
 
 Rustic AI integrates with popular AI tools and services:
