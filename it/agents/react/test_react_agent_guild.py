@@ -325,22 +325,8 @@ agents:
       temperature: 0.7
       toolset:
         kind: rustic_ai.skills.toolset.SkillToolset
-        skill:
-          metadata:
-            name: calculator
-            description: A skill for performing mathematical calculations
-          instructions: |
-            # Calculator Skill
-
-            This skill provides mathematical calculation capabilities.
-          path: {temp_skill_dir}
-          scripts:
-            - name: calculate
-              path: {temp_skill_dir}/scripts/calculate.py
-              extension: .py
-              description: Evaluate mathematical expressions safely
-          references: []
-          assets: []
+        skill_paths:
+          - {temp_skill_dir}
         tool_prefix: calc_
         execution_config:
           timeout_seconds: 30

@@ -1,0 +1,5 @@
+id: research_guild
+name: Research Guild
+description: A guild with research and analysis capabilities
+agents:
+  - !include llm_agent_example.yaml

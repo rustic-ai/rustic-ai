@@ -1,0 +1,6 @@
+id: modular_guild_id
+name: modular_guild_name
+description: description for modular_guild
+agents:
+  - !include agent.yaml
+routes: !include routes.yaml

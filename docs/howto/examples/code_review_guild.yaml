@@ -1,0 +1,8 @@
+id: code_review_guild
+name: Code Review Guild
+description: Automated code review system with multiple specialized agents
+agents:
+  - !include agents/security_reviewer.yaml
+  - !include agents/performance_reviewer.yaml
+  - !include agents/style_reviewer.yaml
+  - !include agents/orchestrator.yaml

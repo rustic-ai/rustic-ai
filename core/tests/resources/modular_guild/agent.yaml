@@ -1,0 +1,6 @@
+id: Lz6GTKQBdBSUcSeSpLdH4g
+name: Modular Agent
+description: A simple agent defined in a separate file
+class_name: rustic_ai.core.agents.eip.basic_wiring_agent.BasicWiringAgent
+additional_topics: []
+properties: {}
