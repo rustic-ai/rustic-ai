@@ -1,31 +1,27 @@
-from abc import ABC, abstractmethod
-from typing import Optional
-
-from pydantic import BaseModel, Field, model_validator
+from abc import abstractmethod
 
 from rustic_ai.core.guild.agent import Agent, ProcessContext
 from rustic_ai.core.guild.agent_ext.depends.llm.llm import LLM
 from rustic_ai.core.guild.agent_ext.depends.llm.models import ChatCompletionRequest
+from rustic_ai.llm_agent.plugins.base_plugin import BasePlugin
 
 
-class RequestPreprocessor(BaseModel, ABC):
+class RequestPreprocessor(BasePlugin):
     """
     Base class for request preprocessors (plugins inherit from this).
-    The implementations of this class will process the prompts before sending them to the LLM.
+
+    Preprocessors are called before the LLM request is sent, allowing
+    modification of the request. They can declare dependencies via the
+    `depends_on` field and access them using `self.get_dep(agent, "name")`.
+
+    Example:
+        class LoggingPreprocessor(RequestPreprocessor):
+            depends_on: List[str] = ["logger"]
+
+            def preprocess(self, agent, ctx, request, llm):
+                self.get_dep(agent, "logger").info("Processing request")
+                return request
     """
-
-    kind: Optional[str] = Field(default=None, frozen=True, description="FQCN of the preprocessor class")
-
-    def model_post_init(self, __context) -> None:
-        if not self.kind:
-            object.__setattr__(self, "kind", f"{self.__class__.__module__}.{self.__class__.__qualname__}")
-
-    @model_validator(mode="after")
-    def _enforce_kind_matches_class(self):
-        fqcn = f"{self.__class__.__module__}.{self.__class__.__qualname__}"
-        if self.kind and self.kind != fqcn:
-            raise ValueError(f"`kind` must be {fqcn!r}, got {self.kind!r}")
-        return self
 
     @abstractmethod
     def preprocess(
@@ -38,5 +34,16 @@ class RequestPreprocessor(BaseModel, ABC):
         """
         Preprocess the prompt before sending it to the LLM.
         This method can modify the prompt as needed.
+
+        Use `self.get_dep(agent, "name")` to access dependencies declared in `depends_on`.
+
+        Args:
+            agent: The agent instance.
+            ctx: The process context.
+            request: The chat completion request.
+            llm: The LLM instance.
+
+        Returns:
+            The (possibly modified) chat completion request.
         """
         pass

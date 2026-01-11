@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Any, List, Optional, Type, TypeVar, Union, cast
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator
 from typing_extensions import Annotated
 
 from rustic_ai.core.guild.dsl import BaseAgentProps
@@ -174,6 +174,16 @@ class LLMAgentConfig(BaseAgentProps):
     This is useful if the LLM response is only used for tool calls and not for direct responses.
     """
 
+    vertex_location: Optional[str] = None
+    """
+    Place where vertex model is deployed (us-central1, asia-southeast1, etc.). If None, attempts to use the VERTEXAI_LOCATION environment variable.
+    """
+
+    vertex_project: Optional[str] = None
+    """
+    The Google Cloud project ID. If None, attempts to use the VERTEXAI_PROJECT environment variable.
+    """
+
     @field_validator("request_preprocessors", mode="before")
     @classmethod
     def _coerce_req(cls, v):
@@ -188,6 +198,21 @@ class LLMAgentConfig(BaseAgentProps):
     @classmethod
     def _coerce_resp(cls, v):
         return _build_plugins(v, ResponsePostprocessor)
+
+    @field_serializer("request_preprocessors", mode="plain")
+    def _serialize_preprocessors(self, preprocessors):
+        """Ensure subclass fields are preserved during serialization."""
+        return [p.model_dump(exclude_none=True) for p in preprocessors]
+
+    @field_serializer("llm_request_wrappers", mode="plain")
+    def _serialize_wrappers(self, wrappers):
+        """Ensure subclass fields are preserved during serialization."""
+        return [w.model_dump(exclude_none=True) for w in wrappers]
+
+    @field_serializer("response_postprocessors", mode="plain")
+    def _serialize_postprocessors(self, postprocessors):
+        """Ensure subclass fields are preserved during serialization."""
+        return [p.model_dump(exclude_none=True) for p in postprocessors]
 
     _non_llm_fields = {
         "max_retries",

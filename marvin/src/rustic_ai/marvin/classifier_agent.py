@@ -35,7 +35,7 @@ class MarvinAgent(Agent):
             category=category,
         )
 
-        ctx.send(response)
+        ctx.send(response, reason=f"Text classified into category: {category}")
 
     @agent.processor(ExtractRequest)
     async def extractor(self, ctx: ProcessContext[ExtractRequest]):
@@ -63,12 +63,13 @@ class MarvinAgent(Agent):
                 ],
             )
 
-            ctx.send(response)
+            ctx.send(response, reason=f"Successfully extracted {len(extracted_entities)} entities from text")
         except Exception as e:
             ctx.send(
                 ErrorMessage(
                     agent_type=self.get_qualified_class_name(), error_type="ExtractorError", error_message=str(e)
-                )
+                ),
+                reason=f"Extraction failed: {str(e)}",
             )
 
     @agent.processor(ClassifyAndExtractRequest)
@@ -94,4 +95,7 @@ class MarvinAgent(Agent):
             extracted_data=extracted_data,
         )  # type: ignore
 
-        ctx.send(response)
+        ctx.send(
+            response,
+            reason=f"Text classified as '{category}' and extracted {len(extracted_data) if hasattr(extracted_data, '__len__') else '0'} entities",
+        )

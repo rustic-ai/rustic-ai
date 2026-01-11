@@ -26,6 +26,7 @@ from rustic_ai.core.guild.metaprog.constants import MetaclassConstants
 from rustic_ai.core.messaging import MDT, AgentTag, Client, Message, Priority
 from rustic_ai.core.messaging.core.message import (
     ForwardHeader,
+    GuildStackEntry,
     MessageConstants,
     MessageRoutable,
     ProcessEntry,
@@ -72,6 +73,8 @@ class Agent(Generic[APT], metaclass=AgentMetaclass):  # type: ignore
     """
     Base class for all agents
     """
+
+    DEFAULT_ORGANIZATION_ID = "default_organization"
 
     def __init__(
         self,
@@ -127,6 +130,7 @@ class Agent(Generic[APT], metaclass=AgentMetaclass):  # type: ignore
         self._state: JsonDict = {}
         self._guild_state: JsonDict = {}
         self._route_to_default_topic: bool = False
+        self._organization_id: Optional[str] = None
 
         self._client = self._init_client(client_class, client_props)
         self._id_generator = id_generator
@@ -304,6 +308,28 @@ class Agent(Generic[APT], metaclass=AgentMetaclass):  # type: ignore
     @property
     def guild_id(self) -> str:
         return self.guild_spec.id
+
+    def get_organization(self) -> str:
+        organization_id = getattr(self, "_organization_id", None)
+        if organization_id:
+            return organization_id
+
+        self.logger.warning(
+            "No organization_id configured for agent %s (%s); using default %s",
+            self.name,
+            self.id,
+            self.DEFAULT_ORGANIZATION_ID,
+        )
+        return self.DEFAULT_ORGANIZATION_ID
+
+    def require_organization(self) -> str:
+        organization_id = getattr(self, "_organization_id", None)
+        if not organization_id:
+            raise ValueError("No organization_id configured. Ensure the ExecutionEngine has organization_id set.")
+        return organization_id
+
+    def set_organization(self, organization_id: str) -> None:
+        self._organization_id = organization_id
 
     def _generate_id(self, priority: Priority) -> GemstoneID:
         """
@@ -538,6 +564,48 @@ class ProcessContext[MDT]:
     def get_context(self) -> JsonDict:
         return deepcopy(self._msg_context)  # deepcopy to prevent modification of the original context
 
+    def set_routing_slip(self, routing_slip: RoutingSlip) -> None:
+        """
+        Set the full routing slip for the origin message.
+
+        This replaces any existing routing slip on the message with the
+        provided one. Use this when you want to explicitly define or reset
+        the complete routing path (e.g. when constructing a new message or
+        re-routing an existing one).
+
+        For adding a single routing step to the current routing slip, prefer
+        :meth:`add_routing_step`, which appends a new :class:`RoutingRule`
+        instead of replacing the entire slip.
+
+        :param routing_slip: The full :class:`RoutingSlip` to associate with
+            the origin message, defining its complete routing path.
+        """
+        self._origin_message.routing_slip = routing_slip
+
+    def set_origin_stack(self, origin_stack: List[GuildStackEntry]) -> None:
+        """
+        Set the origin guild stack associated with the underlying origin message.
+
+        Parameters
+        ----------
+        origin_stack : List[str]
+            Ordered list of guild identifiers (from outermost to innermost) that
+            represents the chain of guilds that have handled or originated the
+            message so far. This is typically aligned with the
+            ``origin_guild_stack`` / guild stack metadata used by the routing
+            layer for cross-guild routing decisions.
+
+        Notes
+        -----
+        This method is intended for routing components that perform cross-guild
+        forwarding (e.g. gateways, bridges, or routers) and need to adjust the
+        recorded origin chain before re-emitting the message into another guild.
+        Regular agents that only process messages within a single guild usually
+        do not need to modify the origin stack directly; they should rely on the
+        routing slip and guild stack managed by the messaging infrastructure.
+        """
+        self._origin_message.origin_guild_stack = origin_stack
+
     def add_routing_step(self, routing_entry: RoutingRule) -> None:
         """
         Adds a new routing step to the routing slip of the message.
@@ -583,10 +651,21 @@ class ProcessContext[MDT]:
         forwarding: bool = False,
         error_message: bool = False,
         reason: Optional[str] = None,
+        clear_origin_stack: bool = False,
     ) -> List[GemstoneID]:
         """
         Sends a new message with the JsonDict payload using the routing rules from the routing slip of the origin message.
         If no routing rules are found, the message is sent using the default routing rule.
+
+        Args:
+            payload: The message payload.
+            format: The message format.
+            new_thread: Whether to start a new thread.
+            forwarding: Whether this is a forwarded message.
+            error_message: Whether this is an error message.
+            reason: Optional reason for the message.
+            clear_origin_stack: If True, clears origin_guild_stack on the new message. Used when
+                a cross-guild round-trip is complete and the message should be treated as local.
         """
 
         if error_message and self._on_error_fixtures:
@@ -646,7 +725,9 @@ class ProcessContext[MDT]:
         logging.debug(f"Agent [{self.agent.name}] from method [{self.method_name}] with rules :\n{next_steps}\n")
 
         for step in next_steps:
-            msgid = self._prepare_and_send_message(payload, format, new_thread, forwarding, error_message, step, reason)
+            msgid = self._prepare_and_send_message(
+                payload, format, new_thread, forwarding, error_message, step, reason, clear_origin_stack
+            )
             if msgid:
                 messages.append(msgid)
             self._remaining_routing_steps -= 1
@@ -662,6 +743,7 @@ class ProcessContext[MDT]:
         error_message: bool,
         step: RoutingRule,
         reason: Optional[str] = None,
+        clear_origin_stack: bool = False,
     ) -> Optional[GemstoneID]:
         self._current_routing_step = step
 
@@ -765,6 +847,10 @@ class ProcessContext[MDT]:
 
         routed_context = routed.context if routed.context else {}
 
+        # Determine origin_guild_stack for the new message
+        # If clear_origin_stack is True, the cross-guild round-trip is complete
+        new_origin_stack = [] if clear_origin_stack else list(self._origin_message.origin_guild_stack)
+
         new_message = Message(
             id_obj=msg_id,
             topics=routed.topics,
@@ -783,6 +869,7 @@ class ProcessContext[MDT]:
             session_state=self.get_context() | routed_context,
             enrich_with_history=routed.enrich_with_history,
             process_status=routed.process_status,
+            origin_guild_stack=new_origin_stack,
         )
 
         for modifier in self._outgoing_message_modifiers:
@@ -847,7 +934,7 @@ class ProcessContext[MDT]:
                 processor=self.method_name,
                 origin=self._origin_message.id,
                 result=msg_id.to_int(),
-                reason=reason,
+                reason=[reason] if reason else None,
             )
         )
 
@@ -881,6 +968,7 @@ class ProcessContext[MDT]:
                 session_state=session_state,
                 enrich_with_history=enrich_with_history,
                 process_status=process_status,
+                origin_guild_stack=list(self._origin_message.origin_guild_stack),
             )
         )
 
@@ -910,13 +998,16 @@ class ProcessorHelper:
     def resolve_dependency(
         resolver: DependencyResolver,
         dep: AgentDependency,
+        org_id: str,
         guild_id: str,
         agent_id: str,
     ):
-        if dep.guild_level:
-            return resolver.get_or_resolve(guild_id=guild_id)
+        if dep.org_level:
+            return resolver.get_or_resolve(org_id=org_id)
+        elif dep.guild_level:
+            return resolver.get_or_resolve(org_id=org_id, guild_id=guild_id)
         else:
-            return resolver.get_or_resolve(guild_id=guild_id, agent_id=agent_id)
+            return resolver.get_or_resolve(org_id=org_id, guild_id=guild_id, agent_id=agent_id)
 
     @staticmethod
     def run_coroutine_blocking(self, func, dependencies, context):
@@ -972,6 +1063,12 @@ class ProcessorHelper:
                 logging.exception(f"Error in after fixture {af.__name__}: {e}")
 
 
+ALWAYS_HANDLE_FORMATS = [
+    "rustic_ai.core.guild.agent.SelfReadyNotification",
+    "rustic_ai.core.guild.agent_ext.mixins.health.HealthCheckRequest",
+]
+
+
 def processor(
     clz: Type[MDT],
     predicate: Optional[Callable[[AT, Message], bool]] = None,
@@ -995,7 +1092,11 @@ def processor(
                 f"and Predicate: {predicate}: {predicate_result}"
             )
 
-            if (predicate_result) and (not self.agent_spec.act_only_when_tagged or msg.is_tagged(self.get_agent_tag())):
+            act_only_when_tagged = self.agent_spec.act_only_when_tagged
+            is_tagged_for_agent = msg.is_tagged(self.get_agent_tag())
+            is_always_handle_format = msg.format in ALWAYS_HANDLE_FORMATS
+
+            if (predicate_result) and (not act_only_when_tagged or (is_tagged_for_agent or is_always_handle_format)):
                 runtime_predicate = self.agent_spec.predicates.get(func.__name__)
 
                 should_process = True
@@ -1020,7 +1121,11 @@ def processor(
 
                 dependencies = {
                     dep.variable_name: ProcessorHelper.resolve_dependency(
-                        self._dependency_resolvers[dep.dependency_key], dep, self.guild_id, self.id
+                        self._dependency_resolvers[dep.dependency_key],
+                        dep,
+                        self.get_organization(),
+                        self.guild_id,
+                        self.id,
                     )
                     for dep in deps
                 }

@@ -15,6 +15,9 @@ In Rustic AI, an agent is a specialized component that performs specific tasks w
 
 Rustic AI includes several specialized agents for various tasks:
 
+### LLM Agent Framework
+- [LLM Agent & Plugin System](llm_agent.md) - Comprehensive LLM agent with extensible plugin system for request/response processing and dependency injection
+
 ### Web and API Agents
 - [PlaywrightScraperAgent](playwright/playwright_scraper_agent.md) - Web scraping using Playwright
 - [SERPAgent](serpapi/serp_agent.md) - Search engine results via SerpAPI

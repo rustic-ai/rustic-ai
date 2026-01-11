@@ -5,7 +5,18 @@ import inspect
 import logging
 import sys
 import textwrap
-from typing import Any, Callable, Dict, Generic, List, Literal, Optional, Type, get_args
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Generic,
+    List,
+    Literal,
+    Optional,
+    Type,
+    TypeVar,
+    get_args,
+)
 
 from pydantic import BaseModel
 
@@ -162,7 +173,7 @@ class AgentMetaclass(ABCMeta):
             # Collect handlers defined directly on the subclass and their dependencies
             handler_entries, agent_dependencies = MetaclassHelper.collect_direct_handlers_from_dict(name, dct, call_map)
 
-            # Include base-class advertised dependencies (backward compatibility)
+            # Include base-class advertised dependencies
             agent_dependencies.extend(MetaclassHelper.collect_base_dependencies(bases))
 
             # Register inherited handlers (not directly defined on subclass) and collect their dependencies
@@ -357,18 +368,35 @@ class MetaclassHelper:
         return apt
 
     @staticmethod
+    def _is_agent_subclass(cls) -> bool:
+        """
+        Check if a class is Agent or a subclass of Agent by examining its MRO.
+
+        This avoids importing Agent directly (which would cause circular imports)
+        by checking if 'Agent' appears in the class's method resolution order.
+        """
+        return any(base.__name__ == "Agent" for base in cls.__mro__)
+
+    @staticmethod
     def get_generic_type(new_mcls):
         name = new_mcls.__name__
         generic_type = BaseAgentProps
         if hasattr(new_mcls, "__orig_bases__"):
             base0 = new_mcls.__orig_bases__[0]
 
-            if hasattr(base0, "__origin__") and base0.__origin__.__name__ == "Agent":
+            # Check if base is a generic Agent or Agent subclass (e.g., BoundaryAgent[Props])
+            if hasattr(base0, "__origin__") and MetaclassHelper._is_agent_subclass(base0.__origin__):
                 base_arg = get_args(base0)
                 if len(base_arg) >= 1:
                     baps: Type = base_arg[0]
-                    if issubclass(baps, BaseAgentProps):
-                        generic_type = base_arg[0]
+                    # Handle TypeVar (used in abstract base classes like BoundaryAgent)
+                    if isinstance(baps, TypeVar):
+                        # Use the TypeVar's bound if available, otherwise default to BaseAgentProps
+                        if baps.__bound__ is not None and issubclass(baps.__bound__, BaseAgentProps):
+                            generic_type = baps.__bound__
+                        # else: keep default BaseAgentProps
+                    elif issubclass(baps, BaseAgentProps):
+                        generic_type = baps
             elif not hasattr(base0, "__origin__") or base0.__origin__ != Generic:  # pragma: no cover
                 raise TypeError(f"{name} must inherit from Agent with a BaseAgentProps generic type")
         return generic_type

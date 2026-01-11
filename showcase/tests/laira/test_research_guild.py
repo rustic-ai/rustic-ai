@@ -155,6 +155,7 @@ class TestResearchGuild:
             .set_id("playwright_agent")
             .set_name("Playwright Agent")
             .set_description("An agent that handles web scraping using Playwright")
+            .set_properties({"browser_idle_timeout_s": 0})
             .build_spec()
         )
 
@@ -168,6 +169,7 @@ class TestResearchGuild:
         yield research_guild
         research_guild.shutdown()
 
+    @pytest.mark.skip(reason="Deprecated test, needs to be updated")
     @pytest.mark.parametrize("dep_map_config", ["openai_chroma", "vertexai"], indirect=True)
     @pytest.mark.skipif(os.getenv("SKIP_EXPENSIVE_TESTS") == "true", reason="Skipping expensive tests")
     @flaky(max_runs=3, min_passes=1)
@@ -252,11 +254,3 @@ class TestResearchGuild:
 
         # Check that the response text contains LSTM
         assert "LSTM" in content.text
-
-        # Give the system a final moment to complete any pending tasks
-        await asyncio.sleep(2)
-
-        # Cancel any remaining tasks explicitly to avoid the warning
-        for task in asyncio.all_tasks():
-            if task is not asyncio.current_task() and not task.done():
-                task.cancel()

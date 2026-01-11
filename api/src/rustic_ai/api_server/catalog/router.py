@@ -76,8 +76,8 @@ async def create_blueprint(blueprint: BlueprintCreate, engine: Engine = Depends(
                 CatalogStore(engine).get_agent_by_class_name(class_name)
             except Exception:
                 raise HTTPException(status_code=400, detail=f"Agent not found for class_name: {class_name}")
-    except ValidationError:
-        raise HTTPException(status_code=400, detail="Invalid GuildSpec")
+    except ValidationError as e:
+        raise HTTPException(status_code=400, detail=f"Invalid GuildSpec: {e}")
     blueprint_id = CatalogStore(engine).create_blueprint(blueprint)
     return IdInfo(id=blueprint_id)
 
@@ -121,8 +121,10 @@ async def get_user_blueprints(user_id: str, engine: Engine = Depends(Metastore.g
     operation_id="getAccessibleBlueprintsByUserId",
     tags=["blueprints", "users"],
 )
-async def get_user_accessible_blueprints(user_id: str, engine: Engine = Depends(Metastore.get_engine)):
-    return CatalogStore(engine).get_user_accessible_blueprints(user_id)
+async def get_user_accessible_blueprints(
+    user_id: str, org_id: Annotated[str | None, Query()] = None, engine: Engine = Depends(Metastore.get_engine)
+):
+    return CatalogStore(engine).get_user_accessible_blueprints(user_id, org_id)
 
 
 class ShareWithOrgRequest(BaseModel):
@@ -216,6 +218,16 @@ async def list_categories(engine: Engine = Depends(Metastore.get_engine)):
 )
 async def get_category_blueprints(category_name: str, engine: Engine = Depends(Metastore.get_engine)):
     return CatalogStore(engine).get_blueprints_by_category(category_name)
+
+
+@catalog_router.get(
+    "/tags/{tag}/blueprints/",
+    response_model=List[BlueprintInfoResponse],
+    operation_id="getBlueprintsByTag",
+    tags=["blueprints"],
+)
+async def get_blueprints_by_tag(tag: str, engine: Engine = Depends(Metastore.get_engine)):
+    return CatalogStore(engine).get_blueprints_by_tag(tag)
 
 
 @catalog_router.post(
@@ -454,9 +466,11 @@ def get_message_schema(message_format: str, engine: Engine = Depends(Metastore.g
 async def launch_guild_from_blueprint(
     blueprint_id: str, launch_request: LaunchGuildFromBlueprintRequest, engine: Engine = Depends(Metastore.get_engine)
 ):
-    blueprint = CatalogStore(engine).get_blueprint(blueprint_id)
+    blueprint = CatalogStore(engine).get_blueprint_with_exposure(
+        blueprint_id, launch_request.user_id, launch_request.org_id
+    )
     if not blueprint:
-        raise HTTPException(status_code=404, detail="Blueprint not found")
+        raise HTTPException(status_code=403, detail="Insufficient permissions to launch")
 
     spec = deepcopy(blueprint.spec)  # deepcopy to prevent modification of the original spec
     try:
@@ -466,6 +480,10 @@ async def launch_guild_from_blueprint(
             spec[KeyConstants.CONFIGURATION] = configuration
 
         guild_spec = GuildBuilder._from_spec_dict(spec).build_spec()
+
+        # Update the guild id if provided
+        if launch_request.guild_id is not None:
+            guild_spec.id = launch_request.guild_id
 
         # Update the guild name
         guild_spec.name = launch_request.guild_name

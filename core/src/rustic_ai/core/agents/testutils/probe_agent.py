@@ -46,6 +46,7 @@ class PublishMixin:
         recipient_list: list = [],
         routing_slip: Optional[RoutingSlip] = None,
         msg_id: Optional[GemstoneID] = None,
+        session_state: Optional[JsonDict] = None,
     ) -> GemstoneID:  # type: ignore
         """
         Publishes a message to the message bus.
@@ -58,6 +59,7 @@ class PublishMixin:
             in_response_to (int): ID of the message to which this is a reply, if any.
             thread (list[int]): The list of threads to which the message belongs.
             recipient_list (List[str]): List of agents tagged in the message.
+            session_state (Optional[JsonDict]): Optional session state to include in the message.
         """
 
         if isinstance(format, type):
@@ -83,6 +85,7 @@ class PublishMixin:
                 recipient_list=recipient_list,
                 thread=msg_thread,
                 routing_slip=routing_slip,
+                session_state=session_state,
             )
         )
 

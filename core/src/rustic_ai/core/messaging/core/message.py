@@ -22,6 +22,7 @@ from pydantic import (
     Field,
     computed_field,
     field_serializer,
+    field_validator,
     model_validator,
 )
 
@@ -147,6 +148,15 @@ class PayloadTransformer(Transformer):
     expression_type: Optional[str] = Field(default=ExpressionType.JSONATA)
     expression: Optional[str] = Field(default=None)
 
+    @field_validator("expression")
+    @classmethod
+    def validate_expression(cls, v):
+        if v is not None:
+            expr = Jsonata(v)
+            if expr.errors:
+                raise ValueError(f"Invalid expression: {v} with errors: {expr.errors}")
+        return v
+
     def transform(
         self, origin: "Message", agent_state: JsonDict, guild_state: JsonDict, routable: "MessageRoutable"
     ) -> Optional["MessageRoutable"]:
@@ -186,6 +196,15 @@ class FunctionalTransformer(Transformer):
     expression_type: Optional[str] = Field(default=ExpressionType.JSONATA)
     handler: str
     lambdas: ClassVar[Dict[str, Callable]] = {}
+
+    @field_validator("handler")
+    @classmethod
+    def validate_handler(cls, v):
+        if v is not None:
+            expr = Jsonata(v)
+            if expr.errors:
+                raise ValueError(f"Invalid expression: {v} with errors: {expr.errors}")
+        return v
 
     def transform(
         self, origin: "Message", agent_state: JsonDict, guild_state: JsonDict, routable: "MessageRoutable"
@@ -671,6 +690,25 @@ class ForwardHeader(BaseModel):
     on_behalf_of: AgentTag
 
 
+class GuildStackEntry(BaseModel):
+    """
+    Represents an entry in the origin_guild_stack for cross-guild routing.
+
+    When a message crosses guild boundaries, each guild in the chain pushes an entry
+    onto the stack. The entry contains the guild ID and optionally a saga_id that
+    references preserved session state in the guild's state store.
+
+    Attributes:
+        guild_id (str): The ID of the guild that forwarded the message.
+        saga_id (Optional[str]): Reference to preserved session state in guild_state.
+            When set, the gateway will restore the session state from
+            guild_state["g2g:saga:{saga_id}"] when the response returns.
+    """
+
+    guild_id: str
+    saga_id: Optional[str] = None
+
+
 class MessageRoutable(BaseModel):
     """
     Represents the fields of a message that can be modified by a router.
@@ -757,6 +795,12 @@ class Message(BaseModel):
     enrich_with_history: Optional[int] = 0
 
     process_status: Annotated[Optional[ProcessStatus], Field(default=None)]
+
+    # Cross-guild origin tracking stack - each guild in the chain pushes an entry.
+    # When a response returns, the stack is popped to route back through the chain.
+    # This enables multi-guild-hop scenarios: A -> B -> C -> B -> A
+    # Each entry contains guild_id and optional saga_id for session state preservation.
+    origin_guild_stack: Annotated[List[GuildStackEntry], Field(default_factory=list)]
 
     _id: int  # Internal backend for id
     _priority: Priority  # Internal backend for priority
@@ -864,9 +908,10 @@ class Message(BaseModel):
         *,
         strict: bool | None = None,
         from_attributes: bool | None = None,
-        context: dict[str, Any] | None = None,
+        context: Any | None = None,
         by_alias: bool | None = None,
         by_name: bool | None = None,
+        extra: Literal["allow", "ignore", "forbid"] | None = None,
     ) -> "Message":
         return cls._from_dict(obj)
 
@@ -876,9 +921,10 @@ class Message(BaseModel):
         json_data: str | bytes | bytearray,
         *,
         strict: bool | None = None,
-        context: dict[str, Any] | None = None,
+        context: Any | None = None,
         by_alias: bool | None = None,
         by_name: bool | None = None,
+        extra: Literal["allow", "ignore", "forbid"] | None = None,
     ) -> "Message":
         """
         Custom JSON decoder for the Message class that supports different GemstoneID implementations.

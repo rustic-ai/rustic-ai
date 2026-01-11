@@ -30,6 +30,7 @@ class MultiProcessAgentWrapper(AgentWrapper):
         machine_id: int,
         client_type: Type[Client] = MessageTrackingClient,
         client_properties: Dict[str, Any] = {},
+        organization_id: Optional[str] = None,
     ):
         super().__init__(
             guild_spec=guild_spec,
@@ -38,6 +39,7 @@ class MultiProcessAgentWrapper(AgentWrapper):
             machine_id=machine_id,
             client_type=client_type,
             client_properties=client_properties,
+            organization_id=organization_id,
         )
 
         # These are only used for tracking purposes in the main process

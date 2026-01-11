@@ -1,18 +1,38 @@
 from fsspec import filesystem
+from fsspec.implementations.asyn_wrapper import AsyncFileSystemWrapper
 from fsspec.implementations.dirfs import DirFileSystem as FileSystem
 
 from rustic_ai.core.guild.agent_ext.depends import DependencyResolver
 
 
 class FileSystemResolver(DependencyResolver[FileSystem]):
-    def __init__(self, path_base: str, protocol: str, storage_options: dict) -> None:
+    def __init__(
+        self,
+        path_base: str,
+        protocol: str,
+        storage_options: dict,
+        asynchronous: bool = False,
+    ) -> None:
         super().__init__()
         self.path_base = path_base
         self.protocol = protocol
         self.storage_options = storage_options
+        self.asynchronous = asynchronous
 
-    def resolve(self, guild_id: str, agent_id: str) -> FileSystem:
-        basefs = filesystem(self.protocol, **self.storage_options)
+    def resolve(self, org_id: str, guild_id: str, agent_id: str) -> FileSystem:
+
+        basefs = filesystem(
+            self.protocol,
+            asynchronous=self.asynchronous,
+            **self.storage_options,
+        )
+
+        if self.asynchronous and not basefs.__class__.async_impl:
+            basefs = AsyncFileSystemWrapper(basefs)
+
         return FileSystem(
-            path=f"{self.path_base}/{guild_id}/{agent_id}", fs=basefs, storage_options=self.storage_options
+            path=f"{self.path_base}/{org_id}/{guild_id}/{agent_id}",
+            fs=basefs,
+            asynchronous=self.asynchronous,
+            storage_options=self.storage_options,
         )

@@ -2,19 +2,24 @@
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
-[tool.poetry]
+
+[project]
 name = "rusticai-core"
-version = "0.1.0"
+version = "1.0.0"
 description = "Rustic AI’s modular, agentic AI framework for building human-centered, multi-agent workflows"
-authors = ["Dragonscale Industries Inc. <dev@dragonscale.ai>"]
+authors = [{name = "Dragonscale Industries Inc.", email = "dev@dragonscale.ai"}]
 license = "Apache-2.0"
 readme = "README.md"
-homepage = "https://www.rustic.ai/"
-repository = "https://github.com/rustic-ai/rustic-ai"
+requires-python = ">=3.12,<3.13"
+dynamic = ["dependencies"]
+urls = { Homepage = "https://www.rustic.ai/", Repository = "https://github.com/rustic-ai/rustic-ai" }
+
+
+
+[tool.poetry]
 packages = [{ include = "rustic_ai", from = "src" }]
 
 [tool.poetry.dependencies]
-python = ">=3.12,<3.13"
 pydantic = "^2.10.6"
 shortuuid = "^1.0.13"
 types-python-dateutil = "^2.9.0.20241003"
@@ -32,9 +37,8 @@ python-dateutil = "^2.9.0.post0"
 opentelemetry-api = "^1.31.1"
 chevron = "^0.14.0"
 cel-python = "^0.4.0"
-numpy = "<2.0.0"
+numpy = "^2.0.0"
 apscheduler = "^3.11.0"
-
 
 [tool.poetry.group.dev]
 optional = true
@@ -46,9 +50,12 @@ flake8 = "^7.1.2"
 tox = "^4.24.1"
 isort = "^6.0.0"
 mypy = "^1.15.0"
+flaky = "^3.8.1"
+pytest-asyncio = "^1.3.0"
+
 
 [tool.poetry.extras]
-test = ["pytest"]
+test = ["pytest", "flaky", "pytest-asyncio"]
 
 [tool.black]
 line-length = 120

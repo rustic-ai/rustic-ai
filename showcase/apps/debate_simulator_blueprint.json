@@ -1,0 +1,239 @@
+{
+    "name": "Debate Simulator",
+    "description": "A guild where two AI actors debate a topic, with real-time fact checking.",
+    "version": "v1",
+    "icon": null,
+    "intro_msg": "Welcome to the Debate Simulator! Please configure the two actors you want to see debate.",
+    "exposure": "private",
+    "author_id": "dummyuserid",
+    "organization_id": null,
+    "category_id": null,
+    "spec": {
+        "name": "Debate Simulator",
+        "description": "Two actors debate a topic.",
+        "properties": {},
+        "configuration_schema": {
+            "type": "object",
+            "properties": {
+                "actor_1": {
+                    "type": "string",
+                    "title": "Actor 1 Name",
+                    "default": "Elon Musk"
+                },
+                "actor_2": {
+                    "type": "string",
+                    "title": "Actor 2 Name",
+                    "default": "Mark Zuckerberg"
+                }
+            },
+            "required": [
+                "actor_1",
+                "actor_2"
+            ]
+        },
+        "configuration": {
+            "actor_1": "Elon Musk",
+            "actor_2": "Mark Zuckerberg"
+        },
+        "guild_state": {
+            "claims": []
+        },
+        "agents": [
+            {
+                "id": "actor_1_agent",
+                "name": "{{ actor_1 }}",
+                "description": "First debater",
+                "class_name": "rustic_ai.llm_agent.llm_agent.LLMAgent",
+                "additional_topics": [
+                    "{{ actor_1 }}"
+                ],
+                "properties": {
+                    "model": "vertex_ai/gpt-4o",
+                    "default_system_prompt": "You are {{ actor_1 }}. You are participating in a debate against {{ actor_2 }}. The topic will be provided by the user. \n\nYou are an expert AI Debater Agent participating in a simulated debate. Your task is to act in-character as a specific actor \u2014 a historical figure, political leader, intellectual, activist, fictional character, or subject matter expert.\n\ud83c\udfaf Your Objective:\n- Defend your assigned actor's point of view and core values on a given debate topic.\n- Critically rebut the opposing debater's last response.\n- Stay entirely in-character, mirroring the actor's tone, language, logic, and ideology.\n- Respond with a persuasive and logically sound counterargument.\n- Win the debate by convincing a neutral observer \u2014 without personal attacks or rambling.\n- Responses must be short, crisp, and powerful: One paragraph only, 5-6 sentences max.\n- End with a single atomic belief, fact, or claim clearly used in the response, labeled Belief: \u2014 this will be extracted for automated fact checking.\n\n\ud83e\uddfe Format Rules:\n- End with the belief, premise, or fact you used make sure it is in new line and the Belief header is in bold (use markdown), like so:\n- **Belief:** Social media boosts free speech\n    This belief must be:\n        Short (max 5-7 words)\n        Concrete \u2014 no vague or broad claims\n        Claim-like \u2014 something a fact-checking API can evaluate\n        Mentioned or implied in the response\n        As the actor would express it\n\n\ud83d\udccc Response Rules:\n- Think and speak exactly like the assigned actor.\n- Use references, tone, analogies, and vocabulary that match the actor's known persona.\n- Always respond directly to the previous message \u2014 dissect it logically or morally.\n- Never break character. Never admit you're an AI.\n- Maintain a firm, confident, and debate-ready tone. Don't hedge or overly qualify.\n- Never repeat the topic \u2014 just dive into the counterargument.\n\nIf you are starting the debate, present your opening argument.",
+                    "send_response": true
+                },
+                "listen_to_default_topic": false,
+                "act_only_when_tagged": false,
+                "dependency_map": {
+                    "llm": {
+                        "class_name": "rustic_ai.litellm.agent_ext.llm.LiteLLMResolver",
+                        "properties": {
+                            "model": "vertex_ai/gpt-4o"
+                        }
+                    }
+                }
+            },
+            {
+                "id": "actor_2_agent",
+                "name": "{{ actor_2 }}",
+                "description": "Second debater",
+                "class_name": "rustic_ai.llm_agent.llm_agent.LLMAgent",
+                "additional_topics": [
+                    "{{ actor_2 }}"
+                ],
+                "properties": {
+                    "model": "vertex_ai/gpt-4o",
+                    "default_system_prompt": "You are {{ actor_2 }}. You are participating in a debate against {{ actor_1 }}. \n\nYou are an expert AI Debater Agent participating in a simulated debate. Your task is to act in-character as a specific actor \u2014 a historical figure, political leader, intellectual, activist, fictional character, or subject matter expert.\n\ud83c\udfaf Your Objective:\n- Defend your assigned actor's point of view and core values on a given debate topic.\n- Critically rebut the opposing debater's last response.\n- Stay entirely in-character, mirroring the actor's tone, language, logic, and ideology.\n- Respond with a persuasive and logically sound counterargument.\n- Win the debate by convincing a neutral observer \u2014 without personal attacks or rambling.\n- Responses must be short, crisp, and powerful: One paragraph only, 5-6 sentences max.\n- End with a single atomic belief, fact, or claim clearly used in the response, labeled Belief: \u2014 this will be extracted for automated fact checking.\n\n\ud83e\uddfe Format Rules:\n- End with the belief, premise, or fact you used make sure it is in new line and the Belief header is in bold (use markdown), like so:\n- **Belief:** Social media boosts free speech\n    This belief must be:\n        Short (max 5-7 words)\n        Concrete \u2014 no vague or broad claims\n        Claim-like \u2014 something a fact-checking API can evaluate\n        Mentioned or implied in the response\n        As the actor would express it\n\n\ud83d\udccc Response Rules:\n- Think and speak exactly like the assigned actor.\n- Use references, tone, analogies, and vocabulary that match the actor's known persona.\n- Always respond directly to the previous message \u2014 dissect it logically or morally.\n- Never break character. Never admit you're an AI.\n- Maintain a firm, confident, and debate-ready tone. Don't hedge or overly qualify.\n- Never repeat the topic \u2014 just dive into the counterargument.",
+                    "send_response": true
+                },
+                "listen_to_default_topic": false,
+                "act_only_when_tagged": false,
+                "dependency_map": {
+                    "llm": {
+                        "class_name": "rustic_ai.litellm.agent_ext.llm.LiteLLMResolver",
+                        "properties": {
+                            "model": "vertex_ai/gpt-4o"
+                        }
+                    }
+                }
+            },
+            {
+                "id": "fact_checker",
+                "name": "Fact Checker Agent",
+                "description": "Checks the facts of the statements.",
+                "class_name": "rustic_ai.showcase.google.fact_checker.FactCheckerAgent",
+                "properties": {},
+                "additional_topics": [
+                    "{{ actor_1 }}",
+                    "{{ actor_2 }}"
+                ],
+                "listen_to_default_topic": false
+            }
+        ],
+        "routes": {
+            "steps": [
+                {
+                    "agent": null,
+                    "agent_type": "rustic_ai.core.agents.utils.user_proxy_agent.UserProxyAgent",
+                    "method_name": "unwrap_and_forward_message",
+                    "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest",
+                    "destination": {
+                        "topics": "{{ actor_1 }}",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "guild_state_update": {
+                        "update_format": "json-merge-patch",
+                        "state_update": "({\"user_query\": $.untransformed.payload.messages[0].content[0].text})"
+                    },
+                    "route_times": 1
+                },
+                {
+                    "agent": {
+                        "id": null,
+                        "name": "{{ actor_1 }}"
+                    },
+                    "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                    "destination": null,
+                    "transformer": {
+                        "style": "simple",
+                        "handler": "({\"format\": \"rustic_ai.core.ui_protocol.types.TextFormat\", \"payload\": {\"text\": $split(payload.choices[0].message.content, '**Belief:**')[1]}})"
+                    },
+                    "route_times": 5
+                },
+                {
+                    "agent": {
+                        "id": null,
+                        "name": "{{ actor_1 }}"
+                    },
+                    "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                    "destination": {
+                        "topics": "user_message_broadcast",
+                        "priority": null,
+                        "recipient_list": []
+                    },
+                    "route_times": 5,
+                    "process_status": "completed"
+                },
+                {
+                    "agent": {
+                        "id": null,
+                        "name": "{{ actor_1 }}"
+                    },
+                    "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                    "destination": {
+                        "topics": "{{ actor_2 }}",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({\"format\": \"rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest\", \"payload\": {\"messages\": [{\"role\": \"user\", \"content\": 'Previous user reply: ' & $.payload.choices[0].message.content & ' Topic: ' & $.guild_state.user_query}]}})"
+                    },
+                    "route_times": 5
+                },
+                {
+                    "agent": {
+                        "id": null,
+                        "name": "{{ actor_2 }}"
+                    },
+                    "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                    "destination": null,
+                    "transformer": {
+                        "style": "simple",
+                        "handler": "({\"format\": \"rustic_ai.core.ui_protocol.types.TextFormat\", \"payload\": {\"text\": $split(payload.choices[0].message.content, '**Belief:**')[1]}})"
+                    },
+                    "route_times": 5
+                },
+                {
+                    "agent": {
+                        "id": null,
+                        "name": "{{ actor_2 }}"
+                    },
+                    "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                    "destination": {
+                        "topics": "{{ actor_1 }}",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({\"format\": \"rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest\", \"payload\": {\"messages\": [{\"role\": \"user\", \"content\": 'Previous user reply: ' & $.payload.choices[0].message.content & ' Topic: ' & $.guild_state.user_query}]}})"
+                    },
+                    "route_times": 5
+                },
+                {
+                    "agent": {
+                        "id": null,
+                        "name": "{{ actor_2 }}"
+                    },
+                    "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                    "destination": {
+                        "topics": "user_message_broadcast",
+                        "priority": null,
+                        "recipient_list": []
+                    },
+                    "route_times": 5,
+                    "process_status": "completed"
+                },
+                {
+                    "agent": {
+                        "id": null,
+                        "name": "Fact Checker Agent"
+                    },
+                    "agent_type": null,
+                    "method_name": null,
+                    "origin_filter": null,
+                    "message_format": "rustic_ai.core.ui_protocol.types.TextFormat",
+                    "destination": {
+                        "topics": "user_message_broadcast",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "mark_forwarded": false,
+                    "route_times": -1,
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({\"format\": \"rustic_ai.core.ui_protocol.types.CanvasFormat\", \"payload\": {\"text\": $join($.guild_state.claims, '<br>') & $string('<br>') & $.payload.text, \"component\": \"MarkdownFormat\"}})"
+                    },
+                    "agent_state_update": null,
+                    "guild_state_update": {
+                        "update_format": "json-merge-patch",
+                        "state_update": "({\"claims\": $append($.guild_state.claims, $.untransformed.payload.text)})"
+                    },
+                    "process_status": "completed"
+                }
+            ]
+        }
+    }
+}

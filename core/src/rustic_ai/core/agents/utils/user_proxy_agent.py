@@ -77,9 +77,6 @@ class UserProxyAgent(Agent[UserProxyAgentProps], GuildRefreshMixin):
 
     BROADCAST_TOPIC = "user_message_broadcast"
 
-    # Create a regular expression pattern from the list of usernames
-    _tag_pattern = re.compile(r"(@\w+)")
-
     def __init__(self):
         self.user_id = self.config.user_id
         self.user_topic = UserProxyAgent.get_user_inbox_topic(self.user_id)
@@ -89,6 +86,7 @@ class UserProxyAgent(Agent[UserProxyAgentProps], GuildRefreshMixin):
         self.guild_requests_topic = UserProxyAgent.get_user_system_requests_topic(self.user_id)
 
         self.guilds_agents_ats: Dict[str, AgentTag] = {}
+        self._tag_pattern = self._build_tag_pattern()
 
     @processor(Message, user_topic_filter)
     def unwrap_and_forward_message(self, ctx: ProcessContext[Message]) -> None:
@@ -117,6 +115,7 @@ class UserProxyAgent(Agent[UserProxyAgentProps], GuildRefreshMixin):
                 priority=unwrapped_message.priority,
                 recipient_list=unwrapped_message.recipient_list + tagged_users,
             ),
+            mark_forwarded=True,
         )
 
         ctx.add_routing_step(notification_rule)
@@ -204,8 +203,22 @@ class UserProxyAgent(Agent[UserProxyAgentProps], GuildRefreshMixin):
 
         return ats
 
+    def _build_tag_pattern(self):
+        """Build regex pattern from actual agent names, sorted by length (longest first)"""
+        if not self.guilds_agents_ats:
+            return None
+
+        # Sort tags by length (longest first) to match longer names before shorter ones
+        sorted_tags = sorted(self.guilds_agents_ats.keys(), key=len, reverse=True)
+        # Escape special regex characters in agent names
+        escaped_tags = [re.escape(tag) for tag in sorted_tags]
+        # Create pattern like: @Echo Agent|@Echo|@John
+        pattern = "|".join(escaped_tags)
+        return re.compile(pattern)
+
     def _get_participant_list(self):
         self.guilds_agents_ats = self._get_guild_agents_ats(self.guild_spec)
+        self._tag_pattern = self._build_tag_pattern()
         participants = []
         for agent in self.guild_spec.agents:
             category = AgentType.BOT
@@ -227,12 +240,12 @@ class UserProxyAgent(Agent[UserProxyAgentProps], GuildRefreshMixin):
         )
 
     def find_tagged_users(self, message: str) -> List[AgentTag]:
-        found_user_tags = re.findall(UserProxyAgent._tag_pattern, message)
+        if not self._tag_pattern:
+            return []
 
-        agent_tags = self.guilds_agents_ats.keys()
-        tagged_users = [user for user in found_user_tags if user in agent_tags]
+        found_user_tags = set(re.findall(self._tag_pattern, message))
 
-        return [self.guilds_agents_ats[tag] for tag in tagged_users]
+        return [self.guilds_agents_ats[tag] for tag in found_user_tags]
 
     @processor(ParticipantListRequest, predicate=system_req_filter)
     def handle_participants_request(self, ctx: ProcessContext[ParticipantListRequest]):

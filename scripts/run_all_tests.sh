@@ -57,7 +57,7 @@ trap cleanup EXIT INT TERM
 
 # -------- run everything inside its own session --------
 # Pass script name as $0, then all arguments
-setsid sh -c '
+sh -c '
     echo $$ > .test_session_pid     # session leader PID for cleanup
 
     export OTEL_TRACES_EXPORTER=console

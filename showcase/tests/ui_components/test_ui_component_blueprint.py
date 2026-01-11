@@ -18,6 +18,7 @@ from rustic_ai.core.ui_protocol.types import (
     QuestionFormat,
     TableFormat,
     TextFormat,
+    UpdateType,
     VegaLiteFormat,
     VideoFormat,
     WeatherFormat,
@@ -75,7 +76,8 @@ class TestUiComponentBlueprint:
         # QuestionFormat, FormFormat, CodeFormat, CalendarFormat, WeatherFormat,
         # LocationFormat, ImageFormat, MermaidFormat, PlotlyGraphFormat,
         # VegaLiteFormat, TableFormat, PerspectiveFormat, AudioFormat, VideoFormat, ChatCompletionResponse
-        assert len(messages) == 20, f"Expected 20 messages, got {len(messages)}"
+        # updateTextFormat(2)
+        assert len(messages) == 22, f"Expected 22 messages, got {len(messages)}"
 
         # Helper function to get messages by format
         def get_messages_by_format(format_class):
@@ -221,5 +223,14 @@ class TestUiComponentBlueprint:
         video_payload = video_messages[0].payload
         assert "rustic-ai.github.io" in video_payload["src"]
         assert video_payload["title"] == "Training Video"
+
+        # Verify Update message
+        update_messages = get_messages_by_format_name("updateTextFormat")
+        assert len(update_messages) == 2
+        update_msg_payload_1 = update_messages[0].payload
+        update_msg_payload_2 = update_messages[1].payload
+        assert update_msg_payload_1["update_id"] == update_msg_payload_2["update_id"]
+        assert update_msg_payload_1["update_type"] is None
+        assert update_msg_payload_2["update_type"] == UpdateType.APPEND
 
         guild.shutdown()

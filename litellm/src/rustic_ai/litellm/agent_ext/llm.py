@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 import litellm
 
@@ -66,19 +66,26 @@ class LiteLLM(LLM):
 
         return full_prompt
 
-    def completion(self, prompt: ChatCompletionRequest):
+    def completion(self, prompt: ChatCompletionRequest, model: Optional[str] = None):
         full_prompt = self._prep_prompt(prompt)
+
+        if model:
+            full_prompt["model"] = model
 
         completion = litellm.completion(**full_prompt)
         response: ChatCompletionResponse = ResponseUtils.from_litellm(completion)
         response.input_messages = full_prompt["messages"]  # Store input messages in the response
         return response
 
-    async def async_completion(self, prompt: ChatCompletionRequest):
+    async def async_completion(self, prompt: ChatCompletionRequest, model: Optional[str] = None):
         full_prompt = self._prep_prompt(prompt)
+
+        if model:
+            full_prompt["model"] = model
 
         completion = await litellm.acompletion(**full_prompt)
         response: ChatCompletionResponse = ResponseUtils.from_litellm(completion)
+        response.input_messages = full_prompt["messages"]  # Store input messages in the response
         return response
 
     @property
@@ -98,5 +105,5 @@ class LiteLLMResolver(DependencyResolver[LLM]):
         self.props = LiteLLMConf.model_validate(conf)
         self.LiteLLM = LiteLLM(self.props)
 
-    def resolve(self, guild_id: str, agent_id: str) -> LLM:
+    def resolve(self, org_id: str, guild_id: str, agent_id: str) -> LLM:
         return self.LiteLLM  # We can always return the same instance of LiteLLM

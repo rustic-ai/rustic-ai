@@ -35,7 +35,10 @@
         "route_times": 1,
         "transformer": null,
         "agent_state_update": null,
-        "guild_state_update": null,
+        "guild_state_update": {
+          "update_format": "json-merge-patch",
+          "state_update": "({\"count\": $.guild_state.count ? $.guild_state.count+1 : 1})"
+        },
         "reason": "simply doing my job",
         "process_status": "completed"
       }

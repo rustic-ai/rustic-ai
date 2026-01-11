@@ -342,3 +342,4 @@ class LaunchGuildFromBlueprintRequest(BaseModel):
     org_id: str
     description: Optional[str] = None
     configuration: dict = {}
+    guild_id: Optional[str] = None

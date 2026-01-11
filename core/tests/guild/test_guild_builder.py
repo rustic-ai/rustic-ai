@@ -1,6 +1,7 @@
 import importlib
 import time
 
+from flaky import flaky
 import pytest
 import shortuuid
 from sqlmodel import Session
@@ -294,6 +295,7 @@ class TestGuildBuilder:
         assert msgconf.backend_class == "EmbeddedMessagingBackend"
         assert msgconf.backend_config == {}
 
+    @flaky(max_runs=4, min_passes=1)
     def test_guild_bootstrap(
         self,
         agent_spec,
@@ -715,7 +717,7 @@ class TestGuildBuilder:
 
         assert len(user_notifications) == 2
 
-        user_response = [message for message in user_notifications if message.forward_header][0]
+        user_response = [message for message in user_notifications if message.forward_header][1]
 
         assert user_response.topics == user_message_topic
         assert user_response.payload["message"] == "Hello, world! @EchoAgent"

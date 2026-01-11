@@ -1,9 +1,32 @@
 from collections import deque
+from pathlib import Path
 from types import SimpleNamespace
+from typing import Optional
 
+from fsspec import filesystem
+from fsspec.implementations.asyn_wrapper import AsyncFileSystemWrapper
+from fsspec.implementations.dirfs import DirFileSystem as FileSystem
+import pytest
+
+from rustic_ai.core.guild.agent import Agent
+from rustic_ai.core.guild.agent_ext.depends.dependency_resolver import (
+    DependencyResolver,
+    DependencySpec,
+)
+from rustic_ai.core.guild.agent_ext.depends.llm.models import (
+    AssistantMessage,
+    UserMessage,
+)
 from rustic_ai.core.guild.agent_ext.mixins.state_refresher import StateRefresherMixin
+from rustic_ai.core.guild.builders import AgentBuilder
+from rustic_ai.core.knowledgebase.kbindex_backend import KBIndexBackend
+from rustic_ai.core.knowledgebase.kbindex_backend_memory import InMemoryKBIndexBackend
+from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 from rustic_ai.llm_agent.memories.history_memories_store import (
     HistoryBasedMemoriesStore,
+)
+from rustic_ai.llm_agent.memories.knowledge_memories_store import (
+    KnowledgeBasedMemoriesStore,
 )
 from rustic_ai.llm_agent.memories.queue_memories_store import (
     QueueBasedMemoriesStore,
@@ -11,6 +34,46 @@ from rustic_ai.llm_agent.memories.queue_memories_store import (
 from rustic_ai.llm_agent.memories.state_memories_store import (
     StateBackedMemoriesStore,
 )
+
+from rustic_ai.testing.helpers import wrap_agent_for_testing
+
+# ------------------------------
+# Dependency Resolvers for KB Memory Store
+# ------------------------------
+
+
+class FilesystemResolver(DependencyResolver[FileSystem]):
+    """Resolver for creating FileSystem instances for testing."""
+
+    def __init__(self, path_base: str, protocol: str = "file", asynchronous: bool = True):
+        super().__init__()
+        self.path_base = path_base
+        self.protocol = protocol
+        self.asynchronous = asynchronous
+
+    def resolve(self, org_id: str, guild_id: str, agent_id: Optional[str] = None) -> FileSystem:
+        basefs = filesystem(
+            self.protocol,
+            asynchronous=self.asynchronous,
+            auto_mkdir=True,
+        )
+
+        if self.asynchronous and not basefs.__class__.async_impl:
+            basefs = AsyncFileSystemWrapper(basefs)
+
+        return FileSystem(
+            path=f"{self.path_base}/{guild_id}",
+            fs=basefs,
+            asynchronous=self.asynchronous,
+            storage_options={"auto_mkdir": True},
+        )
+
+
+class KBBackendResolver(DependencyResolver[KBIndexBackend]):
+    """Resolver for creating KBIndexBackend instances for testing."""
+
+    def resolve(self, org_id: str, guild_id: str, agent_id: Optional[str] = None) -> KBIndexBackend:
+        return InMemoryKBIndexBackend()
 
 
 class FakeLLMMessage:
@@ -240,3 +303,248 @@ def test_history_based_memories_store_recall_includes_non_text_when_disabled(mon
     # text_only=False: keep non-text message, but still dedupe identical text
     contents = [m.content for m in recalled]
     assert contents == ["text A", {"non": "text"}, "text B"]
+
+
+# ---------------------------------------
+# KnowledgeBasedMemoriesStore tests
+# ---------------------------------------
+
+
+class DummyKBAgent(Agent):
+    """Minimal agent for KB memory testing."""
+
+    pass
+
+
+class DummyKBContext:
+    """Mock ProcessContext for KB memory testing."""
+
+    pass
+
+
+@pytest.fixture
+def kb_memory_store(tmp_path):
+    """Create a KnowledgeBasedMemoriesStore instance with temp storage."""
+    return KnowledgeBasedMemoriesStore(
+        context_window_size=5,
+        recall_limit=10,
+    )
+
+
+@pytest.fixture
+def kb_agent(tmp_path, generator):
+    """Create a dummy agent for KB memory testing."""
+    base = Path(tmp_path) / "kb_memory_tests"
+
+    # Create dependency specs for filesystem and kb_backend
+    dependency_map = {
+        "filesystem:guild": DependencySpec(
+            class_name=get_qualified_class_name(FilesystemResolver),
+            properties={"path_base": str(base), "protocol": "file", "asynchronous": True},
+        ),
+        "kb_backend:guild": DependencySpec(
+            class_name=get_qualified_class_name(KBBackendResolver),
+        ),
+    }
+
+    spec = (
+        AgentBuilder(DummyKBAgent)
+        .set_id("kb_test_agent")
+        .set_name("KB Test Agent")
+        .set_description("Test agent for KB memory")
+        .set_additional_dependencies(["filesystem:guild", "kb_backend:guild"])
+        .build_spec()
+    )
+
+    agent, _ = wrap_agent_for_testing(spec, dependency_map)
+    return agent
+
+
+def test_kb_memory_store_initialization(kb_memory_store):
+    """Test that KB memory store initializes correctly."""
+    assert kb_memory_store.memory_type == "knowledge_based"
+    assert kb_memory_store.context_window_size == 5
+    assert kb_memory_store.recall_limit == 10
+    assert kb_memory_store._kb is None
+    assert kb_memory_store._message_counter == 0
+    # Verify plugin dependencies are declared
+    assert "filesystem:guild" in kb_memory_store.depends_on
+    assert "kb_backend:guild" in kb_memory_store.depends_on
+
+
+def test_kb_memory_store_serialize_deserialize(kb_memory_store):
+    """Test message serialization and deserialization."""
+    msg = UserMessage(content="Hello, world!")
+
+    # Serialize
+    content, metadata = kb_memory_store._serialize_message(msg)
+    assert content == "Hello, world!"
+    assert metadata["role"] == "user"
+    assert "timestamp" in metadata
+
+    # Deserialize
+    deserialized = kb_memory_store._deserialize_message(content, metadata)
+    assert deserialized is not None
+    assert deserialized.role == "user"
+    assert deserialized.content == "Hello, world!"
+
+
+def test_kb_memory_store_serialize_with_metadata(kb_memory_store):
+    """Test serialization of message with additional metadata."""
+    msg = AssistantMessage(content="I can help you.", name="assistant_1")
+
+    content, metadata = kb_memory_store._serialize_message(msg)
+    assert content == "I can help you."
+    assert metadata["role"] == "assistant"
+    assert metadata["name"] == "assistant_1"
+    assert "timestamp" in metadata
+
+    deserialized = kb_memory_store._deserialize_message(content, metadata)
+    assert deserialized.role == "assistant"
+    assert deserialized.content == "I can help you."
+    assert deserialized.name == "assistant_1"
+
+
+def test_kb_memory_store_serialize_multimodal(kb_memory_store):
+    """Test serialization of message with multimodal content."""
+    msg = UserMessage(
+        content=[
+            {"type": "text", "text": "What is this?"},
+            {"type": "image_url", "image_url": {"url": "https://example.com/image.jpg"}},
+        ]
+    )
+
+    content, metadata = kb_memory_store._serialize_message(msg)
+    assert "What is this?" in content
+    assert metadata["role"] == "user"
+
+    # Deserialization should work
+    deserialized = kb_memory_store._deserialize_message(content, metadata)
+    assert deserialized is not None
+    assert deserialized.role == "user"
+
+
+def test_kb_memory_store_remember(kb_memory_store, kb_agent):
+    """Test that remember() successfully stores a message."""
+    msg = UserMessage(content="Remember this important fact.")
+    ctx = DummyKBContext()
+
+    initial_counter = kb_memory_store._message_counter
+
+    # Remember the message
+    kb_memory_store.remember(kb_agent, ctx, msg)
+
+    # Verify message counter incremented
+    assert kb_memory_store._message_counter > initial_counter
+
+
+def test_kb_memory_store_recall_empty_context(kb_memory_store, kb_agent):
+    """Test recall with empty context returns empty list."""
+    ctx = DummyKBContext()
+
+    recalled = kb_memory_store.recall(kb_agent, ctx, [])
+    assert recalled == []
+
+
+def test_kb_memory_store_recall_retrieves_memories(kb_memory_store, kb_agent):
+    """Test that recall retrieves semantically relevant memories."""
+    ctx = DummyKBContext()
+
+    # Store several messages on different topics
+    messages = [
+        UserMessage(content="I love programming in Python."),
+        AssistantMessage(content="Python is a great language for data science."),
+        UserMessage(content="What's the weather like today?"),
+        AssistantMessage(content="I don't have access to weather data."),
+        UserMessage(content="Can you help me with a Python function?"),
+    ]
+
+    for msg in messages:
+        kb_memory_store.remember(kb_agent, ctx, msg)
+
+    # Query with Python-related context
+    query_context = [UserMessage(content="Tell me about Python programming.")]
+
+    recalled = kb_memory_store.recall(kb_agent, ctx, query_context)
+
+    # Should retrieve messages
+    assert isinstance(recalled, list)
+
+
+def test_kb_memory_store_multiple_remember_calls(kb_memory_store, kb_agent):
+    """Test multiple sequential remember calls."""
+    ctx = DummyKBContext()
+
+    messages = [
+        UserMessage(content="First message"),
+        AssistantMessage(content="First response"),
+        UserMessage(content="Second message"),
+        AssistantMessage(content="Second response"),
+    ]
+
+    for msg in messages:
+        kb_memory_store.remember(kb_agent, ctx, msg)
+
+    # Verify message counter
+    assert kb_memory_store._message_counter == len(messages)
+
+
+def test_kb_memory_store_lazy_initialization(kb_memory_store, kb_agent):
+    """Test that KB is initialized lazily."""
+    import asyncio
+
+    # KB should not be initialized yet
+    assert kb_memory_store._kb is None
+
+    ctx = DummyKBContext()
+
+    # First remember should initialize KB
+    kb_memory_store.remember(kb_agent, ctx, UserMessage(content="Test"))
+
+    # Now KB should be initialized (check via async call)
+    async def check_init():
+        kb = await kb_memory_store._get_kb(kb_agent, ctx)
+        assert kb is not None
+        return kb
+
+    kb1 = asyncio.run(check_init())
+
+    # Second call should reuse the same KB instance
+    kb2 = asyncio.run(check_init())
+    assert kb1 is kb2
+
+
+def test_kb_memory_store_deserialize_invalid(kb_memory_store):
+    """Test deserialization of invalid message returns None."""
+    result = kb_memory_store._deserialize_message("Invalid content", {})
+    assert result is None
+
+
+def test_kb_memory_store_message_counter_increments(kb_memory_store, kb_agent):
+    """Test that message counter increments correctly."""
+    ctx = DummyKBContext()
+
+    initial_count = kb_memory_store._message_counter
+
+    kb_memory_store.remember(kb_agent, ctx, UserMessage(content="Message 1"))
+    assert kb_memory_store._message_counter == initial_count + 1
+
+    kb_memory_store.remember(kb_agent, ctx, UserMessage(content="Message 2"))
+    assert kb_memory_store._message_counter == initial_count + 2
+
+
+def test_kb_memory_store_configuration_options(tmp_path):
+    """Test creating memory store with different configurations."""
+    store1 = KnowledgeBasedMemoriesStore(
+        context_window_size=3,
+        recall_limit=5,
+    )
+    assert store1.context_window_size == 3
+    assert store1.recall_limit == 5
+
+    store2 = KnowledgeBasedMemoriesStore(
+        context_window_size=10,
+        recall_limit=20,
+    )
+    assert store2.context_window_size == 10
+    assert store2.recall_limit == 20

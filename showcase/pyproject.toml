@@ -2,22 +2,23 @@
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
-[tool.poetry]
+
+[project]
 name = "rusticai-showcase"
-version = "0.1.0"
+version = "1.0.0"
 description = "Module that showcases Rustic AI capabilities"
-authors = ["Dragonscale Industries Inc. <dev@dragonscale.ai>"]
+authors = [{name = "Dragonscale Industries Inc.", email = "dev@dragonscale.ai"}]
 license = "Apache-2.0"
 readme = "README.md"
-homepage = "https://www.rustic.ai/"
-repository = "https://github.com/rustic-ai/rustic-ai"
+requires-python = ">=3.12,<3.13"
+dynamic = ["dependencies"]
+urls = { Homepage = "https://www.rustic.ai/", Repository = "https://github.com/rustic-ai/rustic-ai", "Rustic AI Core" = "https://pypi.org/project/rusticai-core/" }
+
+
+[tool.poetry]
 packages = [{ include = "rustic_ai", from = "src" }]
 
-[tool.poetry.urls]
-"Rustic AI Core" = "https://pypi.org/project/rusticai-core/"
-
 [tool.poetry.dependencies]
-python = ">=3.12,<3.13"
 rusticai-core = { path = "../core", develop = true }
 rusticai-chroma = { path = "../chroma", develop = true }
 rusticai-langchain = { path = "../langchain", develop = true }
@@ -25,6 +26,8 @@ rusticai-litellm = { path = "../litellm", develop = true }
 rusticai-playwright = { path = "../playwright", develop = true }
 rusticai-serpapi = { path = "../serpapi", develop = true }
 rusticai-vertexai = { path = "../vertexai", develop = true }
+google-api-python-client = "^2.187.0"
+spacytextblob = "^5.1.0"
 
 [tool.poetry-monorepo.deps]
 

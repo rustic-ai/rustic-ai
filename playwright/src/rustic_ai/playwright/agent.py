@@ -1,4 +1,5 @@
 import asyncio
+from datetime import datetime
 from enum import StrEnum
 import hashlib
 import logging
@@ -24,6 +25,12 @@ from rustic_ai.core.utils.json_utils import JsonDict
 class ScrapingOutputFormat(StrEnum):
     TEXT_HTML = "text/html"
     MARKDOWN = "text/markdown"
+
+
+class BrowserLifecycle(StrEnum):
+    PER_REQUEST = "per_request"  # Close after each request
+    IDLE_TIMEOUT = "idle_timeout"  # Close after idle period (use browser_idle_timeout_s)
+    PERSISTENT = "persistent"  # Keep alive until agent shutdown
 
 
 class WebScrapingRequest(BaseModel):
@@ -76,6 +83,22 @@ class PlaywrightScraperConfig(BaseAgentProps):
         title="Number of parallel pages to scrape",
         description="The number of pages to scrape in parallel.",
     )
+    browser_lifecycle: BrowserLifecycle = Field(
+        default=BrowserLifecycle.PERSISTENT,
+        title="Browser lifecycle strategy",
+        description=(
+            "Strategy for managing browser lifecycle: "
+            "PER_REQUEST - close after each request, "
+            "IDLE_TIMEOUT - close after idle period, "
+            "PERSISTENT - keep alive until shutdown."
+        ),
+    )
+    browser_idle_timeout_s: float = Field(
+        default=10.0,
+        title="Browser idle close timeout (seconds)",
+        description="How long to wait before closing browser when using IDLE_TIMEOUT lifecycle strategy.",
+        ge=0.0,
+    )
 
 
 class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
@@ -87,11 +110,13 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
         self._scraped_urls: Set[str] = set()
         self._initialized = False
         self._chromium_installed = False
+        # Shared-browser lifecycle management
+        self._active_ops: int = 0
 
-    async def _ensure_browser(self):
+    async def _ensure_browser(self, force: bool = False):
         """Ensure browser is initialized and running."""
         async with self._browser_lock:
-            if not self._initialized or self._browser is None or not self._browser.is_connected():
+            if force or not self._initialized or self._browser is None or not self._browser.is_connected():
                 await self._initialize_browser()
             return self._browser
 
@@ -216,14 +241,25 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
                 with filesystem.open(f"scraped_data/{filename}", "w") as f:
                     f.write(content)
 
+                hostname = urlparse(response.url).hostname
+
                 metadata = {
                     "scraped_url": url,
                     "title": title,
                     "request_id": request.id,
+                    "source_system": f"internet:{hostname}" if hostname else "internet",
+                    "was_derived_from": response.url,
+                    "was_generated_by": "playwright_scraper_agent",
+                    "description": f"Web page scraped from {url}",
+                    "tags": ["web", "scraped", hostname] if hostname else ["web", "scraped"],
+                    "was_retrieved_at": str(datetime.utcnow()),
+                    "created_at": response.headers.get("last-modified", str(datetime.utcnow())),
+                    "source_etag": response.headers.get("etag", ""),
+                    "source_uri": response.url,
                 }
 
                 output = MediaLink(
-                    url=f"scraped_data/{filename}",
+                    url=f"file:///scraped_data/{filename}",
                     name=filename,
                     metadata=metadata,
                     on_filesystem=True,
@@ -311,14 +347,28 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
         async with self._scraped_urls_lock:
             self._scraped_urls.clear()
 
-        # Ensure browser is running
+        # Ensure browser is running; mark operation active and cancel idle close
+        self._active_ops += 1
         browser = await self._ensure_browser()
 
         # Create a new context for this scraping session
-        context = await browser.new_context(
-            viewport={"width": 1920, "height": 1080},
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        )
+        try:
+            context = await browser.new_context(
+                viewport={"width": 1920, "height": 1080},
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            )
+        except Exception as e:
+            # Check for specific error indicating browser connection loss
+            # "WriteUnixTransport closed" or "handler is closed"
+            if "closed" in str(e) or "transport" in str(e):
+                logging.warning(f"Browser context creation failed, re-initializing browser: {e}")
+                browser = await self._ensure_browser(force=True)
+                context = await browser.new_context(
+                    viewport={"width": 1920, "height": 1080},
+                    user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                )
+            else:
+                raise
 
         try:
             scraping_request = ctx.payload
@@ -364,9 +414,19 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
         finally:
             # Always close the context
             await context.close()
+            self._active_ops -= 1
 
-    async def cleanup(self):
-        """Cleanup method to be called when agent is being destroyed."""
+            # Handle browser lifecycle based on configuration
+            if self.config.browser_lifecycle == BrowserLifecycle.PER_REQUEST:
+                await self._cleanup()
+            elif self.config.browser_lifecycle == BrowserLifecycle.IDLE_TIMEOUT:
+                await asyncio.sleep(self.config.browser_idle_timeout_s)
+                if self._active_ops == 0:
+                    await self._cleanup()
+            # PERSISTENT: do nothing, browser stays alive
+
+    async def _cleanup(self):
+        """Cleanup method to free up resources."""
         async with self._browser_lock:
             if self._browser:
                 try:

@@ -7,6 +7,7 @@ Rustic AI Core provides the foundational interfaces and components necessary for
 - [Architecture](architecture.md)
 - [Agents](agents.md)
 - [Guilds](guilds.md)
+- [Guild-to-Guild (G2G) Communication](g2g.md)
 - [Messaging](messaging.md)
   - [Socket Messaging Backend](socket_messaging_backend.md)
 - [Execution](execution.md)

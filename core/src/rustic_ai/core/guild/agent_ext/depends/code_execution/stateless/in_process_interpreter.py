@@ -35,5 +35,5 @@ class InProcessCodeInterpreter(CodeRunner):
 class InProcessCodeInterpreterResolver(DependencyResolver[CodeRunner]):
     memoize_resolution: bool = False
 
-    def resolve(self, guild_id: str, agent_id: str) -> CodeRunner:
+    def resolve(self, org_id: str, guild_id: str, agent_id: str) -> CodeRunner:
         return InProcessCodeInterpreter()

@@ -11,6 +11,7 @@ from rustic_ai.core.messaging.core.message import AgentTag, Message
 from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 from rustic_ai.core.utils.priority import Priority
 from rustic_ai.playwright.agent import (
+    BrowserLifecycle,
     PlaywrightScraperAgent,
     ScrapingOutputFormat,
     WebScrapingCompleted,
@@ -42,6 +43,7 @@ def agent_and_results(filesystem):
         .set_id("001")
         .set_name("WebScrapper")
         .set_description("A web scraping agent using Playwright")
+        .set_properties({"browser_lifecycle": BrowserLifecycle.PER_REQUEST})
         .build_spec(),
         {"filesystem": filesystem},
     )
@@ -49,6 +51,7 @@ def agent_and_results(filesystem):
 
 class TestPlaywrightAgent:
     @flaky(max_runs=3, min_passes=1)
+    @pytest.mark.asyncio
     async def test_scraping(self, generator, agent_and_results, filesystem):
         agent, results = agent_and_results
 
@@ -61,9 +64,9 @@ class TestPlaywrightAgent:
             payload=WebScrapingRequest(
                 id=request_id,
                 links=[
-                    MediaLink(url="https://example.com/index.html"),
-                    MediaLink(url="https://example.com/about.html"),
-                    MediaLink(url="https://example.com/contact.html"),
+                    MediaLink(url="https://the-internet.herokuapp.com/"),
+                    MediaLink(url="https://the-internet.herokuapp.com/abtest"),
+                    MediaLink(url="https://the-internet.herokuapp.com/abtest"),
                     MediaLink(url="https://www.rfc-editor.org/rfc/rfc2606.html"),
                 ],
             ).model_dump(),
@@ -82,45 +85,46 @@ class TestPlaywrightAgent:
             if len(results) >= 5 or (results and results[-1].format == wsc) or tries > 10:
                 break
 
-        assert len(results) == 5
+        assert len(results) == 4
 
         selected_result = [
             r
             for r in results
             if isinstance(r.payload, dict)
             and "metadata" in r.payload
-            and r.payload["metadata"]["scraped_url"] == "https://example.com/index.html"
-        ]
+            and r.payload["metadata"]["scraped_url"] == "https://the-internet.herokuapp.com/abtest"
+        ][0]
 
-        assert selected_result[0].priority == Priority.NORMAL
-        assert selected_result[0].in_response_to == message.id
-        assert selected_result[0].current_thread_id == message.id
-        assert selected_result[0].recipient_list == []
+        assert selected_result.priority == Priority.NORMAL
+        assert selected_result.in_response_to == message.id
+        assert selected_result.current_thread_id == message.id
+        assert selected_result.recipient_list == []
 
-        assert selected_result[0].payload["id"] is not None
-        assert selected_result[0].payload["mimetype"] == "text/html"
-        assert selected_result[0].payload["encoding"] == "utf-8"
-        assert selected_result[0].payload["name"] is not None
+        assert selected_result.payload["id"] is not None
+        assert selected_result.payload["mimetype"] == "text/html"
+        assert selected_result.payload["encoding"] == "utf-8"
+        assert selected_result.payload["name"] is not None
 
-        assert selected_result[0].payload["metadata"] is not None
-        assert selected_result[0].payload["metadata"]["scraped_url"] == "https://example.com/index.html"  # type: ignore
-        assert selected_result[0].payload["metadata"]["title"] == "Example Domain"  # type: ignore
-        assert selected_result[0].payload["metadata"]["request_id"] == request_id  # type: ignore
+        assert selected_result.payload["metadata"] is not None
+        assert selected_result.payload["metadata"]["scraped_url"] == "https://the-internet.herokuapp.com/abtest"  # type: ignore
+        assert selected_result.payload["metadata"]["title"] == "The Internet"  # type: ignore
+        assert selected_result.payload["metadata"]["request_id"] == request_id  # type: ignore
 
-        assert selected_result[0].payload["url"] is not None
-        assert selected_result[0].payload["on_filesystem"] is True
+        assert selected_result.payload["url"] is not None
+        assert selected_result.payload["on_filesystem"] is True
 
-        fs = filesystem.to_resolver().resolve(agent.guild_id, "GUILD_GLOBAL")
+        fs = filesystem.to_resolver().resolve(agent.get_organization(), agent.guild_id, "GUILD_GLOBAL")
 
-        assert fs.exists(results[0].payload["url"])
+        assert fs.exists(selected_result.payload["url"])
 
         completed = WebScrapingCompleted.model_validate(results[-1].payload)
 
         assert completed.id == request_id
-        assert len(completed.links) == 2  # 2 links are duplicates
+        assert len(completed.links) == 3  # 2 links are duplicates
 
     # Test markdown output
     @flaky(max_runs=3, min_passes=1)
+    @pytest.mark.asyncio
     async def test_markdown_output(self, agent_and_results, generator):
         agent, results = agent_and_results
 
@@ -133,7 +137,7 @@ class TestPlaywrightAgent:
             payload=WebScrapingRequest(
                 id=request_id,
                 links=[
-                    MediaLink(url="https://example.com/index.html"),
+                    MediaLink(url="https://the-internet.herokuapp.com/abtest"),
                 ],
                 output_format=ScrapingOutputFormat.MARKDOWN,
                 force=True,
@@ -163,15 +167,8 @@ class TestPlaywrightAgent:
         assert result.payload["encoding"] == "utf-8"
         assert result.payload["name"] is not None
 
-        # Give the system a final moment to complete any pending tasks
-        await asyncio.sleep(2)
-
-        # Cancel any remaining tasks explicitly to avoid the warning
-        for task in asyncio.all_tasks():
-            if task is not asyncio.current_task() and not task.done():
-                task.cancel()
-
     @flaky(max_runs=3, min_passes=1)
+    @pytest.mark.asyncio
     async def test_recursive_scraping_with_depth(self, agent_and_results, filesystem, generator):
         agent, results = agent_and_results
 
@@ -209,9 +206,5 @@ class TestPlaywrightAgent:
 
         for result in results[:-1]:
             assert result.payload["url"].endswith(".html") or result.payload["url"].endswith(".txt")
-            fs = filesystem.to_resolver().resolve(agent.guild_id, "GUILD_GLOBAL")
+            fs = filesystem.to_resolver().resolve(agent.get_organization(), agent.guild_id, "GUILD_GLOBAL")
             assert fs.exists(result.payload["url"])
-
-        for task in asyncio.all_tasks():
-            if task is not asyncio.current_task() and not task.done():
-                task.cancel()

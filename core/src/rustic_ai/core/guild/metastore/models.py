@@ -303,8 +303,13 @@ class AgentModel(SQLModel, table=True):
         default_factory=list,
     )
     listen_to_default_topic: bool = True
+    act_only_when_tagged: bool = False
 
     dependency_map: dict = Field(sa_column=Column(MutableDict.as_mutable(JSON(none_as_null=True)), default={}))
+    additional_dependencies: List[str] = Field(
+        sa_column=Column(MutableList.as_mutable(JSON(none_as_null=True))),
+        default_factory=list,
+    )
 
     guild_id: Optional[str] = Field(index=True, foreign_key="guilds.id", primary_key=True)
     guild: Optional[GuildModel] = Relationship(back_populates="agents")
@@ -343,8 +348,10 @@ class AgentModel(SQLModel, table=True):
             properties=(agent_spec.properties.model_dump() if agent_spec.properties else {}),
             additional_topics=agent_spec.additional_topics,
             listen_to_default_topic=agent_spec.listen_to_default_topic,
+            act_only_when_tagged=agent_spec.act_only_when_tagged,
             guild_id=guild_id,
             dependency_map=deps_map,
+            additional_dependencies=agent_spec.additional_dependencies,
             predicates=predicates,
         )
 
@@ -366,7 +373,9 @@ class AgentModel(SQLModel, table=True):
             "properties": self.properties,
             "additional_topics": self.additional_topics,
             "listen_to_default_topic": self.listen_to_default_topic,
+            "act_only_when_tagged": self.act_only_when_tagged,
             "dependency_map": self.dependency_map,
+            "additional_dependencies": self.additional_dependencies,
             "predicates": self.predicates,
         }
 

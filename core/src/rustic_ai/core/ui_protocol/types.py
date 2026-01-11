@@ -11,8 +11,12 @@ from typing import Dict, Literal, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field, JsonValue, model_validator
 
-from rustic_ai.core import AgentTag
 from rustic_ai.core.agents.commons.media import MediaLink
+
+
+class UpdateType(str, Enum):
+    APPEND = "append"
+    REPLACE = "replace"
 
 
 class DataFormat(BaseModel):
@@ -20,7 +24,8 @@ class DataFormat(BaseModel):
 
     title: Optional[str] = None
     description: Optional[str] = None
-    tagged_users: list[AgentTag] = []
+    update_id: Optional[str] = Field(default=None, alias="updateId")
+    update_type: Optional[UpdateType] = Field(None, alias="updateType")
 
 
 class VisualizationFormat(DataFormat):

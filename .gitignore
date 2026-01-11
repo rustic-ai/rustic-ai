@@ -126,3 +126,15 @@ api/scripts/zipkin/data-tmp/traces.json
 
 old-docs/
 out/
+
+Agents.md
+copilot-instructions.md
+.cursor/
+AGENTS.md
+CLAUDE.md
+debugger/
+
+# npm packages
+node_modules/
+.claude/
+skills/.claude/

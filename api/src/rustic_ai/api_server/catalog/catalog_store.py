@@ -111,6 +111,28 @@ class CatalogStore:
                 return None
             return BlueprintDetailsResponse.from_table(blueprint)
 
+    def get_blueprint_with_exposure(self, blueprint_id: str, user_id: str, org_id: str) -> Optional[Blueprint]:
+        with Session(self.engine) as session:
+            blueprint = session.get(Blueprint, blueprint_id)
+            if not blueprint:
+                raise HTTPException(status_code=404, detail="Blueprint not found")
+            if blueprint.exposure == BlueprintExposure.PUBLIC:
+                return blueprint
+            if blueprint.exposure == BlueprintExposure.PRIVATE and blueprint.author_id == user_id:
+                return blueprint
+            if blueprint.exposure == BlueprintExposure.ORGANIZATION and blueprint.organization_id == org_id:
+                return blueprint
+            if blueprint.exposure == BlueprintExposure.SHARED and org_id:
+                statement = (
+                    select(BlueprintSharedWithOrganization)
+                    .where(BlueprintSharedWithOrganization.organization_id == org_id)
+                    .where(BlueprintSharedWithOrganization.blueprint_id == blueprint_id)
+                )
+                entry = session.exec(statement).first()
+                if entry:
+                    return blueprint
+            return None
+
     def add_tag_to_blueprint(self, blueprint_id: str, tag: str):
         with Session(self.engine) as session:
             blueprint = session.get(Blueprint, blueprint_id)
@@ -182,10 +204,19 @@ class CatalogStore:
             if not blueprint:
                 raise HTTPException(status_code=404, detail=f"Blueprint {blueprint_id} not found")
 
+            # Ensure orginal organization has access when sharing bp with org exposure
+            if blueprint.exposure == BlueprintExposure.ORGANIZATION:
+                session.add(
+                    BlueprintSharedWithOrganization(
+                        organization_id=blueprint.organization_id, blueprint_id=blueprint_id
+                    )
+                )
+
             blueprint.sqlmodel_update({"exposure": BlueprintExposure.SHARED})
             shared_with_organizations = BlueprintSharedWithOrganization(
                 organization_id=organization_id, blueprint_id=blueprint_id
             )
+
             session.add(blueprint)
             session.add(shared_with_organizations)
             session.commit()
@@ -205,14 +236,19 @@ class CatalogStore:
             session.delete(entry)
             session.commit()
 
+    @staticmethod
+    def _get_bps_shared_with_org(session: Session, organization_id: str):
+        statement = (
+            select(Blueprint)
+            .join(BlueprintSharedWithOrganization)
+            .where(BlueprintSharedWithOrganization.organization_id == organization_id)
+        )
+        shared_blueprints = session.exec(statement).all()
+        return shared_blueprints
+
     def get_blueprints_shared_with_organization(self, organization_id: str) -> List[BlueprintInfoResponse]:
         with Session(self.engine) as session:
-            statement = (
-                select(Blueprint)
-                .join(BlueprintSharedWithOrganization)
-                .where(BlueprintSharedWithOrganization.organization_id == organization_id)
-            )
-            shared_blueprints = session.exec(statement).all()
+            shared_blueprints = self._get_bps_shared_with_org(session, organization_id)
             return [BlueprintInfoResponse.from_table(b) for b in shared_blueprints]
 
     def get_organization_with_shared_blueprint(self, blueprint_id: str) -> List[str]:
@@ -261,7 +297,9 @@ class CatalogStore:
         blueprint_info = BlueprintInfoResponse.from_table(blueprint).model_dump()
         return BlueprintResponseWithAccessReason(**blueprint_info, access_organization_id=org_id)
 
-    def get_user_accessible_blueprints(self, user_id: str) -> List[BlueprintResponseWithAccessReason]:
+    def get_user_accessible_blueprints(
+        self, user_id: str, org_id: Optional[str]
+    ) -> List[BlueprintResponseWithAccessReason]:
         with Session(self.engine) as session:
 
             public_blueprints_list = session.exec(
@@ -278,29 +316,24 @@ class CatalogStore:
                 b.id: self._blueprint_with_org_access(b) for b in owned_blueprints_list
             }
 
-            # TODO - revisit this when there is a separate central app repository
-            # user_orgs = user.organizations
-            #
-            # org_owned_blueprints: Dict[str, BlueprintResponseWithAccessReason] = {}
-            # shared_blueprints: Dict[str, BlueprintResponseWithAccessReason] = {}
-            # for org in user_orgs:
-            #     org_owned_blueprints.update(
-            #         {
-            #             b.id: self._blueprint_with_org_access(b, org_id=org.id)
-            #             for b in org.blueprints
-            #             if b.exposure == BlueprintExposure.ORGANIZATION
-            #         }
-            #     )
-            #
-            #     shared_blueprints.update(
-            #         {
-            #             b.id: self._blueprint_with_org_access(b, org_id=org.id)
-            #             for b in org.shared_blueprints
-            #             if b.exposure == BlueprintExposure.SHARED
-            #         }
-            #     )
-            # accessible_bps = {**public_blueprints, **owned_blueprints, **org_owned_blueprints, **shared_blueprints}
             accessible_bps = {**public_blueprints, **owned_blueprints}
+
+            if org_id and org_id.strip():
+                org_blueprints_list = session.exec(
+                    select(Blueprint)
+                    .where(Blueprint.organization_id == org_id)
+                    .where(Blueprint.exposure == BlueprintExposure.ORGANIZATION)
+                ).all()
+                org_owned_blueprints: Dict[str, BlueprintResponseWithAccessReason] = {
+                    b.id: self._blueprint_with_org_access(b, org_id=org_id) for b in org_blueprints_list
+                }
+
+                shared_blueprints_list = self._get_bps_shared_with_org(session, org_id)
+                shared_blueprints: Dict[str, BlueprintResponseWithAccessReason] = {
+                    b.id: self._blueprint_with_org_access(b, org_id=org_id) for b in shared_blueprints_list
+                }
+
+                accessible_bps = {**public_blueprints, **owned_blueprints, **org_owned_blueprints, **shared_blueprints}
 
             return list(accessible_bps.values())
 

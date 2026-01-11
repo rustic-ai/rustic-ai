@@ -224,6 +224,11 @@ class AgentSpec(BaseModel, Generic[APT]):
     # A mapping for guild's dependency to resolver class
     dependency_map: Dict[str, DependencySpec] = {}
 
+    # Additional dependencies to load for this agent beyond what the agent class declares.
+    # Useful for plugins that require dependencies not declared on the agent's processors.
+    # The resolvers must be defined in either the agent's or guild's dependency_map.
+    additional_dependencies: List[str] = Field(default_factory=list)
+
     # Resource configuration for the agent useful for execution engines that support it
     resources: ResourceSpec = Field(default_factory=ResourceSpec)
 
@@ -299,6 +304,17 @@ class AgentSpec(BaseModel, Generic[APT]):
         return cast(Type[BaseAgentProps], gt)
 
 
+class GatewayConfig(BaseModel):
+    """
+    Configuration for the automatic GatewayAgent.
+    """
+
+    enabled: bool = True
+    input_formats: List[str]
+    output_formats: List[str]
+    returned_formats: List[str] = Field(default_factory=list)
+
+
 class GuildSpec(BaseModel):
     """
     A specification for a guild that describes its name, description, and agents.
@@ -310,6 +326,7 @@ class GuildSpec(BaseModel):
         agents (list[AgentSpec]): A list of agents in the guild.
         dependency_map (Dict[str, DependencySpec]): A mapping for guild's dependency to resolver class.
         routes (RoutingSlip): The routes to be attached to every message coming in the guild.
+        gateway (Optional[GatewayConfig]): Configuration for the automatic GatewayAgent.
     """
 
     model_config = ConfigDict(str_strip_whitespace=True)
@@ -324,6 +341,8 @@ class GuildSpec(BaseModel):
     dependency_map: Dict[str, DependencySpec] = {}
 
     routes: RoutingSlip = Field(default_factory=RoutingSlip)
+
+    gateway: Optional[GatewayConfig] = None
 
     def __init__(self, **data):
         super().__init__(**data)
