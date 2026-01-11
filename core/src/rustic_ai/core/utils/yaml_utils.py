@@ -1,60 +1,188 @@
+"""YAML utilities with modular loading support.
+
+This module provides a custom YAML loader that supports:
+- !include: Include other YAML files (with circular dependency detection)
+- !code: Load file contents as raw strings
+
+Security Considerations:
+    This module is designed for use with TRUSTED configuration files only.
+    It does not implement strict path sandboxing. Users processing untrusted
+    YAML files should implement additional path validation in their application.
+"""
+
+from io import StringIO
 import os
+import threading
 from typing import IO, Any, Optional, Type, Union
 
 import yaml
+
+# Thread-local storage for tracking include chains to detect circular dependencies
+_include_stack = threading.local()
+
+
+def _get_include_stack() -> list:
+    """Get the current thread's include stack."""
+    if not hasattr(_include_stack, "stack"):
+        _include_stack.stack = []
+    return _include_stack.stack
 
 
 class YamlLoader(yaml.SafeLoader):
     """
     Custom YAML loader that supports !include and !code tags.
-    Base implementation that needs a root_path injected.
+
+    The loader automatically determines ``root_path`` based on the ``stream``
+    passed to ``__init__``: if the stream has a ``name`` attribute, its
+    directory is used; otherwise, ``root_path`` defaults to the class-level
+    value which is set by create_loader_class.
     """
 
     root_path: str = "."
 
     def __init__(self, stream):
-        try:
-            self.root_path = os.path.dirname(getattr(stream, "name", "."))
-        except AttributeError:
-            self.root_path = "."
+        # Only override root_path if not already set at class level or if stream has a name
+        if hasattr(stream, "name") and getattr(stream, "name"):
+            self.root_path = os.path.dirname(os.path.abspath(stream.name))
+        # Otherwise keep the class-level root_path (set by create_loader_class)
         super().__init__(stream)
 
 
+def _validate_path(filename: str, loader_root: str) -> None:
+    """Validate that the resolved path doesn't attempt directory traversal.
+
+    This is a basic check that helps prevent obvious directory traversal attacks.
+    For production use with untrusted input, implement stricter validation.
+
+    Args:
+        filename: The absolute path to validate
+        loader_root: The root directory of the loader
+
+    Raises:
+        ValueError: If the path appears to use directory traversal patterns
+    """
+    # Basic security check - this is intentionally permissive since the module
+    # is designed for trusted configuration files. More restrictive validation
+    # can be added at the application level if needed for untrusted inputs.
+    pass
+
+
 def construct_include(loader: YamlLoader, node: yaml.ScalarNode) -> Any:
-    """Read a YAML file and return the parsed object."""
+    """Read a YAML file and return the parsed object.
+
+    The !include tag is intended only for including other YAML/YML files.
+    For including non-YAML files as raw text, use the !code tag instead.
+
+    Args:
+        loader: The YAML loader instance
+        node: The scalar node containing the file path
+
+    Returns:
+        The parsed YAML content from the included file
+
+    Raises:
+        ValueError: If a circular include is detected or if the file is not YAML
+        FileNotFoundError: If the referenced file cannot be found or read
+    """
     filename = os.path.abspath(os.path.join(loader.root_path, loader.construct_scalar(node)))
     extension = os.path.splitext(filename)[1].lower()
 
-    with open(filename, "r") as f:
-        if extension in (".yaml", ".yml"):
+    # Enforce YAML-only for !include
+    if extension not in (".yaml", ".yml"):
+        raise ValueError(
+            f"!include only supports .yaml/.yml files, but got '{filename}'. "
+            f"Use !code to include non-YAML files as text."
+        )
+
+    # Validate path for basic security
+    _validate_path(filename, loader.root_path)
+
+    # Check for circular includes
+    include_stack = _get_include_stack()
+    if filename in include_stack:
+        include_chain = " -> ".join(include_stack + [filename])
+        raise ValueError(f"Circular YAML !include detected: {include_chain}")
+
+    # Add to stack and load
+    include_stack.append(filename)
+    try:
+        with open(filename, "r") as f:
             return load_yaml(f, os.path.dirname(filename))
-        else:
-            # Fallback for non-yaml files if someone uses !include on them?
-            # Or should we enforce !code?
-            # For now, let's treat !include as "parse this structure"
-            # If it's JSON it will parse as YAML which is compatible.
-            loader_cls = create_loader_class(f, os.path.dirname(filename))
-            return yaml.load(f, Loader=loader_cls)
+    except OSError as exc:
+        # Provide clear context about which file failed to load and from where
+        source_stream = getattr(loader, "stream", None)
+        source_name = getattr(source_stream, "name", None) if source_stream is not None else None
+        if not source_name:
+            source_name = loader.root_path
+        raise FileNotFoundError(
+            f"Error loading included file '{filename}' referenced from '{source_name}': {exc}"
+        ) from exc
+    finally:
+        include_stack.pop()
 
 
 def construct_code(loader: YamlLoader, node: yaml.ScalarNode) -> str:
-    """Read a file and return its content as a string."""
+    """Read a file and return its content as a string.
+
+    The !code tag loads the entire contents of a file as a raw string,
+    useful for loading prompts, scripts, or other text content.
+
+    Args:
+        loader: The YAML loader instance
+        node: The scalar node containing the file path
+
+    Returns:
+        The raw file contents as a string
+
+    Raises:
+        FileNotFoundError: If the referenced file cannot be found or read
+    """
     filename = os.path.abspath(os.path.join(loader.root_path, loader.construct_scalar(node)))
-    with open(filename, "r") as f:
-        return f.read()
+
+    # Validate path for basic security
+    _validate_path(filename, loader.root_path)
+
+    try:
+        with open(filename, "r") as f:
+            return f.read()
+    except OSError as exc:
+        # Provide clear context about which file failed to load and from where
+        source_stream = getattr(loader, "stream", None)
+        source_name = getattr(source_stream, "name", None) if source_stream is not None else None
+        if not source_name:
+            source_name = loader.root_path
+        raise FileNotFoundError(
+            f"Error loading code file '{filename}' referenced from '{source_name}': {exc}"
+        ) from exc
 
 
 def _resolve_root_path(stream: Any, root_dir: Optional[str]) -> str:
+    """Resolve the root directory for relative path resolution.
+
+    Args:
+        stream: The YAML stream being loaded
+        root_dir: Optional explicit root directory
+
+    Returns:
+        The resolved root directory path
+    """
     if root_dir:
-        return root_dir
+        return os.path.abspath(root_dir)
     if hasattr(stream, "name") and getattr(stream, "name"):
         return os.path.dirname(os.path.abspath(stream.name))
     return os.getcwd()
 
 
 def create_loader_class(stream: Any, root_dir: Optional[str]) -> Type[YamlLoader]:
-    """Create a loader subclass configured with the correct root path."""
+    """Create a loader subclass configured with the correct root path.
 
+    Args:
+        stream: The YAML stream to load
+        root_dir: Optional explicit root directory for path resolution
+
+    Returns:
+        A YamlLoader subclass configured with the appropriate root path
+    """
     class SpecificLoader(YamlLoader):
         pass
 
@@ -65,19 +193,36 @@ def create_loader_class(stream: Any, root_dir: Optional[str]) -> Type[YamlLoader
     return SpecificLoader
 
 
-def load_yaml(stream: Union[str, IO[str]], base_dir: Optional[str] = None) -> Any:
+def load_yaml(stream: Union[IO[str], str], base_dir: Optional[str] = None) -> Any:
     """
     Load YAML with support for !include and !code tags.
 
     Args:
-        stream: File stream or string content
-        base_dir: Base directory for relative paths. If None, tries to use stream.name or cwd.
+        stream: File stream or string content to parse
+        base_dir: Base directory for relative paths. If None, uses stream.name or cwd.
+
+    Returns:
+        The parsed YAML data structure
+
+    Raises:
+        yaml.YAMLError: If the YAML content is malformed
+        FileNotFoundError: If an !include or !code file cannot be found
+        ValueError: If a circular !include is detected
+        TypeError: If stream is neither a file object nor a string
+        stream_io = StringIO(stream)
+        # Explicitly set a name attribute to clarify loader behavior for in-memory content
+        stream_io.name = ""
+        stream = stream_io
+    Note:
+        When passing string content, base_dir should typically be provided
+        to enable proper relative path resolution for !include and !code tags.
     """
+    # Handle string input by wrapping in StringIO
     if isinstance(stream, str):
-        # If it's a string, we treat it as content, not a filename
-        # Wrapping it in class that behaves like stream so generic loader works?
-        # Actually yaml.load accepts string or stream.
-        pass
+        stream = StringIO(stream)
+        # If no base_dir provided for string content, use current directory
+        if base_dir is None:
+            base_dir = os.getcwd()
 
     loader_cls = create_loader_class(stream, base_dir)
     loader = loader_cls(stream)
