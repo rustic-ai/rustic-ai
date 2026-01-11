@@ -5,4 +5,4 @@ class_name: rustic_ai.llm_agent.llm_agent.LLMAgent
 properties:
   model: gpt-4o
   temperature: 0.3  # Lower temperature for more focused analysis
-    default_system_prompt: !code ../prompts/security_reviewer.md
+  default_system_prompt: !code ../prompts/security_reviewer.md
