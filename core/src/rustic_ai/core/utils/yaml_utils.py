@@ -76,14 +76,12 @@ def _validate_path(filename: str, loader_root: str) -> None:
         common = os.path.commonpath([abs_root, abs_filename])
     except ValueError as exc:
         # Raised if paths are on different drives or otherwise incomparable
-        raise ValueError(
-            f"Invalid include path '{filename}' relative to root '{loader_root}': {exc}"
-        ) from exc
+        raise ValueError(f"Invalid include path '{filename}' relative to root '{loader_root}': {exc}") from exc
 
     if common != abs_root:
-        raise ValueError(
-            f"Included file '{filename}' is outside the allowed root directory '{loader_root}'."
-        )
+        raise ValueError(f"Included file '{filename}' is outside the allowed root directory '{loader_root}'.")
+
+
 def construct_include(loader: YamlLoader, node: yaml.ScalarNode) -> Any:
     """Read a YAML file and return the parsed object.
 
@@ -168,9 +166,7 @@ def construct_code(loader: YamlLoader, node: yaml.ScalarNode) -> str:
         source_name = getattr(source_stream, "name", None) if source_stream is not None else None
         if not source_name:
             source_name = loader.root_path
-        raise FileNotFoundError(
-            f"Error loading code file '{filename}' referenced from '{source_name}': {exc}"
-        ) from exc
+        raise FileNotFoundError(f"Error loading code file '{filename}' referenced from '{source_name}': {exc}") from exc
 
 
 def _resolve_root_path(stream: Any, root_dir: Optional[str]) -> str:
@@ -200,6 +196,7 @@ def create_loader_class(stream: Any, root_dir: Optional[str]) -> Type[YamlLoader
     Returns:
         A YamlLoader subclass configured with the appropriate root path
     """
+
     class SpecificLoader(YamlLoader):
         pass
 
