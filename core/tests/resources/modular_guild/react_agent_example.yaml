@@ -6,7 +6,7 @@ properties:
   model: gpt-4o
   max_iterations: 10
   temperature: 0.7
-    system_prompt: !code prompts/react_system_prompt.md
+  system_prompt: !code prompts/react_system_prompt.md
   toolset:
     kind: rustic_ai.skills.toolset.CompositeToolset
     toolsets:
