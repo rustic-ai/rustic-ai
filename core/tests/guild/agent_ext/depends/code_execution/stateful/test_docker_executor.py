@@ -12,7 +12,7 @@ try:
     client = docker.from_env()
     client.ping()
     docker_available = True
-except Exception as exc:
+except Exception:
     # Any failure here means Docker is not usable; tests will be skipped.
     docker_available = False
 
