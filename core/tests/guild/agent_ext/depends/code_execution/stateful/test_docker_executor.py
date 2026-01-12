@@ -12,8 +12,9 @@ try:
     client = docker.from_env()
     client.ping()
     docker_available = True
-except Exception:
-    pass
+except Exception as exc:
+    # Any failure here means Docker is not usable; tests will be skipped.
+    docker_available = False
 
 
 @pytest.mark.skipif(not docker_available, reason="Docker daemon not available")
