@@ -386,7 +386,7 @@ class LLMAgentHelper:
         llm: LLM,
         ctx: ProcessContext[ChatCompletionRequest],
         prompt: ChatCompletionRequest,
-    ) -> ChatCompletionResponse | ChatCompletionError:
+    ) -> Union[ChatCompletionResponse, ChatCompletionError]:
         """
         Invoke the LLM and handle the response with full sending behavior.
 
