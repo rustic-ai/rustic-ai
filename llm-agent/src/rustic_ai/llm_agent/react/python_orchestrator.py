@@ -108,16 +108,14 @@ class PythonOrchestratorToolset(ReActToolset):
         tool_bindings = self._create_tool_bindings()
 
         # Initialize the executor with allowed modules
-        # Note: We pass tool bindings as default_imports hack or pre-populate local vars
-        # PythonExecExecutor allows accessing its _local_vars directly if needed, or we can look for a cleaner way.
-        # Since we are inside the same process (Local Mode), we can just inject into _local_vars.
+        # Inject the tool bindings into the executor's execution scope using its public API
 
         executor = PythonExecExecutor(
             whitelisted_imports=set(self.allowed_modules)
         )
 
         # Inject the tool functions into the executor's scope
-        executor._local_vars.update(tool_bindings)
+        executor.inject_variables(tool_bindings)
 
         try:
             # We wrap the execution to simple ast parsing to check for obvious bad things?
