@@ -25,6 +25,8 @@ Example:
 """
 
 from .code_executor import CodeExecutor, CodeValidator, DefaultCodeValidator
+from .docker_executor import DockerExecutor
+from .e2b_executor import E2BExecutor
 from .exceptions import ExecutorError, ShutdownError, ValidationError
 from .models import CodeSnippet, ExecutionException, ExecutionResult
 from .python_exec_executor import PythonExecExecutor
@@ -33,6 +35,8 @@ __all__ = [
     "CodeExecutor",
     "CodeValidator",
     "DefaultCodeValidator",
+    "DockerExecutor",
+    "E2BExecutor",
     "ExecutorError",
     "ShutdownError",
     "ValidationError",
