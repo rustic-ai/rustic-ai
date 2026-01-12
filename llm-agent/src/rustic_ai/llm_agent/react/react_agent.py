@@ -18,7 +18,10 @@ from rustic_ai.core.guild.dsl import BaseAgentProps
 from rustic_ai.core.utils.basic_class_utils import get_class_from_name
 from rustic_ai.llm_agent.llm_agent_conf import Models
 from rustic_ai.llm_agent.llm_agent_helper import LLMAgentHelper
-from rustic_ai.llm_agent.llm_plugin_mixin import LLMPluginMixin
+from rustic_ai.llm_agent.llm_plugin_mixin import LLMPluginMixin, build_plugins
+from rustic_ai.llm_agent.plugins.llm_call_wrapper import LLMCallWrapper
+from rustic_ai.llm_agent.plugins.request_preprocessor import RequestPreprocessor
+from rustic_ai.llm_agent.plugins.response_postprocessor import ResponsePostprocessor
 
 from .models import ReActRequest, ReActResponse, ReActStep
 from .toolset import ReActToolset
@@ -54,9 +57,16 @@ class ReActAgentConfig(BaseAgentProps, LLMPluginMixin):
     and toolset.
 
     Plugin execution for ReActAgent:
-    - Preprocessors run ONCE before the ReAct loop starts
-    - Postprocessors run ONCE after the loop completes (on final response)
-    - Plugins do NOT run on intermediate LLM calls within the loop
+
+    Loop-level plugins (from LLMPluginMixin):
+    - request_preprocessors: Run ONCE before the ReAct loop starts
+    - llm_request_wrappers: Wrap the entire loop (pre once, post once)
+    - response_postprocessors: Run ONCE after the loop completes
+
+    Iteration-level plugins (ReAct-specific):
+    - iteration_preprocessors: Run BEFORE each LLM call in the loop
+    - iteration_wrappers: Wrap each individual LLM call
+    - iteration_postprocessors: Run AFTER each LLM call in the loop
     """
 
     model_config = ConfigDict(extra="ignore")
@@ -100,6 +110,40 @@ class ReActAgentConfig(BaseAgentProps, LLMPluginMixin):
     timeout: Optional[float] = None
     """Timeout for LLM API requests."""
 
+    # Per-iteration plugins (ReAct-specific)
+    iteration_preprocessors: List[RequestPreprocessor] = Field(default_factory=list)
+    """
+    Preprocessors that run BEFORE each LLM call within the ReAct loop.
+    Use for per-step context injection, logging, etc.
+    """
+
+    iteration_wrappers: List[LLMCallWrapper] = Field(default_factory=list)
+    """
+    Wrappers that wrap each individual LLM call within the loop.
+    The preprocess runs before each call, postprocess after each call.
+    """
+
+    iteration_postprocessors: List[ResponsePostprocessor] = Field(default_factory=list)
+    """
+    Postprocessors that run AFTER each LLM call within the ReAct loop.
+    Use for per-step cost tracking, evaluation, logging, etc.
+    """
+
+    @field_validator("iteration_preprocessors", mode="before")
+    @classmethod
+    def _coerce_iter_preprocessors(cls, v):
+        return build_plugins(v, RequestPreprocessor)
+
+    @field_validator("iteration_wrappers", mode="before")
+    @classmethod
+    def _coerce_iter_wrappers(cls, v):
+        return build_plugins(v, LLMCallWrapper)
+
+    @field_validator("iteration_postprocessors", mode="before")
+    @classmethod
+    def _coerce_iter_postprocessors(cls, v):
+        return build_plugins(v, ResponsePostprocessor)
+
     @field_validator("toolset", mode="before")
     @classmethod
     def _load_toolset(cls, v):
@@ -133,10 +177,19 @@ class ReActAgentConfig(BaseAgentProps, LLMPluginMixin):
         "request_preprocessors",
         "llm_request_wrappers",
         "response_postprocessors",
+        "iteration_preprocessors",
+        "iteration_wrappers",
+        "iteration_postprocessors",
         "max_iterations",
         "toolset",
         "system_prompt",
     }
+
+    def has_iteration_plugins(self) -> bool:
+        """Check if any per-iteration plugins are configured."""
+        return bool(
+            self.iteration_preprocessors or self.iteration_wrappers or self.iteration_postprocessors
+        )
 
     def get_llm_params(self) -> dict:
         """
@@ -242,11 +295,26 @@ class ReActAgent(Agent[ReActAgentConfig]):
         final_response: Optional[ChatCompletionResponse] = None
         iterations_completed = 0
 
+        all_iteration_messages: list = []  # Accumulate messages from iteration plugins
+
         for iteration in range(self.config.max_iterations):
             iterations_completed = iteration + 1
 
-            # Call LLM directly (no plugins inside loop)
-            response = self._call_llm(llm, messages, tools)
+            # Build request for this iteration
+            iteration_request = ChatCompletionRequest(
+                messages=messages,
+                tools=tools,
+                temperature=self.config.temperature,
+                max_tokens=self.config.max_tokens,
+            )
+
+            # ITERATION PREPROCESS (before each LLM call)
+            iteration_request = self._preprocess_iteration_if_needed(
+                ctx, llm, iteration_request, iteration
+            )
+
+            # Call LLM
+            response = self._call_llm_direct(llm, iteration_request)
 
             if isinstance(response, str):
                 # Error occurred
@@ -256,7 +324,13 @@ class ReActAgent(Agent[ReActAgentConfig]):
                     iterations=iterations_completed,
                     success=False,
                     error=response,
-                ), []
+                ), all_iteration_messages
+
+            # ITERATION POSTPROCESS (after each LLM call)
+            iter_messages = self._postprocess_iteration_if_needed(
+                ctx, llm, iteration_request, response, iteration
+            )
+            all_iteration_messages.extend(iter_messages)
 
             choice = response.choices[0]
             assistant_message = choice.message
@@ -324,7 +398,10 @@ class ReActAgent(Agent[ReActAgentConfig]):
                 )
 
         # POSTPROCESS (once, after loop)
-        plugin_messages = self._postprocess_if_needed(ctx, llm, prepared_request, final_response)
+        loop_plugin_messages = self._postprocess_if_needed(ctx, llm, prepared_request, final_response)
+
+        # Combine iteration messages with loop-level plugin messages
+        all_plugin_messages = all_iteration_messages + loop_plugin_messages
 
         # Build final response
         if final_response:
@@ -333,7 +410,7 @@ class ReActAgent(Agent[ReActAgentConfig]):
                 trace=trace,
                 iterations=iterations_completed,
                 success=True,
-            ), plugin_messages
+            ), all_plugin_messages
         else:
             # Max iterations reached
             return ReActResponse(
@@ -342,7 +419,7 @@ class ReActAgent(Agent[ReActAgentConfig]):
                 iterations=self.config.max_iterations,
                 success=False,
                 error="Max iterations reached",
-            ), plugin_messages
+            ), all_plugin_messages
 
     def _preprocess_if_needed(
         self,
@@ -385,6 +462,65 @@ class ReActAgent(Agent[ReActAgentConfig]):
             response=response,
         )
 
+    def _preprocess_iteration_if_needed(
+        self,
+        ctx: ProcessContext[ReActRequest],
+        llm: LLM,
+        request: ChatCompletionRequest,
+        iteration: int,
+    ) -> ChatCompletionRequest:
+        """Run per-iteration preprocessing if iteration plugins are configured."""
+        if not self.config.has_iteration_plugins():
+            return request
+
+        # Use a temporary config-like object with just the iteration plugins
+        return LLMAgentHelper.preprocess_request(
+            agent=self,
+            config=self._iteration_plugin_config(),
+            llm=llm,
+            ctx=ctx,  # type: ignore[arg-type]
+            request=request,
+            llm_params=self.config.get_llm_params(),
+        )
+
+    def _postprocess_iteration_if_needed(
+        self,
+        ctx: ProcessContext[ReActRequest],
+        llm: LLM,
+        request: ChatCompletionRequest,
+        response: ChatCompletionResponse,
+        iteration: int,
+    ) -> list:
+        """Run per-iteration postprocessing if iteration plugins are configured."""
+        if not self.config.has_iteration_plugins():
+            return []
+
+        return LLMAgentHelper.postprocess_response(
+            agent=self,
+            config=self._iteration_plugin_config(),
+            llm=llm,
+            ctx=ctx,  # type: ignore[arg-type]
+            final_request=request,
+            response=response,
+        )
+
+    def _iteration_plugin_config(self):
+        """
+        Create a config-like object with iteration plugins mapped to standard fields.
+
+        This allows us to reuse LLMAgentHelper methods which expect the standard
+        plugin field names (request_preprocessors, llm_request_wrappers, etc.).
+        """
+
+        class _IterationPluginConfig:
+            def __init__(self, config: ReActAgentConfig):
+                self.request_preprocessors = config.iteration_preprocessors
+                self.llm_request_wrappers = config.iteration_wrappers
+                self.response_postprocessors = config.iteration_postprocessors
+                self.max_retries = 0  # No retries at iteration level
+
+        return _IterationPluginConfig(self.config)
+
     def _get_system_prompt(self) -> str:
         """Get the system prompt, using custom or default."""
         if self.config.system_prompt:
@@ -425,6 +561,23 @@ class ReActAgent(Agent[ReActAgentConfig]):
             max_tokens=self.config.max_tokens,
         )
 
+        return self._call_llm_direct(llm, request)
+
+    def _call_llm_direct(
+        self,
+        llm: LLM,
+        request: ChatCompletionRequest,
+    ) -> Union[ChatCompletionResponse, str]:
+        """
+        Call the LLM with a pre-built request.
+
+        Args:
+            llm: The LLM to use.
+            request: The chat completion request.
+
+        Returns:
+            ChatCompletionResponse on success, error string on failure.
+        """
         try:
             response = llm.completion(request, self.config.model)
             return response

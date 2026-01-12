@@ -34,6 +34,7 @@ from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     SystemMessage,
     ToolType,
 )
+from rustic_ai.core.guild.agent_ext.depends.llm.tools_manager import ToolSpec
 from rustic_ai.core.guild.builders import AgentBuilder
 from rustic_ai.core.guild.dsl import AgentSpec
 from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
@@ -47,10 +48,8 @@ from rustic_ai.llm_agent.react import (
     ReActResponse,
     ReActToolset,
 )
-from rustic_ai.core.guild.agent_ext.depends.llm.tools_manager import ToolSpec
 
 from rustic_ai.testing.helpers import wrap_agent_for_testing
-
 
 # =============================================================================
 # Test Tool Parameter Models
@@ -477,12 +476,12 @@ class TestReActAgentPreprocessor:
 
         call_count = [0]
 
-        def mock_call_llm(llm, messages, tools=None):
+        def mock_call_llm(llm, request):
             response = responses[call_count[0]]
             call_count[0] += 1
             return response
 
-        with patch.object(agent, "_call_llm", side_effect=mock_call_llm):
+        with patch.object(agent, "_call_llm_direct", side_effect=mock_call_llm):
             agent._on_message(
                 build_message_from_payload(
                     generator,
@@ -523,7 +522,7 @@ class TestReActAgentPreprocessor:
 
         agent, results = wrap_agent_for_testing(agent_spec, dependency_map=mock_dependency_map)
 
-        with patch.object(agent, "_call_llm", return_value=create_mock_response("Answer is 42.")):
+        with patch.object(agent, "_call_llm_direct", return_value=create_mock_response("Answer is 42.")):
             agent._on_message(
                 build_message_from_payload(
                     generator,
@@ -585,12 +584,12 @@ class TestReActAgentPostprocessor:
 
         call_count = [0]
 
-        def mock_call_llm(llm, messages, tools=None):
+        def mock_call_llm(llm, request):
             response = responses[call_count[0]]
             call_count[0] += 1
             return response
 
-        with patch.object(agent, "_call_llm", side_effect=mock_call_llm):
+        with patch.object(agent, "_call_llm_direct", side_effect=mock_call_llm):
             agent._on_message(
                 build_message_from_payload(
                     generator,
@@ -632,7 +631,7 @@ class TestReActAgentPostprocessor:
 
         agent, results = wrap_agent_for_testing(agent_spec, dependency_map=mock_dependency_map)
 
-        with patch.object(agent, "_call_llm", return_value=create_mock_response("Direct answer.")):
+        with patch.object(agent, "_call_llm_direct", return_value=create_mock_response("Direct answer.")):
             agent._on_message(
                 build_message_from_payload(
                     generator,
@@ -669,7 +668,7 @@ class TestReActAgentPostprocessor:
 
         agent, results = wrap_agent_for_testing(agent_spec, dependency_map=mock_dependency_map)
 
-        with patch.object(agent, "_call_llm", return_value=create_mock_response("Answer.")):
+        with patch.object(agent, "_call_llm_direct", return_value=create_mock_response("Answer.")):
             agent._on_message(
                 build_message_from_payload(
                     generator,
@@ -738,12 +737,12 @@ class TestReActAgentWrapper:
 
         call_count = [0]
 
-        def mock_call_llm(llm, messages, tools=None):
+        def mock_call_llm(llm, request):
             response = responses[call_count[0]]
             call_count[0] += 1
             return response
 
-        with patch.object(agent, "_call_llm", side_effect=mock_call_llm):
+        with patch.object(agent, "_call_llm_direct", side_effect=mock_call_llm):
             agent._on_message(
                 build_message_from_payload(
                     generator,
@@ -799,7 +798,7 @@ class TestReActAgentPluginDependencyInjection:
 
         agent, results = wrap_agent_for_testing(agent_spec, dependency_map=dependency_map)
 
-        with patch.object(agent, "_call_llm", return_value=create_mock_response("Answer.")):
+        with patch.object(agent, "_call_llm_direct", return_value=create_mock_response("Answer.")):
             agent._on_message(
                 build_message_from_payload(
                     generator,
@@ -841,7 +840,7 @@ class TestReActAgentPluginDependencyInjection:
 
         agent, results = wrap_agent_for_testing(agent_spec, dependency_map=dependency_map)
 
-        with patch.object(agent, "_call_llm", return_value=create_mock_response("Answer.")):
+        with patch.object(agent, "_call_llm_direct", return_value=create_mock_response("Answer.")):
             agent._on_message(
                 build_message_from_payload(
                     generator,
@@ -892,7 +891,7 @@ class TestReActAgentMultiplePlugins:
 
         agent, results = wrap_agent_for_testing(agent_spec, dependency_map=mock_dependency_map)
 
-        with patch.object(agent, "_call_llm", return_value=create_mock_response("Final answer.")):
+        with patch.object(agent, "_call_llm_direct", return_value=create_mock_response("Final answer.")):
             agent._on_message(
                 build_message_from_payload(
                     generator,
@@ -910,3 +909,509 @@ class TestReActAgentMultiplePlugins:
         assert len(results) == 1
         response = ReActResponse.model_validate(results[0].payload)
         assert response.answer == "Final answer."
+
+
+# =============================================================================
+# Iteration Plugin Tests
+# =============================================================================
+
+
+class IterationCapturePreprocessor(RequestPreprocessor):
+    """A preprocessor that captures each iteration call."""
+
+    captured_iterations: List[int] = []
+    call_count: int = 0
+
+    def preprocess(
+        self,
+        agent: Agent,
+        ctx,
+        request: ChatCompletionRequest,
+        llm: LLM,
+    ) -> ChatCompletionRequest:
+        IterationCapturePreprocessor.call_count += 1
+        return request
+
+    @classmethod
+    def reset(cls):
+        cls.captured_iterations = []
+        cls.call_count = 0
+
+
+class IterationCapturePostprocessor(ResponsePostprocessor):
+    """A postprocessor that captures each iteration response."""
+
+    captured_responses: List[ChatCompletionResponse] = []
+    call_count: int = 0
+
+    def postprocess(
+        self,
+        agent: Agent,
+        ctx,
+        final_prompt: ChatCompletionRequest,
+        llm_response: ChatCompletionResponse,
+        llm: LLM,
+    ) -> Optional[List[BaseModel]]:
+        IterationCapturePostprocessor.call_count += 1
+        IterationCapturePostprocessor.captured_responses.append(llm_response)
+        return None
+
+    @classmethod
+    def reset(cls):
+        cls.captured_responses = []
+        cls.call_count = 0
+
+
+class IterationCaptureWrapper(LLMCallWrapper):
+    """A wrapper that captures pre/post for each iteration."""
+
+    preprocess_calls: int = 0
+    postprocess_calls: int = 0
+
+    def preprocess(
+        self,
+        agent: Agent,
+        ctx,
+        request: ChatCompletionRequest,
+        llm: LLM,
+    ) -> ChatCompletionRequest:
+        IterationCaptureWrapper.preprocess_calls += 1
+        return request
+
+    def postprocess(
+        self,
+        agent: Agent,
+        ctx,
+        final_prompt: ChatCompletionRequest,
+        llm_response: ChatCompletionResponse,
+        llm: LLM,
+    ) -> Optional[List[BaseModel]]:
+        IterationCaptureWrapper.postprocess_calls += 1
+        return None
+
+    @classmethod
+    def reset(cls):
+        cls.preprocess_calls = 0
+        cls.postprocess_calls = 0
+
+
+class IterationMessageGenerator(ResponsePostprocessor):
+    """A postprocessor that generates a message for each iteration."""
+
+    class IterationMetric(BaseModel):
+        """Metric message generated per iteration."""
+
+        iteration_metric: str
+        response_content: str
+
+    def postprocess(
+        self,
+        agent: Agent,
+        ctx,
+        final_prompt: ChatCompletionRequest,
+        llm_response: ChatCompletionResponse,
+        llm: LLM,
+    ) -> Optional[List[BaseModel]]:
+        content = llm_response.choices[0].message.content or ""
+        return [
+            self.IterationMetric(
+                iteration_metric="step_complete",
+                response_content=content[:50],
+            )
+        ]
+
+
+class TestReActAgentIterationPluginConfig:
+    """Tests for ReActAgentConfig iteration plugin fields."""
+
+    def test_config_has_iteration_plugin_fields(self):
+        """Test that ReActAgentConfig has iteration plugin configuration fields."""
+        config = ReActAgentConfig(
+            model="test-model",
+            toolset=CalculatorToolset(),
+        )
+
+        assert hasattr(config, "iteration_preprocessors")
+        assert hasattr(config, "iteration_wrappers")
+        assert hasattr(config, "iteration_postprocessors")
+
+    def test_config_with_iteration_plugins(self):
+        """Test creating config with iteration plugins."""
+        config = ReActAgentConfig(
+            model="test-model",
+            toolset=CalculatorToolset(),
+            iteration_preprocessors=[IterationCapturePreprocessor()],
+            iteration_wrappers=[IterationCaptureWrapper()],
+            iteration_postprocessors=[IterationCapturePostprocessor()],
+        )
+
+        assert len(config.iteration_preprocessors) == 1
+        assert len(config.iteration_wrappers) == 1
+        assert len(config.iteration_postprocessors) == 1
+
+    def test_has_iteration_plugins_returns_false_when_none(self):
+        """Test has_iteration_plugins returns False when no iteration plugins configured."""
+        config = ReActAgentConfig(
+            model="test-model",
+            toolset=CalculatorToolset(),
+        )
+
+        assert config.has_iteration_plugins() is False
+
+    def test_has_iteration_plugins_returns_true_with_preprocessor(self):
+        """Test has_iteration_plugins returns True with iteration preprocessor."""
+        config = ReActAgentConfig(
+            model="test-model",
+            toolset=CalculatorToolset(),
+            iteration_preprocessors=[IterationCapturePreprocessor()],
+        )
+
+        assert config.has_iteration_plugins() is True
+
+
+class TestReActAgentIterationPlugins:
+    """Tests for per-iteration plugins with ReActAgent."""
+
+    @pytest.fixture(autouse=True)
+    def reset_plugins(self):
+        """Reset plugin state before each test."""
+        CapturePreprocessor.reset()
+        CapturePostprocessor.reset()
+        CaptureWrapper.reset()
+        IterationCapturePreprocessor.reset()
+        IterationCapturePostprocessor.reset()
+        IterationCaptureWrapper.reset()
+        SimpleLogger.reset_shared_logs()
+        yield
+
+    def test_iteration_preprocessor_called_per_iteration(self, generator, build_message_from_payload):
+        """Test that iteration preprocessor is called for each LLM call in the loop."""
+        agent_spec: AgentSpec = (
+            AgentBuilder(ReActAgent)
+            .set_id("react_agent")
+            .set_name("ReAct Agent")
+            .set_description("A ReAct agent with iteration preprocessor")
+            .set_properties(
+                ReActAgentConfig(
+                    model="test-model",
+                    toolset=CalculatorToolset(),
+                    iteration_preprocessors=[IterationCapturePreprocessor()],
+                )
+            )
+            .build_spec()
+        )
+
+        mock_dependency_map = {
+            "llm": DependencySpec(
+                class_name="rustic_ai.litellm.agent_ext.llm.LiteLLMResolver",
+                properties={"model": "test-model"},
+            ),
+        }
+
+        agent, results = wrap_agent_for_testing(agent_spec, dependency_map=mock_dependency_map)
+
+        # 3 LLM calls: tool -> tool -> answer
+        responses = [
+            create_mock_response(
+                content="First call",
+                tool_calls=[create_tool_call("c1", "calculate", {"expression": "1+1"})],
+                finish_reason=FinishReason.tool_calls,
+            ),
+            create_mock_response(
+                content="Second call",
+                tool_calls=[create_tool_call("c2", "calculate", {"expression": "2+2"})],
+                finish_reason=FinishReason.tool_calls,
+            ),
+            create_mock_response("Final answer."),
+        ]
+
+        call_count = [0]
+
+        def mock_call_llm(llm, request):
+            response = responses[call_count[0]]
+            call_count[0] += 1
+            return response
+
+        with patch.object(agent, "_call_llm_direct", side_effect=mock_call_llm):
+            agent._on_message(
+                build_message_from_payload(
+                    generator,
+                    ReActRequest(query="Test"),
+                )
+            )
+
+        # Iteration preprocessor called 3 times (once per LLM call)
+        assert IterationCapturePreprocessor.call_count == 3
+
+    def test_iteration_postprocessor_called_per_iteration(self, generator, build_message_from_payload):
+        """Test that iteration postprocessor is called after each LLM call in the loop."""
+        agent_spec: AgentSpec = (
+            AgentBuilder(ReActAgent)
+            .set_id("react_agent")
+            .set_name("ReAct Agent")
+            .set_description("A ReAct agent with iteration postprocessor")
+            .set_properties(
+                ReActAgentConfig(
+                    model="test-model",
+                    toolset=CalculatorToolset(),
+                    iteration_postprocessors=[IterationCapturePostprocessor()],
+                )
+            )
+            .build_spec()
+        )
+
+        mock_dependency_map = {
+            "llm": DependencySpec(
+                class_name="rustic_ai.litellm.agent_ext.llm.LiteLLMResolver",
+                properties={"model": "test-model"},
+            ),
+        }
+
+        agent, results = wrap_agent_for_testing(agent_spec, dependency_map=mock_dependency_map)
+
+        # 2 LLM calls: tool -> answer
+        responses = [
+            create_mock_response(
+                content="Tool call",
+                tool_calls=[create_tool_call("c1", "calculate", {"expression": "5+5"})],
+                finish_reason=FinishReason.tool_calls,
+            ),
+            create_mock_response("Answer is 10."),
+        ]
+
+        call_count = [0]
+
+        def mock_call_llm(llm, request):
+            response = responses[call_count[0]]
+            call_count[0] += 1
+            return response
+
+        with patch.object(agent, "_call_llm_direct", side_effect=mock_call_llm):
+            agent._on_message(
+                build_message_from_payload(
+                    generator,
+                    ReActRequest(query="What is 5+5?"),
+                )
+            )
+
+        # Iteration postprocessor called 2 times (once per LLM call)
+        assert IterationCapturePostprocessor.call_count == 2
+
+        # Should have captured both responses
+        assert len(IterationCapturePostprocessor.captured_responses) == 2
+        # First is tool call, second is final answer
+        assert IterationCapturePostprocessor.captured_responses[1].choices[0].message.content == "Answer is 10."
+
+    def test_iteration_wrapper_called_per_iteration(self, generator, build_message_from_payload):
+        """Test that iteration wrapper pre/post are called for each LLM call."""
+        agent_spec: AgentSpec = (
+            AgentBuilder(ReActAgent)
+            .set_id("react_agent")
+            .set_name("ReAct Agent")
+            .set_description("A ReAct agent with iteration wrapper")
+            .set_properties(
+                ReActAgentConfig(
+                    model="test-model",
+                    toolset=CalculatorToolset(),
+                    iteration_wrappers=[IterationCaptureWrapper()],
+                )
+            )
+            .build_spec()
+        )
+
+        mock_dependency_map = {
+            "llm": DependencySpec(
+                class_name="rustic_ai.litellm.agent_ext.llm.LiteLLMResolver",
+                properties={"model": "test-model"},
+            ),
+        }
+
+        agent, results = wrap_agent_for_testing(agent_spec, dependency_map=mock_dependency_map)
+
+        # 3 iterations
+        responses = [
+            create_mock_response(
+                content="Call 1",
+                tool_calls=[create_tool_call("c1", "calculate", {"expression": "1"})],
+                finish_reason=FinishReason.tool_calls,
+            ),
+            create_mock_response(
+                content="Call 2",
+                tool_calls=[create_tool_call("c2", "calculate", {"expression": "2"})],
+                finish_reason=FinishReason.tool_calls,
+            ),
+            create_mock_response("Done."),
+        ]
+
+        call_count = [0]
+
+        def mock_call_llm(llm, request):
+            response = responses[call_count[0]]
+            call_count[0] += 1
+            return response
+
+        with patch.object(agent, "_call_llm_direct", side_effect=mock_call_llm):
+            agent._on_message(
+                build_message_from_payload(
+                    generator,
+                    ReActRequest(query="Test"),
+                )
+            )
+
+        # Wrapper called 3 times each for pre and post
+        assert IterationCaptureWrapper.preprocess_calls == 3
+        assert IterationCaptureWrapper.postprocess_calls == 3
+
+    def test_iteration_postprocessor_messages_accumulated(self, generator, build_message_from_payload):
+        """Test that messages from iteration postprocessors are accumulated and sent."""
+        agent_spec: AgentSpec = (
+            AgentBuilder(ReActAgent)
+            .set_id("react_agent")
+            .set_name("ReAct Agent")
+            .set_description("A ReAct agent with message-generating iteration postprocessor")
+            .set_properties(
+                ReActAgentConfig(
+                    model="test-model",
+                    toolset=CalculatorToolset(),
+                    iteration_postprocessors=[IterationMessageGenerator()],
+                )
+            )
+            .build_spec()
+        )
+
+        mock_dependency_map = {
+            "llm": DependencySpec(
+                class_name="rustic_ai.litellm.agent_ext.llm.LiteLLMResolver",
+                properties={"model": "test-model"},
+            ),
+        }
+
+        agent, results = wrap_agent_for_testing(agent_spec, dependency_map=mock_dependency_map)
+
+        # 2 iterations
+        responses = [
+            create_mock_response(
+                content="Step 1 response",
+                tool_calls=[create_tool_call("c1", "calculate", {"expression": "1"})],
+                finish_reason=FinishReason.tool_calls,
+            ),
+            create_mock_response("Final step response"),
+        ]
+
+        call_count = [0]
+
+        def mock_call_llm(llm, request):
+            response = responses[call_count[0]]
+            call_count[0] += 1
+            return response
+
+        with patch.object(agent, "_call_llm_direct", side_effect=mock_call_llm):
+            agent._on_message(
+                build_message_from_payload(
+                    generator,
+                    ReActRequest(query="Test"),
+                )
+            )
+
+        # Should have 3 results: 2 IterationMetric messages + 1 ReActResponse
+        assert len(results) == 3
+
+        # First two are iteration metrics (iteration messages sent before ReActResponse)
+        metric1 = IterationMessageGenerator.IterationMetric.model_validate(results[0].payload)
+        assert metric1.iteration_metric == "step_complete"
+
+        metric2 = IterationMessageGenerator.IterationMetric.model_validate(results[1].payload)
+        assert metric2.iteration_metric == "step_complete"
+
+        # Last is the ReActResponse
+        response = ReActResponse.model_validate(results[2].payload)
+        assert response.answer == "Final step response"
+
+
+class TestReActAgentBothPluginLevels:
+    """Tests for using both loop-level and iteration-level plugins together."""
+
+    @pytest.fixture(autouse=True)
+    def reset_plugins(self):
+        """Reset plugin state before each test."""
+        CapturePreprocessor.reset()
+        CapturePostprocessor.reset()
+        CaptureWrapper.reset()
+        IterationCapturePreprocessor.reset()
+        IterationCapturePostprocessor.reset()
+        IterationCaptureWrapper.reset()
+        yield
+
+    def test_both_loop_and_iteration_plugins(self, generator, build_message_from_payload):
+        """Test that both loop-level and iteration-level plugins work together."""
+        agent_spec: AgentSpec = (
+            AgentBuilder(ReActAgent)
+            .set_id("react_agent")
+            .set_name("ReAct Agent")
+            .set_description("A ReAct agent with both plugin levels")
+            .set_properties(
+                ReActAgentConfig(
+                    model="test-model",
+                    toolset=CalculatorToolset(),
+                    # Loop-level plugins (once per loop)
+                    request_preprocessors=[CapturePreprocessor()],
+                    response_postprocessors=[CapturePostprocessor()],
+                    # Iteration-level plugins (per LLM call)
+                    iteration_preprocessors=[IterationCapturePreprocessor()],
+                    iteration_postprocessors=[IterationCapturePostprocessor()],
+                )
+            )
+            .build_spec()
+        )
+
+        mock_dependency_map = {
+            "llm": DependencySpec(
+                class_name="rustic_ai.litellm.agent_ext.llm.LiteLLMResolver",
+                properties={"model": "test-model"},
+            ),
+        }
+
+        agent, results = wrap_agent_for_testing(agent_spec, dependency_map=mock_dependency_map)
+
+        # 3 iterations
+        responses = [
+            create_mock_response(
+                content="Iteration 1",
+                tool_calls=[create_tool_call("c1", "calculate", {"expression": "1"})],
+                finish_reason=FinishReason.tool_calls,
+            ),
+            create_mock_response(
+                content="Iteration 2",
+                tool_calls=[create_tool_call("c2", "calculate", {"expression": "2"})],
+                finish_reason=FinishReason.tool_calls,
+            ),
+            create_mock_response("Final."),
+        ]
+
+        call_count = [0]
+
+        def mock_call_llm(llm, request):
+            response = responses[call_count[0]]
+            call_count[0] += 1
+            return response
+
+        with patch.object(agent, "_call_llm_direct", side_effect=mock_call_llm):
+            agent._on_message(
+                build_message_from_payload(
+                    generator,
+                    ReActRequest(query="Test"),
+                )
+            )
+
+        # Loop-level plugins: called once
+        assert CapturePreprocessor.call_count == 1
+        assert CapturePostprocessor.call_count == 1
+
+        # Iteration-level plugins: called 3 times (per LLM call)
+        assert IterationCapturePreprocessor.call_count == 3
+        assert IterationCapturePostprocessor.call_count == 3
+
+        # Final response
+        assert len(results) == 1
+        response = ReActResponse.model_validate(results[0].payload)
+        assert response.answer == "Final."

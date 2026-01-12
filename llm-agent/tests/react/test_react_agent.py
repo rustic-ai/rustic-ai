@@ -335,7 +335,7 @@ class TestReActAgent:
         )
 
         # Patch the LLM call
-        with patch.object(agent, "_call_llm", return_value=create_mock_response("The answer is 42.")):
+        with patch.object(agent, "_call_llm_direct", return_value=create_mock_response("The answer is 42.")):
             agent._on_message(
                 build_message_from_payload(
                     generator,
@@ -389,12 +389,12 @@ class TestReActAgent:
 
         call_count = [0]
 
-        def mock_call_llm(llm, messages, tools=None):
+        def mock_call_llm(llm, request):
             response = responses[call_count[0]]
             call_count[0] += 1
             return response
 
-        with patch.object(agent, "_call_llm", side_effect=mock_call_llm):
+        with patch.object(agent, "_call_llm_direct", side_effect=mock_call_llm):
             agent._on_message(
                 build_message_from_payload(
                     generator,
