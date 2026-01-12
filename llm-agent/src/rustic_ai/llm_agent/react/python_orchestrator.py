@@ -92,7 +92,12 @@ class PythonOrchestratorToolset(ReActToolset):
         if tool_name != self.tool_name:
             raise ValueError(f"Unknown tool: {tool_name}")
 
-        code = args.code if hasattr(args, "code") else getattr(args, "get")("code")
+        if not isinstance(args, PythonOrchestratorParams):
+            raise TypeError(
+                f"Expected args to be PythonOrchestratorParams, got {type(args).__name__}"
+            )
+
+        code = args.code
         return self._execute_code(code)
 
     def _execute_code(self, code: str) -> str:
