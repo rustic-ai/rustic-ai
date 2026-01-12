@@ -73,6 +73,8 @@ class E2BExecutor(CodeExecutor):
                         content = self.sandbox.files.read(name)
                         output_files_dict[name] = content
                     except Exception:
+                        # Ignore failures to read individual output files; missing or unreadable
+                        # outputs are treated as absent and do not fail the overall execution.
                         pass
 
             exit_code = 1 if execution.error else 0
