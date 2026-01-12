@@ -2,7 +2,7 @@ import json
 import logging
 from typing import List, Optional, Union
 
-from pydantic import ConfigDict, Field, field_serializer, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator
 
 from rustic_ai.core.guild.agent import Agent, ProcessContext, processor
 from rustic_ai.core.guild.agent_ext.depends.llm.llm import LLM
@@ -22,6 +22,11 @@ from rustic_ai.llm_agent.llm_plugin_mixin import LLMPluginMixin, build_plugins
 from rustic_ai.llm_agent.plugins.llm_call_wrapper import LLMCallWrapper
 from rustic_ai.llm_agent.plugins.request_preprocessor import RequestPreprocessor
 from rustic_ai.llm_agent.plugins.response_postprocessor import ResponsePostprocessor
+from rustic_ai.llm_agent.plugins.tool_call_wrapper import (
+    ToolCallResult,
+    ToolCallWrapper,
+    ToolSkipResult,
+)
 
 from .models import ReActRequest, ReActResponse, ReActStep
 from .toolset import ReActToolset
@@ -67,6 +72,9 @@ class ReActAgentConfig(BaseAgentProps, LLMPluginMixin):
     - iteration_preprocessors: Run BEFORE each LLM call in the loop
     - iteration_wrappers: Wrap each individual LLM call
     - iteration_postprocessors: Run AFTER each LLM call in the loop
+
+    Tool-level plugins (ReAct-specific):
+    - tool_wrappers: Wrap each tool execution (can modify inputs/outputs, skip, handle errors)
     """
 
     model_config = ConfigDict(extra="ignore")
@@ -129,6 +137,18 @@ class ReActAgentConfig(BaseAgentProps, LLMPluginMixin):
     Use for per-step cost tracking, evaluation, logging, etc.
     """
 
+    tool_wrappers: List[ToolCallWrapper] = Field(default_factory=list)
+    """
+    Wrappers that wrap each tool execution within the ReAct loop.
+    Use for logging, caching, input validation, error handling, etc.
+    Tool wrappers can:
+    - Modify tool inputs before execution
+    - Skip execution and return cached/computed results
+    - Modify outputs after execution
+    - Handle errors with custom logic
+    - Generate additional messages
+    """
+
     @field_validator("iteration_preprocessors", mode="before")
     @classmethod
     def _coerce_iter_preprocessors(cls, v):
@@ -143,6 +163,11 @@ class ReActAgentConfig(BaseAgentProps, LLMPluginMixin):
     @classmethod
     def _coerce_iter_postprocessors(cls, v):
         return build_plugins(v, ResponsePostprocessor)
+
+    @field_validator("tool_wrappers", mode="before")
+    @classmethod
+    def _coerce_tool_wrappers(cls, v):
+        return build_plugins(v, ToolCallWrapper)
 
     @field_validator("toolset", mode="before")
     @classmethod
@@ -180,6 +205,7 @@ class ReActAgentConfig(BaseAgentProps, LLMPluginMixin):
         "iteration_preprocessors",
         "iteration_wrappers",
         "iteration_postprocessors",
+        "tool_wrappers",
         "max_iterations",
         "toolset",
         "system_prompt",
@@ -190,6 +216,10 @@ class ReActAgentConfig(BaseAgentProps, LLMPluginMixin):
         return bool(
             self.iteration_preprocessors or self.iteration_wrappers or self.iteration_postprocessors
         )
+
+    def has_tool_wrappers(self) -> bool:
+        """Check if any tool wrappers are configured."""
+        return bool(self.tool_wrappers)
 
     def get_llm_params(self) -> dict:
         """
@@ -367,17 +397,11 @@ class ReActAgent(Agent[ReActAgentConfig]):
                     )
                     continue
 
-                # Get tool spec and execute
-                toolspec = toolset.get_toolspec(tool_name)
-                if not toolspec:
-                    tool_result = f"Error: Unknown tool '{tool_name}'"
-                else:
-                    try:
-                        parsed_args = toolspec.parse_args(tool_args)
-                        tool_result = toolset.execute(tool_name, parsed_args)
-                    except Exception as e:
-                        logger.warning(f"Error executing tool {tool_name}: {e}")
-                        tool_result = f"Error executing tool: {e}"
+                # Execute tool with wrapper pipeline
+                tool_result, tool_messages = self._execute_tool_with_wrappers(
+                    ctx, tool_name, tool_args, toolset, assistant_message.content
+                )
+                all_iteration_messages.extend(tool_messages)
 
                 # Record in trace
                 trace.append(
@@ -584,3 +608,160 @@ class ReActAgent(Agent[ReActAgentConfig]):
         except Exception as e:
             logger.error(f"LLM call failed: {e}", exc_info=True)
             return f"LLM call failed: {e}"
+
+    def _execute_tool_with_wrappers(
+        self,
+        ctx: ProcessContext,
+        tool_name: str,
+        tool_args: dict,
+        toolset: ReActToolset,
+        thought: Optional[str] = None,
+    ) -> tuple[str, list]:
+        """
+        Execute a tool with the wrapper pipeline.
+
+        Tool wrappers allow:
+        - Preprocessing: Modify inputs or skip execution (return cached result)
+        - Postprocessing: Modify outputs and generate messages
+        - Error handling: Custom error recovery
+
+        Args:
+            ctx: The process context.
+            tool_name: Name of the tool to execute.
+            tool_args: Tool arguments as a dict.
+            toolset: The toolset containing the tool.
+            thought: Optional thought/reasoning from the LLM.
+
+        Returns:
+            Tuple of (tool_output, plugin_messages)
+        """
+        plugin_messages: list = []
+
+        # Get tool spec
+        toolspec = toolset.get_toolspec(tool_name)
+        if not toolspec:
+            return f"Error: Unknown tool '{tool_name}'", plugin_messages
+
+        # Parse arguments into BaseModel
+        try:
+            parsed_args = toolspec.parse_args(tool_args)
+        except Exception as e:
+            return f"Error parsing tool arguments: {e}", plugin_messages
+
+        # Run preprocess on all wrappers
+        current_args = parsed_args
+        for wrapper in self.config.tool_wrappers:
+            try:
+                result = wrapper.preprocess(
+                    agent=self,
+                    ctx=ctx,
+                    tool_name=tool_name,
+                    tool_input=current_args,
+                )
+                if isinstance(result, ToolSkipResult):
+                    # Wrapper wants to skip execution
+                    tool_output = result.output
+                    # Still run postprocessors with the skipped result
+                    return self._run_tool_postprocessors(
+                        ctx, tool_name, current_args, tool_output, plugin_messages
+                    )
+                else:
+                    # Continue with modified args
+                    current_args = result
+            except Exception as e:
+                logger.warning(f"Tool preprocess error in {wrapper.__class__.__name__}: {e}")
+                # Continue with current args on preprocess error
+
+        # Execute the tool
+        try:
+            tool_output = toolset.execute(tool_name, current_args)
+        except Exception as e:
+            logger.warning(f"Error executing tool {tool_name}: {e}")
+            # Try error handlers
+            handled_output = self._run_tool_error_handlers(
+                ctx, tool_name, current_args, e
+            )
+            if handled_output is not None:
+                tool_output = handled_output
+            else:
+                tool_output = f"Error executing tool: {e}"
+
+        # Run postprocessors
+        return self._run_tool_postprocessors(
+            ctx, tool_name, current_args, tool_output, plugin_messages
+        )
+
+    def _run_tool_postprocessors(
+        self,
+        ctx: ProcessContext,
+        tool_name: str,
+        tool_input: BaseModel,
+        tool_output: str,
+        plugin_messages: list,
+    ) -> tuple[str, list]:
+        """
+        Run tool postprocessors on the output.
+
+        Args:
+            ctx: The process context.
+            tool_name: Name of the tool.
+            tool_input: The parsed tool input.
+            tool_output: The tool output string.
+            plugin_messages: List to accumulate messages.
+
+        Returns:
+            Tuple of (final_output, plugin_messages)
+        """
+        current_output = tool_output
+        for wrapper in self.config.tool_wrappers:
+            try:
+                result: ToolCallResult = wrapper.postprocess(
+                    agent=self,
+                    ctx=ctx,
+                    tool_name=tool_name,
+                    tool_input=tool_input,
+                    tool_output=current_output,
+                )
+                current_output = result.output
+                if result.messages:
+                    plugin_messages.extend(result.messages)
+            except Exception as e:
+                logger.warning(f"Tool postprocess error in {wrapper.__class__.__name__}: {e}")
+                # Continue with current output on postprocess error
+
+        return current_output, plugin_messages
+
+    def _run_tool_error_handlers(
+        self,
+        ctx: ProcessContext,
+        tool_name: str,
+        tool_input: BaseModel,
+        error: Exception,
+    ) -> Optional[str]:
+        """
+        Run tool error handlers to potentially recover from an error.
+
+        Args:
+            ctx: The process context.
+            tool_name: Name of the tool.
+            tool_input: The parsed tool input.
+            error: The exception that occurred.
+
+        Returns:
+            A string output if error was handled, None otherwise.
+        """
+        for wrapper in self.config.tool_wrappers:
+            try:
+                result = wrapper.on_error(
+                    agent=self,
+                    ctx=ctx,
+                    tool_name=tool_name,
+                    tool_input=tool_input,
+                    error=error,
+                )
+                if result is not None:
+                    return result
+            except Exception as e:
+                logger.warning(f"Tool error handler failed in {wrapper.__class__.__name__}: {e}")
+
+        return None
