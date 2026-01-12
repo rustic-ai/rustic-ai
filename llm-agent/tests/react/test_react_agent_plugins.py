@@ -41,6 +41,11 @@ from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 from rustic_ai.llm_agent.plugins.llm_call_wrapper import LLMCallWrapper
 from rustic_ai.llm_agent.plugins.request_preprocessor import RequestPreprocessor
 from rustic_ai.llm_agent.plugins.response_postprocessor import ResponsePostprocessor
+from rustic_ai.llm_agent.plugins.tool_call_wrapper import (
+    ToolCallResult,
+    ToolCallWrapper,
+    ToolSkipResult,
+)
 from rustic_ai.llm_agent.react import (
     ReActAgent,
     ReActAgentConfig,
@@ -87,6 +92,26 @@ class CalculatorToolset(ReActToolset):
                 return str(result)
             except Exception as e:
                 return f"Error: {e}"
+        raise ValueError(f"Unknown tool: {tool_name}")
+
+
+class ErrorRaisingToolset(ReActToolset):
+    """A toolset that raises exceptions on execution for testing error handlers."""
+
+    def get_toolspecs(self) -> List[ToolSpec]:
+        return [
+            ToolSpec(
+                name="calculate",
+                description="Evaluate a mathematical expression (may fail)",
+                parameter_class=CalculateParams,
+            )
+        ]
+
+    def execute(self, tool_name: str, args: Any) -> str:
+        if tool_name == "calculate":
+            assert isinstance(args, CalculateParams)
+            # Always raise an exception for testing
+            raise RuntimeError(f"Intentional error: {args.expression}")
         raise ValueError(f"Unknown tool: {tool_name}")
 
 
@@ -1415,3 +1440,642 @@ class TestReActAgentBothPluginLevels:
         assert len(results) == 1
         response = ReActResponse.model_validate(results[0].payload)
         assert response.answer == "Final."
+
+
+# =============================================================================
+# Tool Call Wrapper Test Plugins
+# =============================================================================
+
+
+class CaptureToolWrapper(ToolCallWrapper):
+    """A tool wrapper that captures all tool calls for testing."""
+
+    call_count: int = 0
+    captured_calls: list = []
+    captured_results: list = []
+
+    @classmethod
+    def reset(cls):
+        cls.call_count = 0
+        cls.captured_calls = []
+        cls.captured_results = []
+
+    def preprocess(
+        self,
+        agent: Agent,
+        ctx: Any,
+        tool_name: str,
+        tool_input: BaseModel,
+    ):
+        """Capture the tool call."""
+        CaptureToolWrapper.call_count += 1
+        CaptureToolWrapper.captured_calls.append({
+            "tool_name": tool_name,
+            "tool_input": tool_input,
+        })
+        return tool_input
+
+    def postprocess(
+        self,
+        agent: Agent,
+        ctx: Any,
+        tool_name: str,
+        tool_input: BaseModel,
+        tool_output: str,
+    ) -> ToolCallResult:
+        """Capture the tool result."""
+        CaptureToolWrapper.captured_results.append({
+            "tool_name": tool_name,
+            "tool_output": tool_output,
+        })
+        return ToolCallResult(output=tool_output)
+
+
+class ModifyingToolWrapper(ToolCallWrapper):
+    """A tool wrapper that modifies tool inputs and outputs."""
+
+    def preprocess(
+        self,
+        agent: Agent,
+        ctx: Any,
+        tool_name: str,
+        tool_input: BaseModel,
+    ):
+        """Modify the expression to add 10."""
+        if hasattr(tool_input, "expression"):
+            # Create a new model with modified expression
+            return type(tool_input)(expression=f"({tool_input.expression}) + 10")
+        return tool_input
+
+    def postprocess(
+        self,
+        agent: Agent,
+        ctx: Any,
+        tool_name: str,
+        tool_input: BaseModel,
+        tool_output: str,
+    ) -> ToolCallResult:
+        """Append a suffix to the output."""
+        return ToolCallResult(output=f"{tool_output} [modified]")
+
+
+class SkippingToolWrapper(ToolCallWrapper):
+    """A tool wrapper that skips execution and returns a cached result."""
+
+    skip_tool: str = "calculate"  # The tool name to skip
+    cached_result: str = "42 (cached)"
+
+    def preprocess(
+        self,
+        agent: Agent,
+        ctx: Any,
+        tool_name: str,
+        tool_input: BaseModel,
+    ):
+        """Skip calculate tool and return cached result."""
+        if tool_name == self.skip_tool:
+            return ToolSkipResult(output=self.cached_result)
+        return tool_input
+
+    def postprocess(
+        self,
+        agent: Agent,
+        ctx: Any,
+        tool_name: str,
+        tool_input: BaseModel,
+        tool_output: str,
+    ) -> ToolCallResult:
+        """Pass through without modification."""
+        return ToolCallResult(output=tool_output)
+
+
+class ErrorHandlingToolWrapper(ToolCallWrapper):
+    """A tool wrapper that handles errors gracefully."""
+
+    handled_errors: list = []
+
+    @classmethod
+    def reset(cls):
+        cls.handled_errors = []
+
+    def preprocess(
+        self,
+        agent: Agent,
+        ctx: Any,
+        tool_name: str,
+        tool_input: BaseModel,
+    ):
+        """Pass through without modification."""
+        return tool_input
+
+    def postprocess(
+        self,
+        agent: Agent,
+        ctx: Any,
+        tool_name: str,
+        tool_input: BaseModel,
+        tool_output: str,
+    ) -> ToolCallResult:
+        """Pass through without modification."""
+        return ToolCallResult(output=tool_output)
+
+    def on_error(
+        self,
+        agent: Agent,
+        ctx: Any,
+        tool_name: str,
+        tool_input: BaseModel,
+        error: Exception,
+    ) -> Optional[str]:
+        """Handle errors by returning a fallback message."""
+        ErrorHandlingToolWrapper.handled_errors.append({
+            "tool_name": tool_name,
+            "error": str(error),
+        })
+        return f"Error handled: {error}"
+
+
+class MessageGeneratingToolWrapper(ToolCallWrapper):
+    """A tool wrapper that generates messages on tool calls."""
+
+    class ToolCallEvent(BaseModel):
+        """Event message for tool calls."""
+
+        event_type: str
+        tool_name: str
+        tool_output: str
+
+    def preprocess(
+        self,
+        agent: Agent,
+        ctx: Any,
+        tool_name: str,
+        tool_input: BaseModel,
+    ):
+        """Pass through without modification."""
+        return tool_input
+
+    def postprocess(
+        self,
+        agent: Agent,
+        ctx: Any,
+        tool_name: str,
+        tool_input: BaseModel,
+        tool_output: str,
+    ) -> ToolCallResult:
+        """Generate an event message for each tool call."""
+        event = self.ToolCallEvent(
+            event_type="tool_executed",
+            tool_name=tool_name,
+            tool_output=tool_output,
+        )
+        return ToolCallResult(output=tool_output, messages=[event])
+
+
+# =============================================================================
+# Tool Wrapper Config Tests
+# =============================================================================
+
+
+class TestReActAgentToolWrapperConfig:
+    """Tests for ToolCallWrapper config in ReActAgent."""
+
+    def test_config_has_tool_wrapper_field(self):
+        """Test that ReActAgentConfig has tool_wrappers field."""
+        config = ReActAgentConfig(
+            model="test-model",
+            toolset=CalculatorToolset(),
+        )
+        assert hasattr(config, "tool_wrappers")
+        assert config.tool_wrappers == []
+
+    def test_config_with_tool_wrappers(self):
+        """Test that tool wrappers can be configured."""
+        config = ReActAgentConfig(
+            model="test-model",
+            toolset=CalculatorToolset(),
+            tool_wrappers=[CaptureToolWrapper()],
+        )
+        assert len(config.tool_wrappers) == 1
+        assert isinstance(config.tool_wrappers[0], CaptureToolWrapper)
+
+    def test_has_tool_wrappers_returns_false_when_none(self):
+        """Test has_tool_wrappers returns False when no tool wrappers."""
+        config = ReActAgentConfig(
+            model="test-model",
+            toolset=CalculatorToolset(),
+        )
+        assert config.has_tool_wrappers() is False
+
+    def test_has_tool_wrappers_returns_true_with_wrapper(self):
+        """Test has_tool_wrappers returns True when tool wrappers present."""
+        config = ReActAgentConfig(
+            model="test-model",
+            toolset=CalculatorToolset(),
+            tool_wrappers=[CaptureToolWrapper()],
+        )
+        assert config.has_tool_wrappers() is True
+
+
+# =============================================================================
+# Tool Wrapper Behavior Tests
+# =============================================================================
+
+
+class TestReActAgentToolWrappers:
+    """Tests for ToolCallWrapper execution with ReActAgent."""
+
+    @pytest.fixture(autouse=True)
+    def reset_plugins(self):
+        """Reset plugin state before each test."""
+        CaptureToolWrapper.reset()
+        ErrorHandlingToolWrapper.reset()
+        yield
+
+    def test_tool_wrapper_called_per_tool_execution(self, generator, build_message_from_payload):
+        """Test that tool wrappers are called for each tool execution."""
+        agent_spec: AgentSpec = (
+            AgentBuilder(ReActAgent)
+            .set_id("react_agent")
+            .set_name("ReAct Agent")
+            .set_description("A ReAct agent with tool wrapper")
+            .set_properties(
+                ReActAgentConfig(
+                    model="test-model",
+                    toolset=CalculatorToolset(),
+                    tool_wrappers=[CaptureToolWrapper()],
+                )
+            )
+            .build_spec()
+        )
+
+        mock_dependency_map = {
+            "llm": DependencySpec(
+                class_name="rustic_ai.litellm.agent_ext.llm.LiteLLMResolver",
+                properties={"model": "test-model"},
+            ),
+        }
+
+        agent, results = wrap_agent_for_testing(agent_spec, dependency_map=mock_dependency_map)
+
+        # 2 tool calls then final answer
+        responses = [
+            create_mock_response(
+                content="First calculation",
+                tool_calls=[create_tool_call("t1", "calculate", {"expression": "1+1"})],
+                finish_reason=FinishReason.tool_calls,
+            ),
+            create_mock_response(
+                content="Second calculation",
+                tool_calls=[create_tool_call("t2", "calculate", {"expression": "2+2"})],
+                finish_reason=FinishReason.tool_calls,
+            ),
+            create_mock_response("The results are 2 and 4."),
+        ]
+
+        call_idx = [0]
+
+        def mock_call_llm(llm, request):
+            response = responses[call_idx[0]]
+            call_idx[0] += 1
+            return response
+
+        with patch.object(agent, "_call_llm_direct", side_effect=mock_call_llm):
+            agent._on_message(
+                build_message_from_payload(
+                    generator,
+                    ReActRequest(query="Calculate 1+1 and 2+2"),
+                )
+            )
+
+        # Tool wrapper should be called twice (once per tool call)
+        assert CaptureToolWrapper.call_count == 2
+        assert len(CaptureToolWrapper.captured_calls) == 2
+        assert len(CaptureToolWrapper.captured_results) == 2
+
+        # Verify captured tool names and expressions
+        assert CaptureToolWrapper.captured_calls[0]["tool_name"] == "calculate"
+        assert CaptureToolWrapper.captured_calls[0]["tool_input"].expression == "1+1"
+        assert CaptureToolWrapper.captured_calls[1]["tool_name"] == "calculate"
+        assert CaptureToolWrapper.captured_calls[1]["tool_input"].expression == "2+2"
+
+    def test_tool_wrapper_can_modify_input_and_output(self, generator, build_message_from_payload):
+        """Test that tool wrappers can modify tool inputs and outputs."""
+        agent_spec: AgentSpec = (
+            AgentBuilder(ReActAgent)
+            .set_id("react_agent")
+            .set_name("ReAct Agent")
+            .set_description("A ReAct agent with modifying tool wrapper")
+            .set_properties(
+                ReActAgentConfig(
+                    model="test-model",
+                    toolset=CalculatorToolset(),
+                    tool_wrappers=[ModifyingToolWrapper()],
+                )
+            )
+            .build_spec()
+        )
+
+        mock_dependency_map = {
+            "llm": DependencySpec(
+                class_name="rustic_ai.litellm.agent_ext.llm.LiteLLMResolver",
+                properties={"model": "test-model"},
+            ),
+        }
+
+        agent, results = wrap_agent_for_testing(agent_spec, dependency_map=mock_dependency_map)
+
+        responses = [
+            create_mock_response(
+                content="Calculating",
+                tool_calls=[create_tool_call("t1", "calculate", {"expression": "5"})],
+                finish_reason=FinishReason.tool_calls,
+            ),
+            create_mock_response("The result is 15."),
+        ]
+
+        call_idx = [0]
+
+        def mock_call_llm(llm, request):
+            response = responses[call_idx[0]]
+            call_idx[0] += 1
+            return response
+
+        with patch.object(agent, "_call_llm_direct", side_effect=mock_call_llm):
+            agent._on_message(
+                build_message_from_payload(
+                    generator,
+                    ReActRequest(query="Calculate 5"),
+                )
+            )
+
+        # Final response
+        response = ReActResponse.model_validate(results[0].payload)
+        assert response.success is True
+
+        # Trace should show the modified output
+        # Input expression was "5", wrapper changed it to "(5) + 10" = 15
+        # Output should have "[modified]" suffix
+        assert len(response.trace) == 1
+        observation = response.trace[0].observation
+        assert "[modified]" in observation
+        # The actual result: eval("(5) + 10") = 15
+        assert "15" in observation
+
+    def test_tool_wrapper_can_skip_execution(self, generator, build_message_from_payload):
+        """Test that tool wrappers can skip execution with a cached result."""
+        agent_spec: AgentSpec = (
+            AgentBuilder(ReActAgent)
+            .set_id("react_agent")
+            .set_name("ReAct Agent")
+            .set_description("A ReAct agent with skipping tool wrapper")
+            .set_properties(
+                ReActAgentConfig(
+                    model="test-model",
+                    toolset=CalculatorToolset(),
+                    tool_wrappers=[SkippingToolWrapper()],
+                )
+            )
+            .build_spec()
+        )
+
+        mock_dependency_map = {
+            "llm": DependencySpec(
+                class_name="rustic_ai.litellm.agent_ext.llm.LiteLLMResolver",
+                properties={"model": "test-model"},
+            ),
+        }
+
+        agent, results = wrap_agent_for_testing(agent_spec, dependency_map=mock_dependency_map)
+
+        responses = [
+            create_mock_response(
+                content="Calculating",
+                tool_calls=[create_tool_call("t1", "calculate", {"expression": "complex_expr"})],
+                finish_reason=FinishReason.tool_calls,
+            ),
+            create_mock_response("The cached result is 42."),
+        ]
+
+        call_idx = [0]
+
+        def mock_call_llm(llm, request):
+            response = responses[call_idx[0]]
+            call_idx[0] += 1
+            return response
+
+        with patch.object(agent, "_call_llm_direct", side_effect=mock_call_llm):
+            agent._on_message(
+                build_message_from_payload(
+                    generator,
+                    ReActRequest(query="Calculate something"),
+                )
+            )
+
+        response = ReActResponse.model_validate(results[0].payload)
+        assert response.success is True
+
+        # Trace should show the cached result, not an actual execution
+        assert len(response.trace) == 1
+        observation = response.trace[0].observation
+        assert observation == "42 (cached)"
+
+    def test_tool_wrapper_handles_errors(self, generator, build_message_from_payload):
+        """Test that tool wrappers can handle errors gracefully."""
+        agent_spec: AgentSpec = (
+            AgentBuilder(ReActAgent)
+            .set_id("react_agent")
+            .set_name("ReAct Agent")
+            .set_description("A ReAct agent with error-handling tool wrapper")
+            .set_properties(
+                ReActAgentConfig(
+                    model="test-model",
+                    toolset=ErrorRaisingToolset(),  # Use toolset that raises exceptions
+                    tool_wrappers=[ErrorHandlingToolWrapper()],
+                )
+            )
+            .build_spec()
+        )
+
+        mock_dependency_map = {
+            "llm": DependencySpec(
+                class_name="rustic_ai.litellm.agent_ext.llm.LiteLLMResolver",
+                properties={"model": "test-model"},
+            ),
+        }
+
+        agent, results = wrap_agent_for_testing(agent_spec, dependency_map=mock_dependency_map)
+
+        # Tool call - the ErrorRaisingToolset will raise an exception
+        responses = [
+            create_mock_response(
+                content="Calculating",
+                tool_calls=[create_tool_call("t1", "calculate", {"expression": "1+1"})],
+                finish_reason=FinishReason.tool_calls,
+            ),
+            create_mock_response("I handled the error."),
+        ]
+
+        call_idx = [0]
+
+        def mock_call_llm(llm, request):
+            response = responses[call_idx[0]]
+            call_idx[0] += 1
+            return response
+
+        with patch.object(agent, "_call_llm_direct", side_effect=mock_call_llm):
+            agent._on_message(
+                build_message_from_payload(
+                    generator,
+                    ReActRequest(query="Calculate something"),
+                )
+            )
+
+        response = ReActResponse.model_validate(results[0].payload)
+        assert response.success is True
+
+        # Error handler should have been invoked
+        assert len(ErrorHandlingToolWrapper.handled_errors) == 1
+        assert ErrorHandlingToolWrapper.handled_errors[0]["tool_name"] == "calculate"
+
+        # Trace should show the handled error output
+        assert len(response.trace) == 1
+        observation = response.trace[0].observation
+        assert "Error handled:" in observation
+
+    def test_tool_wrapper_generates_messages(self, generator, build_message_from_payload):
+        """Test that tool wrappers can generate messages."""
+        agent_spec: AgentSpec = (
+            AgentBuilder(ReActAgent)
+            .set_id("react_agent")
+            .set_name("ReAct Agent")
+            .set_description("A ReAct agent with message-generating tool wrapper")
+            .set_properties(
+                ReActAgentConfig(
+                    model="test-model",
+                    toolset=CalculatorToolset(),
+                    tool_wrappers=[MessageGeneratingToolWrapper()],
+                )
+            )
+            .build_spec()
+        )
+
+        mock_dependency_map = {
+            "llm": DependencySpec(
+                class_name="rustic_ai.litellm.agent_ext.llm.LiteLLMResolver",
+                properties={"model": "test-model"},
+            ),
+        }
+
+        agent, results = wrap_agent_for_testing(agent_spec, dependency_map=mock_dependency_map)
+
+        responses = [
+            create_mock_response(
+                content="Calculating",
+                tool_calls=[create_tool_call("t1", "calculate", {"expression": "3+3"})],
+                finish_reason=FinishReason.tool_calls,
+            ),
+            create_mock_response("The result is 6."),
+        ]
+
+        call_idx = [0]
+
+        def mock_call_llm(llm, request):
+            response = responses[call_idx[0]]
+            call_idx[0] += 1
+            return response
+
+        with patch.object(agent, "_call_llm_direct", side_effect=mock_call_llm):
+            agent._on_message(
+                build_message_from_payload(
+                    generator,
+                    ReActRequest(query="Calculate 3+3"),
+                )
+            )
+
+        # Should have 2 results: tool event message + ReActResponse
+        assert len(results) == 2
+
+        # First is the tool event message
+        event = MessageGeneratingToolWrapper.ToolCallEvent.model_validate(results[0].payload)
+        assert event.event_type == "tool_executed"
+        assert event.tool_name == "calculate"
+        assert event.tool_output == "6"
+
+        # Second is the ReActResponse
+        response = ReActResponse.model_validate(results[1].payload)
+        assert response.answer == "The result is 6."
+
+
+class TestReActAgentMultipleToolWrappers:
+    """Tests for multiple tool wrappers in ReActAgent."""
+
+    @pytest.fixture(autouse=True)
+    def reset_plugins(self):
+        """Reset plugin state before each test."""
+        CaptureToolWrapper.reset()
+        yield
+
+    def test_multiple_tool_wrappers_chained(self, generator, build_message_from_payload):
+        """Test that multiple tool wrappers are executed in order."""
+        # First wrapper captures, second wrapper modifies
+        agent_spec: AgentSpec = (
+            AgentBuilder(ReActAgent)
+            .set_id("react_agent")
+            .set_name("ReAct Agent")
+            .set_description("A ReAct agent with multiple tool wrappers")
+            .set_properties(
+                ReActAgentConfig(
+                    model="test-model",
+                    toolset=CalculatorToolset(),
+                    tool_wrappers=[
+                        CaptureToolWrapper(),
+                        ModifyingToolWrapper(),
+                    ],
+                )
+            )
+            .build_spec()
+        )
+
+        mock_dependency_map = {
+            "llm": DependencySpec(
+                class_name="rustic_ai.litellm.agent_ext.llm.LiteLLMResolver",
+                properties={"model": "test-model"},
+            ),
+        }
+
+        agent, results = wrap_agent_for_testing(agent_spec, dependency_map=mock_dependency_map)
+
+        responses = [
+            create_mock_response(
+                content="Calculating",
+                tool_calls=[create_tool_call("t1", "calculate", {"expression": "5"})],
+                finish_reason=FinishReason.tool_calls,
+            ),
+            create_mock_response("Result."),
+        ]
+
+        call_idx = [0]
+
+        def mock_call_llm(llm, request):
+            response = responses[call_idx[0]]
+            call_idx[0] += 1
+            return response
+
+        with patch.object(agent, "_call_llm_direct", side_effect=mock_call_llm):
+            agent._on_message(
+                build_message_from_payload(
+                    generator,
+                    ReActRequest(query="Calculate 5"),
+                )
+            )
+
+        # CaptureWrapper should have been called
+        assert CaptureToolWrapper.call_count == 1
+        # CaptureWrapper sees original input
+        assert CaptureToolWrapper.captured_calls[0]["tool_input"].expression == "5"
+
+        # Result has modification from ModifyingToolWrapper
+        response = ReActResponse.model_validate(results[0].payload)
+        observation = response.trace[0].observation
+        assert "[modified]" in observation
