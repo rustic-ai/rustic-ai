@@ -36,9 +36,15 @@ class YamlLoader(yaml.SafeLoader):
     passed to ``__init__``: if the stream has a ``name`` attribute, its
     directory is used; otherwise, ``root_path`` defaults to the class-level
     value which is set by create_loader_class.
+
+    Attributes:
+        root_path: Directory used for resolving relative paths in !include and !code tags.
+        validation_root: Root directory for security validation. All included files must
+                         be within this directory. Defaults to root_path if not set.
     """
 
     root_path: str = "."
+    validation_root: str = "."
 
     def __init__(self, stream):
         # Only override root_path if not already set at class level or if stream has a name
@@ -109,8 +115,9 @@ def construct_include(loader: YamlLoader, node: yaml.ScalarNode) -> Any:
             f"Use !code to include non-YAML files as text."
         )
 
-    # Validate path for basic security
-    _validate_path(filename, loader.root_path)
+    # Validate path for basic security - use validation_root which is preserved from top-level load
+    validation_root = getattr(loader, "validation_root", loader.root_path)
+    _validate_path(filename, validation_root)
 
     # Check for circular includes
     include_stack = _get_include_stack()
@@ -122,7 +129,9 @@ def construct_include(loader: YamlLoader, node: yaml.ScalarNode) -> Any:
     include_stack.append(filename)
     try:
         with open(filename, "r") as f:
-            return load_yaml(f, os.path.dirname(filename))
+            # Use the included file's directory as base for resolving its relative paths,
+            # but pass the original validation_root for security validation
+            return load_yaml(f, base_dir=os.path.dirname(filename), root_dir=validation_root)
     except OSError as exc:
         # Provide clear context about which file failed to load and from where
         source_stream = getattr(loader, "stream", None)
@@ -154,8 +163,9 @@ def construct_code(loader: YamlLoader, node: yaml.ScalarNode) -> str:
     """
     filename = os.path.abspath(os.path.join(loader.root_path, loader.construct_scalar(node)))
 
-    # Validate path for basic security
-    _validate_path(filename, loader.root_path)
+    # Validate path for basic security - use validation_root which is preserved from top-level load
+    validation_root = getattr(loader, "validation_root", loader.root_path)
+    _validate_path(filename, validation_root)
 
     try:
         with open(filename, "r") as f:
@@ -169,16 +179,20 @@ def construct_code(loader: YamlLoader, node: yaml.ScalarNode) -> str:
         raise FileNotFoundError(f"Error loading code file '{filename}' referenced from '{source_name}': {exc}") from exc
 
 
-def _resolve_root_path(stream: Any, root_dir: Optional[str]) -> str:
+def _resolve_root_path(stream: Any, root_dir: Optional[str], base_dir: Optional[str] = None) -> str:
     """Resolve the root directory for relative path resolution.
 
     Args:
         stream: The YAML stream being loaded
-        root_dir: Optional explicit root directory
+        root_dir: Optional explicit root directory for security validation
+        base_dir: Optional base directory for resolving relative paths
 
     Returns:
         The resolved root directory path
     """
+    # Use base_dir if provided (for resolving relative paths in nested includes)
+    if base_dir:
+        return os.path.abspath(base_dir)
     if root_dir:
         return os.path.abspath(root_dir)
     if hasattr(stream, "name") and getattr(stream, "name"):
@@ -186,12 +200,13 @@ def _resolve_root_path(stream: Any, root_dir: Optional[str]) -> str:
     return os.getcwd()
 
 
-def create_loader_class(stream: Any, root_dir: Optional[str]) -> Type[YamlLoader]:
+def create_loader_class(stream: Any, base_dir: Optional[str], root_dir: Optional[str] = None) -> Type[YamlLoader]:
     """Create a loader subclass configured with the correct root path.
 
     Args:
         stream: The YAML stream to load
-        root_dir: Optional explicit root directory for path resolution
+        base_dir: Optional base directory for resolving relative paths
+        root_dir: Optional root directory for security validation (defaults to base_dir)
 
     Returns:
         A YamlLoader subclass configured with the appropriate root path
@@ -200,20 +215,25 @@ def create_loader_class(stream: Any, root_dir: Optional[str]) -> Type[YamlLoader
     class SpecificLoader(YamlLoader):
         pass
 
-    SpecificLoader.root_path = _resolve_root_path(stream, root_dir)
+    # root_path is used for resolving relative paths in the YAML file
+    SpecificLoader.root_path = _resolve_root_path(stream, root_dir, base_dir)
+    # validation_root is used for security checks - files must be within this directory
+    SpecificLoader.validation_root = os.path.abspath(root_dir) if root_dir else SpecificLoader.root_path
     SpecificLoader.add_constructor("!include", construct_include)
     SpecificLoader.add_constructor("!code", construct_code)
 
     return SpecificLoader
 
 
-def load_yaml(stream: Union[IO[str], str], base_dir: Optional[str] = None) -> Any:
+def load_yaml(stream: Union[IO[str], str], base_dir: Optional[str] = None, root_dir: Optional[str] = None) -> Any:
     """
     Load YAML with support for !include and !code tags.
 
     Args:
         stream: File stream or string content to parse
-        base_dir: Base directory for relative paths. If None, uses stream.name or cwd.
+        base_dir: Base directory for resolving relative paths. If None, uses stream.name or cwd.
+        root_dir: Root directory for security validation. Files must be within this directory.
+                  If None, defaults to base_dir. This is preserved across nested includes.
 
     Returns:
         The parsed YAML data structure
@@ -223,10 +243,7 @@ def load_yaml(stream: Union[IO[str], str], base_dir: Optional[str] = None) -> An
         FileNotFoundError: If an !include or !code file cannot be found
         ValueError: If a circular !include is detected
         TypeError: If stream is neither a file object nor a string
-        stream_io = StringIO(stream)
-        # Explicitly set a name attribute to clarify loader behavior for in-memory content
-        stream_io.name = ""
-        stream = stream_io
+
     Note:
         When passing string content, base_dir should typically be provided
         to enable proper relative path resolution for !include and !code tags.
@@ -238,7 +255,7 @@ def load_yaml(stream: Union[IO[str], str], base_dir: Optional[str] = None) -> An
         if base_dir is None:
             base_dir = os.getcwd()
 
-    loader_cls = create_loader_class(stream, base_dir)
+    loader_cls = create_loader_class(stream, base_dir, root_dir)
     loader = loader_cls(stream)
     try:
         return loader.get_single_data()
