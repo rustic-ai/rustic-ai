@@ -410,6 +410,31 @@ class TestMessage:
         assert transformed is not None
         assert transformed.payload == {"new_key": "value"}
 
+    def test_simple_transformer_with_cel_expression(self, generator):
+        transformer = PayloadTransformer(expression_type="cel", expression="{'new_key': key}")
+
+        origin = Message(
+            id_obj=generator.get_id(Priority.NORMAL),
+            topics="default_topic",
+            sender=AgentTag(id="senderId", name="sender"),
+            payload={"origin_key": "origin_value"},
+            format=MessageConstants.RAW_JSON_FORMAT,
+        )
+
+        routable = MessageRoutable(
+            topics="default_topic",
+            priority=Priority.NORMAL,
+            recipient_list=[],
+            payload={"key": "value"},
+            format=MessageConstants.RAW_JSON_FORMAT,
+            forward_header=None,
+        )
+
+        transformed = transformer.transform(origin=origin, agent_state={}, guild_state={}, routable=routable)
+
+        assert transformed is not None
+        assert transformed.payload == {"new_key": "value"}
+
     def test_simple_transformer_with_invalid_expression(self, generator):
         transformer = PayloadTransformer(expression="$.key")
         origin = Message(

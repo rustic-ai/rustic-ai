@@ -22,6 +22,7 @@ from rustic_ai.core.guild.agent_ext.depends.dependency_resolver import Dependenc
 from rustic_ai.core.guild.metaprog.constants import MetaclassConstants
 from rustic_ai.core.messaging.core.message import AgentTag, RoutingSlip
 from rustic_ai.core.utils.basic_class_utils import get_class_from_name
+from rustic_ai.core.utils.cel_expr import CelExpressionEvaluator
 from rustic_ai.core.utils.json_utils import JsonDict
 
 
@@ -115,6 +116,23 @@ class JSONataPredicate(RuntimePredicate):
             return False
 
 
+class CelPredicate(RuntimePredicate):
+    predicate_type: Literal["cel_fn"] = "cel_fn"
+    expression: str
+
+    def evaluate(self, message: JsonDict, agent_state: JsonDict, guild_state: JsonDict) -> bool:
+        evaluator = CelExpressionEvaluator()
+        result = evaluator.eval(
+            self.expression, {"message": message, "agent_state": agent_state, "guild_state": guild_state}
+        )
+
+        # Make sure we return a boolean
+        if result:
+            return True
+        else:
+            return False
+
+
 class TypeEqualsPredicate(RuntimePredicate):
     predicate_type: Literal["type_equals"] = "type_equals"
     expected_type: str
@@ -136,6 +154,7 @@ def predicate_type_discriminator(value: Any) -> str:
 RuntimePredicateType = Annotated[
     Union[
         Annotated[JSONataPredicate, Tag("jsonata_fn")],
+        Annotated[CelPredicate, Tag("cel_fn")],
         Annotated[TypeEqualsPredicate, Tag("type_equals")],
     ],
     Field(discriminator=Discriminator(predicate_type_discriminator)),
