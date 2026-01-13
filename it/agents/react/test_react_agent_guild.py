@@ -16,6 +16,10 @@ from pydantic import BaseModel
 import pytest
 
 from rustic_ai.core.agents.testutils.probe_agent import ProbeAgent
+from rustic_ai.core.guild.agent_ext.depends.llm.models import (
+    ChatCompletionRequest,
+    ChatCompletionResponse,
+)
 from rustic_ai.core.guild.agent_ext.depends.llm.tools_manager import ToolSpec
 from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder
 from rustic_ai.core.guild.dsl import AgentSpec, DependencySpec
@@ -24,8 +28,6 @@ from rustic_ai.litellm.agent_ext.llm import LiteLLMResolver
 from rustic_ai.llm_agent.react import (
     ReActAgent,
     ReActAgentConfig,
-    ReActRequest,
-    ReActResponse,
     ReActToolset,
 )
 from rustic_ai.skills.toolset import SkillToolset
@@ -209,8 +211,8 @@ class TestReActAgentGuildIntegration:
             # Send a calculation request via the probe agent
             probe_agent.publish_dict(
                 topic="default_topic",
-                payload={"query": "What is 15 multiplied by 7?"},
-                format=ReActRequest,
+                payload={"messages": [{"role": "user", "content": "What is 15 multiplied by 7?"}]},
+                format=ChatCompletionRequest,
             )
 
             # Wait for processing
@@ -220,13 +222,13 @@ class TestReActAgentGuildIntegration:
             messages = probe_agent.get_messages()
             assert len(messages) >= 1, f"Expected at least 1 message, got {len(messages)}"
 
-            # Find the ReActResponse message
-            react_responses = [m for m in messages if m.format == get_qualified_class_name(ReActResponse)]
-            assert len(react_responses) >= 1, "Expected at least one ReActResponse"
+            # Find the ChatCompletionResponse message
+            react_responses = [m for m in messages if m.format == get_qualified_class_name(ChatCompletionResponse)]
+            assert len(react_responses) >= 1, "Expected at least one ChatCompletionResponse"
 
-            response = ReActResponse.model_validate(react_responses[0].payload)
-            assert response.success is True, f"Response should be successful: {response.error}"
-            assert "105" in response.answer, f"Answer should contain 105: {response.answer}"
+            response = ChatCompletionResponse.model_validate(react_responses[0].payload)
+            answer = response.choices[0].message.content or ""
+            assert "105" in answer, f"Answer should contain 105: {answer}"
 
         finally:
             probe_agent.clear_messages()
@@ -279,8 +281,8 @@ class TestReActAgentGuildIntegration:
             # Send a calculation request via the probe agent
             probe_agent.publish_dict(
                 topic="default_topic",
-                payload={"query": "Calculate 25 times 4 plus 17"},
-                format=ReActRequest,
+                payload={"messages": [{"role": "user", "content": "Calculate 25 times 4 plus 17"}]},
+                format=ChatCompletionRequest,
             )
 
             # Wait for processing
@@ -290,14 +292,14 @@ class TestReActAgentGuildIntegration:
             messages = probe_agent.get_messages()
             assert len(messages) >= 1, f"Expected at least 1 message, got {len(messages)}"
 
-            # Find the ReActResponse message
-            react_responses = [m for m in messages if m.format == get_qualified_class_name(ReActResponse)]
-            assert len(react_responses) >= 1, "Expected at least one ReActResponse"
+            # Find the ChatCompletionResponse message
+            react_responses = [m for m in messages if m.format == get_qualified_class_name(ChatCompletionResponse)]
+            assert len(react_responses) >= 1, "Expected at least one ChatCompletionResponse"
 
-            response = ReActResponse.model_validate(react_responses[0].payload)
-            assert response.success is True, f"Response should be successful: {response.error}"
+            response = ChatCompletionResponse.model_validate(react_responses[0].payload)
+            answer = response.choices[0].message.content or ""
             # 25 * 4 + 17 = 100 + 17 = 117
-            assert "117" in response.answer, f"Answer should contain 117: {response.answer}"
+            assert "117" in answer, f"Answer should contain 117: {answer}"
 
         finally:
             probe_agent.clear_messages()
@@ -359,8 +361,8 @@ agents:
                 # Send a calculation request via the probe agent
                 probe_agent.publish_dict(
                     topic="default_topic",
-                    payload={"query": "What is 8 plus 12?"},
-                    format=ReActRequest,
+                    payload={"messages": [{"role": "user", "content": "What is 8 plus 12?"}]},
+                    format=ChatCompletionRequest,
                 )
 
                 # Wait for processing
@@ -370,14 +372,14 @@ agents:
                 messages = probe_agent.get_messages()
                 assert len(messages) >= 1, f"Expected at least 1 message, got {len(messages)}"
 
-                # Find the ReActResponse message
-                react_responses = [m for m in messages if m.format == get_qualified_class_name(ReActResponse)]
-                assert len(react_responses) >= 1, "Expected at least one ReActResponse"
+                # Find the ChatCompletionResponse message
+                react_responses = [m for m in messages if m.format == get_qualified_class_name(ChatCompletionResponse)]
+                assert len(react_responses) >= 1, "Expected at least one ChatCompletionResponse"
 
-                response = ReActResponse.model_validate(react_responses[0].payload)
-                assert response.success is True, f"Response should be successful: {response.error}"
+                response = ChatCompletionResponse.model_validate(react_responses[0].payload)
+                answer = response.choices[0].message.content or ""
                 # 8 + 12 = 20
-                assert "20" in response.answer, f"Answer should contain 20: {response.answer}"
+                assert "20" in answer, f"Answer should contain 20: {answer}"
 
             finally:
                 probe_agent.clear_messages()
@@ -435,13 +437,16 @@ agents:
             probe_agent.publish_dict(
                 topic="default_topic",
                 payload={
-                    "query": (
-                        "I have 3 boxes with 5 apples each. "
-                        "If I add 7 more apples, then give away half of all apples, "
-                        "how many apples do I have left?"
-                    )
+                    "messages": [{
+                        "role": "user",
+                        "content": (
+                            "I have 3 boxes with 5 apples each. "
+                            "If I add 7 more apples, then give away half of all apples, "
+                            "how many apples do I have left?"
+                        )
+                    }]
                 },
-                format=ReActRequest,
+                format=ChatCompletionRequest,
             )
 
             # Wait for processing (may need multiple iterations)
@@ -451,16 +456,17 @@ agents:
             messages = probe_agent.get_messages()
             assert len(messages) >= 1, f"Expected at least 1 message, got {len(messages)}"
 
-            # Find the ReActResponse message
-            react_responses = [m for m in messages if m.format == get_qualified_class_name(ReActResponse)]
-            assert len(react_responses) >= 1, "Expected at least one ReActResponse"
+            # Find the ChatCompletionResponse message
+            react_responses = [m for m in messages if m.format == get_qualified_class_name(ChatCompletionResponse)]
+            assert len(react_responses) >= 1, "Expected at least one ChatCompletionResponse"
 
-            response = ReActResponse.model_validate(react_responses[0].payload)
-            assert response.success is True, f"Response should be successful: {response.error}"
+            response = ChatCompletionResponse.model_validate(react_responses[0].payload)
+            answer = response.choices[0].message.content or ""
             # 3 * 5 = 15, 15 + 7 = 22, 22 / 2 = 11
-            assert "11" in response.answer, f"Answer should contain 11: {response.answer}"
+            assert "11" in answer, f"Answer should contain 11: {answer}"
             # Should have taken multiple steps
-            assert response.iterations >= 1, "Should have taken at least 1 iteration"
+            iterations = response.choices[0].provider_specific_fields.get("iterations", 0)
+            assert iterations >= 1, "Should have taken at least 1 iteration"
 
         finally:
             probe_agent.clear_messages()
@@ -513,8 +519,8 @@ agents:
             # Send a query that doesn't need calculation
             probe_agent.publish_dict(
                 topic="default_topic",
-                payload={"query": "Say 'Hello, World!' exactly as written."},
-                format=ReActRequest,
+                payload={"messages": [{"role": "user", "content": "Say 'Hello, World!' exactly as written."}]},
+                format=ChatCompletionRequest,
             )
 
             # Wait for processing
@@ -524,15 +530,15 @@ agents:
             messages = probe_agent.get_messages()
             assert len(messages) >= 1, f"Expected at least 1 message, got {len(messages)}"
 
-            # Find the ReActResponse message
-            react_responses = [m for m in messages if m.format == get_qualified_class_name(ReActResponse)]
-            assert len(react_responses) >= 1, "Expected at least one ReActResponse"
+            # Find the ChatCompletionResponse message
+            react_responses = [m for m in messages if m.format == get_qualified_class_name(ChatCompletionResponse)]
+            assert len(react_responses) >= 1, "Expected at least one ChatCompletionResponse"
 
-            response = ReActResponse.model_validate(react_responses[0].payload)
-            assert response.success is True, f"Response should be successful: {response.error}"
-            assert "Hello, World!" in response.answer, f"Answer should contain greeting: {response.answer}"
+            response = ChatCompletionResponse.model_validate(react_responses[0].payload)
+            answer = response.choices[0].message.content or ""
+            assert "Hello, World!" in answer, f"Answer should contain greeting: {answer}"
             # Should have no tool calls
-            assert len(response.trace) == 0, "Should not have used any tools"
+            assert len(response.choices[0].provider_specific_fields.get("react_trace", [])) == 0, "Should not have used any tools"
 
         finally:
             probe_agent.clear_messages()

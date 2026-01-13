@@ -5,21 +5,27 @@ This module provides a loop-based implementation of the ReAct pattern,
 where an agent iteratively reasons about a problem and takes actions
 (tool calls) until it arrives at a final answer.
 
+The ReActAgent consumes ChatCompletionRequest and produces ChatCompletionResponse,
+making it compatible with standard LLM chat pipelines. The reasoning trace is
+stored in Choice.provider_specific_fields["react_trace"].
+
 Key Components:
 - ReActAgent: The agent that runs the ReAct loop
 - ReActAgentConfig: Configuration for the ReActAgent
 - ReActToolset: Abstract base class for defining tools with execution logic
 - CompositeToolset: Combines multiple toolsets into one
-- ReActRequest: Input message format for the agent
-- ReActResponse: Output message format with answer and trace
-- ReActStep: Single step in the reasoning trace
+- ReActStep: Single step in the reasoning trace (stored in provider_specific_fields)
 
 Example Usage:
+    from rustic_ai.core.guild.agent_ext.depends.llm.models import (
+        ChatCompletionRequest,
+        ChatCompletionResponse,
+        UserMessage,
+    )
     from rustic_ai.llm_agent.react import (
         ReActAgent,
         ReActAgentConfig,
         ReActToolset,
-        ReActRequest,
     )
 
     # Define a custom toolset
@@ -44,9 +50,18 @@ Example Usage:
         .set_config(config)
         .build_spec()
     )
+
+    # Send a ChatCompletionRequest
+    request = ChatCompletionRequest(
+        messages=[UserMessage(content="What is 2 + 2?")]
+    )
+
+    # Response is ChatCompletionResponse with trace in provider_specific_fields
+    # response.choices[0].provider_specific_fields["react_trace"] -> List[dict]
+    # response.choices[0].provider_specific_fields["iterations"] -> int
 """
 
-from .models import ReActRequest, ReActResponse, ReActStep
+from .models import ReActStep
 from .react_agent import DEFAULT_REACT_SYSTEM_PROMPT, ReActAgent, ReActAgentConfig
 from .toolset import CompositeToolset, ReActToolset
 
@@ -59,7 +74,5 @@ __all__ = [
     "ReActToolset",
     "CompositeToolset",
     # Models
-    "ReActRequest",
-    "ReActResponse",
     "ReActStep",
 ]
