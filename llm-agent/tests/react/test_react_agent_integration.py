@@ -12,6 +12,11 @@ from flaky import flaky
 from pydantic import BaseModel
 import pytest
 
+from rustic_ai.core.guild.agent_ext.depends.llm.models import (
+    ChatCompletionRequest,
+    ChatCompletionResponse,
+    UserMessage,
+)
 from rustic_ai.core.guild.agent_ext.depends.llm.tools_manager import ToolSpec
 from rustic_ai.core.guild.builders import AgentBuilder
 from rustic_ai.core.guild.dsl import AgentSpec
@@ -20,8 +25,6 @@ from rustic_ai.llm_agent.react import (
     CompositeToolset,
     ReActAgent,
     ReActAgentConfig,
-    ReActRequest,
-    ReActResponse,
     ReActToolset,
 )
 
@@ -194,20 +197,21 @@ class TestReActAgentIntegration:
         agent._on_message(
             build_message_from_payload(
                 generator,
-                ReActRequest(query="What is 15 multiplied by 7?"),
+                ChatCompletionRequest(messages=[UserMessage(content="What is 15 multiplied by 7?")]),
             )
         )
 
         assert len(results) > 0
         result = results[0]
-        assert result.format == get_qualified_class_name(ReActResponse)
+        assert result.format == get_qualified_class_name(ChatCompletionResponse)
 
-        response = ReActResponse.model_validate(result.payload)
-        assert response.success is True
-        assert "105" in response.answer
+        response = ChatCompletionResponse.model_validate(result.payload)
+        answer = response.choices[0].message.content or ""
+        assert "105" in answer
         # Should have at least one tool call in the trace
-        assert len(response.trace) >= 1
-        assert response.trace[0].action == "calculate"
+        react_trace = response.choices[0].provider_specific_fields.get("react_trace", [])
+        assert len(react_trace) >= 1
+        assert react_trace[0]["action"] == "calculate"
 
     def test_multi_step_calculation(self, generator, build_message_from_payload, dependency_map):
         """Test ReActAgent with a multi-step calculation problem."""
@@ -234,18 +238,22 @@ class TestReActAgentIntegration:
         agent._on_message(
             build_message_from_payload(
                 generator,
-                ReActRequest(
-                    query="I have 3 apples and 4 oranges. If I get 2 more apples and 3 more oranges, "
-                    "then give away half of all my fruits, how many fruits do I have left?"
+                ChatCompletionRequest(
+                    messages=[
+                        UserMessage(
+                            content="I have 3 apples and 4 oranges. If I get 2 more apples and 3 more oranges, "
+                            "then give away half of all my fruits, how many fruits do I have left?"
+                        )
+                    ]
                 ),
             )
         )
 
         assert len(results) > 0
-        response = ReActResponse.model_validate(results[0].payload)
-        assert response.success is True
+        response = ChatCompletionResponse.model_validate(results[0].payload)
+        answer = response.choices[0].message.content or ""
         # 3 + 4 + 2 + 3 = 12, 12 / 2 = 6
-        assert "6" in response.answer
+        assert "6" in answer
         # Note: LLMs may solve simple arithmetic without tools, so we don't assert tool usage here.
         # The important thing is that the answer is correct.
 
@@ -274,17 +282,18 @@ class TestReActAgentIntegration:
         agent._on_message(
             build_message_from_payload(
                 generator,
-                ReActRequest(query="What's the weather like in Paris today?"),
+                ChatCompletionRequest(messages=[UserMessage(content="What's the weather like in Paris today?")]),
             )
         )
 
         assert len(results) > 0
-        response = ReActResponse.model_validate(results[0].payload)
-        assert response.success is True
+        response = ChatCompletionResponse.model_validate(results[0].payload)
+        answer = response.choices[0].message.content or ""
         # Should mention Paris and weather info
-        assert "paris" in response.answer.lower() or "72" in response.answer or "cloudy" in response.answer.lower()
-        assert len(response.trace) >= 1
-        assert response.trace[0].action == "get_weather"
+        assert "paris" in answer.lower() or "72" in answer or "cloudy" in answer.lower()
+        react_trace = response.choices[0].provider_specific_fields.get("react_trace", [])
+        assert len(react_trace) >= 1
+        assert react_trace[0]["action"] == "get_weather"
 
     def test_composite_toolset(self, generator, build_message_from_payload, dependency_map):
         """Test ReActAgent with multiple tools via CompositeToolset."""
@@ -318,18 +327,25 @@ class TestReActAgentIntegration:
         agent._on_message(
             build_message_from_payload(
                 generator,
-                ReActRequest(query="When was the Eiffel Tower built? Calculate how many years old it is as of 2025."),
+                ChatCompletionRequest(
+                    messages=[
+                        UserMessage(
+                            content="When was the Eiffel Tower built? Calculate how many years old it is as of 2025."
+                        )
+                    ]
+                ),
             )
         )
 
         assert len(results) > 0
-        response = ReActResponse.model_validate(results[0].payload)
-        assert response.success is True
+        response = ChatCompletionResponse.model_validate(results[0].payload)
+        answer = response.choices[0].message.content or ""
         # Should find info about Eiffel Tower (built 1889) and calculate age (2025 - 1889 = 136)
-        assert "136" in response.answer or "1889" in response.answer
+        assert "136" in answer or "1889" in answer
         # Should have used at least the search tool
-        assert len(response.trace) >= 1
-        tool_names_used = [step.action for step in response.trace]
+        react_trace = response.choices[0].provider_specific_fields.get("react_trace", [])
+        assert len(react_trace) >= 1
+        tool_names_used = [step["action"] for step in react_trace]
         assert "search" in tool_names_used or "calculate" in tool_names_used
 
     def test_no_tool_needed(self, generator, build_message_from_payload, dependency_map):
@@ -357,16 +373,19 @@ class TestReActAgentIntegration:
         agent._on_message(
             build_message_from_payload(
                 generator,
-                ReActRequest(query="Say 'Hello, World!' exactly as written."),
+                ChatCompletionRequest(
+                    messages=[UserMessage(content="Say 'Hello, World!' exactly as written.")]
+                ),
             )
         )
 
         assert len(results) > 0
-        response = ReActResponse.model_validate(results[0].payload)
-        assert response.success is True
-        assert "Hello, World!" in response.answer
+        response = ChatCompletionResponse.model_validate(results[0].payload)
+        answer = response.choices[0].message.content or ""
+        assert "Hello, World!" in answer
         # Should complete without tool calls
-        assert len(response.trace) == 0
+        react_trace = response.choices[0].provider_specific_fields.get("react_trace", [])
+        assert len(react_trace) == 0
 
     def test_context_in_request(self, generator, build_message_from_payload, dependency_map):
         """Test ReActAgent with additional context in the request."""
@@ -393,23 +412,21 @@ class TestReActAgentIntegration:
         agent._on_message(
             build_message_from_payload(
                 generator,
-                ReActRequest(
-                    query="Calculate the total cost.",
-                    context={
-                        "items": [
-                            {"name": "Apple", "price": 1.50, "quantity": 3},
-                            {"name": "Banana", "price": 0.75, "quantity": 4},
-                        ]
-                    },
+                ChatCompletionRequest(
+                    messages=[
+                        UserMessage(
+                            content="Calculate the total cost. Context: items are: Apple price=1.50 qty=3, Banana price=0.75 qty=4"
+                        )
+                    ]
                 ),
             )
         )
 
         assert len(results) > 0
-        response = ReActResponse.model_validate(results[0].payload)
-        assert response.success is True
+        response = ChatCompletionResponse.model_validate(results[0].payload)
+        answer = response.choices[0].message.content or ""
         # Total: 1.50 * 3 + 0.75 * 4 = 4.50 + 3.00 = 7.50
-        assert "7.5" in response.answer or "7.50" in response.answer
+        assert "7.5" in answer or "7.50" in answer
 
     def test_custom_system_prompt(self, generator, build_message_from_payload, dependency_map):
         """Test ReActAgent with a custom system prompt."""
@@ -443,14 +460,14 @@ class TestReActAgentIntegration:
         agent._on_message(
             build_message_from_payload(
                 generator,
-                ReActRequest(query="What is 25% of 200?"),
+                ChatCompletionRequest(messages=[UserMessage(content="What is 25% of 200?")]),
             )
         )
 
         assert len(results) > 0
-        response = ReActResponse.model_validate(results[0].payload)
-        assert response.success is True
-        assert "50" in response.answer
+        response = ChatCompletionResponse.model_validate(results[0].payload)
+        answer = response.choices[0].message.content or ""
+        assert "50" in answer
 
     def test_error_recovery(self, generator, build_message_from_payload, dependency_map):
         """Test that agent handles tool errors gracefully."""
@@ -501,19 +518,19 @@ class TestReActAgentIntegration:
         agent._on_message(
             build_message_from_payload(
                 generator,
-                ReActRequest(query="What is 10 divided by 0?"),
+                ChatCompletionRequest(messages=[UserMessage(content="What is 10 divided by 0?")]),
             )
         )
 
         assert len(results) > 0
-        response = ReActResponse.model_validate(results[0].payload)
+        response = ChatCompletionResponse.model_validate(results[0].payload)
+        answer = response.choices[0].message.content or ""
         # The agent should still respond, even if the tool returned an error
-        assert response.success is True
         # Response should mention the error or impossibility
         assert (
-            "zero" in response.answer.lower()
-            or "undefined" in response.answer.lower()
-            or "cannot" in response.answer.lower()
-            or "error" in response.answer.lower()
-            or "impossible" in response.answer.lower()
+            "zero" in answer.lower()
+            or "undefined" in answer.lower()
+            or "cannot" in answer.lower()
+            or "error" in answer.lower()
+            or "impossible" in answer.lower()
         )
