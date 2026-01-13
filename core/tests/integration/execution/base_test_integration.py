@@ -165,7 +165,7 @@ class IntegrationTestABC(ABC):
         # Send a new message to ensure that the responder agent is no longer processing messages
         local_test_agent.publish_initial_message()
 
-        time.sleep(1.0)  # Increased wait time for EmbeddedMessagingBackend
+        time.sleep(1.0)  # Wait for messaging
 
         # Ensure that the responder agent did not process the message
         assert len(local_test_agent.captured_messages) == 1

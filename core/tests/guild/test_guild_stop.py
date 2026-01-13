@@ -21,13 +21,11 @@ from rustic_ai.core.messaging.core.message import (
 class TestGuildStop:
 
     @pytest.fixture
-    def messaging(self, messaging_server):
-        # Use the shared messaging server from conftest.py instead of auto-starting
-        server, port = messaging_server
+    def messaging(self):
         return MessagingConfig(
-            backend_module="rustic_ai.core.messaging.backend.embedded_backend",
-            backend_class="EmbeddedMessagingBackend",
-            backend_config={"auto_start_server": False, "port": port},
+            backend_module="rustic_ai.core.messaging.backend",
+            backend_class="InMemoryMessagingBackend",
+            backend_config={},
         )
 
     @pytest.fixture

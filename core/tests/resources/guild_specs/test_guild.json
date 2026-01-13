@@ -5,9 +5,9 @@
     "properties": {
         "client_type": "rustic_ai.core.messaging.client.MessageTrackingClient",
         "messaging": {
-            "backend_module": "rustic_ai.core.messaging.backend.embedded_backend",
-            "backend_class": "EmbeddedMessagingBackend",
-            "backend_config": {"auto_start_server": true}
+            "backend_module": "rustic_ai.core.messaging.backend",
+            "backend_class": "InMemoryMessagingBackend",
+            "backend_config": {}
         }
     },
     "agents": [

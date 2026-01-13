@@ -177,7 +177,7 @@ class BaseTestExactlyOnceClient(ABC):
         message_publisher.send_message("topic1", MessageConstants.RAW_JSON_FORMAT, {"data": "value3"}, message_id3)
 
         # Allow time for asynchronous message delivery
-        time.sleep(1.0)  # Increased wait time for EmbeddedMessagingBackend
+        time.sleep(1.0)  # Wait for message delivery
 
         # Check if all messages were processed
         assert len(messages_received) == 3

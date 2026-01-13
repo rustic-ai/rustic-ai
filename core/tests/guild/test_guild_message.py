@@ -27,38 +27,13 @@ from core.tests.guild.simple_agent import (
 
 class TestGuildMessages:
 
-    @pytest.fixture(
-        scope="function",  # Changed from class to function to access messaging_server
-        params=[
-            pytest.param(
-                "InMemoryMessagingBackend",
-                id="InMemoryMessagingBackend",
-            ),
-            pytest.param(
-                "EmbeddedMessagingBackend",
-                id="EmbeddedMessagingBackend",
-            ),
-        ],
-    )
-    def messaging(self, request, messaging_server) -> MessagingConfig:
-        backend_type = request.param
-
-        if backend_type == "InMemoryMessagingBackend":
-            return MessagingConfig(
-                backend_module="rustic_ai.core.messaging.backend",
-                backend_class="InMemoryMessagingBackend",
-                backend_config={},
-            )
-        elif backend_type == "EmbeddedMessagingBackend":
-            # Use the shared messaging server from conftest.py
-            server, port = messaging_server
-            return MessagingConfig(
-                backend_module="rustic_ai.core.messaging.backend.embedded_backend",
-                backend_class="EmbeddedMessagingBackend",
-                backend_config={"auto_start_server": False, "port": port},
-            )
-        else:
-            raise ValueError(f"Unknown backend type: {backend_type}")
+    @pytest.fixture(scope="function")
+    def messaging(self, request) -> MessagingConfig:
+        return MessagingConfig(
+            backend_module="rustic_ai.core.messaging.backend",
+            backend_class="InMemoryMessagingBackend",
+            backend_config={},
+        )
 
     def test_message_broadcast(self, messaging: MessagingConfig, database, org_id):
         builder = GuildBuilder(
@@ -159,7 +134,7 @@ class TestGuildMessages:
 
         msg_id_int = msg_id.to_int()
 
-        time.sleep(1.0)  # Increased sleep time for EmbeddedMessagingBackend
+        time.sleep(1.0)  # Wait for message delivery
 
         probe_agent_messages = probe_agent.get_messages()
 
@@ -198,7 +173,7 @@ class TestGuildMessages:
             msg_id=send_id,
         )
 
-        time.sleep(1.0)  # Increased sleep time for EmbeddedMessagingBackend
+        time.sleep(1.0)  # Wait for message delivery
 
         probe_agent_messages = probe_agent.get_messages()
 

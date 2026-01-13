@@ -15,16 +15,15 @@ class TestBuildFromSpec:
     exec_engine_clz: str = "rustic_ai.core.guild.execution.sync.sync_exec_engine.SyncExecutionEngine"
 
     #  Builds a Guild instance from a valid GuildSpec.
-    def test_build_from_valid_guild_spec(self, client_properties, org_id, messaging_server):
-        server, port = messaging_server
+    def test_build_from_valid_guild_spec(self, client_properties, org_id):
         guild_spec = GuildSpec(
             name="MyGuild",
             description="A guild for testing",
             properties={
                 "backend": {
-                    "module": "rustic_ai.core.messaging.backend.embedded_backend",
-                    "class": "EmbeddedMessagingBackend",
-                    "config": {"auto_start_server": False, "port": port},
+                    "module": "rustic_ai.core.messaging.backend",
+                    "class": "InMemoryMessagingBackend",
+                    "config": {},
                 }
             },
             agents=[
@@ -61,16 +60,15 @@ class TestBuildFromSpec:
         guild.shutdown()
 
     #  Builds a Guild instance from a valid GuildSpec with multiple agents.
-    def test_build_with_multiple_agents(self, client_properties, org_id, messaging_server):
-        server, port = messaging_server
+    def test_build_with_multiple_agents(self, client_properties, org_id):
         guild_spec = GuildSpec(
             name="MyGuild",
             description="A guild for testing",
             properties={
                 "backend": {
-                    "module": "rustic_ai.core.messaging.backend.embedded_backend",
-                    "class": "EmbeddedMessagingBackend",
-                    "config": {"auto_start_server": False, "port": port},
+                    "module": "rustic_ai.core.messaging.backend",
+                    "class": "InMemoryMessagingBackend",
+                    "config": {},
                 }
             },
             agents=[
@@ -111,16 +109,15 @@ class TestBuildFromSpec:
         assert agent3 is not None
 
     #  Builds a Guild instance from a valid GuildSpec with storage backend.
-    def test_build_with_storage_backend(self, client_properties, org_id, messaging_server):
-        server, port = messaging_server
+    def test_build_with_storage_backend(self, client_properties, org_id):
         guild_spec = GuildSpec(
             name="MyGuild",
             description="A guild for testing",
             properties={
                 "backend": {
-                    "module": "rustic_ai.core.messaging.backend.embedded_backend",
-                    "class": "EmbeddedMessagingBackend",
-                    "config": {"auto_start_server": False, "port": port},
+                    "module": "rustic_ai.core.messaging.backend",
+                    "class": "InMemoryMessagingBackend",
+                    "config": {},
                 },
                 "storage": {
                     "class": "rustic_ai.core.messaging.storage.InMemoryStorage",
@@ -147,16 +144,15 @@ class TestBuildFromSpec:
         guild.shutdown()
 
     #  Builds a Guild instance from a valid GuildSpec with empty agents.
-    def test_build_with_empty_agents(self, client_properties, org_id, messaging_server):
-        server, port = messaging_server
+    def test_build_with_empty_agents(self, client_properties, org_id):
         guild_spec = GuildSpec(
             name="MyGuild",
             description="A guild for testing",
             properties={
                 "backend": {
-                    "module": "rustic_ai.core.messaging.backend.embedded_backend",
-                    "class": "EmbeddedMessagingBackend",
-                    "config": {"auto_start_server": False, "port": port},
+                    "module": "rustic_ai.core.messaging.backend",
+                    "class": "InMemoryMessagingBackend",
+                    "config": {},
                 }
             },
             agents=[],
@@ -202,8 +198,7 @@ class TestBuildFromSpec:
         pass
 
     #  Validates that an invalid agent class name raises a ValidationError.
-    def test_build_with_invalid_agent_class_name(self, client_properties, org_id, messaging_server):
-        server, port = messaging_server
+    def test_build_with_invalid_agent_class_name(self, client_properties, org_id):
         # Test that ValidationError is raised during AgentSpec creation, not guild launch
         with pytest.raises(ValidationError):
             GuildSpec(
@@ -211,9 +206,9 @@ class TestBuildFromSpec:
                 description="A guild for testing",
                 properties={
                     "backend": {
-                        "module": "rustic_ai.core.messaging.backend.embedded_backend",
-                        "class": "EmbeddedMessagingBackend",
-                        "config": {"auto_start_server": True},
+                        "module": "rustic_ai.core.messaging.backend",
+                        "class": "InMemoryMessagingBackend",
+                        "config": {},
                     }
                 },
                 agents=[

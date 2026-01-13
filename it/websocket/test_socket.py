@@ -126,7 +126,7 @@ class TestServer:
             new_guild_resp = await asyncio.wait_for(client.post("/api/guilds", json=req_data), wait_time * 2)
 
             assert new_guild_resp.status_code == 201
-            # Extra wait for EmbeddedMessagingBackend to ensure agents are fully subscribed
+            # Extra wait to ensure agents are fully subscribed
             time.sleep(wait_time * 2)
 
             no_messages = await asyncio.wait_for(
@@ -137,7 +137,7 @@ class TestServer:
             no_messages_json = no_messages.json()
             assert len(no_messages_json) == 0
 
-        # Additional wait for EmbeddedMessagingBackend agents to be fully ready
+        # Additional wait for agents to be fully ready
         time.sleep(wait_time * 2)
 
         async with websockets.connect(

@@ -20,51 +20,13 @@ from rustic_ai.core.messaging.core.messaging_config import MessagingConfig
 
 class TestHealthMixin:
 
-    @pytest.fixture(scope="module")
-    def messaging_server(self):
-        """Start a single embedded messaging server for all tests in this module."""
-        import asyncio
-        import threading
-        import time
-
-        from rustic_ai.core.messaging.backend.embedded_backend import EmbeddedServer
-
-        port = 31149
-        server = EmbeddedServer(port=port)
-
-        def run_server():
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            loop.run_until_complete(server.start())
-            try:
-                loop.run_forever()
-            except KeyboardInterrupt:
-                pass
-            finally:
-                loop.run_until_complete(server.stop())
-                loop.close()
-
-        thread = threading.Thread(target=run_server, daemon=True)
-        thread.start()
-        time.sleep(0.5)  # Wait for server to start
-
-        yield server, port
-
-        # Clean up
-        if server.running:
-            server.topics.clear()
-            server.messages.clear()
-            server.subscribers.clear()
-
     @pytest.fixture
-    def messaging_config(self, messaging_server):
-        # Use embedded backend for multiprocess tests (in-memory can't work across processes)
-        # Connect to the shared server started by the messaging_server fixture
-        server, port = messaging_server
+    def messaging_config(self):
+        # Use InMemory backend for tests
         return MessagingConfig(
-            backend_module="rustic_ai.core.messaging.backend.embedded_backend",
-            backend_class="EmbeddedMessagingBackend",
-            backend_config={"port": port, "auto_start_server": False},
+            backend_module="rustic_ai.core.messaging.backend",
+            backend_class="InMemoryMessagingBackend",
+            backend_config={},
         )
 
     @pytest.fixture

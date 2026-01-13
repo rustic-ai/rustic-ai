@@ -43,7 +43,6 @@ Agents interact with the messaging system via client interfaces:
 ### Backends
 Pluggable storage implementations:
 - **InMemoryMessagingBackend**: Fast, in-memory storage for development/testing
-- **EmbeddedMessagingBackend**: Embedded messaging for testing without external dependencies
 - **RedisMessagingBackend**: Persistent, distributed storage for production
 - **Custom Backends**: Implement `MessagingBackend` interface for specialized needs
 
@@ -213,50 +212,6 @@ MessagingConfig(
 - **Single Process**: Cannot share across processes
 - **Memory Bound**: Limited by available RAM
 
-#### EmbeddedMessagingBackend
-```python
-# Configuration with auto-start server
-MessagingConfig(
-    backend_module="rustic_ai.core.messaging.backend.embedded_backend",
-    backend_class="EmbeddedMessagingBackend",
-    backend_config={}
-)
-
-# Configuration with external server
-MessagingConfig(
-    backend_module="rustic_ai.core.messaging.backend.embedded_backend",
-    backend_class="EmbeddedMessagingBackend",
-    backend_config={
-        "port": 31134,
-        "auto_start_server": False
-    }
-)
-```
-
-**Features:**
-
-- **Cross-Process**: Enables communication between separate processes
-- **Socket-Based**: Fast TCP socket communication with asyncio
-- **No External Dependencies**: Uses only Python standard library
-- **Real-time Subscriptions**: True push delivery with asyncio
-- **Message TTL**: Automatic message expiration
-- **Auto-cleanup**: Automatic resource management and cleanup
-- **Back-pressure Handling**: Per-connection queues with overflow protection
-- **Testing Focused**: Ideal for testing multiprocess scenarios
-
-**Use Cases:**
-
-- **Multiprocess Testing**: Test agents running in separate processes
-- **Development**: Fast messaging without external setup
-- **CI/CD**: Testing distributed scenarios without infrastructure
-- **Process Isolation**: When you need true process separation
-
-**Limitations:**
-
-- **Memory Only**: Data not persisted to disk
-- **Single Server**: No clustering or high availability
-- **Testing Scope**: Designed for testing rather than production
-
 #### RedisMessagingBackend
 ```python
 # Configuration
@@ -307,10 +262,6 @@ config = MessagingConfig(
     backend_config={}
 )
 
-# Socket messaging backend helper
-from rustic_ai.core.messaging.backend.embedded_backend import create_embedded_messaging_config
-embedded_config = create_embedded_messaging_config()
-
 # MessagingInterface uses config to create backend
 messaging = MessagingInterface(namespace="guild-123", messaging_config=config)
 ```
@@ -336,7 +287,6 @@ messaging_interface.publish(client_a, message)
 
 # 4. Backend stores and notifies:
 #    - InMemory: Immediate callback
-#    - SocketMessaging: Socket push delivery
 #    - Redis: Pub/sub notification
 
 # 5. Agent B receives message:
@@ -347,12 +297,21 @@ messaging_interface.publish(client_a, message)
 ### Cross-Process Messaging Example
 
 ```python
-# Process 1: Setup embedded messaging backend with MultiProcessExecutionEngine
-from rustic_ai.core.messaging.backend.embedded_backend import create_embedded_messaging_config
+# Process 1: Setup Redis messaging backend with MultiProcessExecutionEngine
 from rustic_ai.core.guild.execution.multiprocess import MultiProcessExecutionEngine
 
 # Create messaging config for cross-process communication
-messaging_config = create_embedded_messaging_config()
+messaging_config = MessagingConfig(
+    backend_module="rustic_ai.redis.messaging.backend",
+    backend_class="RedisMessagingBackend",
+    backend_config={
+        "redis_client": {
+            "host": "localhost",
+            "port": 6379,
+            "ssl": False
+        }
+    }
+)
 
 # Create guild with multiprocess execution
 guild = Guild(
@@ -366,10 +325,9 @@ for i in range(3):
     agent_spec = create_worker_agent_spec(f"worker-{i}")
     guild.launch_agent(agent_spec)
 
-# Agents can now communicate across processes via socket messaging backend
-# - No Redis setup required
+# Agents can now communicate across processes via Redis messaging backend
 # - Process isolation maintained
-# - Real-time messaging via socket push delivery
+# - Real-time messaging via Redis pub/sub
 ```
 
 ## Client Types
@@ -410,14 +368,8 @@ Different execution engines work optimally with different messaging backends:
 |------------------|-------------------|---------|
 | `SyncExecutionEngine` | `InMemoryMessagingBackend` | Fast, single-process operation |
 | `MultiThreadedEngine` | `InMemoryMessagingBackend` or `RedisMessagingBackend` | Thread-safe with shared memory |
-| `MultiProcessExecutionEngine` | **`EmbeddedMessagingBackend`** or `RedisMessagingBackend` | Cross-process communication |
+| `MultiProcessExecutionEngine` | `RedisMessagingBackend` | Cross-process communication |
 | `RayExecutionEngine` | `RedisMessagingBackend` | Distributed messaging |
-
-The **EmbeddedMessagingBackend** is particularly well-suited for the `MultiProcessExecutionEngine` because:
-- **No External Dependencies**: Works without Redis setup
-- **Process Isolation**: Each process gets proper isolation while maintaining communication
-- **Testing Friendly**: Ideal for testing distributed scenarios in CI/CD
-- **Redis-like Features**: Provides coordination primitives for process synchronization
 
 ### Execution Engine Responsibilities
 - **Configuration**: Provide `MessagingConfig` to agent wrappers
@@ -454,30 +406,29 @@ class AgentWrapper:
 
 ### Backend Performance Comparison
 
-| Feature | InMemoryBackend | EmbeddedMessagingBackend | RedisBackend |
-|---------|----------------|------------------------|--------------|
-| **Latency** | ~1μs | ~0.1-1ms | ~1-10ms |
-| **Throughput** | Very High | Very High | High |
-| **Persistence** | None | None | Full |
-| **Scalability** | Single Process | Multi-Process | Distributed |
-| **Memory Usage** | High (all in RAM) | Medium (socket overhead) | Low (Redis manages) |
-| **Real-time** | Immediate | Push delivery | Near real-time |
-| **Cross-Process** | No | Yes | Yes |
-| **External Dependencies** | None | None | Redis Server |
+| Feature | InMemoryBackend | RedisBackend |
+|---------|----------------|--------------|
+| **Latency** | ~1μs | ~1-10ms |
+| **Throughput** | Very High | High |
+| **Persistence** | None | Full |
+| **Scalability** | Single Process | Distributed |
+| **Memory Usage** | High (all in RAM) | Low (Redis manages) |
+| **Real-time** | Immediate | Near real-time |
+| **Cross-Process** | No | Yes |
+| **External Dependencies** | None | Redis Server |
 
 ## Best Practices
 
 ### Development
 - Use `InMemoryMessagingBackend` for fast iteration and single-process testing
-- Use `EmbeddedMessagingBackend` for testing multiprocess scenarios and process isolation
 - Enable debug logging for message flow visibility
 - Use `SyncExecutionEngine` for deterministic testing
 
 ### Testing
-- Use `EmbeddedMessagingBackend` with `MultiProcessExecutionEngine` for realistic testing
-- Leverage embedded messaging backend's message-based operations for test coordination
+- Use `InMemoryMessagingBackend` for fast, reliable testing
+- Use `RedisMessagingBackend` with `MultiProcessExecutionEngine` for realistic distributed testing
 - Use real-time subscriptions for responsive test monitoring
-- Take advantage of automatic cleanup for test isolation
+- Ensure proper cleanup for test isolation
 
 ### Production
 - Use `RedisMessagingBackend` for persistence and scalability
@@ -526,4 +477,4 @@ class AgentWrapper:
 - Backend performance metrics
 - Error rates and types
 
-> See the [Execution](execution.md) section for how messaging integrates with execution engines, [Embedded Messaging Backend](embedded_messaging_backend.md) for detailed information about cross-process messaging, and [Agents](agents.md) for agent-specific messaging patterns. 
+> See the [Execution](execution.md) section for how messaging integrates with execution engines and [Agents](agents.md) for agent-specific messaging patterns. 

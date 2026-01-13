@@ -35,9 +35,9 @@ class TestMessageTrackingClient:
         Fixture that returns an instance of the Messaging Interface initialized with the given storage.
         """
         messaging_config = MessagingConfig(
-            backend_module="rustic_ai.core.messaging.backend.embedded_backend",
-            backend_class="EmbeddedMessagingBackend",
-            backend_config={"auto_start_server": True},
+            backend_module="rustic_ai.core.messaging.backend",
+            backend_class="InMemoryMessagingBackend",
+            backend_config={},
         )
         return MessagingInterface(namespace, messaging_config)
 
@@ -176,7 +176,7 @@ class TestMessageTrackingClient:
         message_publisher.send_message("topic1", MessageConstants.RAW_JSON_FORMAT, {"data": "value3"}, message_id3)
 
         # Allow time for asynchronous message delivery
-        time.sleep(1.0)  # Increased wait time for EmbeddedMessagingBackend
+        time.sleep(1.0)  # Wait for message delivery
 
         # Check if all messages were processed
         assert len(messages_received) == 3
