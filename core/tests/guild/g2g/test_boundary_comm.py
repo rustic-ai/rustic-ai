@@ -73,37 +73,13 @@ class EnvoyAgent(BoundaryAgent):
 class TestCrossGuildMessaging:
     """Test cross-guild messaging using BoundaryAgent implementations."""
 
-    @pytest.fixture(
-        scope="function",
-        params=[
-            pytest.param(
-                "InMemoryMessagingBackend",
-                id="InMemoryMessagingBackend",
-            ),
-            pytest.param(
-                "EmbeddedMessagingBackend",
-                id="EmbeddedMessagingBackend",
-            ),
-        ],
-    )
-    def messaging(self, request, messaging_server) -> MessagingConfig:
-        backend_type = request.param
-
-        if backend_type == "InMemoryMessagingBackend":
-            return MessagingConfig(
-                backend_module="rustic_ai.core.messaging.backend",
-                backend_class="InMemoryMessagingBackend",
-                backend_config={},
-            )
-        elif backend_type == "EmbeddedMessagingBackend":
-            server, port = messaging_server
-            return MessagingConfig(
-                backend_module="rustic_ai.core.messaging.backend.embedded_backend",
-                backend_class="EmbeddedMessagingBackend",
-                backend_config={"auto_start_server": False, "port": port},
-            )
-        else:
-            raise ValueError(f"Unknown backend type: {backend_type}")
+    @pytest.fixture(scope="function")
+    def messaging(self, request) -> MessagingConfig:
+        return MessagingConfig(
+            backend_module="rustic_ai.core.messaging.backend",
+            backend_class="InMemoryMessagingBackend",
+            backend_config={},
+        )
 
     def test_gateway_forwards_message_across_guilds(self, messaging: MessagingConfig, database, org_id):
         """Test that a Gateway agent can forward messages to another guild's inbox."""

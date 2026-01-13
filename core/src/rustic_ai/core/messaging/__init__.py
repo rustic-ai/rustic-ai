@@ -1,4 +1,4 @@
-from .backend import EmbeddedMessagingBackend, InMemoryMessagingBackend
+from .backend import InMemoryMessagingBackend
 from .client import (
     ExactlyOnceClient,
     FilteringClient,
@@ -53,7 +53,6 @@ __all__ = [
     "MessagingInterface",
     "MessagingBackend",
     "InMemoryMessagingBackend",
-    "EmbeddedMessagingBackend",
     "MessagingConfig",
     "AgentTag",
     "MDT",

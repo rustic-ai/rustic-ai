@@ -3,7 +3,6 @@ from datetime import datetime, timedelta
 import os
 import time
 
-from flaky import flaky
 import pytest
 import shortuuid
 

@@ -56,38 +56,13 @@ class TestGuildBuilder:
 
     exec_engine_clz: str = "rustic_ai.core.guild.execution.sync.sync_exec_@engine.SyncExecutionEngine"
 
-    @pytest.fixture(
-        scope="function",  # Changed from class to function to access messaging_server
-        params=[
-            pytest.param(
-                "InMemoryMessagingBackend",
-                id="InMemoryMessagingBackend",
-            ),
-            pytest.param(
-                "EmbeddedMessagingBackend",
-                id="EmbeddedMessagingBackend",
-            ),
-        ],
-    )
-    def messaging(self, request, messaging_server) -> MessagingConfig:
-        backend_type = request.param
-
-        if backend_type == "InMemoryMessagingBackend":
-            return MessagingConfig(
-                backend_module="rustic_ai.core.messaging.backend",
-                backend_class="InMemoryMessagingBackend",
-                backend_config={},
-            )
-        elif backend_type == "EmbeddedMessagingBackend":
-            # Use the shared messaging server from conftest.py
-            server, port = messaging_server
-            return MessagingConfig(
-                backend_module="rustic_ai.core.messaging.backend.embedded_backend",
-                backend_class="EmbeddedMessagingBackend",
-                backend_config={"auto_start_server": False, "port": port},
-            )
-        else:
-            raise ValueError(f"Unknown backend type: {backend_type}")
+    @pytest.fixture(scope="function")
+    def messaging(self, request) -> MessagingConfig:
+        return MessagingConfig(
+            backend_module="rustic_ai.core.messaging.backend",
+            backend_class="InMemoryMessagingBackend",
+            backend_config={},
+        )
 
     @pytest.fixture
     def agent_spec(self) -> AgentSpec:
@@ -266,9 +241,9 @@ class TestGuildBuilder:
         msgconf = GuildHelper.get_messaging_config(new_spec)
 
         # This is not parameterized as we are testing initialization from a JSON file
-        assert msgconf.backend_module == "rustic_ai.core.messaging.backend.embedded_backend"
-        assert msgconf.backend_class == "EmbeddedMessagingBackend"
-        assert msgconf.backend_config == {"auto_start_server": True}
+        assert msgconf.backend_module == "rustic_ai.core.messaging.backend"
+        assert msgconf.backend_class == "InMemoryMessagingBackend"
+        assert msgconf.backend_config == {}
 
     def test_guild_from_yaml(
         self,
@@ -291,8 +266,8 @@ class TestGuildBuilder:
         msgconf = GuildHelper.get_messaging_config(new_spec)
 
         # This is not parameterized as we are testing initialization from a YAML file
-        assert msgconf.backend_module == "rustic_ai.core.messaging.backend.embedded_backend"
-        assert msgconf.backend_class == "EmbeddedMessagingBackend"
+        assert msgconf.backend_module == "rustic_ai.core.messaging.backend"
+        assert msgconf.backend_class == "InMemoryMessagingBackend"
         assert msgconf.backend_config == {}
 
     @flaky(max_runs=4, min_passes=1)
@@ -346,7 +321,7 @@ class TestGuildBuilder:
 
         assert guild.routes == routing_slip
 
-        time.sleep(0.5)  # Increased wait time for EmbeddedMessagingBackend
+        time.sleep(0.5)  # Wait for messaging backend
         manager_name = GuildHelper.get_manager_agent_name(guild_id)
 
         # Test if the echo agent is added to the metastore
@@ -454,7 +429,7 @@ class TestGuildBuilder:
             format=AgentLaunchRequest,
         )
 
-        time.sleep(1.0)  # Increased sleep time for EmbeddedMessagingBackend
+        time.sleep(1.0)  # Wait for messaging backend
 
         probe_agent_messages = probe_agent.get_messages()
         assert len(probe_agent_messages) == 3
@@ -612,7 +587,7 @@ class TestGuildBuilder:
             format=UserAgentCreationRequest,
         )
 
-        time.sleep(1.0)  # Increased sleep time for EmbeddedMessagingBackend
+        time.sleep(1.0)  # Wait for messaging backend
 
         probe_agent_messages = probe_agent.get_messages()
 

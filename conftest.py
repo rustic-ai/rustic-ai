@@ -1,9 +1,6 @@
-import asyncio
 import gc
-import hashlib
 import multiprocessing
 import os
-import socket
 import threading
 import time
 import uuid
@@ -38,6 +35,8 @@ def cleanup_aiosqlite():
 
     # After all tests, cleanup aiosqlite connections
     try:
+        import asyncio
+
         import aiosqlite
 
         gc.collect()
@@ -73,99 +72,9 @@ def pytest_sessionfinish(session, exitstatus):
         print("\n✓ All threads cleaned up successfully")
 
 
-def derive_port_from_test_name(test_name: str, start_port: int = 31143) -> int:
-    """Derive a unique port number from test name using hash."""
-    # Create MD5 hash of test name for good distribution
-    hash_obj = hashlib.md5(test_name.encode())
-    hash_int = int(hash_obj.hexdigest(), 16)
-
-    # Map to port range (10,000 ports: 31143-41143)
-    port_offset = hash_int % 10000
-    return start_port + port_offset
-
-
-def find_working_port(start_port: int, max_attempts: int = 50) -> int:
-    """Find an available port starting from start_port with fallback mechanism."""
-    for offset in range(max_attempts):
-        port = start_port + offset
-        try:
-            # Quick availability check
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.bind(("localhost", port))
-                return port
-        except OSError:
-            continue
-    raise RuntimeError(f"No available ports found starting from {start_port}")
-
-
 @pytest.fixture(scope="session")
 def org_id():
     return "acmeorganizationid"
-
-
-@pytest.fixture(scope="session")
-def messaging_server(request):
-    """Start embedded messaging server with test-name-derived port."""
-    import asyncio
-    import threading
-    import time
-
-    from rustic_ai.core.messaging.backend.embedded_backend import EmbeddedServer
-
-    # Get unique port from test name, incorporating worker ID for parallel execution
-    test_name = request.node.name or "session"
-
-    # Add worker ID for pytest-xdist parallel execution
-    worker_id = os.environ.get("PYTEST_XDIST_WORKER", "master")
-    unique_name = f"{test_name}_{worker_id}"
-
-    base_port = derive_port_from_test_name(unique_name)
-
-    # Find working port with fallback mechanism
-    port = find_working_port(base_port)
-    print(f"Worker '{worker_id}' test '{test_name}' using port {port} (base: {base_port})")
-
-    server = EmbeddedServer(port=port)
-
-    def run_server():
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            loop.run_until_complete(server.start())
-            loop.run_forever()
-        except KeyboardInterrupt:
-            pass
-        finally:
-            if server.running:
-                loop.run_until_complete(server.stop())
-            loop.close()
-
-    thread = threading.Thread(target=run_server, daemon=True)
-    thread.start()
-    time.sleep(1.0)  # Wait for server startup
-
-    yield server, port
-
-    # Cleanup
-    if server.running:
-        server.topics.clear()
-        server.messages.clear()
-        server.subscribers.clear()
-
-
-@pytest.fixture(autouse=True)
-def cleanup_messaging_server_state(messaging_server):
-    """Auto-use fixture that cleans up server state before each test."""
-    server, port = messaging_server
-    # Clear server state before each test
-    server.topics.clear()
-    server.messages.clear()
-    server.subscribers.clear()
-    yield
-    # Clean up after test as well
-    server.topics.clear()
-    server.messages.clear()
-    server.subscribers.clear()
 
 
 @pytest.fixture
@@ -208,22 +117,17 @@ def database(request):
 
 
 @pytest.fixture
-def guild(org_id, database, messaging_server):
+def guild(org_id, database):
     global TEST_GUILD_COUNT
     TEST_GUILD_COUNT += 1
     # Use a unique guild ID that includes timestamp and UUID to ensure complete isolation
     guild_id = f"test_guild_{TEST_GUILD_COUNT}_{int(time.time() * 1000)}_{uuid.uuid4().hex[:8]}"
 
-    # Use the shared messaging server instead of auto-starting one
-    server, messaging_port = messaging_server
-
+    # Use InMemoryMessagingBackend as default for tests
     messaging_config: MessagingConfig = MessagingConfig(
-        backend_module="rustic_ai.core.messaging.backend.embedded_backend",
-        backend_class="EmbeddedMessagingBackend",
-        backend_config={
-            "auto_start_server": False,  # Connect to existing server
-            "port": messaging_port,
-        },
+        backend_module="rustic_ai.core.messaging.backend",
+        backend_class="InMemoryMessagingBackend",
+        backend_config={},
     )
 
     # Create and return a Guild
@@ -248,8 +152,7 @@ def guild(org_id, database, messaging_server):
         time.sleep(0.2)
 
     except Exception:
-        # Log but don't fail test cleanup - this is expected during teardown
-        # The EmbeddedMessagingBackend async cleanup can cause harmless warnings
+        # Log but don't fail test cleanup
         pass
 
 
