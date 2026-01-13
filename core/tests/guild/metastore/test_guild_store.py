@@ -198,8 +198,8 @@ class TestGuildStore:
         assert gm.description == "guild1"
 
         assert gm.execution_engine == "rustic_ai.core.guild.execution.sync.sync_exec_engine.SyncExecutionEngine"
-        assert gm.backend_module == "rustic_ai.core.messaging.backend.embedded_backend"
-        assert gm.backend_class == "EmbeddedMessagingBackend"
+        assert gm.backend_module == "rustic_ai.core.messaging.backend"
+        assert gm.backend_class == "InMemoryMessagingBackend"
         assert gm.backend_config == {}
 
     def test_model_with_routing_rules(self, engine, org_id):

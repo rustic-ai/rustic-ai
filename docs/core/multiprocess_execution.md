@@ -52,10 +52,20 @@ engine = MultiProcessExecutionEngine(guild_id="my-guild", max_processes=8)
 ```python
 from rustic_ai.core.guild import Guild
 from rustic_ai.core.guild.execution.multiprocess import MultiProcessExecutionEngine
-from rustic_ai.core.messaging.backend.embedded_backend import create_embedded_messaging_config
+from rustic_ai.core.messaging.core.messaging_config import MessagingConfig
 
-# Create messaging config that works well with multiprocess
-messaging_config = create_embedded_messaging_config()
+# Create messaging config that works well with multiprocess (Redis recommended)
+messaging_config = MessagingConfig(
+    backend_module="rustic_ai.redis.messaging.backend",
+    backend_class="RedisMessagingBackend",
+    backend_config={
+        "redis_client": {
+            "host": "localhost",
+            "port": 6379,
+            "ssl": False
+        }
+    }
+)
 
 # Create guild with multiprocess engine
 guild = Guild(
@@ -180,21 +190,18 @@ engine = MultiProcessExecutionEngine(
 For multiprocess execution, use messaging backends that support cross-process communication:
 
 ```python
-# Option 1: Embedded Messaging Backend (recommended)
-from rustic_ai.core.messaging.backend.embedded_backend import create_embedded_messaging_config
-
-messaging_config = create_embedded_messaging_config()
-
-# Option 2: Redis Backend
+# Redis Backend (recommended for multiprocess)
 from rustic_ai.core.messaging.core.messaging_config import MessagingConfig
 
 messaging_config = MessagingConfig(
-    backend_module="rustic_ai.redis.messaging",
+    backend_module="rustic_ai.redis.messaging.backend",
     backend_class="RedisMessagingBackend",
     backend_config={
-        "host": "localhost",
-        "port": 6379,
-        "db": 0
+        "redis_client": {
+            "host": "localhost",
+            "port": 6379,
+            "ssl": False
+        }
     }
 )
 ```
@@ -343,11 +350,21 @@ except Exception as e:
 import multiprocessing
 from rustic_ai.core.guild import Guild, AgentBuilder
 from rustic_ai.core.guild.execution.multiprocess import MultiProcessExecutionEngine
+from rustic_ai.core.messaging.core.messaging_config import MessagingConfig
 
 def parallel_data_processing():
-    # Create embedded messaging for cross-process communication
-    from rustic_ai.core.messaging.backend.embedded_backend import create_embedded_messaging_config
-    messaging_config = create_embedded_messaging_config()
+    # Create Redis messaging for cross-process communication
+    messaging_config = MessagingConfig(
+        backend_module="rustic_ai.redis.messaging.backend",
+        backend_class="RedisMessagingBackend",
+        backend_config={
+            "redis_client": {
+                "host": "localhost",
+                "port": 6379,
+                "ssl": False
+            }
+        }
+    )
     
     # Create guild with multiprocess engine
     guild = Guild(
@@ -398,8 +415,18 @@ def monte_carlo_simulation(num_workers=None):
     if num_workers is None:
         num_workers = multiprocessing.cpu_count()
     
-    # Setup
-    messaging_config = create_embedded_messaging_config()
+    # Setup with Redis messaging
+    messaging_config = MessagingConfig(
+        backend_module="rustic_ai.redis.messaging.backend",
+        backend_class="RedisMessagingBackend",
+        backend_config={
+            "redis_client": {
+                "host": "localhost",
+                "port": 6379,
+                "ssl": False
+            }
+        }
+    )
     guild = Guild(guild_id="monte_carlo", messaging_config=messaging_config)
     engine = MultiProcessExecutionEngine(guild_id="monte_carlo", max_processes=num_workers)
     
@@ -543,51 +570,33 @@ def monitor_engine_performance(engine, guild_id):
     print(f"Agents: {len(agents)}/{stats['max_processes']}")
 ```
 
-## Integration with Embedded Messaging Backend
+## Integration with Redis Messaging Backend
 
-The multiprocess execution engine works particularly well with the [Embedded Messaging Backend](embedded_messaging_backend.md):
+The multiprocess execution engine works well with the Redis Messaging Backend for cross-process communication:
 
 ```python
-from rustic_ai.core.messaging.backend.embedded_backend import (
-    EmbeddedMessagingBackend,
-    EmbeddedServer
-)
-import asyncio
-import threading
+from rustic_ai.core.messaging.core.messaging_config import MessagingConfig
 
-# Start socket server for cross-process messaging
-def start_server(port=31134):
-    def run_server():
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        server = EmbeddedServer(port=port)
-        loop.run_until_complete(server.start())
-        try:
-            loop.run_forever()
-        finally:
-            loop.run_until_complete(server.stop())
-            loop.close()
-    
-    thread = threading.Thread(target=run_server, daemon=True)
-    thread.start()
-    return port
-
-port = start_server(31134)
-
-# Create multiprocess engine with embedded messaging
+# Create Redis messaging config for multiprocess communication
 messaging_config = MessagingConfig(
-    backend_module="rustic_ai.core.messaging.backend.embedded_backend",
-    backend_class="EmbeddedMessagingBackend",
-    backend_config={"port": port, "auto_start_server": False}
+    backend_module="rustic_ai.redis.messaging.backend",
+    backend_class="RedisMessagingBackend",
+    backend_config={
+        "redis_client": {
+            "host": "localhost",
+            "port": 6379,
+            "ssl": False
+        }
+    }
 )
 
 engine = MultiProcessExecutionEngine(guild_id="my-guild")
 guild = Guild(guild_id="my-guild", messaging_config=messaging_config)
 
 # Agents can now communicate across processes
-# without external dependencies
+# via Redis pub/sub
 ```
 
 ## Conclusion
 
-The Multiprocess Execution Engine provides a powerful solution for CPU-intensive and fault-tolerant agent systems. By escaping Python's GIL and providing process isolation, it enables true parallel execution while maintaining the full feature set of the Rustic AI framework. Combined with the embedded messaging backend, it offers a robust platform for building high-performance, distributed agent systems. 
+The Multiprocess Execution Engine provides a powerful solution for CPU-intensive and fault-tolerant agent systems. By escaping Python's GIL and providing process isolation, it enables true parallel execution while maintaining the full feature set of the Rustic AI framework. Combined with the Redis messaging backend, it offers a robust platform for building high-performance, distributed agent systems. 

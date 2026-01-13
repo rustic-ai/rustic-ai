@@ -120,14 +120,12 @@ class TestMultiProcessExecutionEngine:
         )
 
     @pytest.fixture
-    def messaging_config(self, messaging_server):
-        # Use embedded backend for multiprocess tests (in-memory can't work across processes)
-        # Connect to the shared server from the global fixture
-        server, port = messaging_server
+    def messaging_config(self):
+        # Use InMemory backend for unit tests
         return MessagingConfig(
-            backend_module="rustic_ai.core.messaging.backend.embedded_backend",
-            backend_class="EmbeddedMessagingBackend",
-            backend_config={"port": port, "auto_start_server": False},
+            backend_module="rustic_ai.core.messaging.backend",
+            backend_class="InMemoryMessagingBackend",
+            backend_config={},
         )
 
     def test_engine_initialization(self, guild_id, organization_id):

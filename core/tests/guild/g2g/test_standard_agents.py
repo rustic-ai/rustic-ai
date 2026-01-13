@@ -149,31 +149,13 @@ class SagaInitiatorAgent(Agent):
 class TestStandardAgents:
     """Test standard Gateway and Envoy agent implementations."""
 
-    @pytest.fixture(
-        scope="function",
-        params=[
-            pytest.param("InMemoryMessagingBackend", id="InMemoryMessagingBackend"),
-            pytest.param("EmbeddedMessagingBackend", id="EmbeddedMessagingBackend"),
-        ],
-    )
-    def messaging(self, request, messaging_server) -> MessagingConfig:
-        backend_type = request.param
-
-        if backend_type == "InMemoryMessagingBackend":
-            return MessagingConfig(
-                backend_module="rustic_ai.core.messaging.backend",
-                backend_class="InMemoryMessagingBackend",
-                backend_config={},
-            )
-        elif backend_type == "EmbeddedMessagingBackend":
-            server, port = messaging_server
-            return MessagingConfig(
-                backend_module="rustic_ai.core.messaging.backend.embedded_backend",
-                backend_class="EmbeddedMessagingBackend",
-                backend_config={"auto_start_server": False, "port": port},
-            )
-        else:
-            raise ValueError(f"Unknown backend type: {backend_type}")
+    @pytest.fixture(scope="function")
+    def messaging(self, request) -> MessagingConfig:
+        return MessagingConfig(
+            backend_module="rustic_ai.core.messaging.backend",
+            backend_class="InMemoryMessagingBackend",
+            backend_config={},
+        )
 
     def test_standard_gateway_and_envoy_cross_guild(self, messaging: MessagingConfig, database, org_id):
         """Test standard GatewayAgent and EnvoyAgent for cross-guild messaging.
