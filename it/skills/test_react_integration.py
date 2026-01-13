@@ -27,6 +27,11 @@ from pydantic import BaseModel
 import pytest
 import yaml
 
+from rustic_ai.core.guild.agent_ext.depends.llm.models import (
+    ChatCompletionRequest,
+    ChatCompletionResponse,
+    UserMessage,
+)
 from rustic_ai.core.guild.agent_ext.depends.llm.tools_manager import ToolSpec
 from rustic_ai.core.guild.builders import AgentBuilder
 from rustic_ai.core.guild.dsl import AgentSpec
@@ -34,8 +39,6 @@ from rustic_ai.llm_agent.react import (
     CompositeToolset,
     ReActAgent,
     ReActAgentConfig,
-    ReActRequest,
-    ReActResponse,
     ReActToolset,
 )
 from rustic_ai.skills.executor import ExecutionConfig
@@ -1244,16 +1247,18 @@ class TestReActAgentWithSkills:
         agent._on_message(
             build_message_from_payload(
                 generator,
-                ReActRequest(query="What is the square root of 256 multiplied by 4?"),
+                ChatCompletionRequest(
+                    messages=[UserMessage(content="What is the square root of 256 multiplied by 4?")]
+                ),
             )
         )
 
         assert len(results) > 0
-        response = ReActResponse.model_validate(results[0].payload)
-        assert response.success is True
+        response = ChatCompletionResponse.model_validate(results[0].payload)
+        answer = response.choices[0].message.content or ""
 
         # sqrt(256) = 16, 16 * 4 = 64
-        assert "64" in response.answer
+        assert "64" in answer
 
     def test_react_agent_with_text_skill(
         self,
@@ -1288,16 +1293,18 @@ class TestReActAgentWithSkills:
         agent._on_message(
             build_message_from_payload(
                 generator,
-                ReActRequest(query="Convert the text 'hello world from python' to uppercase."),
+                ChatCompletionRequest(
+                    messages=[UserMessage(content="Convert the text 'hello world from python' to uppercase.")]
+                ),
             )
         )
 
         assert len(results) > 0
-        response = ReActResponse.model_validate(results[0].payload)
-        assert response.success is True
+        response = ChatCompletionResponse.model_validate(results[0].payload)
+        answer = response.choices[0].message.content or ""
 
         # Should contain uppercase result
-        assert "HELLO WORLD FROM PYTHON" in response.answer.upper()
+        assert "HELLO WORLD FROM PYTHON" in answer.upper()
 
     def test_react_agent_with_multi_skills(
         self,
@@ -1345,14 +1352,16 @@ Use the appropriate tools to help the user.
         agent._on_message(
             build_message_from_payload(
                 generator,
-                ReActRequest(query="Calculate 15 * 7 and tell me the result."),
+                ChatCompletionRequest(
+                    messages=[UserMessage(content="Calculate 15 * 7 and tell me the result.")]
+                ),
             )
         )
 
         assert len(results) > 0
-        response = ReActResponse.model_validate(results[0].payload)
-        assert response.success is True
-        assert "105" in response.answer
+        response = ChatCompletionResponse.model_validate(results[0].payload)
+        answer = response.choices[0].message.content or ""
+        assert "105" in answer
 
     def test_react_agent_data_skill(
         self,
@@ -1387,15 +1396,17 @@ Use the appropriate tools to help the user.
         agent._on_message(
             build_message_from_payload(
                 generator,
-                ReActRequest(query="Calculate the average of these numbers: 10, 20, 30, 40, 50"),
+                ChatCompletionRequest(
+                    messages=[UserMessage(content="Calculate the average of these numbers: 10, 20, 30, 40, 50")]
+                ),
             )
         )
 
         assert len(results) > 0
-        response = ReActResponse.model_validate(results[0].payload)
-        assert response.success is True
+        response = ChatCompletionResponse.model_validate(results[0].payload)
+        answer = response.choices[0].message.content or ""
         # Average = 30
-        assert "30" in response.answer
+        assert "30" in answer
 
     def test_react_agent_datetime_skill(
         self,
@@ -1430,16 +1441,18 @@ Use the appropriate tools to help the user.
         agent._on_message(
             build_message_from_payload(
                 generator,
-                ReActRequest(query="What is the current date and time?"),
+                ChatCompletionRequest(
+                    messages=[UserMessage(content="What is the current date and time?")]
+                ),
             )
         )
 
         assert len(results) > 0
-        response = ReActResponse.model_validate(results[0].payload)
-        assert response.success is True
+        response = ChatCompletionResponse.model_validate(results[0].payload)
 
         # Should have used the datetime tool
-        tool_names_used = [step.action for step in response.trace]
+        react_trace = response.choices[0].provider_specific_fields.get("react_trace", [])
+        tool_names_used = [step.get("action", "") for step in react_trace]
         assert any("datetime" in name.lower() or "now" in name.lower() for name in tool_names_used)
 
     def test_react_agent_composite_skill_and_regular_toolset(
@@ -1478,15 +1491,17 @@ Use the appropriate tools to help the user.
         agent._on_message(
             build_message_from_payload(
                 generator,
-                ReActRequest(query="Calculate the value of pi times 2."),
+                ChatCompletionRequest(
+                    messages=[UserMessage(content="Calculate the value of pi times 2.")]
+                ),
             )
         )
 
         assert len(results) > 0
-        response = ReActResponse.model_validate(results[0].payload)
-        assert response.success is True
+        response = ChatCompletionResponse.model_validate(results[0].payload)
+        answer = response.choices[0].message.content or ""
         # pi * 2 ≈ 6.28
-        assert "6.28" in response.answer or "6.3" in response.answer
+        assert "6.28" in answer or "6.3" in answer
 
 
 # ---------------------------------------------------------------------------
@@ -1892,19 +1907,23 @@ If you cannot actually execute because you don't have a file, explain what you w
         agent._on_message(
             build_message_from_payload(
                 generator,
-                ReActRequest(query="What tools do you have available for working with PDF files? List them briefly."),
+                ChatCompletionRequest(
+                    messages=[
+                        UserMessage(content="What tools do you have available for working with PDF files? List them briefly.")
+                    ]
+                ),
             )
         )
 
         assert len(results) > 0
-        response = ReActResponse.model_validate(results[0].payload)
-        assert response.success is True
+        response = ChatCompletionResponse.model_validate(results[0].payload)
+        answer = response.choices[0].message.content or ""
 
         # The agent should mention PDF-related capabilities in its answer
-        answer_lower = response.answer.lower()
+        answer_lower = answer.lower()
         assert any(
             term in answer_lower for term in ["pdf", "form", "field", "fillable", "extract", "convert", "image"]
-        ), f"Expected PDF-related terms in answer: {response.answer}"
+        ), f"Expected PDF-related terms in answer: {answer}"
 
     def test_react_agent_with_xlsx_skill(
         self,
@@ -1962,19 +1981,21 @@ When asked about Excel operations, describe your capabilities.
         agent._on_message(
             build_message_from_payload(
                 generator,
-                ReActRequest(query="What can you do with Excel spreadsheets? What tools do you have?"),
+                ChatCompletionRequest(
+                    messages=[UserMessage(content="What can you do with Excel spreadsheets? What tools do you have?")]
+                ),
             )
         )
 
         assert len(results) > 0
-        response = ReActResponse.model_validate(results[0].payload)
-        assert response.success is True
+        response = ChatCompletionResponse.model_validate(results[0].payload)
+        answer = response.choices[0].message.content or ""
 
         # Should mention Excel/spreadsheet capabilities
-        answer_lower = response.answer.lower()
+        answer_lower = answer.lower()
         assert any(
             term in answer_lower for term in ["excel", "spreadsheet", "xlsx", "formula", "recalc", "cell"]
-        ), f"Expected Excel-related terms in answer: {response.answer}"
+        ), f"Expected Excel-related terms in answer: {answer}"
 
     def test_react_agent_with_webapp_testing_skill(
         self,
@@ -2034,19 +2055,23 @@ When asked about web testing, describe your capabilities and available tools.
         agent._on_message(
             build_message_from_payload(
                 generator,
-                ReActRequest(query="What tools do you have for testing web applications? Describe your capabilities."),
+                ChatCompletionRequest(
+                    messages=[
+                        UserMessage(content="What tools do you have for testing web applications? Describe your capabilities.")
+                    ]
+                ),
             )
         )
 
         assert len(results) > 0
-        response = ReActResponse.model_validate(results[0].payload)
-        assert response.success is True
+        response = ChatCompletionResponse.model_validate(results[0].payload)
+        answer = response.choices[0].message.content or ""
 
         # Should mention web testing capabilities
-        answer_lower = response.answer.lower()
+        answer_lower = answer.lower()
         assert any(
             term in answer_lower for term in ["web", "test", "playwright", "server", "browser", "automation"]
-        ), f"Expected web testing terms in answer: {response.answer}"
+        ), f"Expected web testing terms in answer: {answer}"
 
     def test_react_agent_with_combined_anthropic_skills(
         self,
@@ -2109,22 +2134,26 @@ When asked about document processing, describe your capabilities for both PDFs a
         agent._on_message(
             build_message_from_payload(
                 generator,
-                ReActRequest(
-                    query="I need to work with both PDF documents and Excel spreadsheets. What tools do you have for each?"
+                ChatCompletionRequest(
+                    messages=[
+                        UserMessage(
+                            content="I need to work with both PDF documents and Excel spreadsheets. What tools do you have for each?"
+                        )
+                    ]
                 ),
             )
         )
 
         assert len(results) > 0
-        response = ReActResponse.model_validate(results[0].payload)
-        assert response.success is True
+        response = ChatCompletionResponse.model_validate(results[0].payload)
+        answer = response.choices[0].message.content or ""
 
         # Should mention both PDF and Excel capabilities
-        answer_lower = response.answer.lower()
+        answer_lower = answer.lower()
         has_pdf = any(term in answer_lower for term in ["pdf", "form", "document"])
         has_excel = any(term in answer_lower for term in ["excel", "spreadsheet", "xlsx"])
 
-        assert has_pdf or has_excel, f"Expected document processing terms in answer: {response.answer}"
+        assert has_pdf or has_excel, f"Expected document processing terms in answer: {answer}"
 
 
 # ---------------------------------------------------------------------------
@@ -2622,14 +2651,14 @@ description: Test skill {i}
         agent._on_message(
             build_message_from_payload(
                 generator,
-                ReActRequest(query="Calculate 25 + 17"),
+                ChatCompletionRequest(messages=[UserMessage(content="Calculate 25 + 17")]),
             )
         )
 
         assert len(results) > 0
-        response = ReActResponse.model_validate(results[0].payload)
-        assert response.success is True
-        assert "42" in response.answer
+        response = ChatCompletionResponse.model_validate(results[0].payload)
+        answer = response.choices[0].message.content or ""
+        assert "42" in answer
 
     def test_agent_spec_with_multi_skill_toolset_yaml(
         self,
@@ -2715,13 +2744,16 @@ print(sys.argv[1].upper() if len(sys.argv) > 1 else "NO INPUT")
         agent._on_message(
             build_message_from_payload(
                 generator,
-                ReActRequest(query="What tools do you have available? List them briefly."),
+                ChatCompletionRequest(
+                    messages=[UserMessage(content="What tools do you have available? List them briefly.")]
+                ),
             )
         )
 
         assert len(results) > 0
-        response = ReActResponse.model_validate(results[0].payload)
-        assert response.success is True
+        response = ChatCompletionResponse.model_validate(results[0].payload)
+        # Verify successful response
+        assert response.choices[0].message.content
 
     def test_agent_spec_json_roundtrip(
         self,
@@ -2774,14 +2806,14 @@ print(sys.argv[1].upper() if len(sys.argv) > 1 else "NO INPUT")
         agent._on_message(
             build_message_from_payload(
                 generator,
-                ReActRequest(query="Calculate 100 - 37"),
+                ChatCompletionRequest(messages=[UserMessage(content="Calculate 100 - 37")]),
             )
         )
 
         assert len(results) > 0
-        response = ReActResponse.model_validate(results[0].payload)
-        assert response.success is True
-        assert "63" in response.answer
+        response = ChatCompletionResponse.model_validate(results[0].payload)
+        answer = response.choices[0].message.content or ""
+        assert "63" in answer
 
     def test_spec_file_loading_utility(
         self,
@@ -2822,14 +2854,14 @@ print(sys.argv[1].upper() if len(sys.argv) > 1 else "NO INPUT")
         agent._on_message(
             build_message_from_payload(
                 generator,
-                ReActRequest(query="What is 50 times 2?"),
+                ChatCompletionRequest(messages=[UserMessage(content="What is 50 times 2?")]),
             )
         )
 
         assert len(results) > 0
-        response = ReActResponse.model_validate(results[0].payload)
-        assert response.success is True
-        assert "100" in response.answer
+        response = ChatCompletionResponse.model_validate(results[0].payload)
+        answer = response.choices[0].message.content or ""
+        assert "100" in answer
 
 
 class TestAnthropicSkillsYAMLSpecs:
@@ -2915,13 +2947,14 @@ class TestAnthropicSkillsYAMLSpecs:
         agent._on_message(
             build_message_from_payload(
                 generator,
-                ReActRequest(query="What PDF tools do you have?"),
+                ChatCompletionRequest(messages=[UserMessage(content="What PDF tools do you have?")]),
             )
         )
 
         assert len(results) > 0
-        response = ReActResponse.model_validate(results[0].payload)
-        assert response.success is True
+        response = ChatCompletionResponse.model_validate(results[0].payload)
+        # Verify successful response
+        assert response.choices[0].message.content
 
     def test_combined_skills_yaml_spec(
         self,
@@ -2993,13 +3026,16 @@ class TestAnthropicSkillsYAMLSpecs:
         agent._on_message(
             build_message_from_payload(
                 generator,
-                ReActRequest(query="What document processing tools do you have?"),
+                ChatCompletionRequest(
+                    messages=[UserMessage(content="What document processing tools do you have?")]
+                ),
             )
         )
 
         assert len(results) > 0
-        response = ReActResponse.model_validate(results[0].payload)
-        assert response.success is True
+        response = ChatCompletionResponse.model_validate(results[0].payload)
+        # Verify successful response
+        assert response.choices[0].message.content
 
 
 # ---------------------------------------------------------------------------
@@ -3169,13 +3205,16 @@ class TestMarketplaceSkillToolset:
         agent._on_message(
             build_message_from_payload(
                 generator,
-                ReActRequest(query="What PDF tools do you have available?"),
+                ChatCompletionRequest(
+                    messages=[UserMessage(content="What PDF tools do you have available?")]
+                ),
             )
         )
 
         assert len(results) > 0
-        response = ReActResponse.model_validate(results[0].payload)
-        assert response.success is True
+        response = ChatCompletionResponse.model_validate(results[0].payload)
+        # Verify successful response
+        assert response.choices[0].message.content
 
     def test_marketplace_toolset_yaml_spec_loading(
         self,
@@ -3225,13 +3264,14 @@ class TestMarketplaceSkillToolset:
         agent._on_message(
             build_message_from_payload(
                 generator,
-                ReActRequest(query="What tools do you have?"),
+                ChatCompletionRequest(messages=[UserMessage(content="What tools do you have?")]),
             )
         )
 
         assert len(results) > 0
-        response = ReActResponse.model_validate(results[0].payload)
-        assert response.success is True
+        response = ChatCompletionResponse.model_validate(results[0].payload)
+        # Verify successful response
+        assert response.choices[0].message.content
 
 
 class TestMarketplaceSkillToolsetWithMultipleSkills:
@@ -3318,13 +3358,16 @@ class TestMarketplaceSkillToolsetWithMultipleSkills:
         agent._on_message(
             build_message_from_payload(
                 generator,
-                ReActRequest(query="What document tools do you have?"),
+                ChatCompletionRequest(
+                    messages=[UserMessage(content="What document tools do you have?")]
+                ),
             )
         )
 
         assert len(results) > 0
-        response = ReActResponse.model_validate(results[0].payload)
-        assert response.success is True
+        response = ChatCompletionResponse.model_validate(results[0].payload)
+        # Verify successful response
+        assert response.choices[0].message.content
 
     def test_marketplace_toolset_multiple_skills_yaml_spec(
         self,
@@ -3370,10 +3413,11 @@ class TestMarketplaceSkillToolsetWithMultipleSkills:
         agent._on_message(
             build_message_from_payload(
                 generator,
-                ReActRequest(query="What tools are available?"),
+                ChatCompletionRequest(messages=[UserMessage(content="What tools are available?")]),
             )
         )
 
         assert len(results) > 0
-        response = ReActResponse.model_validate(results[0].payload)
-        assert response.success is True
+        response = ChatCompletionResponse.model_validate(results[0].payload)
+        # Verify successful response
+        assert response.choices[0].message.content

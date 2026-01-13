@@ -1,15 +1,23 @@
 import json
 import logging
+import time
 from typing import List, Optional, Union
+import uuid
 
 from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator
 
 from rustic_ai.core.guild.agent import Agent, ProcessContext, processor
 from rustic_ai.core.guild.agent_ext.depends.llm.llm import LLM
 from rustic_ai.core.guild.agent_ext.depends.llm.models import (
+    AssistantMessage,
+    ChatCompletionError,
     ChatCompletionRequest,
     ChatCompletionResponse,
+    Choice,
+    CompletionUsage,
     DiscriminatedLLMMessage,
+    FinishReason,
+    ResponseCodes,
     SystemMessage,
     ToolMessage,
     UserMessage,
@@ -28,7 +36,7 @@ from rustic_ai.llm_agent.plugins.tool_call_wrapper import (
     ToolSkipResult,
 )
 
-from .models import ReActRequest, ReActResponse, ReActStep
+from .models import ReActStep
 from .toolset import ReActToolset
 
 logger = logging.getLogger(__name__)
@@ -213,9 +221,7 @@ class ReActAgentConfig(BaseAgentProps, LLMPluginMixin):
 
     def has_iteration_plugins(self) -> bool:
         """Check if any per-iteration plugins are configured."""
-        return bool(
-            self.iteration_preprocessors or self.iteration_wrappers or self.iteration_postprocessors
-        )
+        return bool(self.iteration_preprocessors or self.iteration_wrappers or self.iteration_postprocessors)
 
     def has_tool_wrappers(self) -> bool:
         """Check if any tool wrappers are configured."""
@@ -248,44 +254,51 @@ class ReActAgent(Agent[ReActAgentConfig]):
     LLMAgent and separate ToolAgents.
     """
 
-    @processor(clz=ReActRequest, depends_on=["llm"])
-    def handle_react_request(self, ctx: ProcessContext[ReActRequest], llm: LLM):
+    @processor(clz=ChatCompletionRequest, depends_on=["llm"])
+    def handle_chat_completion_request(self, ctx: ProcessContext[ChatCompletionRequest], llm: LLM):
         """
-        Process a ReAct request by running the reasoning loop.
+        Process a ChatCompletionRequest by running the ReAct reasoning loop.
+
+        The agent extracts the query from the last UserMessage and runs the ReAct
+        loop. Any SystemMessage in the incoming request is preserved and prepended
+        to the ReAct system prompt.
+
+        The response is a ChatCompletionResponse with the reasoning trace stored in
+        Choice.provider_specific_fields["react_trace"].
 
         Args:
-            ctx: The process context containing the request.
+            ctx: The process context containing the ChatCompletionRequest.
             llm: The LLM dependency for making completion calls.
         """
         request = ctx.payload
 
         try:
-            result, plugin_messages = self._run_react_loop(ctx, request.query, llm, request.context)
+            result, plugin_messages = self._run_react_loop(ctx, request, llm)
 
             # Send plugin-generated messages first
             for msg in plugin_messages:
                 ctx.send(msg)
 
-            # Send the final ReActResponse
+            # Send the final ChatCompletionResponse
             ctx.send(result)
 
         except Exception as e:
             logger.error(f"Error in ReAct loop: {e}", exc_info=True)
-            ctx.send(
-                ReActResponse(
-                    answer="An error occurred while processing your request.",
-                    success=False,
-                    error=str(e),
+            ctx.send_error(
+                ChatCompletionError(
+                    status_code=ResponseCodes.INTERNAL_SERVER_ERROR,
+                    message=f"Error in ReAct loop: {e}",
+                    model=str(self.config.model),
+                    request_messages=list(request.messages),
                 )
             )
 
     def _run_react_loop(
         self,
-        ctx: ProcessContext[ReActRequest],
-        query: str,
+        ctx: ProcessContext[ChatCompletionRequest],
+        incoming_request: ChatCompletionRequest,
         llm: LLM,
-        context: Optional[dict] = None,
-    ) -> tuple[ReActResponse, list]:
+    ) -> tuple[ChatCompletionResponse, list]:
         """
         Execute the ReAct reasoning loop with plugin support.
 
@@ -295,22 +308,63 @@ class ReActAgent(Agent[ReActAgentConfig]):
 
         Args:
             ctx: The process context (needed for plugin execution).
-            query: The user's query to process.
+            incoming_request: The incoming ChatCompletionRequest.
             llm: The LLM to use for completions.
-            context: Optional additional context.
 
         Returns:
-            Tuple of (ReActResponse, plugin_messages)
+            Tuple of (ChatCompletionResponse, plugin_messages)
         """
-        # Build initial request with tools
+        # Record start time for response
+        start_time = int(time.time())
+
+        # Extract system messages and user query from incoming request
+        incoming_system_messages: List[SystemMessage] = []
+        user_query: Optional[str] = None
+
+        for msg in incoming_request.messages:
+            if isinstance(msg, SystemMessage):
+                incoming_system_messages.append(msg)
+            elif isinstance(msg, UserMessage):
+                # Use the last UserMessage as the query
+                if isinstance(msg.content, str):
+                    user_query = msg.content
+                else:
+                    # ArrayOfContentParts - extract text parts
+                    text_parts = [p.text for p in msg.content.root if hasattr(p, "text")]
+                    user_query = " ".join(text_parts)
+
+        if not user_query:
+            # No user query found - return error response
+            return (
+                self._build_error_response(
+                    "No user message found in request",
+                    start_time,
+                    [],
+                    0,
+                ),
+                [],
+            )
+
+        # Build the messages list: incoming system messages + ReAct system prompt + user query
+        initial_messages: List[DiscriminatedLLMMessage] = []
+
+        # Append incoming system messages first (preserving user context)
+        for sys_msg in incoming_system_messages:
+            initial_messages.append(sys_msg)
+
+        # Append the ReAct system prompt
+        initial_messages.append(SystemMessage(content=self._get_system_prompt()))
+
+        # Append the user query
+        initial_messages.append(UserMessage(content=user_query))
+
+        # Build initial request with tools from toolset
+        # Use temperature/max_tokens from incoming request if provided, else fall back to config
         initial_request = ChatCompletionRequest(
-            messages=[
-                SystemMessage(content=self._get_system_prompt()),
-                UserMessage(content=self._format_query(query, context)),
-            ],
+            messages=initial_messages,
             tools=self.config.toolset.chat_tools if self.config.toolset.tool_count > 0 else None,
-            temperature=self.config.temperature,
-            max_tokens=self.config.max_tokens,
+            temperature=incoming_request.temperature or self.config.temperature,
+            max_tokens=incoming_request.max_tokens or self.config.max_tokens,
         )
 
         # PREPROCESS (once, before loop) - create a temporary context for the helper
@@ -324,6 +378,7 @@ class ReActAgent(Agent[ReActAgentConfig]):
         toolset = self.config.toolset
         final_response: Optional[ChatCompletionResponse] = None
         iterations_completed = 0
+        total_usage = CompletionUsage(prompt_tokens=0, completion_tokens=0, total_tokens=0)
 
         all_iteration_messages: list = []  # Accumulate messages from iteration plugins
 
@@ -339,27 +394,33 @@ class ReActAgent(Agent[ReActAgentConfig]):
             )
 
             # ITERATION PREPROCESS (before each LLM call)
-            iteration_request = self._preprocess_iteration_if_needed(
-                ctx, llm, iteration_request, iteration
-            )
+            iteration_request = self._preprocess_iteration_if_needed(ctx, llm, iteration_request, iteration)
 
             # Call LLM
             response = self._call_llm_direct(llm, iteration_request)
 
             if isinstance(response, str):
-                # Error occurred
-                return ReActResponse(
-                    answer=response,
-                    trace=trace,
-                    iterations=iterations_completed,
-                    success=False,
-                    error=response,
-                ), all_iteration_messages
+                # Error occurred - return error response
+                return (
+                    self._build_error_response(
+                        response,
+                        start_time,
+                        trace,
+                        iterations_completed,
+                    ),
+                    all_iteration_messages,
+                )
+
+            # Accumulate usage statistics
+            if response.usage:
+                total_usage = CompletionUsage(
+                    prompt_tokens=total_usage.prompt_tokens + response.usage.prompt_tokens,
+                    completion_tokens=total_usage.completion_tokens + response.usage.completion_tokens,
+                    total_tokens=total_usage.total_tokens + response.usage.total_tokens,
+                )
 
             # ITERATION POSTPROCESS (after each LLM call)
-            iter_messages = self._postprocess_iteration_if_needed(
-                ctx, llm, iteration_request, response, iteration
-            )
+            iter_messages = self._postprocess_iteration_if_needed(ctx, llm, iteration_request, response, iteration)
             all_iteration_messages.extend(iter_messages)
 
             choice = response.choices[0]
@@ -427,27 +488,33 @@ class ReActAgent(Agent[ReActAgentConfig]):
         # Combine iteration messages with loop-level plugin messages
         all_plugin_messages = all_iteration_messages + loop_plugin_messages
 
-        # Build final response
+        # Build final response as ChatCompletionResponse
         if final_response:
-            return ReActResponse(
-                answer=final_response.choices[0].message.content or "",
-                trace=trace,
-                iterations=iterations_completed,
-                success=True,
-            ), all_plugin_messages
+            return (
+                self._build_success_response(
+                    answer=final_response.choices[0].message.content or "",
+                    start_time=start_time,
+                    trace=trace,
+                    iterations=iterations_completed,
+                    usage=total_usage,
+                ),
+                all_plugin_messages,
+            )
         else:
             # Max iterations reached
-            return ReActResponse(
-                answer="Maximum iterations reached. Unable to complete the task.",
-                trace=trace,
-                iterations=self.config.max_iterations,
-                success=False,
-                error="Max iterations reached",
-            ), all_plugin_messages
+            return (
+                self._build_max_iterations_response(
+                    start_time=start_time,
+                    trace=trace,
+                    iterations=self.config.max_iterations,
+                    usage=total_usage,
+                ),
+                all_plugin_messages,
+            )
 
     def _preprocess_if_needed(
         self,
-        ctx: ProcessContext[ReActRequest],
+        ctx: ProcessContext[ChatCompletionRequest],
         llm: LLM,
         request: ChatCompletionRequest,
     ) -> ChatCompletionRequest:
@@ -455,20 +522,18 @@ class ReActAgent(Agent[ReActAgentConfig]):
         if not self.config.has_plugins():
             return request
 
-        # Create a temporary context wrapper for the helper
-        # The helper expects ProcessContext[ChatCompletionRequest]
         return LLMAgentHelper.preprocess_request(
             agent=self,
             config=self.config,
             llm=llm,
-            ctx=ctx,  # type: ignore[arg-type]
+            ctx=ctx,
             request=request,
             llm_params=self.config.get_llm_params(),
         )
 
     def _postprocess_if_needed(
         self,
-        ctx: ProcessContext[ReActRequest],
+        ctx: ProcessContext[ChatCompletionRequest],
         llm: LLM,
         request: ChatCompletionRequest,
         response: Optional[ChatCompletionResponse],
@@ -481,14 +546,14 @@ class ReActAgent(Agent[ReActAgentConfig]):
             agent=self,
             config=self.config,
             llm=llm,
-            ctx=ctx,  # type: ignore[arg-type]
+            ctx=ctx,
             final_request=request,
             response=response,
         )
 
     def _preprocess_iteration_if_needed(
         self,
-        ctx: ProcessContext[ReActRequest],
+        ctx: ProcessContext[ChatCompletionRequest],
         llm: LLM,
         request: ChatCompletionRequest,
         iteration: int,
@@ -502,14 +567,14 @@ class ReActAgent(Agent[ReActAgentConfig]):
             agent=self,
             config=self._iteration_plugin_config(),
             llm=llm,
-            ctx=ctx,  # type: ignore[arg-type]
+            ctx=ctx,
             request=request,
             llm_params=self.config.get_llm_params(),
         )
 
     def _postprocess_iteration_if_needed(
         self,
-        ctx: ProcessContext[ReActRequest],
+        ctx: ProcessContext[ChatCompletionRequest],
         llm: LLM,
         request: ChatCompletionRequest,
         response: ChatCompletionResponse,
@@ -523,7 +588,7 @@ class ReActAgent(Agent[ReActAgentConfig]):
             agent=self,
             config=self._iteration_plugin_config(),
             llm=llm,
-            ctx=ctx,  # type: ignore[arg-type]
+            ctx=ctx,
             final_request=request,
             response=response,
         )
@@ -551,12 +616,121 @@ class ReActAgent(Agent[ReActAgentConfig]):
             return self.config.system_prompt
         return DEFAULT_REACT_SYSTEM_PROMPT
 
-    def _format_query(self, query: str, context: Optional[dict] = None) -> str:
-        """Format the user query, optionally including context."""
-        if context:
-            context_str = json.dumps(context, indent=2)
-            return f"Context:\n{context_str}\n\nQuery: {query}"
-        return query
+    def _build_success_response(
+        self,
+        answer: str,
+        start_time: int,
+        trace: List[ReActStep],
+        iterations: int,
+        usage: Optional[CompletionUsage] = None,
+    ) -> ChatCompletionResponse:
+        """
+        Build a successful ChatCompletionResponse with react_trace in provider_specific_fields.
+
+        Args:
+            answer: The final answer content.
+            start_time: Unix timestamp when the loop started.
+            trace: The reasoning trace of ReActSteps.
+            iterations: Number of iterations completed.
+            usage: Aggregated token usage statistics.
+
+        Returns:
+            ChatCompletionResponse with the answer and trace metadata.
+        """
+        return ChatCompletionResponse(
+            id=f"react-{uuid.uuid4().hex[:12]}",
+            created=start_time,
+            model=str(self.config.model),
+            choices=[
+                Choice(
+                    index=0,
+                    message=AssistantMessage(content=answer),
+                    finish_reason=FinishReason.stop,
+                    provider_specific_fields={
+                        "react_trace": [step.model_dump() for step in trace],
+                        "iterations": iterations,
+                    },
+                )
+            ],
+            usage=usage if usage and usage.total_tokens > 0 else None,
+        )
+
+    def _build_error_response(
+        self,
+        error_message: str,
+        start_time: int,
+        trace: List[ReActStep],
+        iterations: int,
+    ) -> ChatCompletionResponse:
+        """
+        Build an error ChatCompletionResponse with react_trace in provider_specific_fields.
+
+        Args:
+            error_message: The error message.
+            start_time: Unix timestamp when the loop started.
+            trace: The reasoning trace of ReActSteps up to the error.
+            iterations: Number of iterations completed before error.
+
+        Returns:
+            ChatCompletionResponse with error info in provider_specific_fields.
+        """
+        return ChatCompletionResponse(
+            id=f"react-{uuid.uuid4().hex[:12]}",
+            created=start_time,
+            model=str(self.config.model),
+            choices=[
+                Choice(
+                    index=0,
+                    message=AssistantMessage(content=error_message),
+                    finish_reason=FinishReason.stop,
+                    provider_specific_fields={
+                        "react_trace": [step.model_dump() for step in trace],
+                        "iterations": iterations,
+                        "error": error_message,
+                        "success": False,
+                    },
+                )
+            ],
+        )
+
+    def _build_max_iterations_response(
+        self,
+        start_time: int,
+        trace: List[ReActStep],
+        iterations: int,
+        usage: Optional[CompletionUsage] = None,
+    ) -> ChatCompletionResponse:
+        """
+        Build a ChatCompletionResponse for when max iterations is reached.
+
+        Args:
+            start_time: Unix timestamp when the loop started.
+            trace: The reasoning trace of ReActSteps.
+            iterations: Number of iterations (max_iterations).
+            usage: Aggregated token usage statistics.
+
+        Returns:
+            ChatCompletionResponse with finish_reason=length indicating truncation.
+        """
+        return ChatCompletionResponse(
+            id=f"react-{uuid.uuid4().hex[:12]}",
+            created=start_time,
+            model=str(self.config.model),
+            choices=[
+                Choice(
+                    index=0,
+                    message=AssistantMessage(content="Maximum iterations reached. Unable to complete the task."),
+                    finish_reason=FinishReason.length,  # Indicates truncation
+                    provider_specific_fields={
+                        "react_trace": [step.model_dump() for step in trace],
+                        "iterations": iterations,
+                        "error": "Max iterations reached",
+                        "success": False,
+                    },
+                )
+            ],
+            usage=usage if usage and usage.total_tokens > 0 else None,
+        )
 
     def _call_llm(
         self,
@@ -662,9 +836,7 @@ class ReActAgent(Agent[ReActAgentConfig]):
                     # Wrapper wants to skip execution
                     tool_output = result.output
                     # Still run postprocessors with the skipped result
-                    return self._run_tool_postprocessors(
-                        ctx, tool_name, current_args, tool_output, plugin_messages
-                    )
+                    return self._run_tool_postprocessors(ctx, tool_name, current_args, tool_output, plugin_messages)
                 else:
                     # Continue with modified args
                     current_args = result
@@ -678,18 +850,14 @@ class ReActAgent(Agent[ReActAgentConfig]):
         except Exception as e:
             logger.warning(f"Error executing tool {tool_name}: {e}")
             # Try error handlers
-            handled_output = self._run_tool_error_handlers(
-                ctx, tool_name, current_args, e
-            )
+            handled_output = self._run_tool_error_handlers(ctx, tool_name, current_args, e)
             if handled_output is not None:
                 tool_output = handled_output
             else:
                 tool_output = f"Error executing tool: {e}"
 
         # Run postprocessors
-        return self._run_tool_postprocessors(
-            ctx, tool_name, current_args, tool_output, plugin_messages
-        )
+        return self._run_tool_postprocessors(ctx, tool_name, current_args, tool_output, plugin_messages)
 
     def _run_tool_postprocessors(
         self,

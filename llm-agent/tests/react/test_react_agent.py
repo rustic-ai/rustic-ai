@@ -9,12 +9,15 @@ from rustic_ai.core.guild.agent_ext.depends.dependency_resolver import Dependenc
 from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     AssistantMessage,
     ChatCompletionMessageToolCall,
+    ChatCompletionRequest,
     ChatCompletionResponse,
     Choice,
     CompletionUsage,
     FinishReason,
     FunctionCall,
+    SystemMessage,
     ToolType,
+    UserMessage,
 )
 from rustic_ai.core.guild.agent_ext.depends.llm.tools_manager import ToolSpec
 from rustic_ai.core.guild.builders import AgentBuilder
@@ -23,8 +26,6 @@ from rustic_ai.llm_agent.react import (
     CompositeToolset,
     ReActAgent,
     ReActAgentConfig,
-    ReActRequest,
-    ReActResponse,
     ReActStep,
     ReActToolset,
 )
@@ -339,15 +340,21 @@ class TestReActAgent:
             agent._on_message(
                 build_message_from_payload(
                     generator,
-                    ReActRequest(query="What is the answer?"),
+                    ChatCompletionRequest(
+                        messages=[UserMessage(content="What is the answer?")]
+                    ),
                 )
             )
 
         assert len(results) == 1
-        response = ReActResponse.model_validate(results[0].payload)
-        assert response.answer == "The answer is 42."
-        assert response.success is True
-        assert len(response.trace) == 0  # No tool calls
+        response = ChatCompletionResponse.model_validate(results[0].payload)
+        assert response.choices[0].message.content == "The answer is 42."
+        assert response.choices[0].finish_reason == FinishReason.stop
+        # Check react_trace in provider_specific_fields
+        provider_fields = response.choices[0].provider_specific_fields
+        assert provider_fields is not None
+        assert "react_trace" in provider_fields
+        assert len(provider_fields["react_trace"]) == 0  # No tool calls
 
     def test_agent_with_tool_call(self, generator, build_message_from_payload):
         """Test agent with tool calls."""
@@ -398,51 +405,101 @@ class TestReActAgent:
             agent._on_message(
                 build_message_from_payload(
                     generator,
-                    ReActRequest(query="What is 2 + 2?"),
+                    ChatCompletionRequest(
+                        messages=[UserMessage(content="What is 2 + 2?")]
+                    ),
                 )
             )
 
         assert len(results) == 1
-        response = ReActResponse.model_validate(results[0].payload)
-        assert response.answer == "The result is 4."
-        assert response.success is True
-        assert len(response.trace) == 1
-        assert response.trace[0].action == "calculate"
-        assert response.trace[0].observation == "4"
+        response = ChatCompletionResponse.model_validate(results[0].payload)
+        assert response.choices[0].message.content == "The result is 4."
+        assert response.choices[0].finish_reason == FinishReason.stop
+        # Check react_trace in provider_specific_fields
+        provider_fields = response.choices[0].provider_specific_fields
+        assert provider_fields is not None
+        assert "react_trace" in provider_fields
+        trace = provider_fields["react_trace"]
+        assert len(trace) == 1
+        assert trace[0]["action"] == "calculate"
+        assert trace[0]["observation"] == "4"
+
+    def test_agent_with_system_message_appended(self, generator, build_message_from_payload):
+        """Test that incoming SystemMessage is preserved and appended before ReAct prompt."""
+        agent_spec: AgentSpec = (
+            AgentBuilder(ReActAgent)
+            .set_id("react_agent")
+            .set_name("ReAct Agent")
+            .set_description("A ReAct agent for testing")
+            .set_properties(
+                ReActAgentConfig(
+                    model="test-model",
+                    toolset=CalculatorToolset(),
+                )
+            )
+            .build_spec()
+        )
+
+        mock_dependency_map = {
+            "llm": DependencySpec(
+                class_name="rustic_ai.litellm.agent_ext.llm.LiteLLMResolver",
+                properties={"model": "test-model"},
+            ),
+        }
+
+        agent, results = wrap_agent_for_testing(
+            agent_spec,
+            dependency_map=mock_dependency_map,
+        )
+
+        captured_requests = []
+
+        def capture_llm_call(llm, request):
+            captured_requests.append(request)
+            return create_mock_response("Done.")
+
+        custom_system_content = "You are a math tutor. Be helpful and encouraging."
+
+        with patch.object(agent, "_call_llm_direct", side_effect=capture_llm_call):
+            agent._on_message(
+                build_message_from_payload(
+                    generator,
+                    ChatCompletionRequest(
+                        messages=[
+                            SystemMessage(content=custom_system_content),
+                            UserMessage(content="What is 5 + 5?"),
+                        ]
+                    ),
+                )
+            )
+
+        # Verify the LLM was called
+        assert len(captured_requests) == 1
+        llm_request = captured_requests[0]
+
+        # The messages should have: user's SystemMessage, ReAct SystemMessage, UserMessage
+        assert len(llm_request.messages) >= 3
+
+        # First message should be the user's custom system message
+        assert isinstance(llm_request.messages[0], SystemMessage)
+        assert llm_request.messages[0].content == custom_system_content
+
+        # Second message should be the ReAct system prompt
+        assert isinstance(llm_request.messages[1], SystemMessage)
+        assert "ReAct" in llm_request.messages[1].content
+
+        # Last message should be the user query
+        assert isinstance(llm_request.messages[-1], UserMessage)
+        assert llm_request.messages[-1].content == "What is 5 + 5?"
+
+        # Verify response
+        assert len(results) == 1
+        response = ChatCompletionResponse.model_validate(results[0].payload)
+        assert response.choices[0].message.content == "Done."
 
 
 class TestReActModels:
     """Tests for ReAct model classes."""
-
-    def test_react_request(self):
-        """Test ReActRequest model."""
-        request = ReActRequest(query="Test query")
-        assert request.query == "Test query"
-        assert request.context is None
-
-        request_with_context = ReActRequest(query="Test query", context={"key": "value"})
-        assert request_with_context.context == {"key": "value"}
-
-    def test_react_response(self):
-        """Test ReActResponse model."""
-        response = ReActResponse(
-            answer="Test answer",
-            trace=[
-                ReActStep(
-                    thought="Thinking...",
-                    action="test_action",
-                    action_input={"arg": "value"},
-                    observation="Result",
-                )
-            ],
-            iterations=1,
-            success=True,
-        )
-
-        assert response.answer == "Test answer"
-        assert len(response.trace) == 1
-        assert response.iterations == 1
-        assert response.success is True
 
     def test_react_step(self):
         """Test ReActStep model."""
@@ -457,3 +514,18 @@ class TestReActModels:
         assert step.action == "calculate"
         assert step.action_input == {"expression": "1 + 1"}
         assert step.observation == "2"
+
+    def test_react_step_serialization(self):
+        """Test ReActStep serialization for storage in provider_specific_fields."""
+        step = ReActStep(
+            thought="Let me think...",
+            action="search",
+            action_input={"query": "test"},
+            observation="Found results",
+        )
+
+        data = step.model_dump()
+        assert data["thought"] == "Let me think..."
+        assert data["action"] == "search"
+        assert data["action_input"] == {"query": "test"}
+        assert data["observation"] == "Found results"

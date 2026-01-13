@@ -5,7 +5,7 @@ This module tests that RequestPreprocessor, LLMCallWrapper, and ResponsePostproc
 plugins work correctly with ReActAgent. Key behaviors to verify:
 1. Preprocessors run once before the ReAct loop starts
 2. Postprocessors run once after the loop completes (with the final response)
-3. Plugin-generated messages are returned alongside the ReActResponse
+3. Plugin-generated messages are returned alongside the ChatCompletionResponse
 4. Plugins can access injected dependencies via self.get_dep(agent, name)
 """
 
@@ -33,6 +33,7 @@ from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     FunctionCall,
     SystemMessage,
     ToolType,
+    UserMessage,
 )
 from rustic_ai.core.guild.agent_ext.depends.llm.tools_manager import ToolSpec
 from rustic_ai.core.guild.builders import AgentBuilder
@@ -49,8 +50,6 @@ from rustic_ai.llm_agent.plugins.tool_call_wrapper import (
 from rustic_ai.llm_agent.react import (
     ReActAgent,
     ReActAgentConfig,
-    ReActRequest,
-    ReActResponse,
     ReActToolset,
 )
 
@@ -510,7 +509,7 @@ class TestReActAgentPreprocessor:
             agent._on_message(
                 build_message_from_payload(
                     generator,
-                    ReActRequest(query="Calculate 2 + 2 then multiply by 3"),
+                    ChatCompletionRequest(messages=[UserMessage(content="Calculate 2 + 2 then multiply by 3")]),
                 )
             )
 
@@ -551,7 +550,7 @@ class TestReActAgentPreprocessor:
             agent._on_message(
                 build_message_from_payload(
                     generator,
-                    ReActRequest(query="What is the answer?"),
+                    ChatCompletionRequest(messages=[UserMessage(content="What is the answer?")]),
                 )
             )
 
@@ -618,7 +617,7 @@ class TestReActAgentPostprocessor:
             agent._on_message(
                 build_message_from_payload(
                     generator,
-                    ReActRequest(query="What is 5 + 5?"),
+                    ChatCompletionRequest(messages=[UserMessage(content="What is 5 + 5?")]),
                 )
             )
 
@@ -660,7 +659,7 @@ class TestReActAgentPostprocessor:
             agent._on_message(
                 build_message_from_payload(
                     generator,
-                    ReActRequest(query="Simple question"),
+                    ChatCompletionRequest(messages=[UserMessage(content="Simple question")]),
                 )
             )
 
@@ -697,20 +696,20 @@ class TestReActAgentPostprocessor:
             agent._on_message(
                 build_message_from_payload(
                     generator,
-                    ReActRequest(query="Test query"),
+                    ChatCompletionRequest(messages=[UserMessage(content="Test query")]),
                 )
             )
 
-        # Should have 2 results: AuditMessage from postprocessor (sent first) + ReActResponse
+        # Should have 2 results: AuditMessage from postprocessor (sent first) + ChatCompletionResponse
         assert len(results) == 2
 
         # First is the plugin-generated AuditMessage (plugin messages sent first)
         audit = MessageGeneratingPostprocessor.AuditMessage.model_validate(results[0].payload)
         assert audit.audit_type == "react_completion"
 
-        # Second is the ReActResponse
-        response = ReActResponse.model_validate(results[1].payload)
-        assert response.answer == "Answer."
+        # Second is the ChatCompletionResponse
+        response = ChatCompletionResponse.model_validate(results[1].payload)
+        assert response.choices[0].message.content == "Answer."
 
 
 class TestReActAgentWrapper:
@@ -771,7 +770,7 @@ class TestReActAgentWrapper:
             agent._on_message(
                 build_message_from_payload(
                     generator,
-                    ReActRequest(query="Calculate 1+1"),
+                    ChatCompletionRequest(messages=[UserMessage(content="Calculate 1+1")]),
                 )
             )
 
@@ -827,7 +826,7 @@ class TestReActAgentPluginDependencyInjection:
             agent._on_message(
                 build_message_from_payload(
                     generator,
-                    ReActRequest(query="Test"),
+                    ChatCompletionRequest(messages=[UserMessage(content="Test")]),
                 )
             )
 
@@ -869,7 +868,7 @@ class TestReActAgentPluginDependencyInjection:
             agent._on_message(
                 build_message_from_payload(
                     generator,
-                    ReActRequest(query="Test"),
+                    ChatCompletionRequest(messages=[UserMessage(content="Test")]),
                 )
             )
 
@@ -920,7 +919,7 @@ class TestReActAgentMultiplePlugins:
             agent._on_message(
                 build_message_from_payload(
                     generator,
-                    ReActRequest(query="Test query"),
+                    ChatCompletionRequest(messages=[UserMessage(content="Test query")]),
                 )
             )
 
@@ -932,8 +931,8 @@ class TestReActAgentMultiplePlugins:
 
         # Response should be captured correctly
         assert len(results) == 1
-        response = ReActResponse.model_validate(results[0].payload)
-        assert response.answer == "Final answer."
+        response = ChatCompletionResponse.model_validate(results[0].payload)
+        assert response.choices[0].message.content == "Final answer."
 
 
 # =============================================================================
@@ -1161,7 +1160,7 @@ class TestReActAgentIterationPlugins:
             agent._on_message(
                 build_message_from_payload(
                     generator,
-                    ReActRequest(query="Test"),
+                    ChatCompletionRequest(messages=[UserMessage(content="Test")]),
                 )
             )
 
@@ -1215,7 +1214,7 @@ class TestReActAgentIterationPlugins:
             agent._on_message(
                 build_message_from_payload(
                     generator,
-                    ReActRequest(query="What is 5+5?"),
+                    ChatCompletionRequest(messages=[UserMessage(content="What is 5+5?")]),
                 )
             )
 
@@ -1279,7 +1278,7 @@ class TestReActAgentIterationPlugins:
             agent._on_message(
                 build_message_from_payload(
                     generator,
-                    ReActRequest(query="Test"),
+                    ChatCompletionRequest(messages=[UserMessage(content="Test")]),
                 )
             )
 
@@ -1334,23 +1333,23 @@ class TestReActAgentIterationPlugins:
             agent._on_message(
                 build_message_from_payload(
                     generator,
-                    ReActRequest(query="Test"),
+                    ChatCompletionRequest(messages=[UserMessage(content="Test")]),
                 )
             )
 
-        # Should have 3 results: 2 IterationMetric messages + 1 ReActResponse
+        # Should have 3 results: 2 IterationMetric messages + 1 ChatCompletionResponse
         assert len(results) == 3
 
-        # First two are iteration metrics (iteration messages sent before ReActResponse)
+        # First two are iteration metrics (iteration messages sent before ChatCompletionResponse)
         metric1 = IterationMessageGenerator.IterationMetric.model_validate(results[0].payload)
         assert metric1.iteration_metric == "step_complete"
 
         metric2 = IterationMessageGenerator.IterationMetric.model_validate(results[1].payload)
         assert metric2.iteration_metric == "step_complete"
 
-        # Last is the ReActResponse
-        response = ReActResponse.model_validate(results[2].payload)
-        assert response.answer == "Final step response"
+        # Last is the ChatCompletionResponse
+        response = ChatCompletionResponse.model_validate(results[2].payload)
+        assert response.choices[0].message.content == "Final step response"
 
 
 class TestReActAgentBothPluginLevels:
@@ -1424,7 +1423,7 @@ class TestReActAgentBothPluginLevels:
             agent._on_message(
                 build_message_from_payload(
                     generator,
-                    ReActRequest(query="Test"),
+                    ChatCompletionRequest(messages=[UserMessage(content="Test")]),
                 )
             )
 
@@ -1438,8 +1437,8 @@ class TestReActAgentBothPluginLevels:
 
         # Final response
         assert len(results) == 1
-        response = ReActResponse.model_validate(results[0].payload)
-        assert response.answer == "Final."
+        response = ChatCompletionResponse.model_validate(results[0].payload)
+        assert response.choices[0].message.content == "Final."
 
 
 # =============================================================================
@@ -1744,7 +1743,7 @@ class TestReActAgentToolWrappers:
             agent._on_message(
                 build_message_from_payload(
                     generator,
-                    ReActRequest(query="Calculate 1+1 and 2+2"),
+                    ChatCompletionRequest(messages=[UserMessage(content="Calculate 1+1 and 2+2")]),
                 )
             )
 
@@ -1805,19 +1804,19 @@ class TestReActAgentToolWrappers:
             agent._on_message(
                 build_message_from_payload(
                     generator,
-                    ReActRequest(query="Calculate 5"),
+                    ChatCompletionRequest(messages=[UserMessage(content="Calculate 5")]),
                 )
             )
 
         # Final response
-        response = ReActResponse.model_validate(results[0].payload)
-        assert response.success is True
+        response = ChatCompletionResponse.model_validate(results[0].payload)
+        assert response.choices[0].provider_specific_fields.get("success", True) is not False
 
         # Trace should show the modified output
         # Input expression was "5", wrapper changed it to "(5) + 10" = 15
         # Output should have "[modified]" suffix
-        assert len(response.trace) == 1
-        observation = response.trace[0].observation
+        assert len(response.choices[0].provider_specific_fields.get("react_trace", [])) == 1
+        observation = response.choices[0].provider_specific_fields["react_trace"][0]["observation"]
         assert "[modified]" in observation
         # The actual result: eval("(5) + 10") = 15
         assert "15" in observation
@@ -1868,16 +1867,16 @@ class TestReActAgentToolWrappers:
             agent._on_message(
                 build_message_from_payload(
                     generator,
-                    ReActRequest(query="Calculate something"),
+                    ChatCompletionRequest(messages=[UserMessage(content="Calculate something")]),
                 )
             )
 
-        response = ReActResponse.model_validate(results[0].payload)
-        assert response.success is True
+        response = ChatCompletionResponse.model_validate(results[0].payload)
+        assert response.choices[0].provider_specific_fields.get("success", True) is not False
 
         # Trace should show the cached result, not an actual execution
-        assert len(response.trace) == 1
-        observation = response.trace[0].observation
+        assert len(response.choices[0].provider_specific_fields.get("react_trace", [])) == 1
+        observation = response.choices[0].provider_specific_fields["react_trace"][0]["observation"]
         assert observation == "42 (cached)"
 
     def test_tool_wrapper_handles_errors(self, generator, build_message_from_payload):
@@ -1927,20 +1926,20 @@ class TestReActAgentToolWrappers:
             agent._on_message(
                 build_message_from_payload(
                     generator,
-                    ReActRequest(query="Calculate something"),
+                    ChatCompletionRequest(messages=[UserMessage(content="Calculate something")]),
                 )
             )
 
-        response = ReActResponse.model_validate(results[0].payload)
-        assert response.success is True
+        response = ChatCompletionResponse.model_validate(results[0].payload)
+        assert response.choices[0].provider_specific_fields.get("success", True) is not False
 
         # Error handler should have been invoked
         assert len(ErrorHandlingToolWrapper.handled_errors) == 1
         assert ErrorHandlingToolWrapper.handled_errors[0]["tool_name"] == "calculate"
 
         # Trace should show the handled error output
-        assert len(response.trace) == 1
-        observation = response.trace[0].observation
+        assert len(response.choices[0].provider_specific_fields.get("react_trace", [])) == 1
+        observation = response.choices[0].provider_specific_fields["react_trace"][0]["observation"]
         assert "Error handled:" in observation
 
     def test_tool_wrapper_generates_messages(self, generator, build_message_from_payload):
@@ -1989,11 +1988,11 @@ class TestReActAgentToolWrappers:
             agent._on_message(
                 build_message_from_payload(
                     generator,
-                    ReActRequest(query="Calculate 3+3"),
+                    ChatCompletionRequest(messages=[UserMessage(content="Calculate 3+3")]),
                 )
             )
 
-        # Should have 2 results: tool event message + ReActResponse
+        # Should have 2 results: tool event message + ChatCompletionResponse
         assert len(results) == 2
 
         # First is the tool event message
@@ -2002,9 +2001,9 @@ class TestReActAgentToolWrappers:
         assert event.tool_name == "calculate"
         assert event.tool_output == "6"
 
-        # Second is the ReActResponse
-        response = ReActResponse.model_validate(results[1].payload)
-        assert response.answer == "The result is 6."
+        # Second is the ChatCompletionResponse
+        response = ChatCompletionResponse.model_validate(results[1].payload)
+        assert response.choices[0].message.content == "The result is 6."
 
 
 class TestReActAgentMultipleToolWrappers:
@@ -2066,7 +2065,7 @@ class TestReActAgentMultipleToolWrappers:
             agent._on_message(
                 build_message_from_payload(
                     generator,
-                    ReActRequest(query="Calculate 5"),
+                    ChatCompletionRequest(messages=[UserMessage(content="Calculate 5")]),
                 )
             )
 
@@ -2076,6 +2075,6 @@ class TestReActAgentMultipleToolWrappers:
         assert CaptureToolWrapper.captured_calls[0]["tool_input"].expression == "5"
 
         # Result has modification from ModifyingToolWrapper
-        response = ReActResponse.model_validate(results[0].payload)
-        observation = response.trace[0].observation
+        response = ChatCompletionResponse.model_validate(results[0].payload)
+        observation = response.choices[0].provider_specific_fields["react_trace"][0]["observation"]
         assert "[modified]" in observation
