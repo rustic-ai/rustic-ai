@@ -117,8 +117,8 @@ class PythonOrchestratorToolset(ReActToolset):
         executor._local_vars.update(tool_bindings)
 
         try:
-            # We wrap the execution to simple ast parsing to check for obvious bad things?
-            # For now, just exec.
+            # Execute the code snippet via the sandboxed PythonExecExecutor.
+            # Additional validation (e.g., AST-based checks) can be added here if needed.
             snippet = CodeSnippet(language="python", code=code)
             result = executor.run(snippet)
 

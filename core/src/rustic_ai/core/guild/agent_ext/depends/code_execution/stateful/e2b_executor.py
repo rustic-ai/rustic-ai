@@ -49,14 +49,21 @@ class E2BExecutor(CodeExecutor):
         assert self.sandbox is not None
 
         try:
-            # Handle input files?
-            # E2B doesn't support direct file injection in run_code easily without writing them first?
-            # self.sandbox.filesystem.write(path, data)
+            # Handle input files by writing them into the sandbox filesystem before execution.
+            # We normalize content to bytes, accepting both bytes and str for robustness.
+            # The E2B SDK accepts bytes for file contents; str values are encoded as UTF-8 here.
             if input_files:
                 for name, content in input_files.items():
-                    # E2B fs write accepts str or bytes? Check docs. Assuming bytes work or need decode.
-                    # SDK docs usually say write(path, content)
-                    self.sandbox.files.write(name, content)
+                    if isinstance(content, bytes):
+                        file_bytes = content
+                    elif isinstance(content, str):
+                        file_bytes = content.encode("utf-8")
+                    else:
+                        raise ExecutorError(
+                            f"Unsupported file content type for '{name}': {type(content).__name__}; "
+                            "expected bytes or str."
+                        )
+                    self.sandbox.files.write(name, file_bytes)
 
             execution = self.sandbox.run_code(code.code)
 

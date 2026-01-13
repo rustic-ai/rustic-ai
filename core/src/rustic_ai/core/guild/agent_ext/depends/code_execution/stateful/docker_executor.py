@@ -98,11 +98,7 @@ class DockerExecutor(CodeExecutor):
             exit_code = result.get("StatusCode", 0)
 
             # Logs
-            # Docker returns bytes, we decode. Use simple decode for now.
-            # Ideally split streams.
-            # docker-py logs() returns both combined if `stream=False`.
-            # To get separate, we can call twice or use demux=True (if supported).
-            # demux=True returns (stdout, stderr) tuple since 3.0.0
+            # Docker returns bytes; with demux=True we get (stdout, stderr) as separate byte strings.
             stdout_bytes, stderr_bytes = container.logs(stdout=True, stderr=True, stream=False, demux=True)
 
             stdout = stdout_bytes.decode("utf-8") if stdout_bytes else ""
