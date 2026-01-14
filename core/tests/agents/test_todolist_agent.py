@@ -41,10 +41,17 @@ class TestTodoListGuild:
         """
         start = time.time()
         while time.time() - start < timeout:
-            msg = probe_agent.get_messages()[-1]
-            if check_fn(msg):
-                return msg
+            # Check ALL messages, not just the last one
+            for msg in probe_agent.get_messages():
+                if check_fn(msg):
+                    return msg
             await asyncio.sleep(interval)
+
+        # Debug: print all messages on timeout
+        print(f"\n=== Timeout! All messages received ({len(probe_agent.get_messages())}) ===")
+        for i, msg in enumerate(probe_agent.get_messages()):
+            print(f"{i}: format={msg.format}, topic={msg.topic_published_to}, sender={msg.sender.id}")
+
         raise TimeoutError("Timeout waiting for matching message.")
 
     @pytest.fixture
@@ -83,7 +90,6 @@ class TestTodoListGuild:
         guild.shutdown()
 
     @pytest.mark.asyncio
-    @pytest.mark.xfail(reason="Flaky test, needs investigation")
     async def test_todo_flow(self, todolist_guild: Guild):
         generator = GemstoneGenerator(17)
         probe_spec = (
@@ -93,6 +99,7 @@ class TestTodoListGuild:
             .set_description("A test probe agent")
             .add_additional_topic(GuildTopics.SYSTEM_TOPIC)
             .add_additional_topic(UserProxyAgent.BROADCAST_TOPIC)
+            .add_additional_topic(UserProxyAgent.get_user_notifications_topic("test_user"))
             .build_spec()
         )
 
@@ -151,6 +158,7 @@ class TestTodoListGuild:
         assert get_task_response.payload["task"]["todo"] == "Write unit tests"
 
         # Step 3: Update task
+        probe_agent.clear_messages()  # Clear before sending update
         update_request = UpdateTaskRequest(
             id=task_id,
             todo="Write better unit tests",
@@ -167,9 +175,10 @@ class TestTodoListGuild:
             ),
         )
 
-        await asyncio.sleep(10)
+        await asyncio.sleep(5)  # Give time for update to process
 
         # Step 4: Get next pending task
+        probe_agent.clear_messages()  # Clear before getting next task
         probe_agent.publish(
             topic=UserProxyAgent.get_user_inbox_topic("test_user"),
             payload=Message(
