@@ -757,7 +757,7 @@ class ProcessContext[MDT]:
             priority=self._origin_message.priority,
             payload=payload,
             format=format,
-            forward_header=self._origin_message.forward_header,
+            forward_header=None,  # Don't carry forward - only set if forwarding=True or mark_forwarded=True
             context=self.get_context(),
             process_status=step.process_status if step.process_status else self._origin_message.process_status,
         )
