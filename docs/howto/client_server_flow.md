@@ -6,8 +6,8 @@ This comprehensive guide covers the entire client-server interaction flow in Rus
 
 - [Overview](#overview)
 - [Architecture Summary](#architecture-summary)
-- [Phase 1: Blueprint & Agent Setup](#phase-1-blueprint--agent-setup)
-- [Phase 2: Guild Creation & Bootstrap](#phase-2-guild-creation--bootstrap)
+- [Phase 1: Blueprint &amp; Agent Setup](#phase-1-blueprint-agent-setup)
+- [Phase 2: Guild Creation &amp; Bootstrap](#phase-2-guild-creation-bootstrap)
 - [Phase 3: System WebSocket Connection](#phase-3-system-websocket-connection)
 - [Phase 4: User WebSocket Connection](#phase-4-user-websocket-connection)
 - [Phase 5: Real-time Messaging](#phase-5-real-time-messaging)

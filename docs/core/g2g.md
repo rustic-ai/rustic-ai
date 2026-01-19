@@ -740,4 +740,3 @@ from rustic_ai.core.guild.g2g import (
 
 - [Guilds](guilds.md) - Guild fundamentals
 - [Messaging](messaging.md) - Messaging system details
-- [How-To: Cross-Guild Communication](../howto/cross_guild_communication.md) - Step-by-step tutorial
