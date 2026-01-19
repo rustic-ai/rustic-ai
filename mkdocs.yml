@@ -10,6 +10,7 @@ nav:
       - Guild Specifications: howto/guild_specifications.md
       - Dependency Injection: howto/dependency_injection.md
       - State Management: howto/state_management.md
+      - Using ReActAgent with Skills: howto/using_react_agent_with_skills.md
       - Testing Agents: howto/testing_agents.md
       - Writing Effective Agent Tests: howto/writing_effective_agent_tests.md
       - Client-Server Flow: howto/client_server_flow.md
@@ -34,11 +35,15 @@ nav:
       - Overview: agents/index.md
       - Agents Deep Dive: Agents.md
       - LLM Agent & Plugins: agents/llm_agent.md
+      - LLM Agent Memory: agents/llm_agent_memory.md
+      - LLM Agent Plugins: agents/llm_agent_plugins.md
+      - ReAct Agent: agents/react_agent.md
       - Core:
           - Overview: agents/core/index.md
           - Guild Manager Agent: agents/core/guild_manager_agent.md
           - User Proxy Agent: agents/core/user_proxy_agent.md
           - Vector Agent: agents/core/vector_agent.md
+          - Knowledge Agent: agents/core/knowledge_agent.md
           - Simple LLM Agent: agents/core/simple_llm_agent.md
           - Probe Agent: agents/core/probe_agent.md
       - LiteLLM:
@@ -60,6 +65,8 @@ nav:
       - Marvin:
           - Overview: agents/marvin/index.md
           - Marvin Agent: agents/marvin/marvin_agent.md
+      - MCP:
+          - Overview: agents/mcp/index.md
   - Dependencies:
       - Overview: dependencies/index.md
       - Core:
@@ -83,6 +90,14 @@ nav:
           - Character Splitter: dependencies/langchain/character_splitter.md
           - OpenAI Embeddings: dependencies/langchain/openai_embeddings.md
           - Recursive Splitter: dependencies/langchain/recursive_splitter.md
+  - Skills:
+      - Overview: skills/index.md
+  - Patterns:
+      - Overview: patterns/index.md
+      - Messaging: patterns/messaging.md
+      - Routing: patterns/routing.md
+      - Transformation: patterns/transformation.md
+      - Aggregation: patterns/aggregation.md
   - Ray: ray/index.md
   - Showcase: showcase/index.md
   - API: api/index.md
