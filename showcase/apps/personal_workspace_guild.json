@@ -1,0 +1,380 @@
+{
+    "name": "Personal Workspace",
+    "description": "Your personal workspace assistant that integrates with Notion and Playwright to help capture web content and create Notion pages. Powered by MCP agents for seamless web scraping and content organization.",
+    "version": "v1",
+    "icon": null,
+    "intro_msg": "Welcome to your Personal Workspace! I can help you scrape web content using Playwright and create organized Notion pages. Share a URL and I'll capture the content for you. What would you like to do today?",
+    "exposure": "private",
+    "author_id": "dummyuserid",
+    "organization_id": null,
+    "category_id": null,
+    "tags": [
+        "MCP",
+        "Productivity",
+        "Workspace"
+    ],
+    "commands": [],
+    "starter_prompts": [
+        "Scrape https://example.com and create a Notion page",
+        "Extract content from a URL and save it to Notion",
+        "Navigate to a website and capture the text",
+        "Create a Notion page from web content",
+        "Browse a URL and summarize it in Notion"
+    ],
+    "spec": {
+        "name": "Personal Workspace",
+        "description": "Personal workspace assistant with Notion and Playwright integration via MCP for web scraping",
+        "properties": {},
+        "configuration_schema": {
+            "type": "object",
+            "properties": {}
+        },
+        "configuration": {},
+        "agents": [
+            {
+                "id": "notion_mcp_agent",
+                "name": "Notion Agent",
+                "description": "Handles all Notion operations via MCP - tasks, notes, databases",
+                "class_name": "rustic_ai.mcp.agent.MCPAgent",
+                "additional_topics": [
+                    "NOTION"
+                ],
+                "properties": {
+                    "server": {
+                        "name": "notion",
+                        "type": "stdio",
+                        "command": "npx",
+                        "args": [
+                            "-y",
+                            "@notionhq/notion-mcp-server"
+                        ],
+                        "env": {
+                            "NOTION_TOKEN": "<NOTION_TOKEN>"
+                        }
+                    }
+                },
+                "listen_to_default_topic": false,
+                "act_only_when_tagged": false,
+                "predicates": {},
+                "dependency_map": {},
+                "additional_dependencies": [],
+                "resources": {
+                    "num_cpus": null,
+                    "num_gpus": null,
+                    "custom_resources": {}
+                },
+                "qos": {
+                    "timeout": null,
+                    "retry_count": null,
+                    "latency": null
+                }
+            },
+            {
+                "id": "playwright_mcp_agent",
+                "name": "Playwright Agent",
+                "description": "Handles web scraping and browser automation via Playwright MCP - navigate, extract content, screenshots",
+                "class_name": "rustic_ai.mcp.agent.MCPAgent",
+                "additional_topics": [
+                    "PLAYWRIGHT"
+                ],
+                "properties": {
+                    "server": {
+                        "name": "playwright",
+                        "type": "stdio",
+                        "command": "npx",
+                        "args": [
+                            "-y",
+                            "@playwright/mcp@latest"
+                        ],
+                        "env": {}
+                    }
+                },
+                "listen_to_default_topic": false,
+                "act_only_when_tagged": false,
+                "predicates": {},
+                "dependency_map": {},
+                "additional_dependencies": [],
+                "resources": {
+                    "num_cpus": null,
+                    "num_gpus": null,
+                    "custom_resources": {}
+                },
+                "qos": {
+                    "timeout": null,
+                    "retry_count": null,
+                    "latency": null
+                }
+            },
+            {
+                "id": "workspace_orchestrator_agent",
+                "name": "Workspace Orchestrator",
+                "description": "Intelligent agent that understands user intent and determines which productivity service to use first",
+                "class_name": "rustic_ai.llm_agent.llm_agent.LLMAgent",
+                "additional_topics": [
+                    "ORCHESTRATE"
+                ],
+                "properties": {
+                    "model": "vertex_ai/gemini-3-pro-preview",
+                    "base_url": null,
+                    "api_version": null,
+                    "custom_llm_provider": null,
+                    "timeout": null,
+                    "max_retries": 0,
+                    "default_system_prompt": "\nYou are the Workspace Orchestrator, an intelligent routing agent that analyzes user requests and determines which services to use for web scraping and content organization.\n\n### Your Role\nYou analyze user requests related to web scraping, content extraction, and Notion page creation. Based on the intent, decide the next action. Only one action at a time:\n- **Playwright**: For web scraping, browser automation, content extraction, screenshots\n- **Notion**: For creating pages, organizing content, storing scraped data\n\n### Workflow Process\n\n1. **Initial Request**: Analyze the user's request and determine the first action needed\n2. **Iterative Execution**: After each action completes, you'll receive feedback with:\n   - Original user request\n   - What action was just completed\n   - Results from that action\n   - History of all previous tasks\n3. **Decision Making**: Based on this context, decide:\n   - Is another action needed? \u2192 Return next action with intent \"notion\" or \"playwright\"\n   - Are all tasks complete for a multi-step workflow? \u2192 Return intent \"summarize\" for a nicely formatted summary\n   - Was this a single simple task that's now done? \u2192 Return intent \"done\"\n\n### When to Use Each Intent\n\n- **\"notion\" or \"playwright\"**: When you need to execute another action. Always specify exactly ONE action in the actions array.\n- **\"summarize\"**: When ALL tasks in a multi-step workflow are complete and you want the Summary Generator to create a nicely formatted response for the user. This triggers a formatted summary of all work done.\n- **\"done\"**: When a simple, single-action task is complete and no summary formatting is needed.\n\n### Output Format\n\nReturn a JSON object with:\n\n**For next action:**\n```json\n{\n  \"intent\": \"notion\" | \"playwright\",\n  \"actions\": [\n    {\n      \"service\": \"notion\" | \"playwright\",\n      \"tool_name\": \"<tool_name>\",\n      \"arguments\": {<tool_arguments>}\n    }\n  ],\n  \"user_friendly_plan\": \"Brief explanation of what you'll do next\"\n}\n```\n\n**When all tasks in a multi-step workflow are complete:**\n```json\n{\n  \"intent\": \"summarize\",\n  \"actions\": [],\n  \"user_friendly_plan\": \"Brief summary that will be formatted nicely by the Summary Generator\"\n}\n```\n\n**When a single simple task is complete:**\n```json\n{\n  \"intent\": \"done\",\n  \"actions\": [],\n  \"user_friendly_plan\": \"Brief confirmation of what was accomplished\"\n}\n```\n\n### Tool Names Guide\n\nFor Playwright:\n- `browser_navigate`: Navigate to a URL and extract content\n- `browser_screenshot`: Take a screenshot of a webpage\n- `browser_click`: Click elements on a page\n- `browser_fill`: Fill form fields\n- `browser_select`: Select from dropdowns\n\nFor Notion (use these exact tool names):\n- `API-get-user`: Retrieve user information by ID\n- `API-get-users`: Lists all users in workspace\n- `API-get-self`: Retrieves your own bot user information\n- `API-post-search`: Search across Notion workspace (use empty query \"\" to list all pages)\n- `API-get-block-children`: Retrieve children blocks of a block\n- `API-patch-block-children`: Update children blocks (ONLY accepts 'children' array, NOT 'title' or 'parent_page_id')\n- `API-retrieve-a-block`: Retrieve a specific block\n- `API-update-a-block`: Update a block's content or properties\n- `API-delete-a-block`: Delete a block\n- `API-retrieve-a-page`: Retrieve a Notion page\n- `API-patch-page`: Update a page's properties\n- `API-post-page`: Create a new Notion page (MUST include 'parent' object, see critical requirements below)\n- `API-retrieve-a-page-property`: Retrieve a specific page property\n- `API-retrieve-a-comment`: Retrieve a comment\n- `API-create-a-comment`: Create a comment on a page\n- `API-query-data-source`: Query a data source\n- `API-retrieve-a-data-source`: Retrieve a data source\n- `API-update-a-data-source`: Update a data source\n- `API-create-a-data-source`: Create a data source\n- `API-list-data-source-templates`: List available data source templates\n- `API-move-page`: Move a page to a new parent\n\n### CRITICAL: Notion API-post-page Requirements\n\n**BEFORE creating a page, you MUST:**\n1. First use `API-post-search` with `{\"query\": \"\"}` to find available parent pages/databases\n2. Extract a page ID from the search results to use as parent\n\n**When calling API-post-page:**\n1. **MUST include parent**: `{\"parent\": {\"page_id\": \"...\"}}` or `{\"parent\": {\"database_id\": \"...\"}}`\n2. **Title format**: Use `{\"properties\": {\"title\": {\"title\": [{\"text\": {\"content\": \"Page Title\"}}]}}}`\n3. **NEVER pass 'content' parameter**: The API will reject it - content must be added separately\n4. **NEVER pass 'title' as a direct parameter**: Use the properties.title structure shown above\n\n**Correct API-post-page example:**\n```json\n{\n  \"parent\": {\"page_id\": \"abc-123\"},\n  \"properties\": {\n    \"title\": {\n      \"title\": [{\"text\": {\"content\": \"My Page Title\"}}]\n    }\n  }\n}\n```\n\n**For API-patch-block-children:**\n- ONLY accepts `children` parameter (array of block objects)\n- NEVER pass `title` or `parent_page_id` parameters\n\n### Examples\n\n**Initial request:**\nUser: \"Navigate to https://news.ycombinator.com\"\nOutput:\n```json\n{\n  \"intent\": \"playwright\",\n  \"actions\": [\n    {\"service\": \"playwright\", \"tool_name\": \"browser_navigate\", \"arguments\": {\"url\": \"https://news.ycombinator.com\"}}\n  ],\n  \"user_friendly_plan\": \"I'll navigate to Hacker News and extract the content for you.\"\n}\n```\n\n**After scraping, search for parent:**\nUser context: \"Original request: Scrape https://example.com and create Notion page. Completed: browser_navigate with content. What's next?\"\nOutput:\n```json\n{\n  \"intent\": \"notion\",\n  \"actions\": [\n    {\"service\": \"notion\", \"tool_name\": \"API-post-search\", \"arguments\": {\"query\": \"\"}}\n  ],\n  \"user_friendly_plan\": \"First, I'll search for available pages to use as parent for the new page.\"\n}\n```\n\n**After finding parent, create page:**\nUser context: \"Original request: Scrape and save. Completed: browser_navigate, API-post-search (found page ID: abc-123). What's next?\"\nOutput:\n```json\n{\n  \"intent\": \"notion\",\n  \"actions\": [\n    {\"service\": \"notion\", \"tool_name\": \"API-post-page\", \"arguments\": {\"parent\": {\"page_id\": \"abc-123\"}, \"properties\": {\"title\": {\"title\": [{\"text\": {\"content\": \"Content from example.com\"}}]}}}}\n  ],\n  \"user_friendly_plan\": \"Now I'll create a Notion page with the title.\"\n}\n```\n\n**After final action:**\nUser context: \"Original request: Scrape and save. Completed: browser_navigate, API-post-search, API-post-page. What's next?\"\nOutput:\n```json\n{\n  \"intent\": \"summarize\",\n  \"actions\": [],\n  \"user_friendly_plan\": \"Successfully scraped content from example.com and created a Notion page.\"\n}\n```\n\n### CRITICAL OUTPUT REQUIREMENTS\n\n**YOU MUST RETURN ONLY RAW JSON - NOTHING ELSE!**\n\n- NO explanatory text before or after the JSON\n- NO markdown code fences (no ```json or ```)\n- NO additional commentary or reasoning\n- NO newlines before or after the JSON object\n- The FIRST character of your response must be `{`\n- The LAST character of your response must be `}`\n- Your entire response must be valid JSON that can be parsed by JSONata's $eval() function\n- Always include the user_friendly_plan field in the JSON\n- Return only ONE action at a time in the actions array\n\n**Example of CORRECT output:**\n{\"intent\": \"playwright\", \"actions\": [{\"service\": \"playwright\", \"tool_name\": \"browser_navigate\", \"arguments\": {\"url\": \"https://example.com\"}}], \"user_friendly_plan\": \"I'll navigate to example.com\"}\n\n**Example of INCORRECT output:**\n```\nBased on the request, I will navigate to the page.\n\n```json\n{\"intent\": \"playwright\", ...}\n```\n```\n\n**If you return anything other than pure JSON, the system will fail!**\n",
+                    "system_prompt_generator": null,
+                    "request_preprocessors": [],
+                    "llm_request_wrappers": [],
+                    "response_postprocessors": [],
+                    "send_response": true,
+                    "vertex_location": null,
+                    "vertex_project": null
+                },
+                "listen_to_default_topic": false,
+                "act_only_when_tagged": false,
+                "predicates": {},
+                "dependency_map": {},
+                "additional_dependencies": [],
+                "resources": {
+                    "num_cpus": null,
+                    "num_gpus": null,
+                    "custom_resources": {}
+                },
+                "qos": {
+                    "timeout": null,
+                    "retry_count": null,
+                    "latency": null
+                }
+            },
+            {
+                "id": "summary_generator_agent",
+                "name": "Summary Generator",
+                "description": "Generates daily summaries and formatted responses combining information from multiple sources",
+                "class_name": "rustic_ai.llm_agent.llm_agent.LLMAgent",
+                "additional_topics": [
+                    "SUMMARIZE"
+                ],
+                "properties": {
+                    "model": "vertex_ai/gemini-3-pro-preview",
+                    "base_url": null,
+                    "api_version": null,
+                    "custom_llm_provider": null,
+                    "timeout": null,
+                    "max_retries": 0,
+                    "default_system_prompt": "\nYou are the Summary Generator, responsible for creating clear, well-formatted Notion pages from scraped web content.\n\n### Your Role\nYou receive information from Playwright (scraped web content) and create:\n- Well-formatted Notion pages with the scraped content\n- Organized summaries of web pages\n- Structured content ready for storage\n\n### Output Format\n\nCreate well-structured markdown content suitable for Notion pages:\n- Clear title based on the webpage\n- Source URL reference\n- Main content organized into sections\n- Key points or highlights extracted\n\n### Example Summary\n\n```markdown\n# Article Title from Website\n\n**Source:** https://example.com/article\n**Scraped on:** [Date]\n\n## Summary\n\nBrief overview of the main content...\n\n## Key Points\n\n- Important point 1\n- Important point 2\n- Important point 3\n\n## Full Content\n\n[Full scraped content organized into readable sections]\n\n---\n*Captured using Playwright MCP*\n```\n\n### Guidelines\n\n- Extract and preserve the main content structure\n- Create clear section headings\n- Preserve important links and references\n- Format code blocks, quotes, and lists appropriately\n- Keep language clear and well-organized\n- If content is incomplete or unclear, note it\n\n### Input Format\n\nYou'll receive context containing:\n- `playwright_content`: Scraped content from Playwright\n- `url`: Source URL that was scraped\n- `intent`: Original user intent (\"scrape_and_save\", etc.)\n\nTransform this into a well-formatted Notion page.\n Do not add codeblocks or any formatting such as ```markdown, instead just provide the raw markdown content.\n",
+                    "system_prompt_generator": null,
+                    "request_preprocessors": [],
+                    "llm_request_wrappers": [],
+                    "response_postprocessors": [],
+                    "send_response": true,
+                    "vertex_location": null,
+                    "vertex_project": null
+                },
+                "listen_to_default_topic": false,
+                "act_only_when_tagged": false,
+                "predicates": {},
+                "dependency_map": {},
+                "additional_dependencies": [],
+                "resources": {
+                    "num_cpus": null,
+                    "num_gpus": null,
+                    "custom_resources": {}
+                },
+                "qos": {
+                    "timeout": null,
+                    "retry_count": null,
+                    "latency": null
+                }
+            },
+            {
+                "id": "content_moderator_agent",
+                "name": "Content Moderator",
+                "description": "Moderates user input for safety and appropriate content",
+                "class_name": "rustic_ai.vertexai.agents.content_moderation.ContentModerationAgent",
+                "additional_topics": [
+                    "MODERATE"
+                ],
+                "properties": {
+                    "project_id": null,
+                    "location": null,
+                    "threshold": 0.9,
+                    "categories": [
+                        "Legal",
+                        "Public Safety",
+                        "Toxic",
+                        "Violent"
+                    ]
+                },
+                "listen_to_default_topic": false,
+                "act_only_when_tagged": false,
+                "predicates": {},
+                "dependency_map": {},
+                "additional_dependencies": [],
+                "resources": {
+                    "num_cpus": null,
+                    "num_gpus": null,
+                    "custom_resources": {}
+                },
+                "qos": {
+                    "timeout": null,
+                    "retry_count": null,
+                    "latency": null
+                }
+            }
+        ],
+        "dependency_map": {
+            "llm": {
+                "class_name": "rustic_ai.litellm.agent_ext.llm.LiteLLMResolver",
+                "properties": {
+                    "model": "vertex_ai/gemini-3-pro-preview",
+                    "conf": {
+                        "vertex_location": "global"
+                    }
+                }
+            }
+        },
+        "routes": {
+            "steps": [
+                {
+                    "agent": null,
+                    "agent_type": "rustic_ai.core.agents.utils.user_proxy_agent.UserProxyAgent",
+                    "method_name": "unwrap_and_forward_message",
+                    "origin_filter": null,
+                    "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest",
+                    "destination": {
+                        "topics": "MODERATE",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "mark_forwarded": false,
+                    "route_times": -1,
+                    "transformer": null,
+                    "agent_state_update": null,
+                    "guild_state_update": {
+                        "update_format": "json-merge-patch",
+                        "state_update": "({\"original_user_message\": $.payload.messages[0].content[0].text, \"timestamp\": $millis()})"
+                    },
+                    "process_status": null,
+                    "reason": null
+                },
+                {
+                    "agent": {
+                        "id": null,
+                        "name": "Content Moderator"
+                    },
+                    "agent_type": null,
+                    "method_name": "moderate_llm_request",
+                    "origin_filter": null,
+                    "message_format": "rustic_ai.vertexai.agents.content_moderation.ModerationResponse",
+                    "destination": null,
+                    "mark_forwarded": false,
+                    "route_times": -1,
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "($ToOrchestrator := function(){ {\"topics\": \"ORCHESTRATE\", \"format\": \"rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest\", \"payload\": {\"messages\": [{\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": 'Current time: ' & $fromMillis($millis(), '[Y0001]-[M01]-[D01] [H01]:[m01]') & '\\nUser request: ' & $.payload.source_text}]}]}, \"context\": {\"task_history\": []}} }; $ToUserModerated := function(){ {\"topics\": \"user_message_broadcast\", \"format\": \"rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse\", \"payload\": {\"choices\": [{\"message\": {\"content\": 'Your message was flagged for inappropriate content: ' & $join($keys($.payload.flagged_categories), ', ')}}]}, \"process_status\": \"completed\"} }; $.payload.is_flagged ? $ToUserModerated() : $ToOrchestrator())"
+                    },
+                    "agent_state_update": null,
+                    "guild_state_update": null,
+                    "process_status": null,
+                    "reason": "Moderate user input before processing and initialize task_history in context"
+                },
+                {
+                    "agent": {
+                        "id": null,
+                        "name": "Workspace Orchestrator"
+                    },
+                    "agent_type": null,
+                    "method_name": null,
+                    "origin_filter": null,
+                    "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                    "destination": null,
+                    "mark_forwarded": false,
+                    "route_times": -1,
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "($content := $.payload.choices[0].message.content; $jsonMatch := $match($content, /\\{[\\s\\S]*\\}/); $jsonStr := $jsonMatch ? $jsonMatch.match : $content; $cleaned := $trim($replace($replace($jsonStr, /```json/, ''), /```/, '')); $plan := $eval($cleaned); $action := $plan.actions[0]; $taskHistory := $.context.task_history; $ToNotion := function($act){ {\"topics\": \"NOTION\", \"format\": \"rustic_ai.mcp.models.CallToolRequest\", \"payload\": {\"server_name\": \"notion\", \"tool_name\": $act.tool_name, \"arguments\": $act.arguments}, \"context\": {\"plan\": $plan.user_friendly_plan, \"task_history\": $taskHistory}} }; $ToPlaywright := function($act){ {\"topics\": \"PLAYWRIGHT\", \"format\": \"rustic_ai.mcp.models.CallToolRequest\", \"payload\": {\"server_name\": \"playwright\", \"tool_name\": $act.tool_name, \"arguments\": $act.arguments}, \"context\": {\"plan\": $plan.user_friendly_plan, \"task_history\": $taskHistory}} }; $ToSummary := function(){ {\"topics\": \"SUMMARIZE\", \"format\": \"rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest\", \"payload\": {\"messages\": [{\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": $plan.user_friendly_plan & '\\n\\nTask History:\\n' & $string($taskHistory)}]}]}} }; $ToDone := function(){ {\"topics\": \"user_message_broadcast\", \"format\": \"rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse\", \"payload\": {\"choices\": [{\"message\": {\"content\": $plan.user_friendly_plan}}]}, \"process_status\": \"completed\"} }; $plan.intent = 'done' ? $ToDone() : $plan.intent = 'summarize' ? $ToSummary() : $plan.intent = 'notion' ? $ToNotion($action) : $plan.intent = 'playwright' ? $ToPlaywright($action) : $ToDone())"
+                    },
+                    "agent_state_update": null,
+                    "guild_state_update": {
+                        "update_format": "json-merge-patch",
+                        "state_update": "($content := untransformed.payload.choices[0].message.content; $jsonMatch := $match($content, /\\{[\\s\\S]*\\}/); $jsonStr := $jsonMatch ? $jsonMatch.match : $content; $cleaned := $trim($replace($replace($jsonStr, /```json/, ''), /```/, '')); $plan := $eval($cleaned); {\"current_plan\": $plan.user_friendly_plan})"
+                    },
+                    "process_status": null,
+                    "reason": "Route based on orchestrator decision: next action, summary, or done"
+                },
+                {
+                    "agent": {
+                        "id": null,
+                        "name": "Notion Agent"
+                    },
+                    "agent_type": null,
+                    "method_name": null,
+                    "origin_filter": null,
+                    "message_format": "rustic_ai.mcp.models.CallToolResponse",
+                    "destination": {
+                        "topics": "ORCHESTRATE",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "mark_forwarded": false,
+                    "route_times": -1,
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "($updatedHistory := $append($.context.task_history, {\"service\": \"notion\", \"tool_name\": $.payload.tool_name, \"results\": $.payload.results}); {\"topics\": \"ORCHESTRATE\", \"format\": \"rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest\", \"payload\": {\"messages\": [{\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": 'Original user request: ' & $.guild_state.original_user_message & '\\n\\nCompleted action: ' & $.payload.tool_name & ' (Notion service)' & '\\nResults: ' & $string($.payload.results) & '\\n\\nPrevious tasks completed:\\n' & $string($updatedHistory) & '\\n\\nWhat should be the next action?'}]}]}, \"context\": {\"task_history\": $updatedHistory}})"
+                    },
+                    "agent_state_update": null,
+                    "guild_state_update": null,
+                    "process_status": null,
+                    "reason": "Store Notion results in task history (context) and ask Orchestrator for next action"
+                },
+                {
+                    "agent": {
+                        "id": null,
+                        "name": "Playwright Agent"
+                    },
+                    "agent_type": null,
+                    "method_name": null,
+                    "origin_filter": null,
+                    "message_format": "rustic_ai.mcp.models.CallToolResponse",
+                    "destination": {
+                        "topics": "ORCHESTRATE",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "mark_forwarded": false,
+                    "route_times": -1,
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "($updatedHistory := $append($.context.task_history, {\"service\": \"playwright\", \"tool_name\": $.payload.tool_name, \"results\": $.payload.results}); {\"topics\": \"ORCHESTRATE\", \"format\": \"rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest\", \"payload\": {\"messages\": [{\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": 'Original user request: ' & $.guild_state.original_user_message & '\\n\\nCompleted action: ' & $.payload.tool_name & ' (Playwright service)' & '\\nResults: ' & $string($.payload.results) & '\\n\\nPrevious tasks completed:\\n' & $string($updatedHistory) & '\\n\\nWhat should be the next action?'}]}]}, \"context\": {\"task_history\": $updatedHistory}})"
+                    },
+                    "agent_state_update": null,
+                    "guild_state_update": null,
+                    "process_status": null,
+                    "reason": "Store Playwright results in task history (context) and ask Orchestrator for next action"
+                },
+                {
+                    "agent": {
+                        "id": null,
+                        "name": "Summary Generator"
+                    },
+                    "agent_type": null,
+                    "method_name": null,
+                    "origin_filter": null,
+                    "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                    "destination": {
+                        "topics": "user_message_broadcast",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "mark_forwarded": false,
+                    "route_times": -1,
+                    "transformer": null,
+                    "agent_state_update": null,
+                    "guild_state_update": null,
+                    "process_status": "completed",
+                    "reason": "Send formatted summary to user"
+                }
+            ]
+        },
+        "gateway": null
+    }
+}
