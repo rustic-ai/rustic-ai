@@ -73,13 +73,13 @@ class MCPClient:
     def shutdown_event(self) -> asyncio.Event:
         """Lazy property for shutdown event."""
         self._ensure_events()
-        return self._shutdown_event
+        return self._shutdown_event  # type: ignore[return-value]
 
     @property
     def ready_event(self) -> asyncio.Event:
         """Lazy property for ready event."""
         self._ensure_events()
-        return self._ready_event
+        return self._ready_event  # type: ignore[return-value]
 
     async def _run_session(self):
         """Background task to maintain the session."""
@@ -156,18 +156,6 @@ class MCPClient:
             return None
 
         return self._session
-
-    async def shutdown(self):
-        """Clean up connection on shutdown."""
-        logger.info(f"Closing MCP connection to {self.config.name}...")
-        if self._shutdown_event:  # Only set if event was created
-            self._shutdown_event.set()
-        if self._task:
-            try:
-                await self._task
-            except Exception as e:
-                logger.error(f"Error awaiting MCP task shutdown: {e}", exc_info=True)
-            self._task = None
 
     async def call_tool(self, request: CallToolRequest) -> CallToolResponse:
         session = await self.connect()
