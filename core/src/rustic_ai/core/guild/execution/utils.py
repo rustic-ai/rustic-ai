@@ -20,6 +20,7 @@ def build_agent_from_spec(
     client_class: Type[Client],
     client_props: Dict[str, Any],
     machine_id: int,
+    organization_id: Optional[str] = None,
 ) -> Agent:
 
     agent_class = get_agent_class(agent_spec.class_name)
@@ -46,6 +47,7 @@ def build_agent_from_spec(
         client_class=client_class,
         client_props=client_props.copy(),
         id_generator=GemstoneGenerator(machine_id),
+        organization_id=organization_id,
     )
 
     if "__init__" in agent_class.__dict__:  # Only call custom __init__ if defined in this class

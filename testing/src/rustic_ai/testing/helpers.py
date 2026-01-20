@@ -22,7 +22,7 @@ T = TypeVar("T", bound=Agent)
 
 
 def wrap_agent_for_testing(
-    agent_spec: AgentSpec, dependency_map: Dict[str, DependencySpec] = {}
+    agent_spec: AgentSpec, dependency_map: Dict[str, DependencySpec] = {}, organization_id: str = "test_organization_id"
 ) -> Tuple[Agent, List[Message]]:
     """
     Wrap agent for testing.
@@ -126,6 +126,7 @@ def wrap_agent_for_testing(
         client_class,
         client_props,
         1,
+        organization_id=organization_id,
     )
 
     agent._make_process_context = MagicMock()  # type: ignore

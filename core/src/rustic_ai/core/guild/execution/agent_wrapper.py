@@ -95,13 +95,10 @@ class AgentWrapper(ABC):
             client_class=self.client_type,
             client_props=self.client_properties.copy(),
             machine_id=self.machine_id,
+            organization_id=self.organization_id,
         )
 
         subscribe_agent_with_messaging(self.agent, self.messaging, self.organization_id)
-
-        # Set organization_id on agent for cross-guild communication
-        if self.organization_id:
-            self.agent.set_organization(self.organization_id)
 
         # Notify the agent that it is ready to process messages
         self.logger.info(f"Agent {self.agent_spec.name} is ready to process messages")

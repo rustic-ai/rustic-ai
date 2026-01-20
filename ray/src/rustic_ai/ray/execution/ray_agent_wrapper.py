@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, Type
+from typing import Any, Dict, Optional, Type
 
 from opentelemetry import trace
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
@@ -23,6 +23,7 @@ class RayAgentWrapper(AgentWrapper):
         machine_id: int,
         client_type: Type[Client] = MessageTrackingClient,
         client_properties: Dict[str, Any] = {},
+        organization_id: Optional[str] = None,
     ):
         print("Setting up logging")
         logging_level = "INFO"
@@ -46,7 +47,7 @@ class RayAgentWrapper(AgentWrapper):
 
         self._is_running = False
 
-        super().__init__(guild_spec, agent_spec, messaging_config, machine_id, client_type, client_properties)
+        super().__init__(guild_spec, agent_spec, messaging_config, machine_id, client_type, client_properties, organization_id)
 
     def run(self) -> None:
         """
