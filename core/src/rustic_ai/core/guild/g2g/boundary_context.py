@@ -73,7 +73,7 @@ class BoundaryContext(ProcessContext[MDT]):
         )
 
         # Get organization_id from agent
-        organization_id = agent.require_organization()
+        organization_id = agent.get_organization()
 
         # Create BoundaryClient for cross-guild operations
         self._boundary_client = BoundaryClient(self._client, organization_id)

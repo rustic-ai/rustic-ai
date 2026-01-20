@@ -73,9 +73,6 @@ class Agent(Generic[APT], metaclass=AgentMetaclass):  # type: ignore
     """
     Base class for all agents
     """
-
-    DEFAULT_ORGANIZATION_ID = "default_organization"
-
     def __init__(
         self,
         agent_spec: AgentSpec[APT],
@@ -87,6 +84,7 @@ class Agent(Generic[APT], metaclass=AgentMetaclass):  # type: ignore
         agent_type: AgentType = AgentType.BOT,
         agent_mode: AgentMode = AgentMode.LOCAL,
         handled_formats: list = [],
+        organization_id: Optional[str] = None,
     ):
         """
         Initializes a new instance of the Agent class.
@@ -119,6 +117,7 @@ class Agent(Generic[APT], metaclass=AgentMetaclass):  # type: ignore
         self.description = agent_spec.description
         self.mode = agent_mode
         self.handled_formats = handled_formats
+        self._organization_id: Optional[str] = organization_id
         self._self_inbox: str = GuildTopics.get_self_agent_inbox(self.id)
         self._inbox: str = GuildTopics.get_agent_inbox(self.id)
 
@@ -130,7 +129,6 @@ class Agent(Generic[APT], metaclass=AgentMetaclass):  # type: ignore
         self._state: JsonDict = {}
         self._guild_state: JsonDict = {}
         self._route_to_default_topic: bool = False
-        self._organization_id: Optional[str] = None
 
         self._client = self._init_client(client_class, client_props)
         self._id_generator = id_generator
@@ -310,26 +308,9 @@ class Agent(Generic[APT], metaclass=AgentMetaclass):  # type: ignore
         return self.guild_spec.id
 
     def get_organization(self) -> str:
-        organization_id = getattr(self, "_organization_id", None)
-        if organization_id:
-            return organization_id
-
-        self.logger.warning(
-            "No organization_id configured for agent %s (%s); using default %s",
-            self.name,
-            self.id,
-            self.DEFAULT_ORGANIZATION_ID,
-        )
-        return self.DEFAULT_ORGANIZATION_ID
-
-    def require_organization(self) -> str:
-        organization_id = getattr(self, "_organization_id", None)
-        if not organization_id:
+        if not self._organization_id:
             raise ValueError("No organization_id configured. Ensure the ExecutionEngine has organization_id set.")
-        return organization_id
-
-    def set_organization(self, organization_id: str) -> None:
-        self._organization_id = organization_id
+        return self._organization_id
 
     def _generate_id(self, priority: Priority) -> GemstoneID:
         """

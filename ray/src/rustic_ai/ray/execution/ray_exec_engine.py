@@ -65,6 +65,7 @@ class RayExecutionEngine(ExecutionEngine):
                 machine_id=machine_id,
                 client_type=client_type,
                 client_properties=client_properties,
+                organization_id=self.organization_id,
             )
 
         agent_wrapper = ray.get_actor(name=agent_spec.id, namespace=self._get_namespace())
