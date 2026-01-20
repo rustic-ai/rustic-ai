@@ -10,8 +10,15 @@ nav:
       - Guild Specifications: howto/guild_specifications.md
       - Dependency Injection: howto/dependency_injection.md
       - State Management: howto/state_management.md
+      - Using ReActAgent with Skills: howto/using_react_agent_with_skills.md
       - Testing Agents: howto/testing_agents.md
       - Writing Effective Agent Tests: howto/writing_effective_agent_tests.md
+      - Client-Server Flow: howto/client_server_flow.md
+      - Code Tag Quick Reference: howto/code_tag_quick_reference.md
+      - LLM Prompts with Code Tag: howto/llm_prompts_with_code_tag.md
+      - Examples:
+          - Code Review Prompt: howto/examples/code_review_prompt.md
+          - Security Reviewer: howto/examples/prompts/security_reviewer.md
   - Core:
       - Overview: core/index.md
       - Architecture: core/architecture.md
@@ -19,19 +26,24 @@ nav:
       - Guilds: core/guilds.md
       - Guild-to-Guild (G2G): core/g2g.md
       - Messaging: core/messaging.md
-      - Shared Memory Backend: core/shared_memory_backend.md
+      - Messaging Lifecycle: core/messaging_lifecycle.md
       - Execution: core/execution.md
       - Multiprocess Execution: core/multiprocess_execution.md
       - Dependencies: core/dependencies.md
       - State Management: core/state_management.md
   - Agents:
       - Overview: agents/index.md
+      - Agents Deep Dive: Agents.md
       - LLM Agent & Plugins: agents/llm_agent.md
+      - LLM Agent Memory: agents/llm_agent_memory.md
+      - LLM Agent Plugins: agents/llm_agent_plugins.md
+      - ReAct Agent: agents/react_agent.md
       - Core:
           - Overview: agents/core/index.md
           - Guild Manager Agent: agents/core/guild_manager_agent.md
           - User Proxy Agent: agents/core/user_proxy_agent.md
           - Vector Agent: agents/core/vector_agent.md
+          - Knowledge Agent: agents/core/knowledge_agent.md
           - Simple LLM Agent: agents/core/simple_llm_agent.md
           - Probe Agent: agents/core/probe_agent.md
       - LiteLLM:
@@ -53,6 +65,8 @@ nav:
       - Marvin:
           - Overview: agents/marvin/index.md
           - Marvin Agent: agents/marvin/marvin_agent.md
+      - MCP:
+          - Overview: agents/mcp/index.md
   - Dependencies:
       - Overview: dependencies/index.md
       - Core:
@@ -76,11 +90,21 @@ nav:
           - Character Splitter: dependencies/langchain/character_splitter.md
           - OpenAI Embeddings: dependencies/langchain/openai_embeddings.md
           - Recursive Splitter: dependencies/langchain/recursive_splitter.md
+  - Skills:
+      - Overview: skills/index.md
+  - Patterns:
+      - Overview: patterns/index.md
+      - Messaging: patterns/messaging.md
+      - Routing: patterns/routing.md
+      - Transformation: patterns/transformation.md
+      - Aggregation: patterns/aggregation.md
   - Ray: ray/index.md
   - Showcase: showcase/index.md
   - API: api/index.md
   - UI Protocol Types: ui_protocol_types.md
   - Contributing: contributing.md
+  - Design:
+      - ReAct Agent Design: design/react-agent-design.md
 theme:
   icon:
     repo: fontawesome/brands/github
@@ -90,6 +114,9 @@ theme:
   primary: custom
 extra_css:
   - assets/stylesheets/theme.css
+extra_javascript:
+  - https://unpkg.com/mermaid@10/dist/mermaid.min.js
+  - assets/javascripts/mermaid-init.js
 plugins:
   - mkdocstrings:
       handlers:
@@ -107,13 +134,14 @@ plugins:
             filters: ["!^_"]
 markdown_extensions:
   - admonition
-  - codehilite
-  - toc:
-      permalink: true 
+  - pymdownx.highlight:
+      anchor_linenums: true
   - pymdownx.superfences:
       custom_fences:
         - name: mermaid
           class: mermaid
           format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.extra
+  - toc:
+      permalink: true 
   - mdx_truly_sane_lists   

@@ -17,10 +17,16 @@ Rustic AI includes several specialized agents for various tasks:
 
 ### LLM Agent Framework
 - [LLM Agent & Plugin System](llm_agent.md) - Comprehensive LLM agent with extensible plugin system for request/response processing and dependency injection
+- [LLM Agent Memory Stores](llm_agent_memory.md) - Memory systems for conversation history, state persistence, and semantic recall
+- [LLM Agent Plugins](llm_agent_plugins.md) - Plugin architecture for preprocessing, postprocessing, and tool call interception
+- [ReAct Agent](react_agent.md) - Reasoning and Acting agent that iteratively uses tools to solve complex tasks
 
 ### Web and API Agents
 - [PlaywrightScraperAgent](playwright/playwright_scraper_agent.md) - Web scraping using Playwright
 - [SERPAgent](serpapi/serp_agent.md) - Search engine results via SerpAPI
+
+### External Tool Integration
+- [MCP Integration](mcp/index.md) - Connect to MCP (Model Context Protocol) servers for external tools
 
 ### Language Model Agents
 - [LiteLLMAgent](litellm/litellm_agent.md) - Interface to various LLMs via LiteLLM
@@ -38,11 +44,19 @@ Rustic AI includes several specialized agents for various tasks:
 
 ### Utility Agents
 - [VectorAgent](core/vector_agent.md) - Document indexing and similarity search
+- [KnowledgeAgent](core/knowledge_agent.md) - Advanced knowledge base indexing with chunking, embedding pipelines, and hybrid search
 - [ProbeAgent](core/probe_agent.md) - Testing utility for monitoring agent interactions
 
 ### System Agents
 - [UserProxyAgent](core/user_proxy_agent.md) - Interface between users and the guild
 - [GuildManagerAgent](core/guild_manager_agent.md) - Manages guild state and operations
+
+## Skills and Toolsets
+
+Rustic AI provides a powerful skills framework that enables agents to use pre-built, reusable capabilities:
+
+- [Skills Module](../skills/index.md) - Complete guide to discovering, installing, and using Agent Skills
+- [Using ReActAgent with Skills](../howto/using_react_agent_with_skills.md) - How-to guide for combining ReActAgent with Skills
 
 ## Creating Custom Agents
 

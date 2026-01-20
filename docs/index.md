@@ -30,7 +30,6 @@ Rustic AI is built around these core components:
 - [Agents](agents/index.md): The building blocks of intelligent systems that can perceive, reason, and act
 - [Guilds](core/guilds.md): Organized collections of agents working together toward common goals
 - [Messaging](core/messaging.md): Communication infrastructure for agents to exchange information
-  - [Socket Messaging Backend](core/socket_messaging_backend.md): Socket-based messaging for testing without external dependencies
 - [Execution](core/execution.md): How agent code gets executed within the Rustic AI framework
   - [Multiprocess Execution](core/multiprocess_execution.md): True parallel execution with process isolation
 - [State Management](core/state_management.md): Managing persistence across agent interactions

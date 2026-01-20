@@ -11,6 +11,7 @@ Welcome to the Rustic AI How-To Guides. These guides provide step-by-step instru
 
 - [Managing State in Agents](state_management.md): Learn how to maintain and update state in your agents
 - [Dependency Injection](dependency_injection.md): Provide external services to your agents
+- [Using ReActAgent with Skills](using_react_agent_with_skills.md): Combine reasoning agents with pre-built capabilities
 - [Complete Client-Server Flow](client_server_flow.md): Comprehensive guide to building client applications with proper API flow, WebSocket communication, and synchronization
 - [Testing Agents](testing_agents.md): Effectively test your agents in isolation
 - [Writing Effective Agent Tests](writing_effective_agent_tests.md): In-depth guide with real-world testing patterns

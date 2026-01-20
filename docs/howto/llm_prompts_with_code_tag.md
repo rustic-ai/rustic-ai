@@ -253,7 +253,7 @@ default_system_prompt: "!code prompts/my_prompt.md"
 
 ## See Also
 
-- [Modular Guild Loading](modular_guild_loading.md)
 - [LLMAgent Configuration](../agents/llm_agent.md)
-- [YAML Include Tag](yaml_include_tag.md)
-- [Guild Builder API](../core/guild_builder.md)
+- [Code Tag Quick Reference](code_tag_quick_reference.md)
+- [Creating a Guild](creating_a_guild.md)
+- [Guild Specifications](guild_specifications.md)
