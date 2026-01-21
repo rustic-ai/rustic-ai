@@ -25,13 +25,6 @@ def _extract_error_message(exc: Exception) -> str:
     if isinstance(exc, httpx.HTTPStatusError):
         return f"HTTP {exc.response.status_code} {exc.response.reason_phrase} for {exc.request.url}"
 
-    # Handle ExceptionGroup (Python 3.11+)
-    if isinstance(exc, BaseExceptionGroup):
-        # Try to find HTTPStatusError in the group
-        for sub_exc in exc.exceptions:
-            if isinstance(sub_exc, httpx.HTTPStatusError):
-                return f"HTTP {sub_exc.response.status_code} {sub_exc.response.reason_phrase} for {sub_exc.request.url}"
-
     return str(exc)
 
 
