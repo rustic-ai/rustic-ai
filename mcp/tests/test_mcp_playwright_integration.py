@@ -51,7 +51,10 @@ class TestMCPPlaywrightIntegration:
     def playwright_agent_spec(self):
         config = MCPAgentConfig(
             server=MCPServerConfig(
-                name="playwright", type=MCPClientType.STDIO, command="npx", args=["-y", "@playwright/mcp@latest"]
+                name="playwright",
+                type=MCPClientType.STDIO,
+                command="npx",
+                args=["-y", "@playwright/mcp@latest", "--isolated"],
             )
         )
 

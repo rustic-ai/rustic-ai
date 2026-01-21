@@ -26,12 +26,6 @@ class MCPAgent(Agent[MCPAgentConfig]):
         if not self._mcp_client:
             self._mcp_client = MCPClient(self.server_config)
 
-    async def shutdown(self):
-        """Clean up connection on shutdown."""
-        self.logger.info("Closing MCP connection...")
-        if self._mcp_client:
-            await self._mcp_client.shutdown()
-
     @agent.processor(CallToolRequest)
     async def handle_tool_call(self, ctx: ProcessContext[CallToolRequest]):
         request = ctx.payload
