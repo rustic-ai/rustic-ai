@@ -1,6 +1,6 @@
 from datetime import datetime
 from enum import StrEnum
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
 from pydantic import BaseModel, Field, field_validator
@@ -26,6 +26,14 @@ class Task(BaseModel):
     deadline: Optional[str] = None
     depends_on: List[str] = []
     status: TaskStatus = TaskStatus.PENDING  # pending | in_progress | blocked | done | overdue
+    correlation_id: Optional[str] = Field(
+        default=None,
+        description="Groups related tasks together (e.g., company name for dossier workflow)",
+    )
+    metadata: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Arbitrary context data attached to the task",
+    )
 
     @field_validator("deadline")
     @classmethod
@@ -46,6 +54,8 @@ class AddTaskRequest(BaseModel):
     start_time: str
     deadline: Optional[str] = Field(default=None)
     depends_on: List[str]
+    correlation_id: Optional[str] = Field(default=None)
+    metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
 class UpdateTaskRequest(BaseModel):
@@ -85,6 +95,34 @@ class NextTaskRequest(BaseModel):
     sort_by: Optional[str] = Field(default="start_time")  # can be start_time or deadline
 
 
+class TaskUnblockedEvent(BaseModel):
+    """Emitted when a task transitions from blocked to pending."""
+
+    task_id: str = Field(description="ID of the task that was unblocked")
+    correlation_id: Optional[str] = Field(
+        default=None, description="Correlation ID for workflow routing"
+    )
+    unblocked_at: str = Field(
+        default_factory=lambda: datetime.now().isoformat(),
+        description="Timestamp when the task was unblocked",
+    )
+    task: Task = Field(description="The full unblocked task object")
+
+
+class TaskCompletedEvent(BaseModel):
+    """Emitted when a task is marked done."""
+
+    task_id: str = Field(description="ID of the completed task")
+    correlation_id: Optional[str] = Field(
+        default=None, description="Correlation ID for workflow routing"
+    )
+    completed_at: str = Field(
+        default_factory=lambda: datetime.now().isoformat(),
+        description="Timestamp when the task was completed",
+    )
+    task: Task = Field(description="The full completed task object")
+
+
 class TodoListAgent(Agent):
     def get_tasks(self) -> List[Task]:
         agent_state = self.get_agent_state()
@@ -121,6 +159,8 @@ class TodoListAgent(Agent):
             deadline=ctx.payload.deadline,
             depends_on=ctx.payload.depends_on,
             status=status,
+            correlation_id=ctx.payload.correlation_id,
+            metadata=ctx.payload.metadata,
         )
 
         tasks.append(task)
@@ -174,7 +214,8 @@ class TodoListAgent(Agent):
     def list_tasks(self, ctx: ProcessContext[ListTasksRequest]):
         tasks = self.get_tasks()
         status = ctx.payload.status
-        if status != "all":
+        # Return all tasks if status is None or ALL
+        if status is not None and status != TaskStatus.ALL:
             tasks = [t for t in tasks if t.status == status]
 
         ctx.send(ListTasksResponse(tasks=tasks))
@@ -182,7 +223,9 @@ class TodoListAgent(Agent):
     @agent.processor(UpdateStatusRequest)
     def update_status(self, ctx: ProcessContext[UpdateStatusRequest]):
         tasks = self.get_tasks()
+        task_map = {t.id: t for t in tasks}
         updated = None
+        unblocked_tasks: List[Task] = []
 
         for i, task in enumerate(tasks):
             if task.id == ctx.payload.id:
@@ -194,16 +237,38 @@ class TodoListAgent(Agent):
         if not updated:
             raise ValueError("Task not found")
 
+        # Emit TaskCompletedEvent when a task is marked done
         if ctx.payload.status == TaskStatus.DONE:
-            for task in tasks:
+            ctx.send(
+                TaskCompletedEvent(
+                    task_id=updated.id,
+                    correlation_id=updated.correlation_id,
+                    task=updated,
+                )
+            )
+
+            # Check for dependent tasks that should be unblocked
+            for i, task in enumerate(tasks):
                 if ctx.payload.id in task.depends_on and task.status == TaskStatus.BLOCKED:
                     task.depends_on.remove(ctx.payload.id)
 
-                    # If no more dependencies left, mark as pending
+                    # If no more dependencies left, mark as pending and track for event
                     if not task.depends_on:
                         task.status = TaskStatus.PENDING
+                        tasks[i] = task
+                        unblocked_tasks.append(task)
 
         self.save_tasks(tasks, ctx)
+
+        # Emit TaskUnblockedEvent for each unblocked task
+        for task in unblocked_tasks:
+            ctx.send(
+                TaskUnblockedEvent(
+                    task_id=task.id,
+                    correlation_id=task.correlation_id,
+                    task=task,
+                )
+            )
 
     @agent.processor(NextTaskRequest)
     def get_next_task(self, ctx: ProcessContext[NextTaskRequest]):
