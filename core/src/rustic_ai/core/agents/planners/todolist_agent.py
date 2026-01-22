@@ -223,7 +223,7 @@ class TodoListAgent(Agent):
     @agent.processor(UpdateStatusRequest)
     def update_status(self, ctx: ProcessContext[UpdateStatusRequest]):
         tasks = self.get_tasks()
-        task_map = {t.id: t for t in tasks}
+
         updated = None
         unblocked_tasks: List[Task] = []
 
