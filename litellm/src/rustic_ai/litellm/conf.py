@@ -135,6 +135,11 @@ class LiteLLMConf(BaseAgentProps):
     The Google Cloud project ID. If None, attempts to use the VERTEXAI_PROJECT environment variable.
     """
 
+    enable_json_schema_validation: bool = False
+    """
+    If true, enables json schema validation for all requests.
+    """
+
     def get_tools_manager(self) -> Optional[ToolsManager]:
         """
         Returns the tools manager for the agent.
