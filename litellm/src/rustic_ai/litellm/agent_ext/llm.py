@@ -12,7 +12,7 @@ from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     ChatCompletionTool,
 )
 from rustic_ai.litellm.conf import LiteLLMConf
-from rustic_ai.litellm.utils import ResponseUtils
+from rustic_ai.litellm.utils import ResponseUtils, transform_response_format
 
 
 class LiteLLM(LLM):
@@ -51,6 +51,8 @@ class LiteLLM(LLM):
         tools: List[ChatCompletionTool] = self.tool_manager.tools if self.tool_manager else []
         if prompt.tools:
             tools.extend(prompt.tools)
+
+        prompt.response_format = transform_response_format(prompt.response_format)
 
         prompt_dict = prompt.model_dump(exclude_none=True, exclude_unset=True)
 

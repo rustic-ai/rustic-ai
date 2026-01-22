@@ -30,7 +30,7 @@ from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     UserMessage,
 )
 from rustic_ai.core.guild.agent_ext.depends.llm.tools_manager import ToolsManager
-from rustic_ai.litellm.utils import ResponseUtils
+from rustic_ai.litellm.utils import ResponseUtils, transform_response_format
 
 from .conf import LiteLLMConf
 
@@ -81,6 +81,7 @@ class LiteLLMAgent(Agent[LiteLLMConf]):
     def llm_completion(self, ctx: ProcessContext[ChatCompletionRequest]):
 
         prompt = ctx.payload
+        prompt.response_format = transform_response_format(prompt.response_format)
 
         messages = self.pre_messages if self.pre_messages else []
 
