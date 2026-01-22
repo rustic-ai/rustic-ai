@@ -1,0 +1,357 @@
+{
+    "name": "Multi-LLM Guild",
+    "description": "Test out different llm models all in one place.",
+    "version": "v1",
+    "icon": null,
+    "intro_msg": "Hey! which agents would you like to add to test their outputs? \n\nPlease tag **User Input Analyser** with the model you would like to add. \n\nWe support the following models so far:\n- gpt-5\n- gpt-4.1\n- gpt-4\n- gpt-4o\n- gemini-2.5-pro\n- gemini-2.5-flash-preview-09-2025\n- gemini-2.5-flash-lite-preview-09-2025\n- claude-sonnet-4-5\n- meta/llama-4-maverick-17b-128e-instruct-maas",
+    "exposure": "private",
+    "author_id": "dummyuserid",
+    "organization_id": null,
+    "category_id": null,
+    "tags": [],
+    "commands": [],
+    "starter_prompts": [],
+    "spec": {
+        "name": "Multi-LLM Guild",
+        "description": "Test out different llm models all in one place.",
+        "properties": {},
+        "configuration_schema": {
+            "type": "object",
+            "properties": {
+                "model_1": {
+                    "type": "string",
+                    "title": "Model 1",
+                    "enum": [
+                        "vertex_ai/gpt-5",
+                        "vertex_ai/gpt-4o",
+                        "vertex_ai/gpt-4.1",
+                        "vertex_ai/gpt-4",
+                        "vertex_ai/gemini-2.5-pro",
+                        "vertex_ai/gemini-2.5-flash-preview-09-2025",
+                        "vertex_ai/gemini-2.5-flash-lite-preview-09-2025"
+                    ]
+                },
+                "model_2": {
+                    "type": "string",
+                    "title": "Model 2",
+                    "enum": [
+                        "vertex_ai/gpt-5",
+                        "vertex_ai/gpt-4o",
+                        "vertex_ai/gpt-4.1",
+                        "vertex_ai/gpt-4",
+                        "vertex_ai/gemini-2.5-pro",
+                        "vertex_ai/gemini-2.5-flash-preview-09-2025",
+                        "vertex_ai/gemini-2.5-flash-lite-preview-09-2025"
+                    ]
+                }
+            },
+            "required": [
+                "model_1",
+                "model_2"
+            ]
+        },
+        "configuration": {
+            "model_1": "vertex_ai/gemini-2.5-pro",
+            "model_2": "vertex_ai/gpt-4.1"
+        },
+        "agents": [
+            {
+                "id": "classifier_agent",
+                "name": "User Input Analyser",
+                "description": "An agent which classifies the text into categories.",
+                "class_name": "rustic_ai.llm_agent.llm_agent.LLMAgent",
+                "additional_topics": [
+                    "CLASSIFY"
+                ],
+                "properties": {
+                    "request_preprocessors": [],
+                    "llm_request_wrappers": [],
+                    "response_postprocessors": [],
+                    "max_retries": 0,
+                    "model": "vertex_ai/gemini-2.5-flash",
+                    "base_url": null,
+                    "api_version": null,
+                    "custom_llm_provider": null,
+                    "timeout": null,
+                    "default_system_prompt": "\n- You are a extractor agent. From the given text input return the name of llm model mentioned in the text as it is. If multiple models are mentioned, return them as a comma-separated string without any space between. \n- Do not modify the text in any way even keep the casing as is. \n- Do not skip anything part of model if like vertex_ai/\n\nExample input 1: @User Input Analyser can you create a new agent with the following model id: vertex_ai/claude-sonnet-4-5\nOutput: vertex_ai/claude-sonnet-4-5\n\nExample input 2: @User Input Analyser please create add vertex_ai/gemini-2.5-pro and vertex_ai/gpt-4o.\nOutput: vertex_ai/gemini-2.5-pro,vertex_ai/gpt-4o\n",
+                    "system_prompt_generator": null,
+                    "send_response": true,
+                    "vertex_location": null,
+                    "vertex_project": null
+                },
+                "listen_to_default_topic": false,
+                "act_only_when_tagged": false,
+                "predicates": {
+                    "invoke_llm": {
+                        "predicate_type": "jsonata_fn",
+                        "expression": "$contains(message.payload.messages[0].content[0].text, '@User Input Analyser')"
+                    }
+                },
+                "dependency_map": {},
+                "additional_dependencies": [],
+                "resources": {
+                    "num_cpus": null,
+                    "num_gpus": null,
+                    "custom_resources": {}
+                },
+                "qos": {
+                    "timeout": null,
+                    "retry_count": null,
+                    "latency": null
+                }
+            },
+            {
+                "id": "SplitterAgent",
+                "name": "Agent Lauch Processor",
+                "description": "Splits a list of agent specs",
+                "class_name": "rustic_ai.core.agents.eip.splitter_agent.SplitterAgent",
+                "additional_topics": [
+                    "SPLIT"
+                ],
+                "properties": {
+                    "splitter": {
+                        "split_type": "jsonata",
+                        "expression": "($map($split($.text, ','), function($v){ ({\"agent_spec\": {\"id\": $v, \"name\": $v, \"description\": \"An dynamic agent\", \"class_name\": \"rustic_ai.llm_agent.llm_agent.LLMAgent\", \"additional_topics\": [], \"additional_dependencies\": [], \"properties\": {\"model\": 'vertex_ai/' & $v, \"base_url\": null, \"api_version\": null, \"custom_llm_provider\": null, \"timeout\": null, \"max_retries\": 0, \"default_system_prompt\": \"You are an llm agent with memory store capabilities. Use the memories to answer user queries more effectively by fetching them\", \"system_prompt_generator\": null, \"request_preprocessors\": [], \"llm_request_wrappers\": [{\"kind\": \"rustic_ai.llm_agent.memories.guild_state_memories_store.GuildStateBackedMemoriesStore\", \"memory_type\": \"guild_state_backed\"}], \"response_postprocessors\": [], \"send_response\": true}, \"listen_to_default_topic\": true, \"act_only_when_tagged\": true, \"predicates\": {}, \"dependency_map\": {\"llm\": {\"class_name\": \"rustic_ai.litellm.agent_ext.llm.LiteLLMResolver\", \"properties\": {\"model\": 'vertex_ai/' & $v, \"conf\": {\"vertex_location\": $contains($v, 'claude') ? 'global' : $contains($v, 'llama') ? 'us-east5' : 'us-west1'}}}}, \"resources\": {\"num_cpus\": null, \"num_gpus\": null, \"custom_resources\": {}}, \"qos\": {\"timeout\": null, \"retry_count\": null, \"latency\": null}}}) }))"
+                    },
+                    "format_selector": {
+                        "strategy": "fixed",
+                        "fixed_format": "rustic_ai.core.agents.system.models.AgentLaunchRequest"
+                    }
+                },
+                "listen_to_default_topic": false,
+                "act_only_when_tagged": false,
+                "predicates": {},
+                "dependency_map": {},
+                "additional_dependencies": [],
+                "resources": {
+                    "num_cpus": null,
+                    "num_gpus": null,
+                    "custom_resources": {}
+                },
+                "qos": {
+                    "timeout": null,
+                    "retry_count": null,
+                    "latency": null
+                }
+            },
+            {
+                "id": "{{ model_1 }}",
+                "name": "{{ model_1 }}",
+                "description": "A starter llm agent",
+                "class_name": "rustic_ai.llm_agent.llm_agent.LLMAgent",
+                "additional_topics": [],
+                "properties": {
+                    "request_preprocessors": [],
+                    "llm_request_wrappers": [
+                        {
+                            "kind": "rustic_ai.llm_agent.memories.guild_state_memories_store.GuildStateBackedMemoriesStore",
+                            "depends_on": [],
+                            "memory_type": "guild_state_backed"
+                        }
+                    ],
+                    "response_postprocessors": [],
+                    "max_retries": 0,
+                    "model": "{{ model_1 }}",
+                    "base_url": null,
+                    "api_version": null,
+                    "custom_llm_provider": null,
+                    "timeout": null,
+                    "default_system_prompt": "You are an llm agent with memory store capabilities. Use the memories to answer user queries more effectively by fetching them",
+                    "system_prompt_generator": null,
+                    "send_response": true,
+                    "vertex_location": null,
+                    "vertex_project": null
+                },
+                "listen_to_default_topic": true,
+                "act_only_when_tagged": true,
+                "predicates": {},
+                "dependency_map": {
+                    "llm": {
+                        "class_name": "rustic_ai.litellm.agent_ext.llm.LiteLLMResolver",
+                        "properties": {
+                            "model": "{{ model_1 }}"
+                        }
+                    }
+                },
+                "additional_dependencies": [],
+                "resources": {
+                    "num_cpus": null,
+                    "num_gpus": null,
+                    "custom_resources": {}
+                },
+                "qos": {
+                    "timeout": null,
+                    "retry_count": null,
+                    "latency": null
+                }
+            },
+            {
+                "id": "{{ model_2 }}",
+                "name": "{{ model_2 }}",
+                "description": "A starter llm agent",
+                "class_name": "rustic_ai.llm_agent.llm_agent.LLMAgent",
+                "additional_topics": [],
+                "properties": {
+                    "request_preprocessors": [],
+                    "llm_request_wrappers": [
+                        {
+                            "kind": "rustic_ai.llm_agent.memories.guild_state_memories_store.GuildStateBackedMemoriesStore",
+                            "depends_on": [],
+                            "memory_type": "guild_state_backed"
+                        }
+                    ],
+                    "response_postprocessors": [],
+                    "max_retries": 0,
+                    "model": "{{ model_2 }}",
+                    "base_url": null,
+                    "api_version": null,
+                    "custom_llm_provider": null,
+                    "timeout": null,
+                    "default_system_prompt": "You are an llm agent with memory store capabilities. Use the memories to answer user queries more effectively by fetching them",
+                    "system_prompt_generator": null,
+                    "send_response": true,
+                    "vertex_location": null,
+                    "vertex_project": null
+                },
+                "listen_to_default_topic": true,
+                "act_only_when_tagged": true,
+                "predicates": {},
+                "dependency_map": {
+                    "llm": {
+                        "class_name": "rustic_ai.litellm.agent_ext.llm.LiteLLMResolver",
+                        "properties": {
+                            "model": "{{ model_2 }}"
+                        }
+                    }
+                },
+                "additional_dependencies": [],
+                "resources": {
+                    "num_cpus": null,
+                    "num_gpus": null,
+                    "custom_resources": {}
+                },
+                "qos": {
+                    "timeout": null,
+                    "retry_count": null,
+                    "latency": null
+                }
+            }
+        ],
+        "dependency_map": {},
+        "routes": {
+            "steps": [
+                {
+                    "agent": null,
+                    "agent_type": "rustic_ai.core.agents.utils.user_proxy_agent.UserProxyAgent",
+                    "method_name": "unwrap_and_forward_message",
+                    "origin_filter": null,
+                    "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest",
+                    "destination": {
+                        "topics": "CLASSIFY",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "mark_forwarded": false,
+                    "route_times": 1,
+                    "transformer": null,
+                    "agent_state_update": null,
+                    "guild_state_update": null,
+                    "process_status": null,
+                    "reason": null
+                },
+                {
+                    "agent": {
+                        "id": null,
+                        "name": "User Input Analyser"
+                    },
+                    "agent_type": null,
+                    "method_name": null,
+                    "origin_filter": null,
+                    "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                    "destination": null,
+                    "mark_forwarded": false,
+                    "route_times": 1,
+                    "transformer": {
+                        "style": "simple",
+                        "expression_type": "jsonata",
+                        "handler": "({\"topics\": \"SPLIT\", \"format\": \"rustic_ai.core.ui_protocol.types.TextFormat\", \"payload\": {\"text\": payload.choices[0].message.content}})"
+                    },
+                    "agent_state_update": null,
+                    "guild_state_update": null,
+                    "process_status": null,
+                    "reason": null
+                },
+                {
+                    "agent": {
+                        "id": null,
+                        "name": "Agent Lauch Processor"
+                    },
+                    "agent_type": null,
+                    "method_name": null,
+                    "origin_filter": null,
+                    "message_format": "rustic_ai.core.agents.system.models.AgentLaunchRequest",
+                    "destination": {
+                        "topics": "system_topic",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "mark_forwarded": false,
+                    "route_times": -1,
+                    "transformer": null,
+                    "agent_state_update": null,
+                    "guild_state_update": null,
+                    "process_status": "completed",
+                    "reason": null
+                },
+                {
+                    "agent": null,
+                    "agent_type": "rustic_ai.llm_agent.llm_agent.LLMAgent",
+                    "method_name": null,
+                    "origin_filter": null,
+                    "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                    "destination": null,
+                    "mark_forwarded": false,
+                    "route_times": -1,
+                    "transformer": {
+                        "style": "content_based_router",
+                        "expression_type": "jsonata",
+                        "handler": "({\"topics\": topics = 'CLASSIFY' ? 'TRANSCAN' : 'user_message_broadcast'})"
+                    },
+                    "agent_state_update": null,
+                    "guild_state_update": {
+                        "expression_type": "jsonata",
+                        "update_format": "json-merge-patch",
+                        "state_update": "({\"memories\": $append($.guild_state.memories ? $.guild_state.memories : [], {\"role\": \"user\", \"content\": $.untransformed.payload.choices[0].message.content}) })"
+                    },
+                    "process_status": "completed",
+                    "reason": null
+                },
+                {
+                    "agent": null,
+                    "agent_type": "rustic_ai.core.agents.system.guild_manager_agent.GuildManagerAgent",
+                    "method_name": null,
+                    "origin_filter": null,
+                    "message_format": "rustic_ai.core.agents.system.models.AgentLaunchResponse",
+                    "destination": {
+                        "topics": "user_message_broadcast",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "mark_forwarded": false,
+                    "route_times": -1,
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                        "expression_type": "jsonata",
+                        "expression": "({\"choices\": [{\"message\": {\"content\": 'Added the following agent to the guild: ' & $.agent_id}}]})"
+                    },
+                    "agent_state_update": null,
+                    "guild_state_update": null,
+                    "process_status": "completed",
+                    "reason": null
+                }
+            ]
+        },
+        "gateway": null
+    }
+}
