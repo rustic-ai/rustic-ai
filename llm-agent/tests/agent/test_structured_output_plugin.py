@@ -50,8 +50,8 @@ class TestStructuredOutputPlugin:
                     model="vertex_ai/gemini-3-pro-preview",
                     vertex_location="global",
                     default_system_prompt="Extract the event information.",
-                    response_postprocessors=[
-                        StructuredOutputPlugin()
+                    llm_request_wrappers=[
+                        StructuredOutputPlugin(output_format_class_name=get_qualified_class_name(Weather))
                     ]
                 )
             )
@@ -78,8 +78,7 @@ class TestStructuredOutputPlugin:
     Friday returns to partly cloudy conditions, with a temperature of 73°F and the Winds will be light at 12 km/h.
     Finally, Saturday rounds off the week with sunny skies, a temperature of 80°F, and a humidity level of 40%. Winds will be gentle at 8 km/h.
                         """),
-                    ],
-                    response_format=get_qualified_class_name(Weather)
+                    ]
                 ),
             )
         )
