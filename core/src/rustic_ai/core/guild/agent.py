@@ -1047,6 +1047,8 @@ class ProcessorHelper:
 ALWAYS_HANDLE_FORMATS = [
     "rustic_ai.core.guild.agent.SelfReadyNotification",
     "rustic_ai.core.guild.agent_ext.mixins.health.HealthCheckRequest",
+    "rustic_ai.core.state.models.StateUpdateResponse",
+    "rustic_ai.core.state.models.StateFetchResponse",
 ]
 
 
