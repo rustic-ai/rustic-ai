@@ -1,0 +1,546 @@
+{
+    "name": "LLM Council",
+    "description": "A multi-agent system where multiple LLMs collaborate, review each other's responses, and a Chairman compiles the final answer.",
+    "version": "v1",
+    "icon": null,
+    "intro_msg": "Welcome to the LLM Council! Your query will be reviewed by multiple AI models, they'll evaluate each other's responses, and our Chairman will compile the best final answer.\n\nAsk me anything!",
+    "exposure": "private",
+    "author_id": "dummyuserid",
+    "organization_id": null,
+    "category_id": null,
+    "tags": [
+        "multi-llm",
+        "council",
+        "collaborative-ai"
+    ],
+    "commands": [],
+    "starter_prompts": [
+        "What are the key factors to consider when choosing a database for a high-traffic web application?",
+        "Explain the concept of quantum entanglement in simple terms.",
+        "What are the ethical implications of AI in healthcare?"
+    ],
+    "spec": {
+        "name": "LLM Council",
+        "description": "A multi-agent system where multiple LLMs collaborate, review each other's responses, and a Chairman compiles the final answer.",
+        "properties": {},
+        "configuration_schema": {
+            "type": "object",
+            "properties": {
+                "council_member_1": {
+                    "type": "string",
+                    "title": "Council Member 1",
+                    "enum": [
+                        "vertex_ai/gpt-5",
+                        "vertex_ai/gpt-4.1",
+                        "vertex_ai/gpt-4o",
+                        "vertex_ai/gemini-2.5-pro",
+                        "vertex_ai/gemini-2.5-flash-preview-09-2025",
+                        "vertex_ai/gemini-3-pro-preview"
+                    ],
+                    "default": "vertex_ai/gpt-4.1"
+                },
+                "council_member_2": {
+                    "type": "string",
+                    "title": "Council Member 2",
+                    "enum": [
+                        "vertex_ai/gpt-5",
+                        "vertex_ai/gpt-4.1",
+                        "vertex_ai/gpt-4o",
+                        "vertex_ai/gemini-2.5-pro",
+                        "vertex_ai/gemini-2.5-flash-preview-09-2025",
+                        "vertex_ai/gemini-3-pro-preview"
+                    ],
+                    "default": "vertex_ai/gemini-2.5-pro"
+                },
+                "council_member_3": {
+                    "type": "string",
+                    "title": "Council Member 3",
+                    "enum": [
+                        "vertex_ai/gpt-5",
+                        "vertex_ai/gpt-4.1",
+                        "vertex_ai/gpt-4o",
+                        "vertex_ai/gemini-2.5-pro",
+                        "vertex_ai/gemini-2.5-flash-preview-09-2025",
+                        "vertex_ai/gemini-3-pro-preview"
+                    ],
+                    "default": "vertex_ai/gpt-4o"
+                },
+                "chairman_model": {
+                    "type": "string",
+                    "title": "Chairman Model",
+                    "enum": [
+                        "vertex_ai/gpt-5",
+                        "vertex_ai/gpt-4.1",
+                        "vertex_ai/gpt-4o",
+                        "vertex_ai/gemini-2.5-pro",
+                        "vertex_ai/gemini-3-pro-preview"
+                    ],
+                    "default": "vertex_ai/gemini-2.5-pro"
+                }
+            },
+            "required": [
+                "council_member_1",
+                "council_member_2",
+                "council_member_3",
+                "chairman_model"
+            ]
+        },
+        "configuration": {
+            "council_member_1": "vertex_ai/gpt-4.1",
+            "council_member_2": "vertex_ai/gemini-2.5-pro",
+            "council_member_3": "vertex_ai/gemini-3-pro-preview",
+            "chairman_model": "vertex_ai/gemini-2.5-pro"
+        },
+        "agents": [
+            {
+                "id": "council_member_1",
+                "name": "Council Member 1",
+                "description": "First council member providing initial opinion",
+                "class_name": "rustic_ai.llm_agent.llm_agent.LLMAgent",
+                "additional_topics": [
+                    "COUNCIL_OPINION",
+                    "COUNCIL_REVIEW"
+                ],
+                "properties": {
+                    "request_preprocessors": [],
+                    "llm_request_wrappers": [],
+                    "response_postprocessors": [],
+                    "max_retries": 0,
+                    "model": "{{ council_member_1 }}",
+                    "base_url": null,
+                    "api_version": null,
+                    "custom_llm_provider": null,
+                    "timeout": null,
+                    "default_system_prompt": "You are a council member in an expert AI council. Provide thoughtful, well-reasoned responses to user queries. Focus on accuracy, depth, and clarity.",
+                    "system_prompt_generator": null,
+                    "send_response": true,
+                    "vertex_location": null,
+                    "vertex_project": null
+                },
+                "listen_to_default_topic": false,
+                "act_only_when_tagged": false,
+                "predicates": {},
+                "dependency_map": {
+                    "llm": {
+                        "class_name": "rustic_ai.litellm.agent_ext.llm.LiteLLMResolver",
+                        "properties": {
+                            "model": "{{ council_member_1 }}"
+                        }
+                    }
+                },
+                "additional_dependencies": [],
+                "resources": {
+                    "num_cpus": null,
+                    "num_gpus": null,
+                    "custom_resources": {}
+                },
+                "qos": {
+                    "timeout": null,
+                    "retry_count": null,
+                    "latency": null
+                }
+            },
+            {
+                "id": "council_member_2",
+                "name": "Council Member 2",
+                "description": "Second council member providing initial opinion",
+                "class_name": "rustic_ai.llm_agent.llm_agent.LLMAgent",
+                "additional_topics": [
+                    "COUNCIL_OPINION",
+                    "COUNCIL_REVIEW"
+                ],
+                "properties": {
+                    "request_preprocessors": [],
+                    "llm_request_wrappers": [],
+                    "response_postprocessors": [],
+                    "max_retries": 0,
+                    "model": "{{ council_member_2 }}",
+                    "base_url": null,
+                    "api_version": null,
+                    "custom_llm_provider": null,
+                    "timeout": null,
+                    "default_system_prompt": "You are a council member in an expert AI council. Provide thoughtful, well-reasoned responses to user queries. Focus on accuracy, depth, and clarity.",
+                    "system_prompt_generator": null,
+                    "send_response": true,
+                    "vertex_location": null,
+                    "vertex_project": null
+                },
+                "listen_to_default_topic": false,
+                "act_only_when_tagged": false,
+                "predicates": {},
+                "dependency_map": {
+                    "llm": {
+                        "class_name": "rustic_ai.litellm.agent_ext.llm.LiteLLMResolver",
+                        "properties": {
+                            "model": "{{ council_member_2 }}"
+                        }
+                    }
+                },
+                "additional_dependencies": [],
+                "resources": {
+                    "num_cpus": null,
+                    "num_gpus": null,
+                    "custom_resources": {}
+                },
+                "qos": {
+                    "timeout": null,
+                    "retry_count": null,
+                    "latency": null
+                }
+            },
+            {
+                "id": "council_member_3",
+                "name": "Council Member 3",
+                "description": "Third council member providing initial opinion",
+                "class_name": "rustic_ai.llm_agent.llm_agent.LLMAgent",
+                "additional_topics": [
+                    "COUNCIL_OPINION",
+                    "COUNCIL_REVIEW"
+                ],
+                "properties": {
+                    "request_preprocessors": [],
+                    "llm_request_wrappers": [],
+                    "response_postprocessors": [],
+                    "max_retries": 0,
+                    "model": "{{ council_member_3 }}",
+                    "base_url": null,
+                    "api_version": null,
+                    "custom_llm_provider": null,
+                    "timeout": null,
+                    "default_system_prompt": "You are a council member in an expert AI council. Provide thoughtful, well-reasoned responses to user queries. Focus on accuracy, depth, and clarity.",
+                    "system_prompt_generator": null,
+                    "send_response": true,
+                    "vertex_location": null,
+                    "vertex_project": null
+                },
+                "listen_to_default_topic": false,
+                "act_only_when_tagged": false,
+                "predicates": {},
+                "dependency_map": {
+                    "llm": {
+                        "class_name": "rustic_ai.litellm.agent_ext.llm.LiteLLMResolver",
+                        "properties": {
+                            "model": "{{ council_member_3 }}"
+                        }
+                    }
+                },
+                "additional_dependencies": [],
+                "resources": {
+                    "num_cpus": null,
+                    "num_gpus": null,
+                    "custom_resources": {}
+                },
+                "qos": {
+                    "timeout": null,
+                    "retry_count": null,
+                    "latency": null
+                }
+            },
+            {
+                "id": "opinion_aggregator",
+                "name": "Opinion Aggregator",
+                "description": "Aggregates all council member opinions",
+                "class_name": "rustic_ai.core.agents.eip.aggregating_agent.AggregatingAgent",
+                "additional_topics": [
+                    "AGGREGATE_OPINIONS"
+                ],
+                "properties": {
+                    "correlation_location": "payload",
+                    "correlation_id_path": "correlation_id",
+                    "collector": {
+                        "collector_type": "dict",
+                        "key_field": "id"
+                    },
+                    "aggregator": {
+                        "aggregation_check": "count",
+                        "count": 3
+                    }
+                },
+                "listen_to_default_topic": false,
+                "act_only_when_tagged": false,
+                "predicates": {},
+                "dependency_map": {},
+                "additional_dependencies": [],
+                "resources": {
+                    "num_cpus": null,
+                    "num_gpus": null,
+                    "custom_resources": {}
+                },
+                "qos": {
+                    "timeout": null,
+                    "retry_count": null,
+                    "latency": null
+                }
+            },
+            {
+                "id": "review_aggregator",
+                "name": "Review Aggregator",
+                "description": "Aggregates all reviews from council members",
+                "class_name": "rustic_ai.core.agents.eip.aggregating_agent.AggregatingAgent",
+                "additional_topics": [
+                    "AGGREGATE_REVIEWS"
+                ],
+                "properties": {
+                    "correlation_location": "payload",
+                    "correlation_id_path": "correlation_id",
+                    "collector": {
+                        "collector_type": "dict",
+                        "key_field": "id"
+                    },
+                    "aggregator": {
+                        "aggregation_check": "count",
+                        "count": 3
+                    }
+                },
+                "listen_to_default_topic": false,
+                "act_only_when_tagged": false,
+                "predicates": {},
+                "dependency_map": {},
+                "additional_dependencies": [],
+                "resources": {
+                    "num_cpus": null,
+                    "num_gpus": null,
+                    "custom_resources": {}
+                },
+                "qos": {
+                    "timeout": null,
+                    "retry_count": null,
+                    "latency": null
+                }
+            },
+            {
+                "id": "chairman",
+                "name": "Chairman",
+                "description": "Chairman who compiles the final response based on all opinions and reviews",
+                "class_name": "rustic_ai.llm_agent.llm_agent.LLMAgent",
+                "additional_topics": [
+                    "CHAIRMAN_COMPILE"
+                ],
+                "properties": {
+                    "request_preprocessors": [],
+                    "llm_request_wrappers": [],
+                    "response_postprocessors": [],
+                    "max_retries": 0,
+                    "model": "{{ chairman_model }}",
+                    "base_url": null,
+                    "api_version": null,
+                    "custom_llm_provider": null,
+                    "timeout": null,
+                    "default_system_prompt": "You are the Chairman of an expert AI council. Your role is to synthesize multiple perspectives and reviews into a comprehensive, balanced final answer.\n\nYou will receive:\n1. The original user query\n2. Initial responses from multiple AI models\n3. Peer reviews and rankings of those responses\n\nYour task:\n- Analyze all perspectives carefully\n- Consider the peer reviews and rankings\n- Identify the strongest insights from each response\n- Synthesize them into a clear, comprehensive final answer\n- Acknowledge different viewpoints when relevant\n- Present the most accurate and helpful response to the user\n\nFormat your response clearly and professionally.",
+                    "system_prompt_generator": null,
+                    "send_response": true,
+                    "vertex_location": null,
+                    "vertex_project": null
+                },
+                "listen_to_default_topic": false,
+                "act_only_when_tagged": false,
+                "predicates": {},
+                "dependency_map": {
+                    "llm": {
+                        "class_name": "rustic_ai.litellm.agent_ext.llm.LiteLLMResolver",
+                        "properties": {
+                            "model": "{{ chairman_model }}"
+                        }
+                    }
+                },
+                "additional_dependencies": [],
+                "resources": {
+                    "num_cpus": null,
+                    "num_gpus": null,
+                    "custom_resources": {}
+                },
+                "qos": {
+                    "timeout": null,
+                    "retry_count": null,
+                    "latency": null
+                }
+            }
+        ],
+        "dependency_map": {},
+        "routes": {
+            "steps": [
+                {
+                    "agent": null,
+                    "agent_type": "rustic_ai.core.agents.utils.user_proxy_agent.UserProxyAgent",
+                    "method_name": "unwrap_and_forward_message",
+                    "origin_filter": null,
+                    "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest",
+                    "destination": {
+                        "topics": "COUNCIL_OPINION",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "mark_forwarded": false,
+                    "route_times": 1,
+                    "transformer": null,
+                    "agent_state_update": null,
+                    "guild_state_update": {
+                        "expression_type": "jsonata",
+                        "update_format": "json-merge-patch",
+                        "state_update": "({\"user_query\": $.payload.messages[0].content[0].text, \"correlation_id\": $.id})"
+                    },
+                    "process_status": null,
+                    "reason": "Stage 1: Send user query to all council members for initial opinions"
+                },
+                {
+                    "agent": null,
+                    "agent_type": "rustic_ai.llm_agent.llm_agent.LLMAgent",
+                    "method_name": null,
+                    "origin_filter": {
+                        "origin_topic": "COUNCIL_OPINION"
+                    },
+                    "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                    "destination": {
+                        "topics": "AGGREGATE_OPINIONS",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "mark_forwarded": false,
+                    "route_times": 3,
+                    "transformer": {
+                        "style": "content_based_router",
+                        "expression_type": "jsonata",
+                        "handler": "({\"topics\": 'AGGREGATE_OPINIONS', \"format\": 'rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse', \"payload\": $merge([$.payload, {\"correlation_id\": $string($.guild_state.correlation_id)}])})"
+                    },
+                    "agent_state_update": null,
+                    "guild_state_update": null,
+                    "process_status": null,
+                    "reason": "Route opinion responses to Opinion Aggregator"
+                },
+                {
+                    "agent": null,
+                    "agent_type": "rustic_ai.llm_agent.llm_agent.LLMAgent",
+                    "method_name": null,
+                    "origin_filter": {
+                        "origin_topic": "COUNCIL_OPINION"
+                    },
+                    "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                    "destination": {
+                        "topics": "user_message_broadcast",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "mark_forwarded": false,
+                    "route_times": 3,
+                    "transformer": {
+                        "style": "content_based_router",
+                        "expression_type": "jsonata",
+                        "handler": "({\"topics\": 'user_message_broadcast', \"format\": 'rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse', \"payload\": {\"choices\": [{\"message\": {\"content\": '**' & $.sender.name & ' Opinion:**\\n\\n' & $.payload.choices[0].message.content}}]}})"
+                    },
+                    "agent_state_update": null,
+                    "guild_state_update": null,
+                    "process_status": null,
+                    "reason": "Display individual council member opinions to user"
+                },
+                {
+                    "agent": {
+                        "id": null,
+                        "name": "Opinion Aggregator"
+                    },
+                    "agent_type": null,
+                    "method_name": null,
+                    "origin_filter": null,
+                    "message_format": "rustic_ai.core.agents.eip.aggregating_agent.AggregatedMessages",
+                    "destination": {
+                        "topics": "COUNCIL_REVIEW",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "mark_forwarded": false,
+                    "route_times": 1,
+                    "transformer": {
+                        "style": "content_based_router",
+                        "expression_type": "jsonata",
+                        "handler": "({\"topics\": 'COUNCIL_REVIEW', \"format\": 'rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest', \"payload\": {\"messages\": [{\"role\": 'user', \"content\": [{\"type\": 'text', \"text\": 'Original Query: ' & $.guild_state.user_query & '\\n\\nReview the following responses and rank them from 1 (best) to 3 (worst) based on accuracy, insight, and helpfulness. The responses are anonymized.\\n\\n' & $join($map($.payload.messages, function($v, $i) { 'Response_' & ($string($i + 1)) & ': ' & $v.data.choices[0].message.content }), '\\n\\n---\\n\\n') & '\\n\\nProvide your ranking as:\\n1. [Response_X] - [Brief reason]\\n2. [Response_Y] - [Brief reason]\\n3. [Response_Z] - [Brief reason]'}]}]}})"
+                    },
+                    "agent_state_update": null,
+                    "guild_state_update": {
+                        "expression_type": "jsonata",
+                        "update_format": "json-merge-patch",
+                        "state_update": "{\"aggregated_opinions\": $.untransformed.payload.messages}"
+                    },
+                    "process_status": null,
+                    "reason": "Stage 2: Send aggregated opinions to all council members for peer review"
+                },
+                {
+                    "agent": null,
+                    "agent_type": "rustic_ai.llm_agent.llm_agent.LLMAgent",
+                    "method_name": null,
+                    "origin_filter": {
+                        "origin_topic": "COUNCIL_REVIEW"
+                    },
+                    "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                    "destination": {
+                        "topics": "AGGREGATE_REVIEWS",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "mark_forwarded": false,
+                    "route_times": 3,
+                    "transformer": {
+                        "style": "content_based_router",
+                        "expression_type": "jsonata",
+                        "handler": "({\"topics\": 'AGGREGATE_REVIEWS', \"format\": 'rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse', \"payload\": $merge([$.payload, {\"correlation_id\": $string($.guild_state.correlation_id)}])})"
+                    },
+                    "agent_state_update": null,
+                    "guild_state_update": null,
+                    "process_status": null,
+                    "reason": "Route review responses to Review Aggregator"
+                },
+                {
+                    "agent": {
+                        "id": null,
+                        "name": "Review Aggregator"
+                    },
+                    "agent_type": null,
+                    "method_name": null,
+                    "origin_filter": null,
+                    "message_format": "rustic_ai.core.agents.eip.aggregating_agent.AggregatedMessages",
+                    "destination": {
+                        "topics": "CHAIRMAN_COMPILE",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "mark_forwarded": false,
+                    "route_times": 1,
+                    "transformer": {
+                        "style": "content_based_router",
+                        "expression_type": "jsonata",
+                        "handler": "({\"topics\": 'CHAIRMAN_COMPILE', \"format\": 'rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest', \"payload\": {\"messages\": [{\"role\": 'user', \"content\": [{\"type\": 'text', \"text\": 'Original Query: ' & $.guild_state.user_query & '\\n\\nCouncil Member Responses:\\n' & $join($map($.guild_state.aggregated_opinions, function($v, $i) { 'Response ' & ($string($i + 1)) & ':\\n' & $v.data.choices[0].message.content }), '\\n\\n---\\n\\n') & '\\n\\nPeer Reviews and Rankings:\\n' & $join($map($.payload.messages, function($v, $i) { 'Review ' & ($string($i + 1)) & ':\\n' & $v.data.choices[0].message.content }), '\\n\\n') & '\\n\\nAs Chairman, synthesize all perspectives and provide the final, most comprehensive answer.'}]}]}})"
+                    },
+                    "agent_state_update": null,
+                    "guild_state_update": null,
+                    "process_status": null,
+                    "reason": "Stage 3: Send all opinions and reviews to Chairman"
+                },
+                {
+                    "agent": {
+                        "id": null,
+                        "name": "Chairman"
+                    },
+                    "agent_type": null,
+                    "method_name": null,
+                    "origin_filter": null,
+                    "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                    "destination": {
+                        "topics": "user_message_broadcast",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "mark_forwarded": false,
+                    "route_times": 1,
+                    "transformer": {
+                        "style": "content_based_router",
+                        "expression_type": "jsonata",
+                        "handler": "({\"topics\": 'user_message_broadcast', \"format\": 'rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse', \"payload\": {\"choices\": [{\"message\": {\"content\": '\\n\\n---\\n\\n## Chairman Final Response:\\n\\n' & $.payload.choices[0].message.content}}]}})"
+                    },
+                    "agent_state_update": null,
+                    "guild_state_update": null,
+                    "process_status": "completed",
+                    "reason": "Send Chairman's final response to user"
+                }
+            ]
+        },
+        "gateway": null
+    }
+}
