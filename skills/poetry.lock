@@ -168,7 +168,6 @@ files = [
 
 [package.dependencies]
 frozenlist = ">=1.1.0"
-typing-extensions = {version = ">=4.2", markers = "python_version < \"3.13\""}
 
 [[package]]
 name = "annotated-doc"
@@ -208,7 +207,6 @@ files = [
 
 [package.dependencies]
 idna = ">=2.8"
-typing_extensions = {version = ">=4.5", markers = "python_version < \"3.13\""}
 
 [package.extras]
 trio = ["trio (>=0.31.0) ; python_version < \"3.10\"", "trio (>=0.32.0) ; python_version >= \"3.10\""]
@@ -1028,6 +1026,7 @@ description = "RE2 Python bindings"
 optional = false
 python-versions = "~=3.9"
 groups = ["main", "dev"]
+markers = "sys_platform != \"darwin\" or platform_machine != \"arm64\""
 files = [
     {file = "google_re2-1.1.20251105-1-cp310-cp310-macosx_13_0_arm64.whl", hash = "sha256:88bd426c1904f3562049bf766301bbc4f7a4bcb8f61e92f8cc833faac1cf2a92"},
     {file = "google_re2-1.1.20251105-1-cp310-cp310-macosx_13_0_x86_64.whl", hash = "sha256:a486dc10bb07f3c34b9908541368e21ab6d77972569427200db077126668fbf3"},
@@ -3008,7 +3007,6 @@ files = [
 [package.dependencies]
 attrs = ">=22.2.0"
 rpds-py = ">=0.7.0"
-typing-extensions = {version = ">=4.4.0", markers = "python_version < \"3.13\""}
 
 [[package]]
 name = "regex"
@@ -3303,7 +3301,7 @@ name = "rusticai-core"
 version = "1.0.0"
 description = "Rustic AI’s modular, agentic AI framework for building human-centered, multi-agent workflows"
 optional = false
-python-versions = ">=3.12,<3.13"
+python-versions = ">=3.13,<3.14"
 groups = ["main", "dev"]
 files = []
 develop = true
@@ -3340,7 +3338,7 @@ name = "rusticai-litellm"
 version = "1.0.0"
 description = "Rustic AI module leveraging LiteLLM for LLMs"
 optional = false
-python-versions = ">=3.12,<3.13"
+python-versions = ">=3.13,<3.14"
 groups = ["dev"]
 files = []
 develop = true
@@ -3364,7 +3362,7 @@ name = "rusticai-llm-agent"
 version = "1.0.0"
 description = "A complete set of LLM agents"
 optional = false
-python-versions = ">=3.12,<3.13"
+python-versions = ">=3.13,<3.14"
 groups = ["main"]
 files = []
 develop = true
@@ -3385,7 +3383,7 @@ name = "rusticai-testing"
 version = "1.0.0"
 description = "Test Utilities for Rustic AI Framework"
 optional = false
-python-versions = ">=3.12,<3.13"
+python-versions = ">=3.13,<3.14"
 groups = ["dev"]
 files = []
 develop = true
@@ -3606,7 +3604,6 @@ files = [
 
 [package.dependencies]
 anyio = ">=3.6.2,<5"
-typing-extensions = {version = ">=4.10.0", markers = "python_version < \"3.13\""}
 
 [package.extras]
 full = ["httpx (>=0.27.0,<0.29.0)", "itsdangerous", "jinja2", "python-multipart (>=0.0.18)", "pyyaml"]
@@ -4139,5 +4136,5 @@ test = []
 
 [metadata]
 lock-version = "2.1"
-python-versions = ">=3.12,<3.13"
-content-hash = "7dec277be3f5217ae74635d040ce25fffd4727ffa05462770b0c4daeec6f6de0"
+python-versions = ">=3.13,<3.14"
+content-hash = "00fb9f84f7f1e131be25fa08c4992a6acb37a37b0df0bc40ca24855fe18a7fd7"
