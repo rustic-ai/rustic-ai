@@ -138,3 +138,7 @@ debugger/
 node_modules/
 .claude/
 skills/.claude/
+
+# Excluded modules
+icp_researcher/
+dossier/
