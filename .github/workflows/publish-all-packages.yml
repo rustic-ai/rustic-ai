@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.13.1']
+        python-version: ['3.13.11']
     permissions:
       contents: read
       id-token: write  # For PyPI trusted publishing
