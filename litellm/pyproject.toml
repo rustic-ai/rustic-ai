@@ -10,7 +10,7 @@ description = "Rustic AI module leveraging LiteLLM for LLMs"
 authors = [{name = "Dragonscale Industries Inc.", email = "dev@dragonscale.ai"}]
 license = "Apache-2.0"
 readme = "README.md"
-requires-python = ">=3.12,<3.13"
+requires-python = ">=3.13,<3.14"
 dynamic = ["dependencies"]
 urls = { Homepage = "https://www.rustic.ai/", Repository = "https://github.com/rustic-ai/rustic-ai", "Rustic AI Core" = "https://pypi.org/project/rusticai-core/" }
 
@@ -45,7 +45,7 @@ test = ["pytest","rusticai-testing"]
 
 [tool.black]
 line-length = 120
-target-version = ['py312']
+target-version = ['py313']
 include = '\.pyi?$'
 exclude = '''
 /(
@@ -61,7 +61,7 @@ exclude = '''
 '''
 
 [tool.mypy]
-python_version = "3.12"
+python_version = "3.13"
 ignore_missing_imports = true
 check_untyped_defs = true
 plugins = "pydantic.mypy"

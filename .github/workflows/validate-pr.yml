@@ -18,7 +18,7 @@ jobs:
     # The type of runner that the job will run on
     strategy:
       matrix:
-        python-versions: [3.12.12]
+        python-versions: [3.13.1]
         os: [ubuntu-latest]
         redis-versions: [7]
     runs-on: ${{ matrix.os }}
@@ -71,7 +71,7 @@ jobs:
           tox
 
       - name: Save Cache
-        if: matrix.os == 'ubuntu-latest' && matrix.python-versions == '3.12.12'
+        if: matrix.os == 'ubuntu-latest' && matrix.python-versions == '3.13.1'
         uses: actions/cache/save@v4
         with:
           path: ~/.cache/huggingface
