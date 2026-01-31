@@ -1,5 +1,9 @@
 #!/bin/sh
 # POSIX‑compliant integration test runner WITHOUT coverage for faster development.
+# Optional args:
+#   --parallel             Enable pytest-xdist with -n auto
+#   --workers N|auto       Set xdist worker count (implies --parallel)
+#   --no-parallel          Force serial execution
 
 # -------- strict mode --------
 set -eu                           # exit on error or unset var
@@ -69,6 +73,68 @@ sh -c '
     printf "    • Uvicorn PID: %s\n" "$UVICORN_PID"
 
     sleep 5   # let the server bind
+
+    PARALLEL=0
+    HAS_XDIST=0
+    WORKERS=auto
+    PYTEST_ARGS=""
+
+    escape_arg() {
+        # Escape backslashes and double-quotes for safe eval inside double quotes.
+        printf "%s" "$1" | sed "s/\\\\/\\\\\\\\/g; s/\"/\\\\\"/g"
+    }
+
+    while [ "$#" -gt 0 ]; do
+        case "$1" in
+            --parallel)
+                PARALLEL=1
+                shift
+                ;;
+            --no-parallel)
+                PARALLEL=0
+                shift
+                ;;
+            --workers)
+                if [ "$#" -lt 2 ]; then
+                    echo "Missing value for --workers" >&2
+                    exit 2
+                fi
+                WORKERS="$2"
+                PARALLEL=1
+                shift 2
+                ;;
+            --workers=*)
+                WORKERS="${1#--workers=}"
+                PARALLEL=1
+                shift
+                ;;
+            -n|--numprocesses)
+                HAS_XDIST=1
+                if [ "$#" -lt 2 ]; then
+                    echo "Missing value for $1" >&2
+                    exit 2
+                fi
+                PYTEST_ARGS="$PYTEST_ARGS \"$(escape_arg "$1")\" \"$(escape_arg "$2")\""
+                shift 2
+                ;;
+            -n*)
+                HAS_XDIST=1
+                PYTEST_ARGS="$PYTEST_ARGS \"$(escape_arg "$1")\""
+                shift
+                ;;
+            *)
+                PYTEST_ARGS="$PYTEST_ARGS \"$(escape_arg "$1")\""
+                shift
+                ;;
+        esac
+    done
+
+    # shellcheck disable=SC2086
+    eval "set -- $PYTEST_ARGS"
+
+    if [ "$PARALLEL" -eq 1 ] && [ "$HAS_XDIST" -eq 0 ]; then
+        set -- -n "$WORKERS" "$@"
+    fi
 
     # Arguments are already in correct positions ($1, $2, etc.)
     printf "🧪  Running pytest (NO COVERAGE) with: \n"

@@ -654,7 +654,7 @@ def test_skill_with_react_agent():
         .set_description("Test skill agent")
         .set_properties(
             ReActAgentConfig(
-                model="gpt-4o-mini",
+                model="gpt-5-nano",
                 toolset=toolset,
             )
         )

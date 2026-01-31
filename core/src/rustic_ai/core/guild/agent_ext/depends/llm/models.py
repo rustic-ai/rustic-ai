@@ -31,7 +31,7 @@ class Models(StrEnum):
     """
 
     gpt_4o = "gpt-4o"
-    gpt_4o_mini = "gpt-4o-mini"
+    gpt_4o_mini = "gpt-5-nano"
 
     gpt_4_turbo = "gpt-4-turbo"
     gpt_4_turbo_2024_04_09 = "gpt-4-turbo-2024-04-09"
