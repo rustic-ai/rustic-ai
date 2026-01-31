@@ -356,7 +356,7 @@ class UiComponentAgent(Agent):
         )
 
         ctx.send_dict(
-            perspective_msg.model_dump(by_alias=True),
+            perspective_msg.model_dump(),
             format="PerspectiveFormat",
         )
 

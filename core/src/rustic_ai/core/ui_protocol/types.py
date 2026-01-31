@@ -10,6 +10,7 @@ from enum import Enum
 from typing import Dict, Literal, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field, JsonValue, model_validator
+from pydantic.alias_generators import to_camel
 
 from rustic_ai.core.agents.commons.media import MediaLink
 
@@ -21,11 +22,12 @@ class UpdateType(str, Enum):
 
 class DataFormat(BaseModel):
     """Base class for all message data formats."""
-
+    model_config = ConfigDict(alias_generator=to_camel, serialize_by_alias=True, validate_by_name=True,
+                              validate_by_alias=True)
     title: Optional[str] = None
     description: Optional[str] = None
-    update_id: Optional[str] = Field(default=None, alias="updateId")
-    update_type: Optional[UpdateType] = Field(None, alias="updateType")
+    update_id: Optional[str] = Field(default=None)
+    update_type: Optional[UpdateType] = Field(None)
 
 
 class VisualizationFormat(DataFormat):
