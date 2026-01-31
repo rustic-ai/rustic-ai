@@ -7,7 +7,7 @@ name = "rusticai-python-framework"
 description = "Monorepo for Rustic AI Python Packages"
 authors = [{name = "Dragonscale Industries Inc.", email = "dev@dragonscale.ai"}]
 readme = "README.md"
-requires-python = ">=3.12,<3.13"
+requires-python = ">=3.14,<3.15"
 urls = { Homepage = "https://www.rustic.ai/", Repository = "https://github.com/rustic-ai/rustic-ai" }
 dynamic = [ "dependencies" ]
 
@@ -75,7 +75,7 @@ google-cloud = ["gcsfs"]
 
 [tool.black]
 line-length = 120
-target-version = ['py312']
+target-version = ['py314']
 include = '\\.pyi?$'
 exclude = '''
 /(
@@ -93,7 +93,7 @@ exclude = '''
 '''
 
 [tool.mypy]
-python_version = "3.12"
+python_version = "3.14"
 ignore_missing_imports = true
 check_untyped_defs = true
 plugins = "pydantic.mypy"

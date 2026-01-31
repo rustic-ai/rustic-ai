@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.4
-FROM python:3.12.12-slim AS base
+FROM python:3.14.2-slim AS base
 
 ARG RAY_UID=1000
 ARG RAY_GID=1000

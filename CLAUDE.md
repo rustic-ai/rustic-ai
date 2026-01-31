@@ -227,7 +227,7 @@ Test utilities support:
 
 ## Repository Conventions
 
-**Python version:** 3.12 (strict requirement)
+**Python version:** 3.14 (strict requirement)
 
 **Line length:** 120 characters (configured in `pyproject.toml`)
 

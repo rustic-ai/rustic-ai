@@ -10,7 +10,7 @@ description = "Claude Integration"
 authors = [{name = "Dragonscale Industries Inc.", email = "dev@dragonscale.ai"}]
 license = "Apache-2.0"
 readme = "README.md"
-requires-python = ">=3.12,<3.13"
+requires-python = ">=3.14,<3.15"
 urls = { Homepage = "https://www.rustic.ai/", Repository = "https://github.com/dragonscale-ai/rustic-ai", "Rustic AI Core" = "https://pypi.org/project/rusticai-core/" }
 dynamic = ["dependencies"]
 
@@ -43,7 +43,7 @@ test = ["pytest"]
 
 [tool.black]
 line-length = 120
-target-version = ['py312']
+target-version = ['py314']
 include = '\.pyi?$'
 exclude = '''
 /(
@@ -59,7 +59,7 @@ exclude = '''
 '''
 
 [tool.mypy]
-python_version = "3.12"
+python_version = "3.14"
 ignore_missing_imports = true
 check_untyped_defs = true
 plugins = "pydantic.mypy"
