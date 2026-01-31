@@ -229,8 +229,8 @@ class TestUiComponentBlueprint:
         assert len(update_messages) == 2
         update_msg_payload_1 = update_messages[0].payload
         update_msg_payload_2 = update_messages[1].payload
-        assert update_msg_payload_1["update_id"] == update_msg_payload_2["update_id"]
-        assert update_msg_payload_1["update_type"] is None
-        assert update_msg_payload_2["update_type"] == UpdateType.APPEND
+        assert update_msg_payload_1["updateId"] == update_msg_payload_2["updateId"]
+        assert update_msg_payload_1["updateType"] is None
+        assert update_msg_payload_2["updateType"] == UpdateType.APPEND
 
         guild.shutdown()
