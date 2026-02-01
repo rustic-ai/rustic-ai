@@ -84,6 +84,34 @@ sh -c '
         printf "%s" "$1" | sed "s/\\\\/\\\\\\\\/g; s/\"/\\\\\"/g"
     }
 
+    add_arg() {
+        PYTEST_ARGS="$PYTEST_ARGS \"$(escape_arg "$1")\""
+    }
+
+    expand_and_add_args() {
+        # Expand globs for path args only; preserve options/expressions intact.
+        arg=$1
+        case "$arg" in
+            -*)
+                add_arg "$arg"
+                ;;
+            *[\*\?\[]*)
+                # Shell glob expansion happens here; if no matches, the pattern stays literal.
+                set -- $arg
+                if [ "$#" -eq 0 ]; then
+                    add_arg "$arg"
+                else
+                    for expanded in "$@"; do
+                        add_arg "$expanded"
+                    done
+                fi
+                ;;
+            *)
+                add_arg "$arg"
+                ;;
+        esac
+    }
+
     while [ "$#" -gt 0 ]; do
         case "$1" in
             --parallel)
@@ -123,7 +151,7 @@ sh -c '
                 shift
                 ;;
             *)
-                PYTEST_ARGS="$PYTEST_ARGS \"$(escape_arg "$1")\""
+                expand_and_add_args "$1"
                 shift
                 ;;
         esac
@@ -136,10 +164,29 @@ sh -c '
         set -- -n "$WORKERS" "$@"
     fi
 
-    # Arguments are already in correct positions ($1, $2, etc.)
-    printf "🧪  Running pytest (NO COVERAGE) with: \n"
+    if [ "$#" -eq 0 ]; then
+        echo "No pytest args provided; defaulting to '.'" >&2
+        set -- .
+    fi
+
+    PYTEST_BASE_ARGS="${RUSTIC_PYTEST_ARGS:-}"
+    if [ -z "$PYTEST_BASE_ARGS" ]; then
+        PYTEST_BASE_ARGS="-q -r a --disable-warnings"
+    fi
+    if [ "${RUSTIC_PYTEST_VERBOSE:-0}" = "1" ]; then
+        PYTEST_BASE_ARGS="-vv $PYTEST_BASE_ARGS"
+    fi
+    if [ "${RUSTIC_PYTEST_SHOWLOCALS:-0}" = "1" ]; then
+        PYTEST_BASE_ARGS="$PYTEST_BASE_ARGS --showlocals"
+    fi
+
+    printf "🧪  Running pytest (NO COVERAGE) with:\n"
+    for arg in $PYTEST_BASE_ARGS "$@"; do
+        printf "    • %s\n" "$arg"
+    done
+
     PYTHONFAULTHANDLER=true \
-        pytest -vvvv --showlocals "$@"
+        pytest $PYTEST_BASE_ARGS "$@"
 ' run_tests_no_coverage "$@" &
 SESSION_PID=$!
 
