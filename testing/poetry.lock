@@ -168,7 +168,6 @@ files = [
 
 [package.dependencies]
 frozenlist = ">=1.1.0"
-typing-extensions = {version = ">=4.2", markers = "python_version < \"3.13\""}
 
 [[package]]
 name = "annotated-types"
@@ -623,6 +622,7 @@ description = "RE2 Python bindings"
 optional = false
 python-versions = "~=3.9"
 groups = ["main"]
+markers = "sys_platform != \"darwin\" or platform_machine != \"arm64\""
 files = [
     {file = "google_re2-1.1.20251105-1-cp310-cp310-macosx_13_0_arm64.whl", hash = "sha256:88bd426c1904f3562049bf766301bbc4f7a4bcb8f61e92f8cc833faac1cf2a92"},
     {file = "google_re2-1.1.20251105-1-cp310-cp310-macosx_13_0_x86_64.whl", hash = "sha256:a486dc10bb07f3c34b9908541368e21ab6d77972569427200db077126668fbf3"},
@@ -2064,7 +2064,7 @@ name = "rusticai-core"
 version = "1.0.0"
 description = "Rustic AI’s modular, agentic AI framework for building human-centered, multi-agent workflows"
 optional = false
-python-versions = ">=3.12,<3.13"
+python-versions = ">=3.13,<3.14"
 groups = ["main"]
 files = []
 develop = true
@@ -2604,5 +2604,5 @@ type = ["pytest-mypy"]
 
 [metadata]
 lock-version = "2.1"
-python-versions = ">=3.12,<3.13"
-content-hash = "686eab461a592e34f9d594c8cf52e8da8d335876d1416eaa4a8b0a5bcc1a4147"
+python-versions = ">=3.13,<3.14"
+content-hash = "758196a24da514ccdb17652d4c4eed9e5d8765c5dd55cb937b1fcf599c83e1ae"

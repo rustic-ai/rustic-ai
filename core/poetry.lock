@@ -168,7 +168,6 @@ files = [
 
 [package.dependencies]
 frozenlist = ">=1.1.0"
-typing-extensions = {version = ">=4.2", markers = "python_version < \"3.13\""}
 
 [[package]]
 name = "annotated-types"
@@ -634,6 +633,7 @@ description = "RE2 Python bindings"
 optional = false
 python-versions = "~=3.9"
 groups = ["main"]
+markers = "sys_platform != \"darwin\" or platform_machine != \"arm64\""
 files = [
     {file = "google_re2-1.1.20251105-1-cp310-cp310-macosx_13_0_arm64.whl", hash = "sha256:88bd426c1904f3562049bf766301bbc4f7a4bcb8f61e92f8cc833faac1cf2a92"},
     {file = "google_re2-1.1.20251105-1-cp310-cp310-macosx_13_0_x86_64.whl", hash = "sha256:a486dc10bb07f3c34b9908541368e21ab6d77972569427200db077126668fbf3"},
@@ -1986,7 +1986,6 @@ files = [
 
 [package.dependencies]
 pytest = ">=8.2,<10"
-typing-extensions = {version = ">=4.12", markers = "python_version < \"3.13\""}
 
 [package.extras]
 docs = ["sphinx (>=5.3)", "sphinx-rtd-theme (>=1)"]
@@ -2601,5 +2600,5 @@ test = []
 
 [metadata]
 lock-version = "2.1"
-python-versions = ">=3.12,<3.13"
-content-hash = "4e79ab27d6793930792262178cb0612c1a99176432a5771609987cc9a5e50a66"
+python-versions = ">=3.13,<3.14"
+content-hash = "4e20de8e1b001fa5b912ba311e5783c9eb37e1e3f61d0ee22c24d4bd1db57b99"

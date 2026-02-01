@@ -9,7 +9,7 @@ description = "{{ cookiecutter.description }}"
 authors = [{name = "{{ cookiecutter.author_name }}", email = "{{ cookiecutter.author_email }}"}]
 license = "Apache-2.0"
 readme = "README.md"
-requires-python = ">=3.12,<3.13"
+requires-python = ">=3.13,<3.14"
 urls = { Homepage = "{{ cookiecutter.homepage }}", Repository = "{{ cookiecutter.repository }}", "Rustic AI Core" = "https://pypi.org/project/rusticai-core/" }
 
 
@@ -41,7 +41,7 @@ test = ["pytest"]
 
 [tool.black]
 line-length = 120
-target-version = ['py312']
+target-version = ['py313']
 include = '\.pyi?$'
 exclude = '''
 /(
@@ -57,7 +57,7 @@ exclude = '''
 '''
 
 [tool.mypy]
-python_version = "3.12"
+python_version = "3.13"
 ignore_missing_imports = true
 check_untyped_defs = true
 plugins = "pydantic.mypy"
