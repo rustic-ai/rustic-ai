@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [project]
 name = "rusticai-skills"
-version = "0.1.0"
+version = "0.2.0"
 description = "Agent Skills support for Rustic AI - load, parse, and execute skills from the Agent Skills ecosystem"
 authors = [{name = "Dragonscale Industries Inc.", email = "dev@dragonscale.ai"}]
 license = "Apache-2.0"
