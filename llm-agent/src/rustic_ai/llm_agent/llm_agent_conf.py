@@ -16,7 +16,7 @@ class Models(str, Enum):
     gpt_5_nano = "gpt-5-nano"
 
     gpt_4o = "gpt-4o"
-    gpt_4o_mini = "gpt-5-nano"
+    gpt_4o_mini = "gpt-4o-mini"
 
     gpt_4_1 = "gpt-4.1"
     gpt_4_1_mini = "gpt-4.1-mini"
