@@ -265,6 +265,9 @@ class AggregatingAgent(Agent[AggregatorConf]):
         self.aggregator = self.config.aggregator
         self._route_to_default_topic = True  # Route messages to default topic if no specific routing is defined
 
+        # Track processed correlation IDs to prevent duplicate outputs due to race conditions
+        self._processed_correlations: set[str] = set()
+
     @agent.processor(JsonDict)
     def collect_message(self, ctx: ProcessContext[JsonDict]) -> None:
         """Collects a message using the configured collection strategy."""
@@ -308,10 +311,17 @@ class AggregatingAgent(Agent[AggregatorConf]):
 
         aggregations: Dict[str, JsonDict] = state.get("aggregations", {})  # type: ignore
         for correlation_id, correlation_state in aggregations.items():
+            # Skip if already processed (prevents duplicate outputs due to race conditions)
+            if correlation_id in self._processed_correlations:
+                continue
+
             # Use collector to extract messages for evaluation (handles both list and dict states)
             messages = self.collector.get_messages(correlation_state)
 
             if messages and self.aggregator.evaluate(correlation_id, messages):
+                # Mark as processed before sending to prevent duplicate outputs
+                self._processed_correlations.add(correlation_id)
+
                 # If the aggregator determines completion, we can process the aggregated messages
                 logging.info(f"Aggregation complete for correlation_id={correlation_id}, message_count={len(messages)}")
 
@@ -328,11 +338,14 @@ class AggregatingAgent(Agent[AggregatorConf]):
 
                 ctx.message.message_history = []
 
+                logging.debug(f"Sending aggregated messages for correlation_id={correlation_id}")
                 ctx.send(
                     payload=aggregated_messages,
                 )
 
-                # Clean up completed aggregation
+                # Clean up completed aggregation from state
+                # Note: We keep correlation_id in _processed_correlations to prevent duplicate
+                # sends during the race window between send and state cleanup completion
                 self.update_state(  # type: ignore[no-untyped-call]
                     ctx,
                     update_format=StateUpdateFormat.JSON_PATCH,
