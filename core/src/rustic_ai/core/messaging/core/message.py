@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from enum import StrEnum
+import hashlib
 import json
 import logging
 from typing import (
@@ -427,6 +428,18 @@ class RoutingRule(BaseModel):
     guild_state_update: Optional[StateTransformer] = None
     process_status: Optional[ProcessStatus] = None
     reason: Optional[str] = None
+
+    @property
+    def hashid(self) -> str:
+        """
+        Generates a unique hash for the routing rule based on its content.
+        This property is computed on the fly and is not serialized by default.
+        """
+        # Exclude None to keep it cleaner, and sort keys for deterministic order
+        # We model_dump first to get a dict of serializable values (handling Enums, etc.)
+        data = self.model_dump(exclude_none=True)
+        canonical_str = json.dumps(data, sort_keys=True)
+        return hashlib.sha256(canonical_str.encode("utf-8")).hexdigest()
 
     @model_validator(mode="before")
     @classmethod

@@ -1,9 +1,10 @@
-from typing import List, Literal
+from typing import List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
 from rustic_ai.core.guild import AgentSpec
 from rustic_ai.core.guild.dsl import GuildSpec
+from rustic_ai.core.messaging.core.message import RoutingRule
 
 
 class BadInputResponse(BaseModel):
@@ -146,3 +147,49 @@ class StopGuildResponse(BaseModel):
     """
 
     user_id: str
+
+
+class AddRoutingRuleRequest(BaseModel):
+    """
+    A class to represent a request to add a routing rule to the guild.
+    """
+
+    routing_rule: RoutingRule
+
+
+class RemoveRoutingRuleRequest(BaseModel):
+    """
+    A class to represent a request to remove a routing rule from the guild.
+    """
+
+    rule_hashid: str
+
+
+class RoutingRuleUpdateResponse(BaseModel):
+    """
+    Response for routing rule add/remove operations.
+    """
+
+    rule_hashid: str
+    status_code: int
+    status: str
+    message: Optional[str] = None
+
+
+class RemoveAgentRequest(BaseModel):
+    """
+    A class to represent a request to remove an agent from the guild.
+    """
+
+    agent_id: str
+
+
+class AgentRemovalResponse(BaseModel):
+    """
+    Response for agent removal operation.
+    """
+
+    agent_id: str
+    status_code: int
+    status: str
+    message: Optional[str] = None

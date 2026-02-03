@@ -4,7 +4,7 @@ name: Validate PR
 on:
   # Triggers the workflow on pull request events only for the main branch
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -31,7 +31,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-versions }}
-          cache: 'pip'
+          cache: "pip"
 
       - name: Start Redis
         uses: shogo82148/actions-setup-redis@v1
@@ -42,12 +42,12 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "20"
 
       - name: Install Playwright Browsers
         run: |
-            npm install playwright
-            npx playwright install --with-deps chromium
+          npm install playwright
+          npx playwright install --with-deps chromium
 
       - name: Install dependencies
         run: |
@@ -68,7 +68,7 @@ jobs:
           PYTEST_ADDOPTS: "--color=yes"
           SKIP_EXPENSIVE_TESTS: true
         run: |
-          tox
+          tox  -e test
 
       - name: Save Cache
         if: matrix.os == 'ubuntu-latest' && matrix.python-versions == '3.12.12'
