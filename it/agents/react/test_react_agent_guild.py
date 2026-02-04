@@ -172,7 +172,7 @@ class TestReActAgentGuildIntegration:
         dep_map = {
             "llm": DependencySpec(
                 class_name=LiteLLMResolver.get_qualified_class_name(),
-                properties={"model": "gpt-4o-mini"},
+                properties={"model": "gpt-5-nano"},
             ),
         }
 
@@ -187,7 +187,7 @@ class TestReActAgentGuildIntegration:
             .set_description("A ReAct agent that can perform calculations using skills")
             .set_properties(
                 ReActAgentConfig(
-                    model="gpt-4o-mini",
+                    model="gpt-5-nano",
                     max_iterations=5,
                     toolset=skill_toolset,
                 )
@@ -245,7 +245,7 @@ class TestReActAgentGuildIntegration:
         dep_map = {
             "llm": DependencySpec(
                 class_name=LiteLLMResolver.get_qualified_class_name(),
-                properties={"model": "gpt-4o-mini"},
+                properties={"model": "gpt-5-nano"},
             ),
         }
 
@@ -257,7 +257,7 @@ class TestReActAgentGuildIntegration:
             .set_description("A ReAct agent that can perform calculations")
             .set_properties(
                 ReActAgentConfig(
-                    model="gpt-4o-mini",
+                    model="gpt-5-nano",
                     max_iterations=5,
                     toolset=CalculatorToolset(),
                 )
@@ -322,7 +322,7 @@ agents:
     description: A ReAct agent that uses skills to solve problems
     additional_topics: []
     properties:
-      model: gpt-4o-mini
+      model: gpt-5-nano
       max_iterations: 5
       temperature: 0.7
       toolset:
@@ -344,7 +344,7 @@ agents:
             dep_map = {
                 "llm": DependencySpec(
                     class_name=LiteLLMResolver.get_qualified_class_name(),
-                    properties={"model": "gpt-4o-mini"},
+                    properties={"model": "gpt-5-nano"},
                 ),
             }
 
@@ -400,7 +400,7 @@ agents:
         dep_map = {
             "llm": DependencySpec(
                 class_name=LiteLLMResolver.get_qualified_class_name(),
-                properties={"model": "gpt-4o-mini"},
+                properties={"model": "gpt-5-nano"},
             ),
         }
 
@@ -412,7 +412,7 @@ agents:
             .set_description("A ReAct agent that can perform calculations")
             .set_properties(
                 ReActAgentConfig(
-                    model="gpt-4o-mini",
+                    model="gpt-5-nano",
                     max_iterations=10,
                     toolset=CalculatorToolset(),
                 )
@@ -483,7 +483,7 @@ agents:
         dep_map = {
             "llm": DependencySpec(
                 class_name=LiteLLMResolver.get_qualified_class_name(),
-                properties={"model": "gpt-4o-mini"},
+                properties={"model": "gpt-5-nano"},
             ),
         }
 
@@ -495,7 +495,7 @@ agents:
             .set_description("A ReAct agent")
             .set_properties(
                 ReActAgentConfig(
-                    model="gpt-4o-mini",
+                    model="gpt-5-nano",
                     max_iterations=5,
                     toolset=CalculatorToolset(),
                 )

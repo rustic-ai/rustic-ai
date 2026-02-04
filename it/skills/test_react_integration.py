@@ -1231,7 +1231,7 @@ class TestReActAgentWithSkills:
             .set_description("A ReAct agent with calculator skill")
             .set_properties(
                 ReActAgentConfig(
-                    model="gpt-4o-mini",
+                    model="gpt-5-nano",
                     max_iterations=5,
                     toolset=skill_toolset,
                 )
@@ -1277,7 +1277,7 @@ class TestReActAgentWithSkills:
             .set_description("A ReAct agent with text processing skill")
             .set_properties(
                 ReActAgentConfig(
-                    model="gpt-4o-mini",
+                    model="gpt-5-nano",
                     max_iterations=5,
                     toolset=skill_toolset,
                 )
@@ -1329,7 +1329,7 @@ class TestReActAgentWithSkills:
             .set_description("A ReAct agent with multiple skills")
             .set_properties(
                 ReActAgentConfig(
-                    model="gpt-4o-mini",
+                    model="gpt-5-nano",
                     max_iterations=10,
                     toolset=multi_toolset,
                     system_prompt=f"""You are an AI assistant with calculation and text processing capabilities.
@@ -1380,7 +1380,7 @@ Use the appropriate tools to help the user.
             .set_description("A ReAct agent with data tools")
             .set_properties(
                 ReActAgentConfig(
-                    model="gpt-4o-mini",
+                    model="gpt-5-nano",
                     max_iterations=5,
                     toolset=skill_toolset,
                 )
@@ -1425,7 +1425,7 @@ Use the appropriate tools to help the user.
             .set_description("A ReAct agent with datetime tools")
             .set_properties(
                 ReActAgentConfig(
-                    model="gpt-4o-mini",
+                    model="gpt-5-nano",
                     max_iterations=5,
                     toolset=skill_toolset,
                 )
@@ -1475,7 +1475,7 @@ Use the appropriate tools to help the user.
             .set_description("Agent with skills and regular tools")
             .set_properties(
                 ReActAgentConfig(
-                    model="gpt-4o-mini",
+                    model="gpt-5-nano",
                     max_iterations=5,
                     toolset=composite,
                 )
@@ -1814,7 +1814,7 @@ class TestAnthropicSkillsRepository:
     not os.getenv("OPENAI_API_KEY"),
     reason="OPENAI_API_KEY not set - required for LLM integration tests",
 )
-@pytest.mark.parametrize("model", ["gpt-4o-mini"])
+@pytest.mark.parametrize("model", ["gpt-5-nano"])
 class TestReActAgentWithAnthropicSkills:
     """
     Integration tests for ReActAgent using REAL Anthropic skills.

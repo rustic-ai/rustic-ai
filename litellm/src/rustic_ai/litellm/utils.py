@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 from rustic_ai.core.guild.agent_ext.depends.llm.models import ChatCompletionResponse
 from rustic_ai.core.utils.basic_class_utils import get_class_from_name
+from rustic_ai.core.utils.json_utils import JsonDict
 
 
 class ResponseUtils:
@@ -19,7 +20,7 @@ class ResponseUtils:
 def transform_response_format(value: Optional[Union[dict, str]]):
     if value is None:
         return None
-    result = {
+    result: JsonDict = {
         "type": "json_schema",
         "json_schema": {
             "schema": {},

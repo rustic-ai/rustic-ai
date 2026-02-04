@@ -70,7 +70,7 @@ agents:
   - id: friendly_assistant
     class_name: rustic_ai.llm_agent.llm_agent.LLMAgent
     properties:
-      model: gpt-4o-mini
+      model: gpt-5-nano
       default_system_prompt: !code prompts/friendly_tone.md
       
   - id: technical_assistant
