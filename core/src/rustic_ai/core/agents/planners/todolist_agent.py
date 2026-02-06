@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field, field_validator
 from rustic_ai.core.guild import agent
 from rustic_ai.core.guild.agent import Agent, ProcessContext
 from rustic_ai.core.state.models import StateUpdateFormat
+from rustic_ai.core.utils.json_utils import JsonDict
 
 
 class TaskStatus(StrEnum):
@@ -33,6 +34,14 @@ class Task(BaseModel):
     metadata: Dict[str, Any] = Field(
         default_factory=dict,
         description="Arbitrary context data attached to the task",
+    )
+    result: Optional[JsonDict] = Field(
+        default=None,
+        description="Result data produced when the task is completed",
+    )
+    collected_results: JsonDict = Field(
+        default_factory=dict,
+        description="Aggregated results from completed dependencies, keyed by task_id",
     )
 
     @field_validator("deadline")
@@ -89,6 +98,10 @@ class GetTaskResponse(BaseModel):
 class UpdateStatusRequest(BaseModel):
     id: str
     status: TaskStatus  # "done", "pending", "in_progress", "blocked", "overdue"
+    result: Optional[JsonDict] = Field(
+        default=None,
+        description="Result data to store when marking task as done",
+    )
 
 
 class NextTaskRequest(BaseModel):
@@ -107,6 +120,10 @@ class TaskUnblockedEvent(BaseModel):
         description="Timestamp when the task was unblocked",
     )
     task: Task = Field(description="The full unblocked task object")
+    dependency_results: JsonDict = Field(
+        default_factory=dict,
+        description="Aggregated results from completed dependencies, keyed by task_id",
+    )
 
 
 class TaskCompletedEvent(BaseModel):
@@ -223,14 +240,20 @@ class TodoListAgent(Agent):
     @agent.processor(UpdateStatusRequest)
     def update_status(self, ctx: ProcessContext[UpdateStatusRequest]):
         tasks = self.get_tasks()
+        task_map = {t.id: t for t in tasks}  # For O(1) lookup
 
         updated = None
+        # Track unblocked tasks for emitting events
         unblocked_tasks: List[Task] = []
 
         for i, task in enumerate(tasks):
             if task.id == ctx.payload.id:
                 task.status = ctx.payload.status
+                # Store result if provided
+                if ctx.payload.result is not None:
+                    task.result = ctx.payload.result
                 tasks[i] = task
+                task_map[task.id] = task  # Update map with new result
                 updated = task
                 break
 
@@ -250,23 +273,29 @@ class TodoListAgent(Agent):
             # Check for dependent tasks that should be unblocked
             for i, task in enumerate(tasks):
                 if ctx.payload.id in task.depends_on and task.status == TaskStatus.BLOCKED:
+                    # Collect the result from this completed dependency
+                    if updated.result is not None:
+                        task.collected_results[ctx.payload.id] = updated.result
+
                     task.depends_on.remove(ctx.payload.id)
 
                     # If no more dependencies left, mark as pending and track for event
                     if not task.depends_on:
                         task.status = TaskStatus.PENDING
-                        tasks[i] = task
                         unblocked_tasks.append(task)
+
+                    tasks[i] = task
 
         self.save_tasks(tasks, ctx)
 
-        # Emit TaskUnblockedEvent for each unblocked task
+        # Emit TaskUnblockedEvent for each unblocked task with collected dependency results
         for task in unblocked_tasks:
             ctx.send(
                 TaskUnblockedEvent(
                     task_id=task.id,
                     correlation_id=task.correlation_id,
                     task=task,
+                    dependency_results=task.collected_results,
                 )
             )
 
