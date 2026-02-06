@@ -235,14 +235,14 @@ files = [
 
 [[package]]
 name = "anthropic"
-version = "0.77.0"
+version = "0.78.0"
 description = "The official Python library for the anthropic API"
 optional = false
 python-versions = ">=3.9"
 groups = ["main"]
 files = [
-    {file = "anthropic-0.77.0-py3-none-any.whl", hash = "sha256:65cc83a3c82ce622d5c677d0d7706c77d29dc83958c6b10286e12fda6ffb2651"},
-    {file = "anthropic-0.77.0.tar.gz", hash = "sha256:ce36efeb80cb1e25430a88440dc0f9aa5c87f10d080ab70a1bdfd5c2c5fbedb4"},
+    {file = "anthropic-0.78.0-py3-none-any.whl", hash = "sha256:2a9887d2e99d1b0f9fe08857a1e9fe5d2d4030455dbf9ac65aab052e2efaeac4"},
+    {file = "anthropic-0.78.0.tar.gz", hash = "sha256:55fd978ab9b049c61857463f4c4e9e092b24f892519c6d8078cee1713d8af06e"},
 ]
 
 [package.dependencies]
@@ -4051,47 +4051,47 @@ timezone = ["tzdata ; python_version >= \"3.9\" and platform_system == \"Windows
 
 [[package]]
 name = "pydantic-ai"
-version = "1.51.0"
+version = "1.56.0"
 description = "Agent Framework / shim to use Pydantic with LLMs"
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "pydantic_ai-1.51.0-py3-none-any.whl", hash = "sha256:217a683b5c7a95d219980e56c0b81f6a9160fda542d7292c38708947a8e992e9"},
-    {file = "pydantic_ai-1.51.0.tar.gz", hash = "sha256:cb3312af009b71fe3f8174512bc4ac1ee977a0a101bf0aaeaa2ea3b8f31603da"},
+    {file = "pydantic_ai-1.56.0-py3-none-any.whl", hash = "sha256:b6b3ac74bdc004693834750da4420ea2cde0d3cbc3f134c0b7544f98f1c00859"},
+    {file = "pydantic_ai-1.56.0.tar.gz", hash = "sha256:643ff71612df52315b3b4c4b41543657f603f567223eb33245dc8098f005bdc4"},
 ]
 
 [package.dependencies]
-pydantic-ai-slim = {version = "1.51.0", extras = ["ag-ui", "anthropic", "bedrock", "cli", "cohere", "evals", "fastmcp", "google", "groq", "huggingface", "logfire", "mcp", "mistral", "openai", "retries", "temporal", "ui", "vertexai", "xai"]}
+pydantic-ai-slim = {version = "1.56.0", extras = ["ag-ui", "anthropic", "bedrock", "cli", "cohere", "evals", "fastmcp", "google", "groq", "huggingface", "logfire", "mcp", "mistral", "openai", "retries", "temporal", "ui", "vertexai", "xai"]}
 
 [package.extras]
 a2a = ["fasta2a (>=0.4.1)"]
-dbos = ["pydantic-ai-slim[dbos] (==1.51.0)"]
-examples = ["pydantic-ai-examples (==1.51.0)"]
-outlines-llamacpp = ["pydantic-ai-slim[outlines-llamacpp] (==1.51.0)"]
-outlines-mlxlm = ["pydantic-ai-slim[outlines-mlxlm] (==1.51.0) ; platform_system == \"Darwin\" and platform_machine == \"arm64\""]
-outlines-sglang = ["pydantic-ai-slim[outlines-sglang] (==1.51.0)"]
-outlines-transformers = ["pydantic-ai-slim[outlines-transformers] (==1.51.0)"]
-outlines-vllm-offline = ["pydantic-ai-slim[outlines-vllm-offline] (==1.51.0)"]
-prefect = ["pydantic-ai-slim[prefect] (==1.51.0)"]
-sentence-transformers = ["pydantic-ai-slim[sentence-transformers] (==1.51.0)"]
-voyageai = ["pydantic-ai-slim[voyageai] (==1.51.0)"]
+dbos = ["pydantic-ai-slim[dbos] (==1.56.0)"]
+examples = ["pydantic-ai-examples (==1.56.0)"]
+outlines-llamacpp = ["pydantic-ai-slim[outlines-llamacpp] (==1.56.0)"]
+outlines-mlxlm = ["pydantic-ai-slim[outlines-mlxlm] (==1.56.0) ; platform_system == \"Darwin\" and platform_machine == \"arm64\""]
+outlines-sglang = ["pydantic-ai-slim[outlines-sglang] (==1.56.0)"]
+outlines-transformers = ["pydantic-ai-slim[outlines-transformers] (==1.56.0)"]
+outlines-vllm-offline = ["pydantic-ai-slim[outlines-vllm-offline] (==1.56.0)"]
+prefect = ["pydantic-ai-slim[prefect] (==1.56.0)"]
+sentence-transformers = ["pydantic-ai-slim[sentence-transformers] (==1.56.0)"]
+voyageai = ["pydantic-ai-slim[voyageai] (==1.56.0)"]
 
 [[package]]
 name = "pydantic-ai-slim"
-version = "1.51.0"
+version = "1.56.0"
 description = "Agent Framework / shim to use Pydantic with LLMs, slim package"
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "pydantic_ai_slim-1.51.0-py3-none-any.whl", hash = "sha256:09aa368a034f7adbd6fbf23ae8415cbce0de13999ca1b0ba1ae5a42157293318"},
-    {file = "pydantic_ai_slim-1.51.0.tar.gz", hash = "sha256:55c6059917559580bcfc39232dbe28ee00b4963a2eb1d9554718edabde4e082a"},
+    {file = "pydantic_ai_slim-1.56.0-py3-none-any.whl", hash = "sha256:d657e4113485020500b23b7390b0066e2a0277edc7577eaad2290735ca5dd7d5"},
+    {file = "pydantic_ai_slim-1.56.0.tar.gz", hash = "sha256:9f9f9c56b1c735837880a515ae5661b465b40207b25f3a3434178098b2137f05"},
 ]
 
 [package.dependencies]
 ag-ui-protocol = {version = ">=0.1.10", optional = true, markers = "extra == \"ag-ui\""}
-anthropic = {version = ">=0.75.0", optional = true, markers = "extra == \"anthropic\""}
+anthropic = {version = ">=0.78.0", optional = true, markers = "extra == \"anthropic\""}
 argcomplete = {version = ">=3.5.0", optional = true, markers = "extra == \"cli\""}
 boto3 = {version = ">=1.42.14", optional = true, markers = "extra == \"bedrock\""}
 cohere = {version = ">=5.18.0", optional = true, markers = "platform_system != \"Emscripten\" and extra == \"cohere\""}
@@ -4110,8 +4110,8 @@ openai = {version = ">=2.11.0", optional = true, markers = "extra == \"openai\""
 opentelemetry-api = ">=1.28.0"
 prompt-toolkit = {version = ">=3", optional = true, markers = "extra == \"cli\""}
 pydantic = ">=2.10"
-pydantic-evals = {version = "1.51.0", optional = true, markers = "extra == \"evals\""}
-pydantic-graph = "1.51.0"
+pydantic-evals = {version = "1.56.0", optional = true, markers = "extra == \"evals\""}
+pydantic-graph = "1.56.0"
 pyperclip = {version = ">=1.9.0", optional = true, markers = "extra == \"cli\""}
 requests = {version = ">=2.32.2", optional = true, markers = "extra == \"vertexai\""}
 rich = {version = ">=13", optional = true, markers = "extra == \"cli\""}
@@ -4125,13 +4125,13 @@ xai-sdk = {version = ">=1.5.0", optional = true, markers = "extra == \"xai\""}
 [package.extras]
 a2a = ["fasta2a (>=0.4.1)"]
 ag-ui = ["ag-ui-protocol (>=0.1.10)", "starlette (>=0.45.3)"]
-anthropic = ["anthropic (>=0.75.0)"]
+anthropic = ["anthropic (>=0.78.0)"]
 bedrock = ["boto3 (>=1.42.14)"]
 cli = ["argcomplete (>=3.5.0)", "prompt-toolkit (>=3)", "pyperclip (>=1.9.0)", "rich (>=13)"]
 cohere = ["cohere (>=5.18.0) ; platform_system != \"Emscripten\""]
 dbos = ["dbos (>=2.10.0)"]
 duckduckgo = ["ddgs (>=9.0.0)"]
-evals = ["pydantic-evals (==1.51.0)"]
+evals = ["pydantic-evals (==1.56.0)"]
 exa = ["exa-py (>=2.0.0)"]
 fastmcp = ["fastmcp (>=2.14.0)"]
 google = ["google-genai (>=1.56.0)"]
@@ -4294,21 +4294,21 @@ typing-extensions = ">=4.14.1"
 
 [[package]]
 name = "pydantic-evals"
-version = "1.51.0"
+version = "1.56.0"
 description = "Framework for evaluating stochastic code execution, especially code making use of LLMs"
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "pydantic_evals-1.51.0-py3-none-any.whl", hash = "sha256:67d89d024d1d65691312a46f2a1130d0a882ed5e61dd40e78e168a67b398c7f6"},
-    {file = "pydantic_evals-1.51.0.tar.gz", hash = "sha256:3a96c70dec9e36ea5bc346490239a6e8d7fadcfdd5ea09d86b92da7a7a8d8db2"},
+    {file = "pydantic_evals-1.56.0-py3-none-any.whl", hash = "sha256:d1efb410c97135aabd2a22453b10c981b2b9851985e9354713af67ae0973b7a9"},
+    {file = "pydantic_evals-1.56.0.tar.gz", hash = "sha256:206635107127af6a3ee4b1fc8f77af6afb14683615a2d6b3609f79467c1c0d28"},
 ]
 
 [package.dependencies]
 anyio = ">=0"
 logfire-api = ">=3.14.1"
 pydantic = ">=2.10"
-pydantic-ai-slim = "1.51.0"
+pydantic-ai-slim = "1.56.0"
 pyyaml = ">=6.0.2"
 rich = ">=13.9.4"
 
@@ -4317,14 +4317,14 @@ logfire = ["logfire (>=3.14.1)"]
 
 [[package]]
 name = "pydantic-graph"
-version = "1.51.0"
+version = "1.56.0"
 description = "Graph and state machine library"
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "pydantic_graph-1.51.0-py3-none-any.whl", hash = "sha256:fcd6b94ddd1fd261f25888a2b7882a21e677b9718045e40af6321238538752d1"},
-    {file = "pydantic_graph-1.51.0.tar.gz", hash = "sha256:6b6220c858e552df1ea76f8191bb12b13027f7e301d4f14ee593b0e55452a1a1"},
+    {file = "pydantic_graph-1.56.0-py3-none-any.whl", hash = "sha256:ec3f0a1d6fcedd4eb9c59fef45079c2ee4d4185878d70dae26440a9c974c6bb3"},
+    {file = "pydantic_graph-1.56.0.tar.gz", hash = "sha256:5e22972dbb43dbc379ab9944252ff864019abf3c7d465dcdf572fc8aec9a44a1"},
 ]
 
 [package.dependencies]
