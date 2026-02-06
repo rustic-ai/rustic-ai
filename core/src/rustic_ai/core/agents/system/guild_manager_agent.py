@@ -167,7 +167,6 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
             with Session(self.engine) as session:
                 if AgentModel.get_by_id(session, self.guild_id, agent_spec.id) is None:
                     session.add(agent_model)
-                    session.add(agent_model)
                     session.commit()
                     session.close()
         else:
@@ -425,7 +424,6 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
 
         # Update persistent store
         with Session(self.engine) as session:
-            guild_route = GuildRoutes.from_routing_rule(self.guild_id, rule)
             guild_route = GuildRoutes.from_routing_rule(self.guild_id, rule)
             guild_route.status = RouteStatus.ACTIVE
             session.add(guild_route)

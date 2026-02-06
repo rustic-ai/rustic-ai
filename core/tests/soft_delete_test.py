@@ -1,10 +1,11 @@
 from datetime import datetime
 
 import pytest
-from sqlmodel import Session, SQLModel, create_engine
+from sqlmodel import Session, SQLModel, create_engine, select
 
 from rustic_ai.core.agents.system.guild_manager_agent import GuildManagerAgent
 from rustic_ai.core.agents.system.models import (
+    AddRoutingRuleRequest,
     RemoveAgentRequest,
     RemoveRoutingRuleRequest,
 )
@@ -127,7 +128,7 @@ def test_soft_delete_agent(guild_manager, metastore_engine):
         assert model.status == AgentStatus.PENDING_LAUNCH
 
     # 2. Simulate RemoveAgentRequest
-    req = RemoveAgentRequest(agent_id=agent_spec.id, guild_id=guild_manager.guild_id)
+    req = RemoveAgentRequest(agent_id=agent_spec.id)
     ctx = ProcessContext(
         agent=guild_manager,
         method_name="remove_agent",
@@ -176,7 +177,7 @@ def test_soft_delete_route(guild_manager, metastore_engine):
         session.commit()
 
     # 2. Simulate RemoveRoutingRuleRequest
-    req = RemoveRoutingRuleRequest(rule_hashid=rule.hashid, guild_id=guild_manager.guild_id)
+    req = RemoveRoutingRuleRequest(rule_hashid=rule.hashid)
     ctx = ProcessContext(
         agent=guild_manager,
         method_name="remove_routing_rule",
@@ -217,6 +218,76 @@ def test_soft_delete_route(guild_manager, metastore_engine):
         if new_spec.routes:
             hashes = [s.hashid for s in new_spec.routes.steps]
             assert rule.hashid not in hashes, "Deleted route should not be in spec"
+
+
+def test_add_routing_rule(guild_manager, metastore_engine):
+    # 1. Create a routing rule
+    rule = RoutingRule(
+        agent=AgentTag(id="test_agent", name="Test Agent"),
+        method_name="test_method",
+        destination=RoutingDestination(topics=["test.output"]),
+    )
+
+    # 2. Simulate AddRoutingRuleRequest
+    req = AddRoutingRuleRequest(routing_rule=rule)
+    ctx = ProcessContext(
+        agent=guild_manager,
+        method_name="add_routing_rule",
+        message=Message(
+            id_obj=id_gen.get_id(Priority.NORMAL),
+            sender=AgentTag(id="tester"),
+            topics=["control"],
+            payload=req.model_dump(),
+        ),
+        payload_type=AddRoutingRuleRequest,
+    )
+
+    # Track if response was sent successfully
+    responses = []
+    ctx.send = lambda x: responses.append(x)
+    ctx._direct_send = lambda **kwargs: None
+    ctx.send_error = lambda x: print(f"Error: {x}")
+
+    guild_manager.add_routing_rule.__wfn__(guild_manager, ctx)
+
+    # 2.5. Verify response indicates success
+    assert len(responses) == 1, "Should have sent a response"
+    assert responses[0].status_code == 201, "Response should indicate success"
+
+    # 3. Verify route was added to database by querying GuildRoutes directly
+    with Session(metastore_engine) as session:
+        statement = select(GuildRoutes).where(GuildRoutes.guild_id == guild_manager.guild_id)
+        routes = session.exec(statement).all()
+
+        # Find the route by matching on method_name and agent_id (more reliable than hashid
+        # due to topics list/string normalization in to_routing_rule())
+        found_route = None
+        for r in routes:
+            if r.method_name == rule.method_name and r.agent_id == rule.agent.id:
+                found_route = r
+                break
+
+        assert found_route is not None, f"Route should be added to database. Found {len(routes)} routes"
+        assert found_route.status == RouteStatus.ACTIVE, "Route status should be ACTIVE"
+
+    # 4. Verify route was added to in-memory guild
+    in_memory_routes = [
+        (step.method_name, step.agent.id if step.agent else None)
+        for step in guild_manager.guild.routes.steps
+    ]
+    assert (rule.method_name, rule.agent.id) in in_memory_routes, "Route should be added to in-memory guild"
+
+    # 5. Verify route appears in generated spec
+    with Session(metastore_engine) as session:
+        guild_model = GuildModel.get_by_id(session, guild_manager.guild_id)
+        new_spec = guild_model.to_guild_spec()
+
+        if new_spec.routes:
+            spec_routes = [
+                (s.method_name, s.agent.id if s.agent else None)
+                for s in new_spec.routes.steps
+            ]
+            assert (rule.method_name, rule.agent.id) in spec_routes, "Added route should be in generated spec"
 
 
 def test_guild_status_aggregation(guild_manager, metastore_engine):

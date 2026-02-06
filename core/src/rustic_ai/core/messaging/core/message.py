@@ -434,10 +434,19 @@ class RoutingRule(BaseModel):
         """
         Generates a unique hash for the routing rule based on its content.
         This property is computed on the fly and is not serialized by default.
+
+        Note:
+            Mutable runtime fields (such as route_times, process_status, reason)
+            are excluded from the hash so that it remains a stable identifier
+            for the logical routing rule across processing steps.
         """
-        # Exclude None to keep it cleaner, and sort keys for deterministic order
-        # We model_dump first to get a dict of serializable values (handling Enums, etc.)
-        data = self.model_dump(exclude_none=True)
+        # Exclude None to keep it cleaner, and sort keys for deterministic order.
+        # We model_dump first to get a dict of serializable values (handling Enums, etc.).
+        # Exclude mutable runtime fields to keep the hash stable.
+        data = self.model_dump(
+            exclude_none=True,
+            exclude={"route_times", "process_status", "reason"},
+        )
         canonical_str = json.dumps(data, sort_keys=True)
         return hashlib.sha256(canonical_str.encode("utf-8")).hexdigest()
 

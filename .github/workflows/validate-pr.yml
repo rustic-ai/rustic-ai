@@ -68,7 +68,7 @@ jobs:
           PYTEST_ADDOPTS: "--color=yes"
           SKIP_EXPENSIVE_TESTS: true
         run: |
-          tox  -e test
+          tox -e test
 
       - name: Save Cache
         if: matrix.os == 'ubuntu-latest' && matrix.python-versions == '3.12.12'
