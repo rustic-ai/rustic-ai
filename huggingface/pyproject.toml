@@ -29,7 +29,7 @@ datasets = { version = "^3.5.0" }
 soundfile = { version = "^0.13.1" }
 sentencepiece = { version = "^0.2.0" }
 diffusers = { version = "^0.33.1" }
-protobuf = { version = "^5" }
+protobuf = { version = "^6" }
 pillow = { version = "^11.2.1" }
 sentence-transformers = "^4.1.0"
 
