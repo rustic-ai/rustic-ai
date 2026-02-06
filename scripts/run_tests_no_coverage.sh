@@ -160,6 +160,24 @@ sh -c '
     # shellcheck disable=SC2086
     eval "set -- $PYTEST_ARGS"
 
+    if [ "$PARALLEL" -eq 1 ] && [ "$HAS_XDIST" -eq 0 ] && [ "$WORKERS" = "auto" ]; then
+        if command -v nproc >/dev/null 2>&1; then
+            CPU_COUNT=$(nproc)
+        elif command -v getconf >/dev/null 2>&1; then
+            CPU_COUNT=$(getconf _NPROCESSORS_ONLN)
+        else
+            CPU_COUNT=1
+        fi
+
+        if [ "$CPU_COUNT" -gt 4 ]; then
+            WORKERS=$((CPU_COUNT - 2))
+            printf "⚙️  Auto-configuring workers: %d cores detected, using %d workers (N-2)\n" "$CPU_COUNT" "$WORKERS"
+        else
+            printf "ℹ️  Only %d cores detected (<= 4). Disabling parallel execution.\n" "$CPU_COUNT"
+            PARALLEL=0
+        fi
+    fi
+
     if [ "$PARALLEL" -eq 1 ] && [ "$HAS_XDIST" -eq 0 ]; then
         set -- -n "$WORKERS" "$@"
     fi

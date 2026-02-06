@@ -133,8 +133,11 @@ class TestGuild:
 
     def test_remove_agent(self, guild: Guild, agent_spec: AgentSpec):
         guild.launch_agent(agent_spec)
+        assert guild.is_agent_running(agent_spec.id)
+
         guild.remove_agent(agent_spec.id)
         assert guild.get_agent(agent_spec.id) is None
+        assert not guild.is_agent_running(agent_spec.id)
 
         with pytest.raises(ValueError):
             guild.remove_agent("invalid_id")

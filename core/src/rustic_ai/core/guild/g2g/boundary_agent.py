@@ -1,6 +1,7 @@
 from typing import Callable, List, Type, TypeVar
 
-from rustic_ai.core.guild.agent import Agent
+from rustic_ai.core.guild.agent import Agent, ProcessContext
+from rustic_ai.core.guild.agent_ext.mixins.guild_refresher import GuildRefreshMixin
 from rustic_ai.core.guild.dsl import BaseAgentProps
 from rustic_ai.core.guild.g2g.boundary_context import BoundaryContext
 from rustic_ai.core.messaging import Message
@@ -23,7 +24,7 @@ class BoundaryAgentProps(BaseAgentProps):
 BAPT = TypeVar("BAPT", bound=BoundaryAgentProps)
 
 
-class BoundaryAgent(Agent[BAPT]):
+class BoundaryAgent(Agent[BAPT], GuildRefreshMixin):
     """
     Base class for agents that communicate across guild boundaries.
 
@@ -99,3 +100,12 @@ class BoundaryAgent(Agent[BAPT]):
         )
 
         return boundary_ctx
+
+    def guild_refresh_handler(self, ctx: ProcessContext):
+        """
+        Handle guild refresh events.
+        """
+        # For now, just log the update. The mixin already updates self.guild_spec.
+        # This ensures that subsequent calls to self.guild_spec.routes use the new routes.
+        # If specific subclasses need to rebuild internal state, they can override this.
+        pass

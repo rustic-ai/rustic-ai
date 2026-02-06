@@ -29,6 +29,24 @@ class GuildStatus(str, Enum):
     PENDING_LAUNCH = "not_launched"
 
 
+class AgentStatus(str, Enum):
+    """Status values for Agent models."""
+
+    PENDING_LAUNCH = "not_launched"
+    STARTING = "starting"
+    RUNNING = "running"
+    STOPPED = "stopped"
+    ERROR = "error"
+    DELETED = "deleted"
+
+
+class RouteStatus(str, Enum):
+    """Status values for Route models."""
+
+    ACTIVE = "active"
+    DELETED = "deleted"
+
+
 class GuildRoutes(SQLModel, table=True):
 
     __tablename__ = "guild_routes"  # type: ignore
@@ -68,6 +86,8 @@ class GuildRoutes(SQLModel, table=True):
 
     process_status: Optional[str] = Field(default=None)
     reason: Optional[str] = Field(default=None)
+
+    status: str = Field(default=RouteStatus.ACTIVE)
 
     @classmethod
     def from_routing_rule(cls, guild_id: str, routing_rule: RoutingRule):
@@ -263,10 +283,11 @@ class GuildModel(SQLModel, table=True):
         """
         deps = {k: DependencySpec.model_validate(v) for k, v in self.dependency_map.items()}
 
-        routes = []
+        routes: List[RoutingRule] = []
         if self.routes:
             for route in self.routes:
-                routes.append(route.to_routing_rule())
+                if route.status != RouteStatus.DELETED:
+                    routes.append(route.to_routing_rule())
 
         routing_slip = RoutingSlip(steps=routes)
 
@@ -275,7 +296,7 @@ class GuildModel(SQLModel, table=True):
             name=self.name,
             description=self.description,
             status=self.status,
-            agents=[agent.to_agent_spec() for agent in self.agents],
+            agents=[agent.to_agent_spec() for agent in self.agents if agent.status != AgentStatus.DELETED],
             properties={
                 GSKC.EXECUTION_ENGINE: self.execution_engine,
                 GSKC.MESSAGING: {
@@ -315,6 +336,8 @@ class AgentModel(SQLModel, table=True):
     guild: Optional[GuildModel] = Relationship(back_populates="agents")
 
     predicates: dict = Field(sa_column=Column(MutableDict.as_mutable(JSON(none_as_null=True)), default={}))
+
+    status: str = Field(default=AgentStatus.PENDING_LAUNCH)
 
     @classmethod
     def get_by_id(cls, session, guild_id: str, agent_id: str) -> Optional["AgentModel"]:
