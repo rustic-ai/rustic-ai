@@ -1,5 +1,9 @@
 #!/bin/sh
 # POSIX‑compliant integration test runner WITHOUT coverage for faster development.
+# Optional args:
+#   --parallel             Enable pytest-xdist with -n auto
+#   --workers N|auto       Set xdist worker count (implies --parallel)
+#   --no-parallel          Force serial execution
 
 # -------- strict mode --------
 set -eu                           # exit on error or unset var
@@ -70,10 +74,137 @@ sh -c '
 
     sleep 5   # let the server bind
 
-    # Arguments are already in correct positions ($1, $2, etc.)
-    printf "🧪  Running pytest (NO COVERAGE) with: \n"
+    PARALLEL=0
+    HAS_XDIST=0
+    WORKERS=auto
+    PYTEST_ARGS=""
+
+    escape_arg() {
+        # Escape backslashes and double-quotes for safe eval inside double quotes.
+        printf "%s" "$1" | sed "s/\\\\/\\\\\\\\/g; s/\"/\\\\\"/g"
+    }
+
+    add_arg() {
+        PYTEST_ARGS="$PYTEST_ARGS \"$(escape_arg "$1")\""
+    }
+
+    expand_and_add_args() {
+        # Expand globs for path args only; preserve options/expressions intact.
+        arg=$1
+        case "$arg" in
+            -*)
+                add_arg "$arg"
+                ;;
+            *[\*\?\[]*)
+                # Shell glob expansion happens here; if no matches, the pattern stays literal.
+                set -- $arg
+                if [ "$#" -eq 0 ]; then
+                    add_arg "$arg"
+                else
+                    for expanded in "$@"; do
+                        add_arg "$expanded"
+                    done
+                fi
+                ;;
+            *)
+                add_arg "$arg"
+                ;;
+        esac
+    }
+
+    while [ "$#" -gt 0 ]; do
+        case "$1" in
+            --parallel)
+                PARALLEL=1
+                shift
+                ;;
+            --no-parallel)
+                PARALLEL=0
+                shift
+                ;;
+            --workers)
+                if [ "$#" -lt 2 ]; then
+                    echo "Missing value for --workers" >&2
+                    exit 2
+                fi
+                WORKERS="$2"
+                PARALLEL=1
+                shift 2
+                ;;
+            --workers=*)
+                WORKERS="${1#--workers=}"
+                PARALLEL=1
+                shift
+                ;;
+            -n|--numprocesses)
+                HAS_XDIST=1
+                if [ "$#" -lt 2 ]; then
+                    echo "Missing value for $1" >&2
+                    exit 2
+                fi
+                PYTEST_ARGS="$PYTEST_ARGS \"$(escape_arg "$1")\" \"$(escape_arg "$2")\""
+                shift 2
+                ;;
+            -n*)
+                HAS_XDIST=1
+                PYTEST_ARGS="$PYTEST_ARGS \"$(escape_arg "$1")\""
+                shift
+                ;;
+            *)
+                expand_and_add_args "$1"
+                shift
+                ;;
+        esac
+    done
+
+    # shellcheck disable=SC2086
+    eval "set -- $PYTEST_ARGS"
+
+    if [ "$PARALLEL" -eq 1 ] && [ "$HAS_XDIST" -eq 0 ] && [ "$WORKERS" = "auto" ]; then
+        if command -v nproc >/dev/null 2>&1; then
+            CPU_COUNT=$(nproc)
+        elif command -v getconf >/dev/null 2>&1; then
+            CPU_COUNT=$(getconf _NPROCESSORS_ONLN)
+        else
+            CPU_COUNT=1
+        fi
+
+        if [ "$CPU_COUNT" -gt 4 ]; then
+            WORKERS=$((CPU_COUNT - 2))
+            printf "⚙️  Auto-configuring workers: %d cores detected, using %d workers (N-2)\n" "$CPU_COUNT" "$WORKERS"
+        else
+            printf "ℹ️  Only %d cores detected (<= 4). Disabling parallel execution.\n" "$CPU_COUNT"
+            PARALLEL=0
+        fi
+    fi
+
+    if [ "$PARALLEL" -eq 1 ] && [ "$HAS_XDIST" -eq 0 ]; then
+        set -- -n "$WORKERS" "$@"
+    fi
+
+    if [ "$#" -eq 0 ]; then
+        echo "No pytest args provided; defaulting to '.'" >&2
+        set -- .
+    fi
+
+    PYTEST_BASE_ARGS="${RUSTIC_PYTEST_ARGS:-}"
+    if [ -z "$PYTEST_BASE_ARGS" ]; then
+        PYTEST_BASE_ARGS="-q -r a --disable-warnings"
+    fi
+    if [ "${RUSTIC_PYTEST_VERBOSE:-0}" = "1" ]; then
+        PYTEST_BASE_ARGS="-vv $PYTEST_BASE_ARGS"
+    fi
+    if [ "${RUSTIC_PYTEST_SHOWLOCALS:-0}" = "1" ]; then
+        PYTEST_BASE_ARGS="$PYTEST_BASE_ARGS --showlocals"
+    fi
+
+    printf "🧪  Running pytest (NO COVERAGE) with:\n"
+    for arg in $PYTEST_BASE_ARGS "$@"; do
+        printf "    • %s\n" "$arg"
+    done
+
     PYTHONFAULTHANDLER=true \
-        pytest -vvvv --showlocals "$@"
+        pytest $PYTEST_BASE_ARGS "$@"
 ' run_tests_no_coverage "$@" &
 SESSION_PID=$!
 

@@ -1,4 +1,6 @@
 from abc import ABC, abstractmethod
+import os
+import uuid
 
 import pytest
 
@@ -24,9 +26,21 @@ class BaseTestStateManager(ABC):
         raise NotImplementedError("This fixture should be overridden in subclasses.")
 
     @pytest.fixture
-    def base_state(self) -> JsonDict:
+    def guild_id(self, request) -> str:
+        worker_id = os.environ.get("PYTEST_XDIST_WORKER", "master")
+        node_id = request.node.nodeid.replace("/", "_").replace(":", "_").replace("[", "_").replace("]", "_")
+        return f"test_guild_{worker_id}_{node_id}_{uuid.uuid4().hex[:8]}"
+
+    @pytest.fixture
+    def agent_id(self, request) -> str:
+        worker_id = os.environ.get("PYTEST_XDIST_WORKER", "master")
+        node_id = request.node.nodeid.replace("/", "_").replace(":", "_").replace("[", "_").replace("]", "_")
+        return f"test_agent_{worker_id}_{node_id}_{uuid.uuid4().hex[:8]}"
+
+    @pytest.fixture
+    def base_state(self, guild_id: str, agent_id: str) -> JsonDict:
         return {
-            "GUILD001": {
+            guild_id: {
                 "state": {
                     "some": {
                         "key1": "value1",
@@ -40,7 +54,7 @@ class BaseTestStateManager(ABC):
                 "version": 0,
                 "timestamp": 0,
             },
-            "GUILD001#AGENT001": {
+            f"{guild_id}#{agent_id}": {
                 "state": {
                     "other": {
                         "key1": "value1",
@@ -54,10 +68,7 @@ class BaseTestStateManager(ABC):
 
     state_fetch_data = [
         pytest.param(
-            StateFetchRequest(
-                state_owner=StateOwner.GUILD,
-                guild_id="GUILD001",
-            ),
+            {"state_owner": StateOwner.GUILD},
             {
                 "some": {
                     "key1": "value1",
@@ -71,29 +82,17 @@ class BaseTestStateManager(ABC):
             id="FetchGuildState",
         ),
         pytest.param(
-            StateFetchRequest(
-                state_owner=StateOwner.GUILD,
-                guild_id="GUILD001",
-                state_path="some.key1",
-            ),
+            {"state_owner": StateOwner.GUILD, "state_path": "some.key1"},
             {"key1": "value1"},
             id="FetchGuildStatePath",
         ),
         pytest.param(
-            StateFetchRequest(
-                state_owner=StateOwner.GUILD,
-                guild_id="GUILD001",
-                state_path="some.nkey.nkey1",
-            ),
+            {"state_owner": StateOwner.GUILD, "state_path": "some.nkey.nkey1"},
             {"nkey1": "nvalue1"},
             id="FetchGuildStateNestedPath",
         ),
         pytest.param(
-            StateFetchRequest(
-                state_owner=StateOwner.AGENT,
-                guild_id="GUILD001",
-                agent_id="AGENT001",
-            ),
+            {"state_owner": StateOwner.AGENT},
             {
                 "other": {
                     "key1": "value1",
@@ -103,30 +102,38 @@ class BaseTestStateManager(ABC):
             id="FetchAgentState",
         ),
         pytest.param(
-            StateFetchRequest(
-                state_owner=StateOwner.AGENT,
-                guild_id="GUILD001",
-                agent_id="AGENT001",
-                state_path="other.key1",
-            ),
+            {"state_owner": StateOwner.AGENT, "state_path": "other.key1"},
             {"key1": "value1"},
             id="FetchAgentStatePath",
         ),
     ]
 
     @pytest.mark.parametrize("sfr, expected_response", state_fetch_data)
-    def test_get_state(self, state_manager: StateManager, base_state: JsonDict, sfr, expected_response):
+    def test_get_state(
+        self,
+        state_manager: StateManager,
+        base_state: JsonDict,
+        guild_id: str,
+        agent_id: str,
+        sfr,
+        expected_response,
+    ):
         state_manager.load(base_state)
-        assert state_manager.get_state(sfr).state == expected_response
+        request = StateFetchRequest(
+            state_owner=sfr["state_owner"],
+            guild_id=guild_id,
+            agent_id=agent_id if sfr["state_owner"] == StateOwner.AGENT else None,
+            state_path=sfr.get("state_path"),
+        )
+        assert state_manager.get_state(request).state == expected_response
 
     state_update_data = [
         pytest.param(
-            StateUpdateRequest(
-                state_owner=StateOwner.GUILD,
-                guild_id="GUILD001",
-                update_format=StateUpdateFormat.JSON_MERGE_PATCH,
-                state_update={"some": {"key1": "new_value"}},
-            ),
+            {
+                "state_owner": StateOwner.GUILD,
+                "update_format": StateUpdateFormat.JSON_MERGE_PATCH,
+                "state_update": {"some": {"key1": "new_value"}},
+            },
             {
                 "some": {
                     "key1": "new_value",
@@ -140,11 +147,10 @@ class BaseTestStateManager(ABC):
             id="MergePatchGuildState",
         ),
         pytest.param(
-            StateUpdateRequest(
-                state_owner=StateOwner.GUILD,
-                guild_id="GUILD001",
-                update_format=StateUpdateFormat.JSON_MERGE_PATCH,
-                state_update={
+            {
+                "state_owner": StateOwner.GUILD,
+                "update_format": StateUpdateFormat.JSON_MERGE_PATCH,
+                "state_update": {
                     "some": {
                         "key1": "new_value",
                         "key3": "value3",
@@ -153,7 +159,7 @@ class BaseTestStateManager(ABC):
                         },
                     },
                 },
-            ),
+            },
             {
                 "some": {
                     "key1": "new_value",
@@ -168,16 +174,15 @@ class BaseTestStateManager(ABC):
             id="MergePatchGuildStateNested",
         ),
         pytest.param(
-            StateUpdateRequest(
-                state_owner=StateOwner.GUILD,
-                guild_id="GUILD001",
-                update_format=StateUpdateFormat.JSON_PATCH,
-                state_update={
+            {
+                "state_owner": StateOwner.GUILD,
+                "update_format": StateUpdateFormat.JSON_PATCH,
+                "state_update": {
                     "operations": [
                         {"op": "replace", "path": "/some/key1", "value": "new_value"},
                     ]
                 },
-            ),
+            },
             {
                 "some": {
                     "key1": "new_value",
@@ -191,18 +196,16 @@ class BaseTestStateManager(ABC):
             id="JsonPatchGuildState",
         ),
         pytest.param(
-            StateUpdateRequest(
-                state_owner=StateOwner.AGENT,
-                guild_id="GUILD001",
-                agent_id="AGENT001",
-                update_format=StateUpdateFormat.JSON_PATCH,
-                state_update={
+            {
+                "state_owner": StateOwner.AGENT,
+                "update_format": StateUpdateFormat.JSON_PATCH,
+                "state_update": {
                     "operations": [
                         {"op": "replace", "path": "/other/key1", "value": "new_value"},
                         {"op": "add", "path": "/other/key3", "value": "value3"},
                     ]
                 },
-            ),
+            },
             {
                 "other": {
                     "key1": "new_value",
@@ -219,23 +222,35 @@ class BaseTestStateManager(ABC):
         self,
         state_manager: StateManager,
         base_state: JsonDict,
-        sur: StateUpdateRequest,
+        guild_id: str,
+        agent_id: str,
+        sur,
         expected_state,
     ):
         state_manager.load(base_state)
-        updated_state = state_manager.update_state(sur)
+        request = StateUpdateRequest(
+            state_owner=sur["state_owner"],
+            guild_id=guild_id,
+            agent_id=agent_id if sur["state_owner"] == StateOwner.AGENT else None,
+            update_format=sur["update_format"],
+            state_update=sur["state_update"],
+            update_path=sur.get("update_path"),
+            update_version=sur.get("update_version"),
+            update_timestamp=sur.get("update_timestamp"),
+        )
+        updated_state = state_manager.update_state(request)
 
         assert updated_state.state == expected_state
         assert updated_state.version == 1
 
         sfr = state_manager.get_state(
             StateFetchRequest(
-                state_owner=sur.state_owner,
-                guild_id=sur.guild_id,
-                agent_id=sur.agent_id,
-                state_path=sur.update_path,
-                version=sur.update_version,
-                timestamp=sur.update_timestamp,
+                state_owner=request.state_owner,
+                guild_id=request.guild_id,
+                agent_id=request.agent_id,
+                state_path=request.update_path,
+                version=request.update_version,
+                timestamp=request.update_timestamp,
             )
         )
 

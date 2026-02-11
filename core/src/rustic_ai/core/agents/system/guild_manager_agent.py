@@ -9,15 +9,20 @@ from rustic_ai.core.agents.system.guild_manager_agent_props import (
     GuildManagerAgentProps,
 )
 from rustic_ai.core.agents.system.models import (
+    AddRoutingRuleRequest,
     AgentGetRequest,
     AgentInfoResponse,
     AgentLaunchRequest,
     AgentLaunchResponse,
     AgentListRequest,
     AgentListResponse,
+    AgentRemovalResponse,
     BadInputResponse,
     ConflictResponse,
     GuildUpdatedAnnouncement,
+    RemoveAgentRequest,
+    RemoveRoutingRuleRequest,
+    RoutingRuleUpdateResponse,
     RunningAgentListRequest,
     StopGuildRequest,
     StopGuildResponse,
@@ -45,8 +50,17 @@ from rustic_ai.core.guild.agent_ext.mixins.health import (
 )
 from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder, GuildHelper
 from rustic_ai.core.guild.guild import Guild
-from rustic_ai.core.guild.metastore import AgentModel, GuildModel, Metastore
-from rustic_ai.core.guild.metastore.models import GuildStatus
+from rustic_ai.core.guild.metastore import (
+    AgentModel,
+    GuildModel,
+    GuildRoutes,
+    Metastore,
+)
+
+# Re-export AgentStatus and RouteStatus for convenience, though they should ideally come from metastore.models
+# (Using imports from metastore models inside methods to avoid potential circular dep issues if any,
+# or just import commonly at top)
+from rustic_ai.core.guild.metastore.models import AgentStatus, GuildStatus, RouteStatus
 from rustic_ai.core.state.manager.state_manager import StateManager
 from rustic_ai.core.state.models import (
     StateFetchError,
@@ -127,6 +141,7 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
                     checkstatus=HeartbeatStatus.PENDING_LAUNCH,
                     checkmeta={},
                 ).model_dump()
+                self.agent_health[agent_spec.id]["status"] = AgentStatus.PENDING_LAUNCH
 
             logging.info(f"Updating state with agent health: \n{self.agent_health}")
             self.state_manager.update_state(
@@ -157,6 +172,14 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
         else:
             if AgentModel.get_by_id(session, self.guild_id, agent_spec.id) is None:
                 session.add(agent_model)  # pragma: no cover
+
+        # When adding an agent, we should also initialize its health status in the manager's view
+        self.agent_health[agent_spec.id] = Heartbeat(
+            checktime=datetime.now(),
+            checkstatus=HeartbeatStatus.PENDING_LAUNCH,
+            checkmeta={},
+        ).model_dump()
+        # Ensure status is PENDING_LAUNCH on addition
 
     def _announce_guild_refresh(self, ctx: ProcessContext) -> None:
         """
@@ -345,6 +368,131 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
         # Announce Guild refresh to all agents
         self._announce_guild_refresh(ctx)
 
+    @processor(RemoveAgentRequest)
+    def remove_agent(self, ctx: ProcessContext[RemoveAgentRequest]) -> None:
+        """
+        Removes a member from the guild.
+        """
+        rar = ctx.payload
+        if self.guild is None:
+            raise RuntimeError("Guild is not initialized")
+
+        try:
+            self.guild.remove_agent(rar.agent_id)
+        except ValueError as e:
+            # If agent not found in running guild, check DB and try to remove anyway to ensure consistency
+            logging.warning(f"Agent {rar.agent_id} not found in running guild: {e}")
+
+        with Session(self.engine) as session:
+            agent_model = AgentModel.get_by_id(session, self.guild_id, rar.agent_id)
+            if agent_model:
+                agent_model.status = AgentStatus.DELETED
+                session.add(agent_model)
+                session.commit()
+            else:
+                ctx.send_error(
+                    ErrorMessage(
+                        error_type="AGENT_NOT_FOUND",
+                        error_message=f"Agent {rar.agent_id} not found in guild {self.guild_id}",
+                    )
+                )
+                return
+
+        # Update health state to indicate removal (optional, or just rely on spec refresh)
+        # self.state_manager.update_state(...)
+
+        agent_removal_response = AgentRemovalResponse(
+            agent_id=rar.agent_id,
+            status_code=200,
+            status="Agent removed successfully",
+        )
+        ctx.send(agent_removal_response)
+
+        # Announce Guild refresh to all agents
+        self._announce_guild_refresh(ctx)
+
+    @processor(AddRoutingRuleRequest)
+    def add_routing_rule(self, ctx: ProcessContext[AddRoutingRuleRequest]) -> None:
+        """
+        Adds a routing rule to the guild.
+        """
+        arr = ctx.payload
+        if self.guild is None:
+            raise RuntimeError("Guild is not initialized")
+
+        rule = arr.routing_rule
+
+        # Update persistent store
+        with Session(self.engine) as session:
+            guild_route = GuildRoutes.from_routing_rule(self.guild_id, rule)
+            guild_route.status = RouteStatus.ACTIVE
+            session.add(guild_route)
+            session.commit()
+            session.refresh(guild_route)
+
+        # Update in-memory guild
+        self.guild.routes.add_step(rule)
+
+        response = RoutingRuleUpdateResponse(
+            rule_hashid=rule.hashid,
+            status_code=201,
+            status="Routing rule added successfully",
+        )
+        ctx.send(response)
+
+        self._announce_guild_refresh(ctx)
+
+    @processor(RemoveRoutingRuleRequest)
+    def remove_routing_rule(self, ctx: ProcessContext[RemoveRoutingRuleRequest]) -> None:
+        """
+        Removes a routing rule from the guild by its hashid.
+        """
+        rrr = ctx.payload
+        if self.guild is None:
+            raise RuntimeError("Guild is not initialized")
+
+        target_hashid = rrr.rule_hashid
+        rule_removed = False
+
+        # Update persistent store
+        with Session(self.engine) as session:
+            guild_model = GuildModel.get_by_id(session, self.guild_id)
+            if guild_model and guild_model.routes:
+                for db_route in guild_model.routes:
+                    # Convert back to RoutingRule to compute hashid
+                    # This is slightly inefficient but ensures consistency with the property logic
+                    temp_rule = db_route.to_routing_rule()
+                    if temp_rule.hashid == target_hashid:
+                        db_route.status = RouteStatus.DELETED
+                        session.add(db_route)
+                        rule_removed = True
+                        break
+
+            if rule_removed:
+                session.commit()
+
+        if not rule_removed:
+            ctx.send_error(
+                ErrorMessage(
+                    agent_type=self.get_qualified_class_name(),
+                    error_type="RULE_NOT_FOUND",
+                    error_message=f"Routing rule with hashid {target_hashid} not found",
+                )
+            )
+            return
+
+        # Update in-memory guild (reconstruct list excluding the target)
+        self.guild.routes.steps = [step for step in self.guild.routes.steps if step.hashid != target_hashid]
+
+        response = RoutingRuleUpdateResponse(
+            rule_hashid=target_hashid,
+            status_code=200,
+            status="Routing rule removed successfully",
+        )
+        ctx.send(response)
+
+        self._announce_guild_refresh(ctx)
+
     @processor(AgentListRequest)
     def list_agents(self, ctx: ProcessContext[AgentListRequest]) -> None:
         """
@@ -418,18 +566,40 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
                 guild_model = GuildModel.get_by_id(guild_id=self.guild_id, session=session)
                 guild_status = GuildStatus.UNKNOWN
 
-                if heartbeat.checkstatus == HeartbeatStatus.OK:
+                # Use aggregated guild health to determine guild status
+                aggregated_health = health_report.guild_health
+
+                if aggregated_health == HeartbeatStatus.OK:
                     guild_status = GuildStatus.RUNNING
-                elif heartbeat.checkstatus == HeartbeatStatus.WARNING:
+                elif aggregated_health == HeartbeatStatus.WARNING:
                     guild_status = GuildStatus.WARNING
-                elif heartbeat.checkstatus == HeartbeatStatus.STARTING:
+                elif aggregated_health == HeartbeatStatus.STARTING:
                     guild_status = GuildStatus.STARTING
-                elif heartbeat.checkstatus == HeartbeatStatus.BACKLOGGED:
+                elif aggregated_health == HeartbeatStatus.BACKLOGGED:
                     guild_status = GuildStatus.BACKLOGGED
-                elif heartbeat.checkstatus == HeartbeatStatus.UNKNOWN:
+                elif aggregated_health == HeartbeatStatus.UNKNOWN:
                     guild_status = GuildStatus.UNKNOWN
-                elif heartbeat.checkstatus == HeartbeatStatus.ERROR:
+                elif aggregated_health == HeartbeatStatus.ERROR:
                     guild_status = GuildStatus.ERROR
+
+                # Update specific agent status in DB
+                agent_model = AgentModel.get_by_id(session, self.guild_id, ctx.message.sender.id)
+                if agent_model and agent_model.status != AgentStatus.DELETED:
+                    new_agent_status = AgentStatus.ERROR
+                    if heartbeat.checkstatus in [
+                        HeartbeatStatus.OK,
+                        HeartbeatStatus.WARNING,
+                        HeartbeatStatus.BACKLOGGED,
+                    ]:
+                        new_agent_status = AgentStatus.RUNNING
+                    elif heartbeat.checkstatus == HeartbeatStatus.STARTING:
+                        new_agent_status = AgentStatus.STARTING
+                    elif heartbeat.checkstatus == HeartbeatStatus.PENDING_LAUNCH:
+                        new_agent_status = AgentStatus.PENDING_LAUNCH
+
+                    if agent_model.status != new_agent_status:
+                        agent_model.status = new_agent_status
+                        session.add(agent_model)
 
                 if guild_model:
                     guild_model.status = guild_status

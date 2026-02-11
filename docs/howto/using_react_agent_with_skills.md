@@ -40,7 +40,7 @@ agent_spec = (
     .set_description("Helps with PDF document processing")
     .set_properties(
         ReActAgentConfig(
-            model="gpt-4o-mini",
+            model="gpt-5-nano",
             max_iterations=10,
             toolset=toolset,
             system_prompt=toolset.get_system_prompt_addition(),
@@ -56,7 +56,7 @@ guild_spec = (
     .set_dependency_map({
         "llm": DependencySpec(
             class_name="rustic_ai.litellm.agent_ext.llm.LiteLLMResolver",
-            properties={"model": "gpt-4o-mini"}
+            properties={"model": "gpt-5-nano"}
         )
     })
     .build()
@@ -162,7 +162,7 @@ name: PDF Assistant
 description: Processes PDF documents
 class_name: rustic_ai.llm_agent.react.ReActAgent
 properties:
-  model: gpt-4o-mini
+  model: gpt-5-nano
   max_iterations: 10
   toolset:
     kind: rustic_ai.skills.toolset.SkillToolset
@@ -464,7 +464,7 @@ def test_agent_with_skill(generator, build_message_from_payload, dependency_map)
         .set_description("Test skill agent")
         .set_properties(
             ReActAgentConfig(
-                model="gpt-4o-mini",
+                model="gpt-5-nano",
                 toolset=toolset,
             )
         )

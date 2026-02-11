@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
+import os
 import time
+import uuid
 
 import pytest
 
@@ -23,8 +25,10 @@ class IntegrationTestABC(ABC):
         pass
 
     @pytest.fixture
-    def guild_id(self) -> str:
-        return "test_guild_id"
+    def guild_id(self, request) -> str:
+        worker_id = os.environ.get("PYTEST_XDIST_WORKER", "master")
+        node_id = request.node.nodeid.replace("/", "_").replace(":", "_").replace("[", "_").replace("]", "_")
+        return f"test_guild_{worker_id}_{node_id}_{uuid.uuid4().hex[:8]}"
 
     @pytest.fixture
     def wait_time(self) -> float:

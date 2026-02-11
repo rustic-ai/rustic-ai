@@ -84,7 +84,7 @@ class TestReActGuildYAML:
             dep_map = {
                 "llm": DependencySpec(
                     class_name=LiteLLMResolver.get_qualified_class_name(),
-                    properties={"model": "gpt-4o-mini"},
+                    properties={"model": "gpt-5-nano"},
                 ),
             }
 
@@ -132,7 +132,7 @@ class TestReActGuildYAML:
             dep_map = {
                 "llm": DependencySpec(
                     class_name=LiteLLMResolver.get_qualified_class_name(),
-                    properties={"model": "gpt-4o-mini"},
+                    properties={"model": "gpt-5-nano"},
                 ),
             }
 
@@ -152,7 +152,7 @@ class TestReActGuildYAML:
                 assert properties is not None, "Agent should have properties"
 
                 # Properties is a Pydantic model (ReActAgentConfig), access attributes directly
-                assert properties.model == "gpt-4o-mini", f"Model should be gpt-4o-mini: {properties.model}"
+                assert properties.model == "gpt-5-nano", f"Model should be gpt-5-nano: {properties.model}"
                 assert properties.max_iterations == 10, f"Max iterations should be 10: {properties.max_iterations}"
                 assert properties.temperature == 0.7, f"Temperature should be 0.7: {properties.temperature}"
 
@@ -177,7 +177,7 @@ class TestReActGuildYAML:
             dep_map = {
                 "llm": DependencySpec(
                     class_name=LiteLLMResolver.get_qualified_class_name(),
-                    properties={"model": "gpt-4o-mini"},
+                    properties={"model": "gpt-5-nano"},
                 ),
             }
 
@@ -248,7 +248,7 @@ class TestReActGuildYAML:
             dep_map = {
                 "llm": DependencySpec(
                     class_name=LiteLLMResolver.get_qualified_class_name(),
-                    properties={"model": "gpt-4o-mini"},
+                    properties={"model": "gpt-5-nano"},
                 ),
             }
 
@@ -300,7 +300,7 @@ class TestReActGuildYAML:
             dep_map = {
                 "llm": DependencySpec(
                     class_name=LiteLLMResolver.get_qualified_class_name(),
-                    properties={"model": "gpt-4o-mini"},
+                    properties={"model": "gpt-5-nano"},
                 ),
             }
 
@@ -351,7 +351,7 @@ class TestReActGuildYAML:
             dep_map = {
                 "llm": DependencySpec(
                     class_name=LiteLLMResolver.get_qualified_class_name(),
-                    properties={"model": "gpt-4o-mini"},
+                    properties={"model": "gpt-5-nano"},
                 ),
             }
 
@@ -403,7 +403,7 @@ class TestReActGuildYAML:
             dep_map = {
                 "llm": DependencySpec(
                     class_name=LiteLLMResolver.get_qualified_class_name(),
-                    properties={"model": "gpt-4o-mini"},
+                    properties={"model": "gpt-5-nano"},
                 ),
             }
 
@@ -462,7 +462,7 @@ class TestReActGuildYAML:
             dep_map = {
                 "llm": DependencySpec(
                     class_name=LiteLLMResolver.get_qualified_class_name(),
-                    properties={"model": "gpt-4o-mini"},
+                    properties={"model": "gpt-5-nano"},
                 ),
             }
 
@@ -513,7 +513,7 @@ class TestReActGuildYAML:
             dep_map = {
                 "llm": DependencySpec(
                     class_name=LiteLLMResolver.get_qualified_class_name(),
-                    properties={"model": "gpt-4o-mini"},
+                    properties={"model": "gpt-5-nano"},
                 ),
             }
 

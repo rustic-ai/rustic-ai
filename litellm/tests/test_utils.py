@@ -26,7 +26,7 @@ def test_from_litellm_simple_text_response():
     resp_dict = {
         "id": "chatcmpl-abc123",
         "created": 1_700_000_000,
-        "model": "gpt-4o-mini",
+        "model": "gpt-5-nano",
         "choices": [make_basic_choice("Hello world", finish_reason="stop")],
         "usage": {
             "prompt_tokens": 10,
@@ -43,7 +43,7 @@ def test_from_litellm_simple_text_response():
     # Then we get our internal model populated correctly
     assert isinstance(converted, ChatCompletionResponse)
     assert converted.id == "chatcmpl-abc123"
-    assert converted.model == "gpt-4o-mini"
+    assert converted.model == "gpt-5-nano"
     assert len(converted.choices) == 1
     assert converted.choices[0].message.content == "Hello world"
     assert converted.choices[0].finish_reason == FinishReason.stop
@@ -101,7 +101,7 @@ def test_from_litellm_with_reasoning_content_and_usage():
     resp_dict = {
         "id": "chatcmpl-reason-1",
         "created": 1_700_000_200,
-        "model": "gpt-4o-mini",
+        "model": "gpt-5-nano",
         "choices": [
             {
                 "index": 0,
@@ -135,7 +135,7 @@ def test_from_litellm_multiple_choices_and_length_finish_reason():
     resp_dict = {
         "id": "chatcmpl-many-1",
         "created": 1_700_000_300,
-        "model": "gpt-4o-mini",
+        "model": "gpt-5-nano",
         "choices": [
             make_basic_choice("First", finish_reason="stop", index=0),
             make_basic_choice("Second", finish_reason="length", index=1),
@@ -157,7 +157,7 @@ def test_from_litellm_system_fingerprint_and_no_usage():
     resp_dict = {
         "id": "chatcmpl-fp-1",
         "created": 1_700_000_350,
-        "model": "gpt-4o-mini",
+        "model": "gpt-5-nano",
         "system_fingerprint": "fp_abc123",
         "choices": [make_basic_choice("Hi", finish_reason="stop")],
     }
@@ -225,7 +225,7 @@ def test_from_litellm_with_logprobs_content():
     resp_dict = {
         "id": "chatcmpl-logprobs-1",
         "created": 1_700_000_370,
-        "model": "gpt-4o-mini",
+        "model": "gpt-5-nano",
         "choices": [
             {
                 "index": 0,
@@ -269,7 +269,7 @@ def test_from_litellm_assistant_name_provider_fields_and_thinking_blocks():
     resp_dict = {
         "id": "chatcmpl-think-1",
         "created": 1_700_000_380,
-        "model": "gpt-4o-mini",
+        "model": "gpt-5-nano",
         "choices": [
             {
                 "index": 0,
@@ -305,7 +305,7 @@ def test_from_litellm_empty_string_content():
     resp_dict = {
         "id": "chatcmpl-empty-1",
         "created": 1_700_000_390,
-        "model": "gpt-4o-mini",
+        "model": "gpt-5-nano",
         "choices": [make_basic_choice("", finish_reason="stop")],
     }
 
@@ -327,7 +327,7 @@ def test_from_litellm_various_finish_reasons(finish_reason: str):
     resp_dict = {
         "id": f"chatcmpl-fr-{finish_reason}",
         "created": 1_700_000_400,
-        "model": "gpt-4o-mini",
+        "model": "gpt-5-nano",
         "choices": [make_basic_choice("Some text", finish_reason=finish_reason)],
     }
 

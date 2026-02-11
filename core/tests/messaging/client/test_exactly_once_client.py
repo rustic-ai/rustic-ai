@@ -296,6 +296,9 @@ class TestExactlyOnceClientSql(BaseTestExactlyOnceClient):
 
     def setup_class(cls):
         # Setup once before all tests in this class
+        worker_id = os.environ.get("PYTEST_XDIST_WORKER", "master")
+        cls.db_filename = f"test_exactly_once_client_{worker_id}.db"
+        cls.db_url = f"sqlite:///{cls.db_filename}"
         try:
             os.remove(cls.db_filename)
         except FileNotFoundError:

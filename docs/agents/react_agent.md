@@ -85,7 +85,7 @@ agent_spec = (
     .set_description("Solves math problems")
     .set_properties(
         ReActAgentConfig(
-            model="gpt-4o-mini",
+            model="gpt-5-nano",
             max_iterations=10,
             toolset=CalculatorToolset(),
         )
@@ -99,7 +99,7 @@ agent, results = wrap_agent_for_testing(
     dependency_map={
         "llm": DependencySpec(
             class_name="rustic_ai.litellm.agent_ext.llm.LiteLLMResolver",
-            properties={"model": "gpt-4o-mini"}
+            properties={"model": "gpt-5-nano"}
         )
     }
 )
@@ -139,7 +139,7 @@ name: Calculator Agent
 description: Solves mathematical problems using tools
 class_name: rustic_ai.llm_agent.react.ReActAgent
 properties:
-  model: gpt-4o-mini
+  model: gpt-5-nano
   max_iterations: 10
   toolset:
     kind: my_package.CalculatorToolset

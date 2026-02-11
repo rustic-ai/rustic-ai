@@ -58,12 +58,12 @@ def build_message_from_payload():
 # Model parameters for LLM tests
 _model_params = [
     pytest.param(
-        "gpt-4o-mini",
+        "gpt-5-nano",
         marks=pytest.mark.skipif(
             "OPENAI_API_KEY" not in os.environ,
             reason="OPENAI_API_KEY not set",
         ),
-        id="gpt-4o-mini",
+        id="gpt-5-nano",
     )
 ]
 

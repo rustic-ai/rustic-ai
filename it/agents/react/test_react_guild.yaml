@@ -9,7 +9,7 @@ agents:
     description: A ReAct agent that uses skills to solve problems
     additional_topics: []
     properties:
-      model: gpt-4o-mini
+      model: gpt-5-nano
       max_iterations: 10
       temperature: 0.7
       toolset:
