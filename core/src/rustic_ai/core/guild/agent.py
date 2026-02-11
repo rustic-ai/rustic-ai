@@ -12,7 +12,7 @@ from typing import Any, Callable, Dict, Generic, List, Optional, Type, TypeVar
 from pydantic import BaseModel, Field
 
 from rustic_ai.core.agents.commons.message_formats import ErrorMessage
-from rustic_ai.core.guild.agent_ext.depends import DependencyResolver
+from rustic_ai.core.guild.agent_ext.depends import DependencyResolver, DependencySpec
 from rustic_ai.core.guild.dsl import APT, AgentSpec, GuildSpec, GuildTopics
 from rustic_ai.core.guild.metaprog import AgentAnnotations
 from rustic_ai.core.guild.metaprog.agent_metaclass import (
@@ -85,6 +85,7 @@ class Agent(Generic[APT], metaclass=AgentMetaclass):  # type: ignore
         agent_mode: AgentMode = AgentMode.LOCAL,
         handled_formats: list = [],
         organization_id: Optional[str] = None,
+        dependency_specs: Optional[Dict[str, "DependencySpec"]] = None,
     ):
         """
         Initializes a new instance of the Agent class.
@@ -99,6 +100,7 @@ class Agent(Generic[APT], metaclass=AgentMetaclass):  # type: ignore
             agent_type (AgentType): The type of the agent.
             agent_mode (AgentMode): The mode of the agent.
             handled_formats (list): The formats of messages handled by the agent.
+            dependency_specs (Dict[str, DependencySpec]): The dependency specs for scope overrides.
         """
         self.logger = logging.getLogger(f"Agent[{agent_spec.name}:{agent_spec.id}]")
 
@@ -125,6 +127,7 @@ class Agent(Generic[APT], metaclass=AgentMetaclass):  # type: ignore
         self._dependency_resolvers: Dict[str, DependencyResolver] = {}
         self._agent_tag = AgentTag(id=self.id, name=self.name)
         self._dependency_resolvers = dependency_resolvers or {}
+        self._dependency_specs: Dict[str, "DependencySpec"] = dependency_specs or {}
 
         self._state: JsonDict = {}
         self._guild_state: JsonDict = {}
@@ -982,10 +985,16 @@ class ProcessorHelper:
         org_id: str,
         guild_id: str,
         agent_id: str,
+        dependency_specs: Optional[Dict[str, "DependencySpec"]] = None,
     ):
-        if dep.org_level:
+        # Check for spec-level scope overrides (take precedence over agent-level)
+        spec = dependency_specs.get(dep.dependency_key) if dependency_specs else None
+        org_level = spec.org_level if spec and spec.org_level else dep.org_level
+        guild_level = spec.guild_level if spec and spec.guild_level else dep.guild_level
+
+        if org_level:
             return resolver.get_or_resolve(org_id=org_id)
-        elif dep.guild_level:
+        elif guild_level:
             return resolver.get_or_resolve(org_id=org_id, guild_id=guild_id)
         else:
             return resolver.get_or_resolve(org_id=org_id, guild_id=guild_id, agent_id=agent_id)
@@ -1109,6 +1118,7 @@ def processor(
                         self.get_organization(),
                         self.guild_id,
                         self.id,
+                        self._dependency_specs,
                     )
                     for dep in deps
                 }
