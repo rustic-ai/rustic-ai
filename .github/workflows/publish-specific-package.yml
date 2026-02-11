@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.13.11']
+        python-version: ['3.13.12']
 
     steps:
       - name: Check out the repo
