@@ -9,7 +9,7 @@ Ready to contribute? Here's how to set up for local development.
     git clone git@github.com:<your_github_username_name_here>/rustic_ai.git
     ```
 
-3. Ensure Python 3.12 and [poetry](https://python-poetry.org/docs/) are installed.
+3. Ensure Python 3.13 and [poetry](https://python-poetry.org/docs/) are installed.
 4. Create a branch for local development:
 
     ```sh
@@ -119,7 +119,7 @@ This project is a monorepo of all the different Rustic AI modules. Each module h
 individually or altogether from the root folder.
 
 **Prerequisites**
-* Python 3.12
+* Python 3.13
 * [Poetry 1.8](https://python-poetry.org/docs/1.8/)
 
 ```shell

@@ -5,12 +5,12 @@ build-backend = "poetry.core.masonry.api"
 
 [project]
 name = "rusticai-showcase"
-version = "1.0.0"
+version = "1.1.0"
 description = "Module that showcases Rustic AI capabilities"
 authors = [{name = "Dragonscale Industries Inc.", email = "dev@dragonscale.ai"}]
 license = "Apache-2.0"
 readme = "README.md"
-requires-python = ">=3.12,<3.13"
+requires-python = ">=3.13,<3.14"
 dynamic = ["dependencies"]
 urls = { Homepage = "https://www.rustic.ai/", Repository = "https://github.com/rustic-ai/rustic-ai", "Rustic AI Core" = "https://pypi.org/project/rusticai-core/" }
 
@@ -28,6 +28,7 @@ rusticai-serpapi = { path = "../serpapi", develop = true }
 rusticai-vertexai = { path = "../vertexai", develop = true }
 google-api-python-client = "^2.187.0"
 spacytextblob = "^5.1.0"
+spacy = "^3.8.11"
 
 [tool.poetry-monorepo.deps]
 
@@ -49,7 +50,7 @@ test = ["pytest"]
 
 [tool.black]
 line-length = 120
-target-version = ['py312']
+target-version = ['py313']
 include = '\.pyi?$'
 exclude = '''
 /(
@@ -65,7 +66,7 @@ exclude = '''
 '''
 
 [tool.mypy]
-python_version = "3.12"
+python_version = "3.13"
 ignore_missing_imports = true
 check_untyped_defs = true
 plugins = "pydantic.mypy"
