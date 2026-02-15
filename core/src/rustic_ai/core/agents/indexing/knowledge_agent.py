@@ -1,6 +1,6 @@
 from typing import Any, Dict, List, Optional, Tuple
 
-from pydantic import BaseModel, Field
+from pydantic import AnyUrl, BaseModel, Field
 
 from rustic_ai.core.agents.commons.media import MediaLink
 from rustic_ai.core.guild import agent
@@ -227,6 +227,8 @@ class KnowledgeAgent(Agent[KnowledgeAgentProps]):
             for k, v in res.payload.items():
                 if hasattr(v, "isoformat"):
                     res.payload[k] = v.isoformat()
+                elif isinstance(v, AnyUrl):
+                    res.payload[k] = str(v)
 
         # Convert SearchResults to KBSearchResults and add query text
         kb_results = KBSearchResults(
