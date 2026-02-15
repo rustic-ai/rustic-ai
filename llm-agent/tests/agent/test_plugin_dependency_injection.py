@@ -9,11 +9,15 @@ from typing import Any, List, Optional
 
 from pydantic import BaseModel
 import pytest
+import shortuuid
 
 from rustic_ai.core.guild.agent import Agent
 from rustic_ai.core.guild.agent_ext.depends.dependency_resolver import (
     DependencyResolver,
     DependencySpec,
+)
+from rustic_ai.core.guild.agent_ext.depends.filesystem.filesystem import (
+    FileSystemResolver,
 )
 from rustic_ai.core.guild.agent_ext.depends.llm.llm import LLM
 from rustic_ai.core.guild.agent_ext.depends.llm.models import (
@@ -246,6 +250,18 @@ class TestPluginDependencyInjection:
         # Add LLM dependency to the dependency map
         dependency_map["llm"] = DependencySpec(
             class_name=get_qualified_class_name(MockLLMResolver),
+        )
+
+        # Add filesystem dependency required by LLMAgent's invoke_llm_with_attachments processor
+        dependency_map["filesystem"] = DependencySpec(
+            class_name=FileSystemResolver.get_qualified_class_name(),
+            properties={
+                "path_base": f"/tmp/tests/{shortuuid.uuid()}",
+                "protocol": "file",
+                "storage_options": {
+                    "auto_mkdir": True,
+                },
+            },
         )
 
         agent, results = wrap_agent_for_testing(agent_spec, dependency_map)
