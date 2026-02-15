@@ -532,3 +532,485 @@ class TestTodoListGuild:
         assert task["metadata"]["company"] == "Acme Corp"
         assert task["metadata"]["phase"] == "intel"
         assert task["metadata"]["file_path"] == "/tmp/dossier/acme/intel.md"
+
+    @pytest.mark.asyncio
+    async def test_completion_with_result(self, todolist_guild: Guild):
+        """Test that completing a task with result stores and returns the result."""
+        generator = GemstoneGenerator(21)
+        probe_spec = (
+            AgentBuilder(ProbeAgent)
+            .set_id("test_agent_result")
+            .set_name("Test Agent Result")
+            .set_description("A test probe agent for result tests")
+            .add_additional_topic(GuildTopics.SYSTEM_TOPIC)
+            .add_additional_topic(UserProxyAgent.BROADCAST_TOPIC)
+            .add_additional_topic(UserProxyAgent.get_user_notifications_topic("test_user_result"))
+            .build_spec()
+        )
+
+        probe_agent: ProbeAgent = todolist_guild._add_local_agent(probe_spec)  # type: ignore
+
+        # Create user
+        probe_agent.publish_dict(
+            topic=GuildTopics.SYSTEM_TOPIC,
+            payload=UserAgentCreationRequest(user_id="test_user_result", user_name="test_user_result").model_dump(),
+            format=UserAgentCreationRequest,
+        )
+        await asyncio.sleep(2)
+        probe_agent.clear_messages()
+
+        task_id = "task-with-result"
+
+        # Add task
+        probe_agent.publish(
+            topic=UserProxyAgent.get_user_inbox_topic("test_user_result"),
+            payload=Message(
+                id_obj=generator.get_id(Priority.NORMAL),
+                topics="default_topic",
+                payload=AddTaskRequest(
+                    id=task_id,
+                    todo="Task to complete with result",
+                    start_time=datetime.now().isoformat(),
+                    depends_on=[],
+                ).model_dump(),
+                format=get_qualified_class_name(AddTaskRequest),
+                sender=AgentTag(id="test_agent_result"),
+            ),
+        )
+        await asyncio.sleep(2)
+        probe_agent.clear_messages()
+
+        # Complete task with result
+        result_data = {"output": "analysis complete", "score": 0.95}
+        probe_agent.publish(
+            topic=UserProxyAgent.get_user_inbox_topic("test_user_result"),
+            payload=Message(
+                id_obj=generator.get_id(Priority.NORMAL),
+                topics="default_topic",
+                payload=UpdateStatusRequest(id=task_id, status=TaskStatus.DONE, result=result_data).model_dump(),
+                format=get_qualified_class_name(UpdateStatusRequest),
+                sender=AgentTag(id="test_agent_result"),
+            ),
+        )
+
+        # Wait for TaskCompletedEvent
+        completed_event = await self.wait_for_message(
+            probe_agent,
+            lambda m: "TaskCompletedEvent" in m.format,
+        )
+        assert completed_event.payload["task"]["result"] == result_data
+
+        # Get task and verify result is persisted
+        probe_agent.clear_messages()
+        probe_agent.publish(
+            topic=UserProxyAgent.get_user_inbox_topic("test_user_result"),
+            payload=Message(
+                id_obj=generator.get_id(Priority.NORMAL),
+                topics="default_topic",
+                payload=GetTaskRequest(id=task_id).model_dump(),
+                format=get_qualified_class_name(GetTaskRequest),
+                sender=AgentTag(id="test_agent_result"),
+            ),
+        )
+
+        get_response = await self.wait_for_message(
+            probe_agent,
+            lambda m: "GetTaskResponse" in m.format,
+        )
+        assert get_response.payload["task"]["result"] == result_data
+
+    @pytest.mark.asyncio
+    async def test_single_dependency_result_aggregation(self, todolist_guild: Guild):
+        """Test that completing a dependency aggregates result into TaskUnblockedEvent."""
+        generator = GemstoneGenerator(22)
+        probe_spec = (
+            AgentBuilder(ProbeAgent)
+            .set_id("test_agent_single_agg")
+            .set_name("Test Agent Single Agg")
+            .set_description("A test probe agent for single aggregation tests")
+            .add_additional_topic(GuildTopics.SYSTEM_TOPIC)
+            .add_additional_topic(UserProxyAgent.BROADCAST_TOPIC)
+            .add_additional_topic(UserProxyAgent.get_user_notifications_topic("test_user_single_agg"))
+            .build_spec()
+        )
+
+        probe_agent: ProbeAgent = todolist_guild._add_local_agent(probe_spec)  # type: ignore
+
+        # Create user
+        probe_agent.publish_dict(
+            topic=GuildTopics.SYSTEM_TOPIC,
+            payload=UserAgentCreationRequest(
+                user_id="test_user_single_agg", user_name="test_user_single_agg"
+            ).model_dump(),
+            format=UserAgentCreationRequest,
+        )
+        await asyncio.sleep(2)
+        probe_agent.clear_messages()
+
+        child_id = "child-single"
+        parent_id = "parent-single"
+        child_result = {"intel": "gathered", "files": ["/a.md", "/b.md"]}
+
+        # Add child task
+        probe_agent.publish(
+            topic=UserProxyAgent.get_user_inbox_topic("test_user_single_agg"),
+            payload=Message(
+                id_obj=generator.get_id(Priority.NORMAL),
+                topics="default_topic",
+                payload=AddTaskRequest(
+                    id=child_id,
+                    todo="Child task",
+                    start_time=datetime.now().isoformat(),
+                    depends_on=[],
+                ).model_dump(),
+                format=get_qualified_class_name(AddTaskRequest),
+                sender=AgentTag(id="test_agent_single_agg"),
+            ),
+        )
+        await asyncio.sleep(1)
+
+        # Add parent task depending on child
+        probe_agent.publish(
+            topic=UserProxyAgent.get_user_inbox_topic("test_user_single_agg"),
+            payload=Message(
+                id_obj=generator.get_id(Priority.NORMAL),
+                topics="default_topic",
+                payload=AddTaskRequest(
+                    id=parent_id,
+                    todo="Parent task",
+                    start_time=datetime.now().isoformat(),
+                    depends_on=[child_id],
+                ).model_dump(),
+                format=get_qualified_class_name(AddTaskRequest),
+                sender=AgentTag(id="test_agent_single_agg"),
+            ),
+        )
+        await asyncio.sleep(2)
+        probe_agent.clear_messages()
+
+        # Complete child with result
+        probe_agent.publish(
+            topic=UserProxyAgent.get_user_inbox_topic("test_user_single_agg"),
+            payload=Message(
+                id_obj=generator.get_id(Priority.NORMAL),
+                topics="default_topic",
+                payload=UpdateStatusRequest(id=child_id, status=TaskStatus.DONE, result=child_result).model_dump(),
+                format=get_qualified_class_name(UpdateStatusRequest),
+                sender=AgentTag(id="test_agent_single_agg"),
+            ),
+        )
+
+        # Wait for TaskUnblockedEvent with aggregated results
+        unblocked_event = await self.wait_for_message(
+            probe_agent,
+            lambda m: "TaskUnblockedEvent" in m.format,
+        )
+        assert unblocked_event.payload["task_id"] == parent_id
+        assert unblocked_event.payload["dependency_results"][child_id] == child_result
+
+    @pytest.mark.asyncio
+    async def test_multiple_dependency_result_aggregation(self, todolist_guild: Guild):
+        """Test that completing multiple dependencies aggregates all results."""
+        generator = GemstoneGenerator(23)
+        probe_spec = (
+            AgentBuilder(ProbeAgent)
+            .set_id("test_agent_multi_agg")
+            .set_name("Test Agent Multi Agg")
+            .set_description("A test probe agent for multi aggregation tests")
+            .add_additional_topic(GuildTopics.SYSTEM_TOPIC)
+            .add_additional_topic(UserProxyAgent.BROADCAST_TOPIC)
+            .add_additional_topic(UserProxyAgent.get_user_notifications_topic("test_user_multi_agg"))
+            .build_spec()
+        )
+
+        probe_agent: ProbeAgent = todolist_guild._add_local_agent(probe_spec)  # type: ignore
+
+        # Create user
+        probe_agent.publish_dict(
+            topic=GuildTopics.SYSTEM_TOPIC,
+            payload=UserAgentCreationRequest(
+                user_id="test_user_multi_agg", user_name="test_user_multi_agg"
+            ).model_dump(),
+            format=UserAgentCreationRequest,
+        )
+        await asyncio.sleep(2)
+        probe_agent.clear_messages()
+
+        child1_id = "child-multi-1"
+        child2_id = "child-multi-2"
+        child3_id = "child-multi-3"
+        parent_id = "parent-multi"
+
+        child1_result = {"source": "news", "count": 10}
+        child2_result = {"source": "financial", "count": 5}
+        child3_result = {"source": "social", "count": 20}
+
+        # Add all child tasks
+        for child_id in [child1_id, child2_id, child3_id]:
+            probe_agent.publish(
+                topic=UserProxyAgent.get_user_inbox_topic("test_user_multi_agg"),
+                payload=Message(
+                    id_obj=generator.get_id(Priority.NORMAL),
+                    topics="default_topic",
+                    payload=AddTaskRequest(
+                        id=child_id,
+                        todo=f"Child task {child_id}",
+                        start_time=datetime.now().isoformat(),
+                        depends_on=[],
+                    ).model_dump(),
+                    format=get_qualified_class_name(AddTaskRequest),
+                    sender=AgentTag(id="test_agent_multi_agg"),
+                ),
+            )
+            await asyncio.sleep(0.5)
+
+        # Add parent task depending on all children
+        probe_agent.publish(
+            topic=UserProxyAgent.get_user_inbox_topic("test_user_multi_agg"),
+            payload=Message(
+                id_obj=generator.get_id(Priority.NORMAL),
+                topics="default_topic",
+                payload=AddTaskRequest(
+                    id=parent_id,
+                    todo="Parent task",
+                    start_time=datetime.now().isoformat(),
+                    depends_on=[child1_id, child2_id, child3_id],
+                ).model_dump(),
+                format=get_qualified_class_name(AddTaskRequest),
+                sender=AgentTag(id="test_agent_multi_agg"),
+            ),
+        )
+        await asyncio.sleep(2)
+        probe_agent.clear_messages()
+
+        # Complete all children with results, waiting for each completion
+        for child_id, result in [(child1_id, child1_result), (child2_id, child2_result), (child3_id, child3_result)]:
+            probe_agent.publish(
+                topic=UserProxyAgent.get_user_inbox_topic("test_user_multi_agg"),
+                payload=Message(
+                    id_obj=generator.get_id(Priority.NORMAL),
+                    topics="default_topic",
+                    payload=UpdateStatusRequest(id=child_id, status=TaskStatus.DONE, result=result).model_dump(),
+                    format=get_qualified_class_name(UpdateStatusRequest),
+                    sender=AgentTag(id="test_agent_multi_agg"),
+                ),
+            )
+            # Wait for TaskCompletedEvent to ensure result is persisted before next completion
+            await self.wait_for_message(
+                probe_agent,
+                lambda m, cid=child_id: "TaskCompletedEvent" in m.format and m.payload.get("task_id") == cid,
+            )
+
+        # Wait for TaskUnblockedEvent with all aggregated results
+        unblocked_event = await self.wait_for_message(
+            probe_agent,
+            lambda m: "TaskUnblockedEvent" in m.format,
+        )
+        assert unblocked_event.payload["task_id"] == parent_id
+        assert unblocked_event.payload["dependency_results"][child1_id] == child1_result
+        assert unblocked_event.payload["dependency_results"][child2_id] == child2_result
+        assert unblocked_event.payload["dependency_results"][child3_id] == child3_result
+
+    @pytest.mark.asyncio
+    async def test_partial_results_aggregation(self, todolist_guild: Guild):
+        """Test that only dependencies with results are included in aggregation."""
+        generator = GemstoneGenerator(24)
+        probe_spec = (
+            AgentBuilder(ProbeAgent)
+            .set_id("test_agent_partial")
+            .set_name("Test Agent Partial")
+            .set_description("A test probe agent for partial results tests")
+            .add_additional_topic(GuildTopics.SYSTEM_TOPIC)
+            .add_additional_topic(UserProxyAgent.BROADCAST_TOPIC)
+            .add_additional_topic(UserProxyAgent.get_user_notifications_topic("test_user_partial"))
+            .build_spec()
+        )
+
+        probe_agent: ProbeAgent = todolist_guild._add_local_agent(probe_spec)  # type: ignore
+
+        # Create user
+        probe_agent.publish_dict(
+            topic=GuildTopics.SYSTEM_TOPIC,
+            payload=UserAgentCreationRequest(
+                user_id="test_user_partial", user_name="test_user_partial"
+            ).model_dump(),
+            format=UserAgentCreationRequest,
+        )
+        await asyncio.sleep(2)
+        probe_agent.clear_messages()
+
+        child_with_result_id = "child-with-result"
+        child_no_result_id = "child-no-result"
+        parent_id = "parent-partial"
+        child_result = {"data": "some result"}
+
+        # Add both child tasks
+        for child_id in [child_with_result_id, child_no_result_id]:
+            probe_agent.publish(
+                topic=UserProxyAgent.get_user_inbox_topic("test_user_partial"),
+                payload=Message(
+                    id_obj=generator.get_id(Priority.NORMAL),
+                    topics="default_topic",
+                    payload=AddTaskRequest(
+                        id=child_id,
+                        todo=f"Child task {child_id}",
+                        start_time=datetime.now().isoformat(),
+                        depends_on=[],
+                    ).model_dump(),
+                    format=get_qualified_class_name(AddTaskRequest),
+                    sender=AgentTag(id="test_agent_partial"),
+                ),
+            )
+            await asyncio.sleep(0.5)
+
+        # Add parent task depending on both children
+        probe_agent.publish(
+            topic=UserProxyAgent.get_user_inbox_topic("test_user_partial"),
+            payload=Message(
+                id_obj=generator.get_id(Priority.NORMAL),
+                topics="default_topic",
+                payload=AddTaskRequest(
+                    id=parent_id,
+                    todo="Parent task",
+                    start_time=datetime.now().isoformat(),
+                    depends_on=[child_with_result_id, child_no_result_id],
+                ).model_dump(),
+                format=get_qualified_class_name(AddTaskRequest),
+                sender=AgentTag(id="test_agent_partial"),
+            ),
+        )
+        await asyncio.sleep(2)
+        probe_agent.clear_messages()
+
+        # Complete first child WITH result
+        probe_agent.publish(
+            topic=UserProxyAgent.get_user_inbox_topic("test_user_partial"),
+            payload=Message(
+                id_obj=generator.get_id(Priority.NORMAL),
+                topics="default_topic",
+                payload=UpdateStatusRequest(
+                    id=child_with_result_id, status=TaskStatus.DONE, result=child_result
+                ).model_dump(),
+                format=get_qualified_class_name(UpdateStatusRequest),
+                sender=AgentTag(id="test_agent_partial"),
+            ),
+        )
+
+        # Wait for TaskCompletedEvent to ensure result is persisted
+        await self.wait_for_message(
+            probe_agent,
+            lambda m: "TaskCompletedEvent" in m.format and m.payload.get("task_id") == child_with_result_id,
+        )
+        probe_agent.clear_messages()
+
+        # Complete second child WITHOUT result
+        probe_agent.publish(
+            topic=UserProxyAgent.get_user_inbox_topic("test_user_partial"),
+            payload=Message(
+                id_obj=generator.get_id(Priority.NORMAL),
+                topics="default_topic",
+                payload=UpdateStatusRequest(id=child_no_result_id, status=TaskStatus.DONE).model_dump(),
+                format=get_qualified_class_name(UpdateStatusRequest),
+                sender=AgentTag(id="test_agent_partial"),
+            ),
+        )
+
+        # Wait for TaskUnblockedEvent
+        unblocked_event = await self.wait_for_message(
+            probe_agent,
+            lambda m: "TaskUnblockedEvent" in m.format,
+        )
+        assert unblocked_event.payload["task_id"] == parent_id
+        # Only the child with result should be in dependency_results
+        assert child_with_result_id in unblocked_event.payload["dependency_results"]
+        assert unblocked_event.payload["dependency_results"][child_with_result_id] == child_result
+        assert child_no_result_id not in unblocked_event.payload["dependency_results"]
+
+    @pytest.mark.asyncio
+    async def test_complex_jsondict_result(self, todolist_guild: Guild):
+        """Test that complex nested JsonDict results are serialized correctly."""
+        generator = GemstoneGenerator(25)
+        probe_spec = (
+            AgentBuilder(ProbeAgent)
+            .set_id("test_agent_complex")
+            .set_name("Test Agent Complex")
+            .set_description("A test probe agent for complex result tests")
+            .add_additional_topic(GuildTopics.SYSTEM_TOPIC)
+            .add_additional_topic(UserProxyAgent.BROADCAST_TOPIC)
+            .add_additional_topic(UserProxyAgent.get_user_notifications_topic("test_user_complex"))
+            .build_spec()
+        )
+
+        probe_agent: ProbeAgent = todolist_guild._add_local_agent(probe_spec)  # type: ignore
+
+        # Create user
+        probe_agent.publish_dict(
+            topic=GuildTopics.SYSTEM_TOPIC,
+            payload=UserAgentCreationRequest(
+                user_id="test_user_complex", user_name="test_user_complex"
+            ).model_dump(),
+            format=UserAgentCreationRequest,
+        )
+        await asyncio.sleep(2)
+        probe_agent.clear_messages()
+
+        task_id = "task-complex-result"
+        complex_result = {
+            "metrics": {
+                "score": 0.95,
+                "confidence": 0.87,
+                "breakdown": {"precision": 0.92, "recall": 0.98},
+            },
+            "files": ["/tmp/output/a.md", "/tmp/output/b.md", "/tmp/output/c.md"],
+            "nested_list": [[1, 2, 3], [4, 5, 6]],
+            "nullable_field": None,
+            "boolean_field": True,
+            "integer_field": 42,
+        }
+
+        # Add task
+        probe_agent.publish(
+            topic=UserProxyAgent.get_user_inbox_topic("test_user_complex"),
+            payload=Message(
+                id_obj=generator.get_id(Priority.NORMAL),
+                topics="default_topic",
+                payload=AddTaskRequest(
+                    id=task_id,
+                    todo="Task with complex result",
+                    start_time=datetime.now().isoformat(),
+                    depends_on=[],
+                ).model_dump(),
+                format=get_qualified_class_name(AddTaskRequest),
+                sender=AgentTag(id="test_agent_complex"),
+            ),
+        )
+        await asyncio.sleep(2)
+        probe_agent.clear_messages()
+
+        # Complete task with complex result
+        probe_agent.publish(
+            topic=UserProxyAgent.get_user_inbox_topic("test_user_complex"),
+            payload=Message(
+                id_obj=generator.get_id(Priority.NORMAL),
+                topics="default_topic",
+                payload=UpdateStatusRequest(id=task_id, status=TaskStatus.DONE, result=complex_result).model_dump(),
+                format=get_qualified_class_name(UpdateStatusRequest),
+                sender=AgentTag(id="test_agent_complex"),
+            ),
+        )
+
+        # Wait for TaskCompletedEvent
+        completed_event = await self.wait_for_message(
+            probe_agent,
+            lambda m: "TaskCompletedEvent" in m.format,
+        )
+
+        # Verify complex structure is preserved
+        result = completed_event.payload["task"]["result"]
+        assert result["metrics"]["score"] == 0.95
+        assert result["metrics"]["breakdown"]["precision"] == 0.92
+        assert result["files"] == ["/tmp/output/a.md", "/tmp/output/b.md", "/tmp/output/c.md"]
+        assert result["nested_list"] == [[1, 2, 3], [4, 5, 6]]
+        assert result["nullable_field"] is None
+        assert result["boolean_field"] is True
+        assert result["integer_field"] == 42
