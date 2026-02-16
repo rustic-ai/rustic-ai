@@ -48,6 +48,7 @@ def build_agent_from_spec(
         client_props=client_props.copy(),
         id_generator=GemstoneGenerator(machine_id),
         organization_id=organization_id,
+        dependency_specs=dependencies,
     )
 
     if "__init__" in agent_class.__dict__:  # Only call custom __init__ if defined in this class
