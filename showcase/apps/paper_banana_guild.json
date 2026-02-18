@@ -1,12 +1,12 @@
     {
         "name": "PaperBanana",
-        "description": "Agentic framework for automated generation of publication-ready academic illustrations.",
+        "description": "Agentic framework for automated generation of publication-ready academic illustrations. Original research paper: https://arxiv.org/abs/2601.23265",
         "version": "v1",
         "icon": "🍌",
         "intro_msg": "Welcome to PaperBanana! I can help you generate publication-ready illustrations. Upload your paper or references to get started, or describe the diagram you need.",
         "exposure": "private",
-        "author_id": "cvqa5ebf660o",
-        "organization_id": "p447tvwgs54q",
+        "author_id": "dummyuserid",
+        "organization_id": null,
         "category_id": null,
         "tags": [
             "Research",
@@ -55,7 +55,7 @@
                     ],
                     "listen_to_default_topic": false,
                     "properties": {
-                        "model": "vertex_ai/gemini-2.5-flash",
+                        "model": "vertex_ai/gemini-3-pro-preview",
                         "default_system_prompt": "You are the Planner Agent for PaperBanana. Your goal is to plan a publication-ready scientific illustration based on the user's request and retrieved context. Output a detailed description of the visual elements, layout, and scientific concepts to be depicted."
                     }
                 },
@@ -69,7 +69,7 @@
                     ],
                     "listen_to_default_topic": false,
                     "properties": {
-                        "model": "vertex_ai/gemini-2.5-flash",
+                        "model": "vertex_ai/gemini-3-pro-preview",
                         "default_system_prompt": "You are the Stylist Agent for PaperBanana. You receive a plan for a scientific illustration. Your job is to refine this into a specific visual style guide (e.g., color palette, line style, font choices) suitable for a top-tier academic conference (like NeurIPS). Convert the plan and style into a detailed image generation prompt."
                     }
                 },
@@ -96,7 +96,7 @@
                     ],
                     "listen_to_default_topic": false,
                     "properties": {
-                        "model": "vertex_ai/gemini-2.5-flash",
+                        "model": "vertex_ai/gemini-3-pro-preview",
                         "default_system_prompt": "You are the Critic Agent for PaperBanana. You will receive an image and the original plan/context. Provide a precise critique of the image. Does it accurately reflect the scientific concepts? Is it aesthetically pleasing and publication-ready? If it is good, output 'APPROVE'. If not, output 'REJECT' followed by specific constructive feedback."
                     }
                 }
@@ -122,7 +122,7 @@
                 "llm": {
                     "class_name": "rustic_ai.litellm.agent_ext.llm.LiteLLMResolver",
                     "properties": {
-                        "model": "vertex_ai/gemini-2.5-flash"
+                        "model": "vertex_ai/gemini-3-pro-preview"
                     }
                 }
             },
