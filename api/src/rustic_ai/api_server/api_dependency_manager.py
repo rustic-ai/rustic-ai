@@ -26,6 +26,7 @@ class ApiDependencyManager:
         if not hasattr(self, "initialized"):
             self.dependency_map_cache: Dict[str, Dict[str, DependencySpec]] = {}
             self.dependency_resolver_cache: Dict[str, Dict[str, DependencyResolver]] = {}
+            self.org_id_cache: Dict[str, str] = {}
             self.initialized = True
 
     def get_dependency(self, dependency_name: str, engine: Engine, guild_id: str, agent_id: Optional[str] = None):
@@ -57,6 +58,7 @@ class ApiDependencyManager:
                 guild_spec = guild_model.to_guild_spec()
 
                 self.dependency_map_cache[guild_id] = GuildHelper.get_guild_dependency_map(guild_spec)
+                self.org_id_cache[guild_id] = guild_model.organization_id
 
             if dependency_name not in self.dependency_map_cache[guild_id]:  # pragma: no cover
                 raise HTTPException(
@@ -71,7 +73,14 @@ class ApiDependencyManager:
             )
 
         resolver = self.dependency_resolver_cache[guild_id][dependency_name]
-        dependency = resolver.get_or_resolve(guild_id, agent_id)
+        # Get org_id from cache, or load it if not available
+        if guild_id not in self.org_id_cache:
+            guild_store = GuildStore(engine)
+            guild_model = guild_store.get_guild(guild_id)
+            if guild_model:
+                self.org_id_cache[guild_id] = guild_model.organization_id
+        org_id = self.org_id_cache.get(guild_id, guild_id)  # Fallback to guild_id if still not available
+        dependency = resolver.get_or_resolve(org_id, guild_id, agent_id)
 
         return dependency
 

@@ -1,0 +1,229 @@
+    {
+        "name": "PaperBanana",
+        "description": "Agentic framework for automated generation of publication-ready academic illustrations. Original research paper: https://arxiv.org/abs/2601.23265",
+        "version": "v1",
+        "icon": "🍌",
+        "intro_msg": "Welcome to PaperBanana! I can help you generate publication-ready illustrations. Upload your paper or references to get started, or describe the diagram you need.",
+        "exposure": "private",
+        "author_id": "dummyuserid",
+        "organization_id": null,
+        "category_id": null,
+        "tags": [
+            "Research",
+            "Illustration",
+            "Academic"
+        ],
+        "commands": [],
+        "starter_prompts": [],
+        "spec": {
+            "name": "PaperBanana",
+            "description": "Automated generation of publication-ready academic illustrations",
+            "agents": [
+                {
+                    "id": "retriever_agent",
+                    "name": "Retriever",
+                    "description": "Indexes references and retrieves relevant context.",
+                    "class_name": "rustic_ai.core.agents.indexing.knowledge_agent.KnowledgeAgent",
+                    "additional_topics": [
+                        "RETRIEVER_SEARCH",
+                        "RETRIEVER_INDEX"
+                    ],
+                    "properties": {
+                        "search_defaults": {
+                            "limit": 5,
+                            "hybrid": {
+                                "dense_weight": 0.5,
+                                "sparse_weight": 0.5
+                            }
+                        },
+                        "chunking": {
+                            "chunk_size": 1000,
+                            "chunk_overlap": 100
+                        },
+                        "embedder": {
+                            "dimension": 768
+                        }
+                    }
+                },
+                {
+                    "id": "planner_agent",
+                    "name": "Planner",
+                    "description": "Plans the content and structure of the illustration.",
+                    "class_name": "rustic_ai.llm_agent.llm_agent.LLMAgent",
+                    "additional_topics": [
+                        "PLANNER"
+                    ],
+                    "listen_to_default_topic": false,
+                    "properties": {
+                        "model": "vertex_ai/gemini-3-pro-preview",
+                        "default_system_prompt": "You are the Planner Agent for PaperBanana. Your goal is to plan a publication-ready scientific illustration based on the user's request and retrieved context. Output a detailed description of the visual elements, layout, and scientific concepts to be depicted."
+                    }
+                },
+                {
+                    "id": "stylist_agent",
+                    "name": "Stylist",
+                    "description": "Refines the plan into a visual style guide and generation prompt.",
+                    "class_name": "rustic_ai.llm_agent.llm_agent.LLMAgent",
+                    "additional_topics": [
+                        "STYLIST"
+                    ],
+                    "listen_to_default_topic": false,
+                    "properties": {
+                        "model": "vertex_ai/gemini-3-pro-preview",
+                        "default_system_prompt": "You are the Stylist Agent for PaperBanana. You receive a plan for a scientific illustration. Your job is to refine this into a specific visual style guide (e.g., color palette, line style, font choices) suitable for a top-tier academic conference (like NeurIPS). Convert the plan and style into a detailed image generation prompt."
+                    }
+                },
+                {
+                    "id": "visualizer_agent",
+                    "name": "Visualizer",
+                    "description": "Generates the illustration using Vertex AI Imagen.",
+                    "class_name": "rustic_ai.vertexai.agents.image_generation.VertexAiImagenAgent",
+                    "additional_topics": [
+                        "VISUALIZER"
+                    ],
+                    "listen_to_default_topic": false,
+                    "properties": {
+                        "model_id": "imagen-4.0-generate-001"
+                    }
+                },
+                {
+                    "id": "critic_agent",
+                    "name": "Critic",
+                    "description": "Critiques the generated illustration against the plan.",
+                    "class_name": "rustic_ai.llm_agent.llm_agent.LLMAgent",
+                    "additional_topics": [
+                        "CRITIC"
+                    ],
+                    "listen_to_default_topic": false,
+                    "properties": {
+                        "model": "vertex_ai/gemini-3-pro-preview",
+                        "default_system_prompt": "You are the Critic Agent for PaperBanana. You will receive an image and the original plan/context. Provide a precise critique of the image. Does it accurately reflect the scientific concepts? Is it aesthetically pleasing and publication-ready? If it is good, output 'APPROVE'. If not, output 'REJECT' followed by specific constructive feedback."
+                    }
+                }
+            ],
+            "dependency_map": {
+                "filesystem": {
+                    "class_name": "rustic_ai.core.guild.agent_ext.depends.filesystem.FileSystemResolver",
+                    "properties": {
+                        "path_base": "/tmp/paperbanana_data",
+                        "protocol": "file",
+                        "storage_options": {
+                            "auto_mkdir": true
+                        },
+                        "asynchronous": true
+                    },
+                    "scope": "guild"
+                },
+                "kb_backend": {
+                    "class_name": "rustic_ai.core.knowledgebase.kbindex_backend_memory.InMemoryKBIndexBackendResolver",
+                    "properties": {},
+                    "scope": "guild"
+                },
+                "llm": {
+                    "class_name": "rustic_ai.litellm.agent_ext.llm.LiteLLMResolver",
+                    "properties": {
+                        "model": "vertex_ai/gemini-3-pro-preview"
+                    }
+                }
+            },
+            "routes": {
+                "steps": [
+                    {
+                        "agent_type": "rustic_ai.core.agents.utils.user_proxy_agent.UserProxyAgent",
+                        "method_name": "unwrap_and_forward_message",
+                        "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest",
+                        "transformer": {
+                            "style": "content_based_router",
+                            "handler": "($content := $.payload.messages[0].content; $is_array := $type($content) = 'array'; $files := $is_array ? $content[type='file_url'] : []; $text := $is_array ? $content[type='text'][0].text : $content; $is_file_upload := $count($files) > 0; $ToRetrieverIndex := function(){ {'topics': 'RETRIEVER_INDEX', 'format': 'rustic_ai.core.agents.indexing.knowledge_agent.IndexMediaLinks', 'payload': {'media': [$files.({'url': $.file_url.url, 'name': 'upload', 'mimetype': 'application/pdf', 'on_filesystem': false})]}} }; $ToRetrieverSearch := function(){ {'topics': 'RETRIEVER_SEARCH', 'format': 'rustic_ai.core.agents.indexing.knowledge_agent.KBSearchRequest', 'payload': {'text': $text, 'limit': 3}} }; $is_file_upload ? $ToRetrieverIndex() : $ToRetrieverSearch())"
+                        },
+                        "route_times": -1
+                    },
+                    {
+                        "agent": {
+                            "name": "Retriever"
+                        },
+                        "method_name": "index_media",
+                        "message_format": "rustic_ai.core.agents.indexing.knowledge_agent.IndexMediaResults",
+                        "transformer": {
+                            "style": "content_based_router",
+                            "handler": "({'topics': 'user_message_broadcast', 'format': 'rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse', 'payload': {'choices': [{'message': {'content': 'Indexed ' & $string($count($.payload.results)) & ' files.'}}]}})"
+                        },
+                        "route_times": -1,
+                        "process_status": "completed"
+                    },
+                    {
+                        "agent": {
+                            "name": "Retriever"
+                        },
+                        "method_name": "search",
+                        "message_format": "rustic_ai.core.agents.indexing.knowledge_agent.KBSearchResults",
+                        "route_times": -1,
+                        "transformer": {
+                            "style": "content_based_router",
+                            "handler": "({'topics': 'PLANNER', 'format': 'rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest', 'context': {'user_query': $.payload.query_text}, 'payload': {'messages': [{'role': 'user', 'content': 'User Query: ' & $.payload.query_text & '\\n\\nContext:\\n' & $string($.payload.results)}]}})"
+                        }
+                    },
+                    {
+                        "agent": {
+                            "name": "Planner"
+                        },
+                        "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                        "route_times": -1,
+                        "transformer": {
+                            "style": "content_based_router",
+                            "handler": "({'topics': 'STYLIST', 'format': 'rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest', 'payload': {'messages': [{'role': 'user', 'content': $.payload.choices[0].message.content}]}})"
+                        }
+                    },
+                    {
+                        "agent": {
+                            "name": "Stylist"
+                        },
+                        "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                        "route_times": -1,
+                        "transformer": {
+                            "style": "content_based_router",
+                            "handler": "({'topics': 'VISUALIZER', 'format': 'rustic_ai.vertexai.agents.image_generation.VertexAiImageGenerationRequest', 'payload': {'prompt': \"User Query: \" & $.context.user_query & \"Style and Plan: \" & $.payload.choices[0].message.content, 'number_of_images': 1}})"
+                        }
+                    },
+                    {
+                        "agent": {
+                            "name": "Visualizer"
+                        },
+                        "message_format": "rustic_ai.core.agents.commons.image_generation.ImageGenerationResponse",
+                        "route_times": -1,
+                        "transformer": {
+                            "style": "content_based_router",
+                            "handler": "($file := $.payload.files[0]; $url := $file ? $file.url : 'http://placeholder.url'; {'topics': 'CRITIC', 'format': 'rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest', 'payload': {'messages': [{'role': 'user', 'content': [{'type': 'text', 'text': 'Critique this image against the plan.'}, {'type': 'image_url', 'image_url': {'url': $url}}]}]}})"
+                        }
+                    },
+                    {
+                        "agent": {
+                            "name": "Visualizer"
+                        },
+                        "message_format": "rustic_ai.core.agents.commons.image_generation.ImageGenerationResponse",
+                        "transformer": {
+                            "style": "content_based_router",
+                            "handler": "($p := $.payload; $ImageInChat := function(){ {\"format\": \"rustic_ai.core.ui_protocol.types.ImageFormat\", \"payload\": {\"src\": $p.files[0].url, \"alt\": \"Generated image\"}} }; $ErrorMsg := function(){ {\"format\": \"rustic_ai.core.ui_protocol.types.TextFormat\", \"payload\": {\"text\": (($p.errors[0] & \"<br/>Prompt used: \") & $p.request)}} }; ($count($p.errors) > 0) ? $ErrorMsg() : $ImageInChat())"
+                        },
+                        "process_status": "completed",
+                        "destination": {
+                            "topics": "user_message_broadcast"
+                        },
+                        "route_times": -1
+                    },
+                    {
+                        "agent": {
+                            "name": "Critic"
+                        },
+                        "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                        "route_times": -1,
+                        "transformer": {
+                            "style": "content_based_router",
+                            "handler": "($content := $.payload.choices[0].message.content; $is_approved := $contains($content, 'APPROVE'); $ToUser := function(){ {'topics': 'user_message_broadcast', 'format': 'rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse', 'payload': $.payload} }; $ToStylist := function(){ {'topics': 'STYLIST', 'format': 'rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest', 'payload': {'messages': [{'role': 'user', 'content': 'The previous image was rejected. Critique: ' & $content & '. Please refine the prompt.'}]}} }; $is_approved ? $ToUser() : $ToStylist())"
+                        },
+                        "process_status": "completed"
+                    }
+                ]
+            }
+        }
+    }
