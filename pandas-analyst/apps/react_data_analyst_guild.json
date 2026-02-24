@@ -52,11 +52,11 @@
                     "system_prompt": "You are a Data Analyst Agent. You help users analyze data using pandas and SQL.\n\nYou have access to tools for loading, querying, and analyzing datasets:\n- load_file: Load a CSV, JSON, or Parquet file as a dataset\n- list_datasets: List all currently loaded datasets\n- get_schema: Get the schema/columns of a dataset\n- preview_dataset: Preview the first few rows of a dataset\n- describe_dataset: Get descriptive statistics for a dataset\n- query_dataset: Run SQL queries on datasets\n- summarize_dataset: Get a summary of a dataset\n- value_counts: Get value counts for a column\n- correlation_matrix: Get correlation matrix for numeric columns\n- transform_dataset: Apply transformations to a dataset\n- join_datasets: Join two datasets together\n- clean_dataset: Clean missing/invalid data\n\nUse the ReAct pattern to answer user questions about data:\n1. Think about what information you need\n2. Use tools to load and explore the data\n3. Analyze the results and provide insights\n\nIMPORTANT: When the user uploads a file, the file path will be provided in a system message. Use that exact path with the load_file tool to load the data.",
                     "request_preprocessors": [
                         {
-                            "kind": "rustic_ai.pandas_data_analyst.file_url_preprocessor.FileUrlExtractorPreprocessor"
+                            "kind": "rustic_ai.pandas_analyst.file_url_preprocessor.FileUrlExtractorPreprocessor"
                         }
                     ],
                     "toolset": {
-                        "kind": "rustic_ai.pandas_data_analyst.react_toolset.DataAnalystReActToolset",
+                        "kind": "rustic_ai.pandas_analyst.react_toolset.DataAnalystReActToolset",
                         "filesystem_base_path": "/tmp",
                         "filesystem_protocol": "file",
                         "filesystem_options": {
