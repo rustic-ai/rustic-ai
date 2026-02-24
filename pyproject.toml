@@ -1,78 +1,55 @@
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
-
-[project]
-name = "rusticai-python-framework"
-description = "Monorepo for Rustic AI Python Packages"
-authors = [{name = "Dragonscale Industries Inc.", email = "dev@dragonscale.ai"}]
-readme = "README.md"
-requires-python = ">=3.13,<3.14"
-urls = { Homepage = "https://www.rustic.ai/", Repository = "https://github.com/rustic-ai/rustic-ai" }
-dynamic = [ "dependencies" ]
-
-[tool.poetry]
-package-mode = false
-
-[tool.poetry.dependencies]
-rusticai-core = { path = "./core", develop = true }
-rusticai-redis = { path = "./redis", develop = true }
-rusticai-ray = { path = "./ray", develop = true }
-rusticai-api = { path = "./api", develop = true }
-rusticai-litellm = { path = "./litellm", develop = true }
-rusticai-chroma = { path = "./chroma", develop = true }
-rusticai-marvin = { path = "./marvin", develop = true }
-rusticai-serpapi = { path = "./serpapi", develop = true }
-rusticai-playwright = { path = "./playwright", develop = true }
-torch = [ # Adding torch dependency explicitly to avoid issues on macOS
-    { version = "^2.4.0", platform = "darwin" },
-    { version = "^2.4.0", source = "pytorch-cpu", platform = "linux" },
+[tool.uv.workspace]
+members = [
+    "api",
+    "chroma",
+    "claude",
+    "core",
+    "huggingface",
+    "lancedb",
+    "langchain",
+    "litellm",
+    "llm-agent",
+    "marvin",
+    "mcp",
+    "playwright",
+    "ray",
+    "redis",
+    "serpapi",
+    "showcase",
+    "skills",
+    "testing",
+    "vertexai"
 ]
-rusticai-huggingface = { path = "./huggingface", develop = true }
-rusticai-langchain = { path = "./langchain", develop = true }
-rusticai-showcase = { path = "./showcase", develop = true }
-# Optional dependencies for additional functionality during runtime
-gcsfs = { version = "^2024.12.0", optional = true }
-rusticai-vertexai = { path = "./vertexai", develop = true }
-rusticai-llm-agent = { path = "./llm-agent", develop = true }
-rusticai-lancedb = {path = "./lancedb", develop = true}
-rusticai-mcp = {path = "./mcp", develop = true}
-rusticai-claude = {path = "./claude", develop = true}
-rusticai-skills = {path = "./skills", develop = true}
 
-[tool.poetry.group.dev]
-optional = true
+[dependency-groups]
+dev = [
+    "pytest>=8.3.4",
+    "black[jupyter]>=24.2.0",
+    "flake8>=7.1.2",
+    "tox>=4.24.1",
+    "isort>=6.0.0",
+    "mypy>=1.15.0",
+    "coverage>=7.6.12",
+    "cookiecutter>=2.6.0",
+    "tomlkit>=0.13.2",
+    "fakeredis>=2.27.0",
+    "pytest-asyncio>=0.25.3",
+    "httpx>=0.28.1",
+    "flaky>=3.8.1",
+    "pytest-xdist>=3.6.1",
+    "rusticai-testing",
+]
+docs = [
+    "mkdocs>=1.6.1",
+    "mkdocs-material>=9.6.14",
+    "mdx-truly-sane-lists>=1.3",
+    "mkdocstrings>=0.30.0",
+    "mkdocstrings-python>=1.18.2",
+    "pydoc-markdown>=4.8.2",
+]
 
-[tool.poetry.group.dev.dependencies]
-pytest = "^8.3.4"
-black = { version = "^24.2.0", extras = ["jupyter"] }
-flake8 = "^7.1.2"
-tox = "^4.24.1"
-isort = "^6.0.0"
-mypy = "^1.15.0"
-coverage = "^7.6.12"
-cookiecutter = "^2.6.0"
-tomlkit = "^0.13.2"
-# redis dev dependencies
-fakeredis = "^2.27.0"
-# api-server dev dependencies
-pytest-asyncio = "^0.25.3"
-httpx = "^0.28.1"
-flaky = "^3.8.1"
-pytest-xdist = "^3.6.1"
-rusticai-testing = { path = "./testing", develop = true }
-
-
-[tool.poetry.group.docs.dependencies]
-mkdocs = "^1.6.1"
-mkdocs-material = "^9.6.14"
-mdx-truly-sane-lists = "^1.3"
-mkdocstrings = "^0.30.0"
-mkdocstrings-python = "^1.18.2"
-pydoc-markdown = "^4.8.2"
-
-[tool.poetry.extras]
-google-cloud = ["gcsfs"]
+[tool.uv.sources]
+rusticai-testing = { workspace = true }
 
 [tool.black]
 line-length = 120
@@ -139,7 +116,7 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 norecursedirs = ["cookiecutter-rustic"]
 
-[[tool.poetry.source]]
+[[tool.uv.index]]
 name = "pytorch-cpu"
 url = "https://download.pytorch.org/whl/cpu"
-priority = "explicit"
+explicit = true
