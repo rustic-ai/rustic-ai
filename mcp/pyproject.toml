@@ -1,7 +1,6 @@
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
-
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name = "rusticai-mcp"
@@ -12,34 +11,10 @@ license = "Apache-2.0"
 readme = "README.md"
 requires-python = ">=3.13,<3.14"
 urls = { Homepage = "https://www.rustic.ai/", Repository = "https://github.com/dragonscale-ai/rustic-ai", "Rustic AI Core" = "https://pypi.org/project/rusticai-core/" }
-dynamic = ["dependencies"]
-
-[tool.poetry]
-packages = [{ include = "rustic_ai", from = "src" }]
-
-[tool.poetry.dependencies]
-rusticai-core = { path = "../core", develop = true }
-mcp = "^1.0.0"
+dependencies = ["rusticai-core", "mcp>=1.0.0,<2.0.0"]
 
 [tool.poetry-monorepo.deps]
 
-
-[tool.poetry.group.dev]
-optional = true
-
-[tool.poetry.group.dev.dependencies]
-pytest = "^8.3.4"
-black = { version = "^24.2.0", extras = ["jupyter"] }
-flake8 = "^7.1.2"
-tox = "^4.24.1"
-isort = "^6.0.0"
-mypy = "^1.15.0"
-flaky = "^3.8.1"
-pytest-asyncio = "^0.26.0"
-rusticai-testing = {path = "../testing", develop = true}
-
-[tool.poetry.extras]
-test = ["pytest"]
 
 [tool.black]
 line-length = 120
@@ -73,3 +48,14 @@ lines_between_sections = 1 # For the newline issue
 known_third_party = ["pydantic"]
 known_first_party = ["rustic_ai.core"]
 
+[tool.uv.sources.rusticai-core]
+workspace = true
+
+[tool.uv.sources.rusticai-testing]
+workspace = true
+
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/rustic_ai"]
+[dependency-groups]
+dev = ["pytest>=8.3.4", "black>=24.2.0", "flake8>=7.1.2", "tox>=4.24.1", "isort>=6.0.0", "mypy>=1.15.0", "flaky>=3.8.1,<4.0.0", "pytest-asyncio>=0.25.3", "rusticai-testing"]

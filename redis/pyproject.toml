@@ -1,7 +1,6 @@
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
-
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name = "rusticai-redis"
@@ -11,34 +10,11 @@ authors = [{name = "Dragonscale Industries Inc.", email = "dev@dragonscale.ai"}]
 license = "Apache-2.0"
 readme = "README.md"
 requires-python = ">=3.13,<3.14"
-dynamic = ["dependencies"]
 urls = { Homepage = "https://www.rustic.ai/", Repository = "https://github.com/rustic-ai/rustic-ai", "Rustic AI Core" = "https://pypi.org/project/rusticai-core/" }
+dependencies = ["rusticai-core", "redis[hiredis]>=6.4.0,<7.0.0"]
 
-
-[tool.poetry]
-packages = [{ include = "rustic_ai", from = "src" }]
-
-[tool.poetry.dependencies]
-rusticai-core = { path = "../core", develop = true }
-redis = { extras = ["hiredis"], version = "^6.4.0" }
 
 [tool.poetry-monorepo.deps]
-
-[tool.poetry.group.dev]
-optional = true
-
-[tool.poetry.group.dev.dependencies]
-pytest = "^8.3.4"
-black = { version = "^24.2.0", extras = ["jupyter"] }
-flake8 = "^7.1.2"
-tox = "^4.24.1"
-isort = "^6.0.0"
-mypy = "^1.15.0"
-fakeredis = "^2.27.0"
-rusticai-testing = { path = "../testing", develop = true }
-
-[tool.poetry.extras]
-test = ["pytest", "fakeredis", "rusticai-testing"]
 
 [tool.black]
 line-length = 120
@@ -72,3 +48,15 @@ lines_between_sections = 1 # For the newline issue
 known_third_party = ["pydantic"]
 known_first_party = ["rustic_ai.core", "rustic_ai.redis"]
 known_local_folder = ["rustic_ai.testing"]
+
+[tool.uv.sources.rusticai-core]
+workspace = true
+
+[tool.uv.sources.rusticai-testing]
+workspace = true
+
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/rustic_ai"]
+[dependency-groups]
+dev = ["pytest>=8.3.4", "black>=24.2.0", "flake8>=7.1.2", "tox>=4.24.1", "isort>=6.0.0", "mypy>=1.15.0", "fakeredis>=2.27.0,<3.0.0", "rusticai-testing"]
