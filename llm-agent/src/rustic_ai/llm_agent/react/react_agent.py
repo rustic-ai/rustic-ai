@@ -317,6 +317,13 @@ class ReActAgent(Agent[ReActAgentConfig]):
         # Record start time for response
         start_time = int(time.time())
 
+        # Bind agent context to toolset for guild-scoped resource access
+        self.config.toolset.bind_agent_context(
+            org_id=self.get_organization(),
+            guild_id=self.guild_id,
+            agent_id=self.id,
+        )
+
         # Extract system messages and user query from incoming request
         incoming_system_messages: List[SystemMessage] = []
         user_query: Optional[str] = None

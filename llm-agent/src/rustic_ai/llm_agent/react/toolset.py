@@ -80,6 +80,20 @@ class ReActToolset(BaseModel, ABC):
         """
         pass
 
+    def bind_agent_context(self, org_id: str, guild_id: str, agent_id: str) -> None:
+        """
+        Optional hook called by ReActAgent to provide guild context to the toolset.
+
+        Toolsets that need access to guild-scoped resources (like filesystems)
+        can override this method to configure themselves with the correct paths.
+
+        Args:
+            org_id: The organization ID.
+            guild_id: The guild ID.
+            agent_id: The agent ID.
+        """
+        pass
+
     @cached_property
     def toolspecs_by_name(self) -> Dict[str, ToolSpec]:
         """Return a dictionary mapping tool names to their specifications."""
@@ -217,3 +231,15 @@ class CompositeToolset(ReActToolset):
             if tool_name in toolset.tool_names:
                 return toolset.execute(tool_name, args)
         raise ValueError(f"Unknown tool: {tool_name}")
+
+    def bind_agent_context(self, org_id: str, guild_id: str, agent_id: str) -> None:
+        """
+        Propagate agent context to all child toolsets.
+
+        Args:
+            org_id: The organization ID.
+            guild_id: The guild ID.
+            agent_id: The agent ID.
+        """
+        for toolset in self.toolsets:
+            toolset.bind_agent_context(org_id, guild_id, agent_id)
