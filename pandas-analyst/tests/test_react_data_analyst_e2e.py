@@ -466,6 +466,7 @@ class TestReactDataAnalystGuildIntegration:
                     max_iterations=10,
                     toolset=DataAnalystReActToolset(
                         filesystem_base_path=guild_global_dir,
+                        use_guild_filesystem=False,
                     ),
                 )
             )
@@ -561,6 +562,7 @@ class TestReactDataAnalystGuildIntegration:
                     max_iterations=10,
                     toolset=DataAnalystReActToolset(
                         filesystem_base_path=guild_global_dir,
+                        use_guild_filesystem=False,
                     ),
                 )
             )

@@ -42,7 +42,8 @@ class TestDatasetLoadedEmitter:
             dataschema={"a": "int64", "b": "object", "c": "float64", "d": "bool", "e": "datetime64"}
         )
         mock_analyzer.preview_dataset.return_value = Mock(
-            data=[{"a": 1, "b": "x"}, {"a": 2, "b": "y"}, {"a": 3, "b": "z"}]
+            columns=["a", "b"],
+            data=[[1, "x"], [2, "y"], [3, "z"]]
         )
         mock_agent.config = Mock()
         mock_agent.config.toolset = Mock()
@@ -75,7 +76,7 @@ class TestDatasetLoadedEmitter:
         mock_analyzer = Mock()
         mock_analyzer.get_dataset_summary.return_value = Mock(num_rows=50, num_columns=3, column_names=["x", "y", "z"])
         mock_analyzer.get_schema.return_value = Mock(dataschema={"x": "int64"})
-        mock_analyzer.preview_dataset.return_value = Mock(data=[{"x": 1}])
+        mock_analyzer.preview_dataset.return_value = Mock(columns=["x"], data=[[1]])
         mock_agent.config.toolset._analyzer = mock_analyzer
 
         mock_input = Mock(filename="data.csv", dataset_name="my_dataset")
@@ -182,7 +183,7 @@ class TestEnrichmentContextPreprocessor:
         preprocessor = EnrichmentContextPreprocessor()
 
         mock_agent = Mock()
-        mock_agent._guild_state = {
+        mock_agent.get_guild_state.return_value = {
             "codex_enrichment": {
                 "datasets": {
                     "test_data": {
@@ -229,7 +230,7 @@ class TestEnrichmentContextPreprocessor:
         preprocessor = EnrichmentContextPreprocessor()
 
         mock_agent = Mock()
-        mock_agent._guild_state = {}
+        mock_agent.get_guild_state.return_value = {}
 
         request = ChatCompletionRequest(messages=[UserMessage(content="Analyze the data")])
 
@@ -245,11 +246,11 @@ class TestEnrichmentContextPreprocessor:
         assert isinstance(result.messages[0], UserMessage)
 
     def test_passthrough_when_no_guild_state(self):
-        """Verify request passes through when _guild_state is None."""
+        """Verify request passes through when get_guild_state returns None."""
         preprocessor = EnrichmentContextPreprocessor()
 
         mock_agent = Mock()
-        mock_agent._guild_state = None
+        mock_agent.get_guild_state.return_value = None
 
         request = ChatCompletionRequest(messages=[UserMessage(content="Analyze the data")])
 
@@ -267,7 +268,7 @@ class TestEnrichmentContextPreprocessor:
         preprocessor = EnrichmentContextPreprocessor()
 
         mock_agent = Mock()
-        mock_agent._guild_state = {
+        mock_agent.get_guild_state.return_value = {
             "codex_enrichment": {
                 "datasets": {
                     "sales": {
@@ -309,7 +310,7 @@ class TestEnrichmentContextPreprocessor:
         preprocessor = EnrichmentContextPreprocessor()
 
         mock_agent = Mock()
-        mock_agent._guild_state = {
+        mock_agent.get_guild_state.return_value = {
             "codex_enrichment": {
                 "datasets": {
                     "valid_data": {
