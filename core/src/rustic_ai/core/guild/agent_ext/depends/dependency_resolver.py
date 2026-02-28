@@ -18,6 +18,8 @@ GUILD_GLOBAL = "GUILD_GLOBAL"
 class DependencySpec(BaseModel):
     class_name: str = Field(min_length=1, max_length=512)
     properties: JsonDict = {}
+    org_level: bool = False
+    guild_level: bool = False
 
     def to_resolver(self) -> DependencyResolver:
         resolver_class = get_class_from_name(self.class_name)
