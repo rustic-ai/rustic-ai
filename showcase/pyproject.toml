@@ -26,7 +26,9 @@ rusticai-litellm = { path = "../litellm", develop = true }
 rusticai-playwright = { path = "../playwright", develop = true }
 rusticai-serpapi = { path = "../serpapi", develop = true }
 rusticai-vertexai = { path = "../vertexai", develop = true }
+rusticai-llm-agent = { path = "../llm-agent", develop = true }
 google-api-python-client = "^2.187.0"
+arxiv = "^2.1.0"
 spacytextblob = "^5.1.0"
 spacy = "^3.8.11"
 
