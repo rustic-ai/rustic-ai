@@ -10,7 +10,7 @@ This toolset provides tools for the Agentic mode:
 import json
 import os
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -330,7 +330,7 @@ class AgenticToolset(ReActToolset):
                         )
             else:
                 for item in path.iterdir():
-                    entry = {
+                    entry: dict[str, str | int] = {
                         "path": item.name,
                         "type": "directory" if item.is_dir() else "file",
                     }

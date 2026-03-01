@@ -1,12 +1,12 @@
 {
     "name": "Iterative Studio",
-    "description": "A multi-mode AI platform with 5 operational modes: Refine, Deepthink, Adaptive Deepthink, Agentic, and Contextual. Based on the Iterative Contextual Refinements system.",
+    "description": "A multi-mode AI platform with 5 operational modes: Refine, Deepthink, Adaptive Deepthink, Agentic, and Contextual. Based on the Iterative Contextual Refinements system. Original project link: https://github.com/ryoiki-tokuiten/Iterative-Contextual-Refinements",
     "version": "v1",
-    "icon": "🔄",
+    "icon": null,
     "intro_msg": "Welcome to Iterative Studio! I support 5 operational modes:\n\n1. **Refine** - Code refinement with feature suggestions and bug fixing\n2. **Deepthink** - Multi-agent strategic reasoning for complex problems\n3. **Adaptive** - Flexible strategic reasoning with self-guided tools\n4. **Agentic** - Tool-based refinement with file operations and research\n5. **Contextual** - Iterative content generation with memory\n\nJust describe what you need, and I'll automatically select the best mode for your task!",
     "exposure": "public",
-    "author_id": "cvqa5ebf660o",
-    "organization_id": "p447tvwgs54q",
+    "author_id": "dummyuserid",
+    "organization_id": null,
     "category_id": null,
     "tags": [
         "Multi-Agent",

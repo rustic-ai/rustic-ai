@@ -9,16 +9,13 @@ This test module validates:
 """
 
 import json
-import os
-import time
 from pathlib import Path
-from typing import List
-from unittest.mock import MagicMock, patch
+import time
 
 import pytest
 import shortuuid
 
-from rustic_ai.core import GuildTopics, Message, Priority
+from rustic_ai.core import GuildTopics, Message
 from rustic_ai.core.agents.testutils import ProbeAgent
 from rustic_ai.core.agents.utils import UserProxyAgent
 from rustic_ai.core.guild.agent_ext.depends.llm.models import (
@@ -32,12 +29,8 @@ from rustic_ai.core.guild.agent_ext.depends.llm.models import (
 )
 from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder
 from rustic_ai.core.guild.dsl import GuildSpec
-from rustic_ai.core.guild.guild import Guild
-from rustic_ai.core.messaging.core.message import AgentTag
 from rustic_ai.core.messaging.core.messaging_config import MessagingConfig
-from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 from rustic_ai.core.utils.gemstone_id import GemstoneGenerator
-
 
 # Path to the guild.json file
 GUILD_JSON_PATH = Path(__file__).parent.parent.parent / "apps" / "iterative_studio" / "guild.json"
@@ -647,8 +640,10 @@ class TestModeControllerTransformIntegration:
         not available when the transformer ran. The fix uses input_messages from the
         ChatCompletionResponse instead.
         """
+        from rustic_ai.core.guild.agent_ext.depends.llm.models import (
+            ChatCompletionRequest,
+        )
         from rustic_ai.core.messaging.core.message import FunctionalTransformer
-        from rustic_ai.core.guild.agent_ext.depends.llm.models import ChatCompletionRequest
         from rustic_ai.core.utils.priority import Priority
 
         # Load the actual handler from guild.json
@@ -743,7 +738,10 @@ class TestModeControllerTransformIntegration:
 
     def test_mode_controller_routes_to_correct_modes(self):
         """Test that Mode Controller routes to correct topics for each mode."""
-        from rustic_ai.core.messaging.core.message import FunctionalTransformer, MessageRoutable
+        from rustic_ai.core.messaging.core.message import (
+            FunctionalTransformer,
+            MessageRoutable,
+        )
         from rustic_ai.core.utils.priority import Priority
 
         # Load the actual handler

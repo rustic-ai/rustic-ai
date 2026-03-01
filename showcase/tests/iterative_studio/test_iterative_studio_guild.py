@@ -9,33 +9,14 @@ This test module validates:
 """
 
 import json
-import os
-import tempfile
-import time
 from pathlib import Path
-from typing import List
-from unittest.mock import MagicMock, patch
+import tempfile
 
 import pytest
 import shortuuid
 
-from rustic_ai.core import GuildTopics
-from rustic_ai.core.agents.testutils import ProbeAgent
-from rustic_ai.core.guild.agent_ext.depends.dependency_resolver import DependencySpec
-from rustic_ai.core.guild.agent_ext.depends.llm.models import (
-    AssistantMessage,
-    ChatCompletionRequest,
-    ChatCompletionResponse,
-    Choice,
-    CompletionUsage,
-    FinishReason,
-    UserMessage,
-)
-from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder
-from rustic_ai.core.guild.dsl import AgentSpec, GuildSpec
-from rustic_ai.core.messaging.core.message import RoutingSlip
-from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
-
+from rustic_ai.core.guild.builders import GuildBuilder
+from rustic_ai.core.guild.dsl import GuildSpec
 
 # Path to the guild.json file
 GUILD_JSON_PATH = Path(__file__).parent.parent.parent / "apps" / "iterative_studio" / "guild.json"
@@ -123,14 +104,18 @@ class TestArxivToolset:
 
     def test_arxiv_toolset_import(self):
         """Test that ArxivToolset can be imported."""
-        from rustic_ai.showcase.iterative_studio.toolsets.arxiv_toolset import ArxivToolset
+        from rustic_ai.showcase.iterative_studio.toolsets.arxiv_toolset import (
+            ArxivToolset,
+        )
 
         toolset = ArxivToolset()
         assert toolset is not None
 
     def test_arxiv_toolset_has_toolspecs(self):
         """Test that ArxivToolset provides tool specifications."""
-        from rustic_ai.showcase.iterative_studio.toolsets.arxiv_toolset import ArxivToolset
+        from rustic_ai.showcase.iterative_studio.toolsets.arxiv_toolset import (
+            ArxivToolset,
+        )
 
         toolset = ArxivToolset()
         specs = toolset.get_toolspecs()
@@ -143,7 +128,6 @@ class TestArxivToolset:
         """Test that ArxivToolset parameter class is valid."""
         from rustic_ai.showcase.iterative_studio.toolsets.arxiv_toolset import (
             ArxivSearchParams,
-            ArxivToolset,
         )
 
         params = ArxivSearchParams(query="transformer neural network", max_results=5)
@@ -169,14 +153,18 @@ class TestAgenticToolset:
 
     def test_agentic_toolset_import(self):
         """Test that AgenticToolset can be imported."""
-        from rustic_ai.showcase.iterative_studio.toolsets.agentic_toolset import AgenticToolset
+        from rustic_ai.showcase.iterative_studio.toolsets.agentic_toolset import (
+            AgenticToolset,
+        )
 
         toolset = AgenticToolset()
         assert toolset is not None
 
     def test_agentic_toolset_has_toolspecs(self):
         """Test that AgenticToolset provides tool specifications."""
-        from rustic_ai.showcase.iterative_studio.toolsets.agentic_toolset import AgenticToolset
+        from rustic_ai.showcase.iterative_studio.toolsets.agentic_toolset import (
+            AgenticToolset,
+        )
 
         toolset = AgenticToolset()
         specs = toolset.get_toolspecs()
@@ -293,14 +281,18 @@ class TestDeepthinkToolset:
 
     def test_deepthink_toolset_import(self):
         """Test that DeepthinkToolset can be imported."""
-        from rustic_ai.showcase.iterative_studio.toolsets.deepthink_toolset import DeepthinkToolset
+        from rustic_ai.showcase.iterative_studio.toolsets.deepthink_toolset import (
+            DeepthinkToolset,
+        )
 
         toolset = DeepthinkToolset()
         assert toolset is not None
 
     def test_deepthink_toolset_has_toolspecs(self):
         """Test that DeepthinkToolset provides tool specifications."""
-        from rustic_ai.showcase.iterative_studio.toolsets.deepthink_toolset import DeepthinkToolset
+        from rustic_ai.showcase.iterative_studio.toolsets.deepthink_toolset import (
+            DeepthinkToolset,
+        )
 
         toolset = DeepthinkToolset()
         specs = toolset.get_toolspecs()
