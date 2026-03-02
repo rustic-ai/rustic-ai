@@ -9,10 +9,9 @@ import os
 import shutil
 import tempfile
 import time
+from typing import List
+from unittest.mock import patch
 import uuid
-from pathlib import Path
-from typing import Any, List
-from unittest.mock import MagicMock, patch
 
 from flaky import flaky
 from pydantic import BaseModel
@@ -33,16 +32,13 @@ from rustic_ai.core.guild.agent_ext.depends.llm.models import (
 )
 from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder
 from rustic_ai.core.guild.dsl import AgentSpec, DependencySpec
-from rustic_ai.core.guild.execution.sync.sync_exec_engine import SyncExecutionEngine
-from rustic_ai.core.messaging.core.messaging_config import MessagingConfig
 from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 from rustic_ai.core.utils.gemstone_id import GemstoneGenerator
 from rustic_ai.core.utils.priority import Priority
 from rustic_ai.litellm.agent_ext.llm import LiteLLMResolver
 from rustic_ai.llm_agent.react import ReActAgent, ReActAgentConfig
-
+from rustic_ai.pandas_analyst.file_url_preprocessor import FileUrlExtractorPreprocessor
 from rustic_ai.pandas_analyst.react_toolset import DataAnalystReActToolset
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -111,8 +107,8 @@ def build_message_from_payload():
         *,
         format: str | None = None,
     ):
-        from rustic_ai.core.messaging.core.message import AgentTag, Message
         from rustic_ai.core.guild.dsl import GuildTopics
+        from rustic_ai.core.messaging.core.message import AgentTag, Message
 
         payload_dict = payload.model_dump() if isinstance(payload, BaseModel) else payload
         computed_format = format or (
@@ -226,6 +222,7 @@ class TestReactDataAnalystWithMockedLLM:
         from rustic_ai.testing.helpers import wrap_agent_for_testing
 
         # Create agent spec with self-contained toolset
+        # Note: FileUrlExtractorPreprocessor is required by DataAnalystReActToolset
         agent_spec: AgentSpec = (
             AgentBuilder(ReActAgent)
             .set_id("react_data_analyst")
@@ -238,6 +235,7 @@ class TestReactDataAnalystWithMockedLLM:
                     toolset=DataAnalystReActToolset(
                         filesystem_base_path=temp_data_dir,
                     ),
+                    request_preprocessors=[FileUrlExtractorPreprocessor()],
                 )
             )
             .build_spec()
@@ -259,7 +257,6 @@ class TestReactDataAnalystWithMockedLLM:
         # 1. Load the file
         # 2. Query the data
         # 3. Return final answer
-        import json
 
         responses = [
             # First: Load the file
@@ -343,6 +340,7 @@ class TestReactDataAnalystWithMockedLLM:
                     toolset=DataAnalystReActToolset(
                         filesystem_base_path=temp_data_dir,
                     ),
+                    request_preprocessors=[FileUrlExtractorPreprocessor()],
                 )
             )
             .build_spec()
@@ -455,6 +453,7 @@ class TestReactDataAnalystGuildIntegration:
         }
 
         # Build the agent spec with self-contained toolset
+        # Note: FileUrlExtractorPreprocessor is required by DataAnalystReActToolset
         react_agent_spec: AgentSpec = (
             AgentBuilder(ReActAgent)
             .set_id("react_data_analyst")
@@ -468,6 +467,7 @@ class TestReactDataAnalystGuildIntegration:
                         filesystem_base_path=guild_global_dir,
                         use_guild_filesystem=False,
                     ),
+                    request_preprocessors=[FileUrlExtractorPreprocessor()],
                 )
             )
             .build_spec()
@@ -564,6 +564,7 @@ class TestReactDataAnalystGuildIntegration:
                         filesystem_base_path=guild_global_dir,
                         use_guild_filesystem=False,
                     ),
+                    request_preprocessors=[FileUrlExtractorPreprocessor()],
                 )
             )
             .build_spec()
@@ -638,6 +639,7 @@ class TestToolCallVerification:
                     toolset=DataAnalystReActToolset(
                         filesystem_base_path=temp_data_dir,
                     ),
+                    request_preprocessors=[FileUrlExtractorPreprocessor()],
                 )
             )
             .build_spec()

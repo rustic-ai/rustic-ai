@@ -4,7 +4,7 @@
     "version": "v1",
     "icon": null,
     "intro_msg": "Welcome to the Data Analyst Assistant! I can help you analyze CSV data files. Just tell me which file to load and what you'd like to know about the data. I can calculate statistics, run SQL queries, describe datasets, and more. When you load a dataset, I'll automatically analyze its structure to provide better insights.",
-    "exposure": "private",
+    "exposure": "public",
     "author_id": "dummyuserid",
     "organization_id": null,
     "category_id": null,

@@ -324,6 +324,14 @@ class ReActAgent(Agent[ReActAgentConfig]):
             agent_id=self.id,
         )
 
+        # Validate that required plugins are configured for this toolset
+        # This provides early detection of configuration errors
+        all_preprocessors = self.config.request_preprocessors + self.config.iteration_preprocessors
+        self.config.toolset.validate_plugins(
+            request_preprocessors=all_preprocessors,
+            tool_wrappers=self.config.tool_wrappers,
+        )
+
         # Extract system messages and user query from incoming request
         incoming_system_messages: List[SystemMessage] = []
         user_query: Optional[str] = None

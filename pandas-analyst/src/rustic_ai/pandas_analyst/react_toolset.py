@@ -1,20 +1,39 @@
-from typing import Any, Dict, List, Optional
 import mimetypes
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from fsspec import filesystem as create_filesystem
 from pydantic import BaseModel, Field, PrivateAttr
 
 from rustic_ai.core.agents.commons.media import MediaLink
-from rustic_ai.core.guild.agent_ext.depends.code_execution.data_analyzer import DataAnalyzer, LoadDatasetRequest
-from rustic_ai.core.guild.agent_ext.depends.code_execution.data_analyzer.tools import DataAnalystToolset
+from rustic_ai.core.guild.agent_ext.depends.code_execution.data_analyzer import (
+    DataAnalyzer,
+    LoadDatasetRequest,
+)
+from rustic_ai.core.guild.agent_ext.depends.code_execution.data_analyzer.models import (
+    CorrelationMatrixRequest,
+    GetDescriptiveStatisticsRequest,
+    GetSchemaRequest,
+    PreviewDatasetRequest,
+    ValueCountsRequest,
+)
+from rustic_ai.core.guild.agent_ext.depends.code_execution.data_analyzer.tools import (
+    AskUserRequest,
+    DataAnalystToolset,
+)
 from rustic_ai.core.guild.agent_ext.depends.filesystem import FileSystem
 from rustic_ai.core.guild.agent_ext.depends.llm.tools_manager import ToolSpec
 from rustic_ai.llm_agent.react.toolset import ReActToolset
+
 from .analyzer import PandasDataAnalyzer
+
+if TYPE_CHECKING:
+    from rustic_ai.llm_agent.plugins.request_preprocessor import RequestPreprocessor
+    from rustic_ai.llm_agent.plugins.tool_call_wrapper import ToolCallWrapper
 
 
 class LoadFileRequest(BaseModel):
     """Request to load a file as a dataset."""
+
     filename: str = Field(description="Path to the file to load.")
     dataset_name: Optional[str] = Field(default=None, description="Name to give the dataset. Defaults to filename.")
 
@@ -34,7 +53,9 @@ class DataAnalystReActToolset(ReActToolset):
 
     filesystem_base_path: str = Field(default="/tmp", description="Base path for filesystem operations")
     filesystem_protocol: str = Field(default="file", description="Filesystem protocol (e.g., 'file', 's3')")
-    filesystem_options: Dict[str, Any] = Field(default_factory=lambda: {"auto_mkdir": True}, description="Filesystem storage options")
+    filesystem_options: Dict[str, Any] = Field(
+        default_factory=lambda: {"auto_mkdir": True}, description="Filesystem storage options"
+    )
     use_guild_filesystem: bool = Field(default=True, description="If True, use guild filesystem path structure")
 
     _analyzer: Optional[DataAnalyzer] = PrivateAttr(default=None)
@@ -96,20 +117,83 @@ class DataAnalystReActToolset(ReActToolset):
         self._analyzer = analyzer
         self._filesystem = filesystem
 
+    def validate_plugins(
+        self,
+        request_preprocessors: List["RequestPreprocessor"],
+        tool_wrappers: List["ToolCallWrapper"],
+    ) -> None:
+        """
+        Validate that required plugins are configured for this toolset.
+
+        DataAnalystReActToolset requires FileUrlExtractorPreprocessor to be
+        configured because:
+        - The load_file tool expects filenames (e.g., 'sales.csv'), not full paths
+        - When users upload files via the UI, they arrive as FileContentParts
+          with full filesystem paths
+        - FileUrlExtractorPreprocessor extracts filenames from FileContentParts
+          and adds a system message informing the LLM about available files
+
+        Without this preprocessor, the LLM won't know about uploaded files
+        and cannot use the load_file tool correctly.
+
+        Args:
+            request_preprocessors: The configured request preprocessors.
+            tool_wrappers: The configured tool wrappers.
+
+        Raises:
+            ValueError: If FileUrlExtractorPreprocessor is not configured.
+        """
+        from .file_url_preprocessor import FileUrlExtractorPreprocessor
+
+        has_file_url_preprocessor = any(isinstance(p, FileUrlExtractorPreprocessor) for p in request_preprocessors)
+
+        if not has_file_url_preprocessor:
+            raise ValueError(
+                f"{self.__class__.__name__} requires FileUrlExtractorPreprocessor to be configured.\n\n"
+                "The load_file tool expects filenames (e.g., 'sales.csv'), but uploaded files "
+                "arrive as FileContentParts with full paths. FileUrlExtractorPreprocessor "
+                "extracts these filenames and informs the LLM about available files.\n\n"
+                "Add FileUrlExtractorPreprocessor to request_preprocessors in your agent configuration:\n\n"
+                '    "request_preprocessors": [\n'
+                '        {"kind": "rustic_ai.pandas_analyst.file_url_preprocessor.FileUrlExtractorPreprocessor"}\n'
+                "    ]"
+            )
+
     def get_toolspecs(self) -> List[ToolSpec]:
         """
         Return the list of tool specifications.
         We reuse the tool specifications from DataAnalystToolset and add load_file.
         """
         base_tools = DataAnalystToolset().get_data_analyst_tools()
-        
+
         load_tool = ToolSpec(
             name="load_file",
             description="Load a file from the filesystem as a dataset for analysis.",
-            parameter_class=LoadFileRequest
+            parameter_class=LoadFileRequest,
         )
-        
+
         return base_tools + [load_tool]
+
+    def _load_file(self, args: LoadFileRequest) -> str:
+        """Helper method to load a file as a dataset."""
+        filename = args.filename
+        name = args.dataset_name if args.dataset_name else filename.split("/")[-1].split(".")[0]
+
+        # Guess mimetype
+        mimetype, _ = mimetypes.guess_type(filename)
+        if not mimetype:
+            if filename.endswith(".csv"):
+                mimetype = "text/csv"
+            elif filename.endswith(".json"):
+                mimetype = "application/json"
+            elif filename.endswith(".parquet"):
+                mimetype = "application/x-parquet"
+
+        media_link = MediaLink(url=filename, name=filename, mimetype=mimetype, on_filesystem=True)
+
+        request = LoadDatasetRequest(name=name, source=media_link)
+        result = self.analyzer.load_dataset(request, self.filesystem)
+        return self._format_result(result)
 
     def execute(self, tool_name: str, args: BaseModel) -> str:
         """
@@ -117,42 +201,27 @@ class DataAnalystReActToolset(ReActToolset):
         Delegates to the underlying DataAnalyzer instance.
         """
         if tool_name == "load_file":
-            filename = args.filename
-            name = args.dataset_name if args.dataset_name else filename.split("/")[-1].split(".")[0]
+            load_args = args if isinstance(args, LoadFileRequest) else LoadFileRequest.model_validate(args)
+            return self._load_file(load_args)
 
-            # Guess mimetype
-            mimetype, _ = mimetypes.guess_type(filename)
-            if not mimetype:
-                if filename.endswith(".csv"):
-                    mimetype = "text/csv"
-                elif filename.endswith(".json"):
-                    mimetype = "application/json"
-                elif filename.endswith(".parquet"):
-                    mimetype = "application/x-parquet"
-
-            media_link = MediaLink(
-                url=filename,
-                name=filename,
-                mimetype=mimetype,
-                on_filesystem=True
-            )
-
-            request = LoadDatasetRequest(name=name, source=media_link)
-            result = self.analyzer.load_dataset(request, self.filesystem)
-            return self._format_result(result)
-             
         # Map tool names to analyzer methods
         try:
             if tool_name == "preview_dataset":
+                preview_args = (
+                    args if isinstance(args, PreviewDatasetRequest) else PreviewDatasetRequest.model_validate(args)
+                )
                 result = self.analyzer.preview_dataset(
-                    name=args.name,
-                    num_rows=args.num_rows,
-                    include_schema=args.include_schema
+                    name=preview_args.name, num_rows=preview_args.num_rows, include_schema=preview_args.include_schema
                 )
                 return self._format_result(result)
 
             elif tool_name == "summarize_dataset":
-                result = self.analyzer.get_dataset_summary(name=args.name)
+                summary_args = (
+                    args
+                    if isinstance(args, GetSchemaRequest)
+                    else GetSchemaRequest.model_validate(args.model_dump() if hasattr(args, "model_dump") else args)
+                )
+                result = self.analyzer.get_dataset_summary(name=summary_args.name)
                 return self._format_result(result)
 
             elif tool_name == "query_dataset":
@@ -164,10 +233,15 @@ class DataAnalystReActToolset(ReActToolset):
                 return self._format_result(result)
 
             elif tool_name == "describe_dataset":
+                describe_args = (
+                    args
+                    if isinstance(args, GetDescriptiveStatisticsRequest)
+                    else GetDescriptiveStatisticsRequest.model_validate(args)
+                )
                 result = self.analyzer.get_descriptive_statistics(
-                    name=args.name,
-                    columns=args.columns,
-                    include_categoricals=args.include_categoricals
+                    name=describe_args.name,
+                    columns=describe_args.columns,
+                    include_categoricals=describe_args.include_categoricals,
                 )
                 return self._format_result(result)
 
@@ -180,7 +254,10 @@ class DataAnalystReActToolset(ReActToolset):
                 return self._format_result(result)
 
             elif tool_name == "get_schema":
-                result = self.analyzer.get_schema(args.name)
+                schema_args = (
+                    args if isinstance(args, GetSchemaRequest) else GetSchemaRequest.model_validate(args)
+                )
+                result = self.analyzer.get_schema(schema_args.name)
                 return self._format_result(result)
 
             elif tool_name == "clean_dataset":
@@ -188,33 +265,36 @@ class DataAnalystReActToolset(ReActToolset):
                 return self._format_result(result)
 
             elif tool_name == "value_counts":
+                vc_args = args if isinstance(args, ValueCountsRequest) else ValueCountsRequest.model_validate(args)
                 result = self.analyzer.get_value_counts(
-                    name=args.name,
-                    column=args.column,
-                    normalize=args.normalize,
-                    max_unique_values=args.max_unique_values
+                    name=vc_args.name,
+                    column=vc_args.column,
+                    normalize=vc_args.normalize,
+                    max_unique_values=vc_args.max_unique_values,
                 )
                 return self._format_result(result)
 
             elif tool_name == "correlation_matrix":
+                corr_args = (
+                    args if isinstance(args, CorrelationMatrixRequest) else CorrelationMatrixRequest.model_validate(args)
+                )
                 result = self.analyzer.get_correlation(
-                    name=args.name,
-                    columns=args.columns,
-                    method=args.method
+                    name=corr_args.name, columns=corr_args.columns, method=corr_args.method
                 )
                 return self._format_result(result)
 
             elif tool_name == "ask_user":
-                return f"ASK_USER: {args.question}"
+                ask_args = args if isinstance(args, AskUserRequest) else AskUserRequest.model_validate(args)
+                return f"ASK_USER: {ask_args.question}"
 
             else:
                 raise ValueError(f"Unknown tool: {tool_name}")
-                
+
         except Exception as e:
             return f"Error executing {tool_name}: {str(e)}"
 
     def _format_result(self, result: Any) -> str:
         """Format the result Pydantic model into a string for the LLM."""
         if hasattr(result, "model_dump_json"):
-             return result.model_dump_json(indent=2)
+            return result.model_dump_json(indent=2)
         return str(result)

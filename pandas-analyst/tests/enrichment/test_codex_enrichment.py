@@ -9,14 +9,12 @@ Tests cover:
 
 from unittest.mock import Mock
 
-import pytest
-from rustic_ai.llm_agent.plugins.tool_call_wrapper import ToolCallResult
-
 from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     ChatCompletionRequest,
     SystemMessage,
     UserMessage,
 )
+from rustic_ai.llm_agent.plugins.tool_call_wrapper import ToolCallResult
 from rustic_ai.pandas_analyst.enrichment import (
     DatasetEnrichmentMetadata,
     DatasetLoadedEmitter,

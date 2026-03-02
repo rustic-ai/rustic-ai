@@ -9,14 +9,13 @@ more informed decisions about data analysis.
 import logging
 from typing import List, Optional
 
-from rustic_ai.llm_agent.plugins.request_preprocessor import RequestPreprocessor
-
 from rustic_ai.core.guild.agent import Agent, ProcessContext
 from rustic_ai.core.guild.agent_ext.depends.llm.llm import LLM
 from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     ChatCompletionRequest,
     SystemMessage,
 )
+from rustic_ai.llm_agent.plugins.request_preprocessor import RequestPreprocessor
 
 from .models import DatasetEnrichmentMetadata
 
@@ -89,7 +88,7 @@ class EnrichmentContextPreprocessor(RequestPreprocessor):
         Returns a list of valid DatasetEnrichmentMetadata objects.
         Invalid entries are skipped with a debug log.
         """
-        enrichments = []
+        enrichments: List[DatasetEnrichmentMetadata] = []
         try:
             guild_state = agent.get_guild_state()
             logger.debug(f"Guild state retrieved for enrichment: {guild_state}")
