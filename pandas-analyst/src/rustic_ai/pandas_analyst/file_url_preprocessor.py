@@ -136,10 +136,4 @@ class FileUrlExtractorPreprocessor(RequestPreprocessor):
 
         new_messages.insert(insert_pos, SystemMessage(content=system_content))
 
-        return ChatCompletionRequest(
-            messages=new_messages,
-            tools=request.tools,
-            temperature=request.temperature,
-            max_tokens=request.max_tokens,
-            tool_choice=request.tool_choice,
-        )
+        return request.model_copy(update={"messages": new_messages})

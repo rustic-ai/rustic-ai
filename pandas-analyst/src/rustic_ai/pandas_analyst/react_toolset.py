@@ -11,6 +11,7 @@ from rustic_ai.core.guild.agent_ext.depends.code_execution.data_analyzer import 
 )
 from rustic_ai.core.guild.agent_ext.depends.code_execution.data_analyzer.models import (
     CorrelationMatrixRequest,
+    GetDatasetSummaryRequest,
     GetDescriptiveStatisticsRequest,
     GetSchemaRequest,
     PreviewDatasetRequest,
@@ -218,8 +219,8 @@ class DataAnalystReActToolset(ReActToolset):
             elif tool_name == "summarize_dataset":
                 summary_args = (
                     args
-                    if isinstance(args, GetSchemaRequest)
-                    else GetSchemaRequest.model_validate(args.model_dump() if hasattr(args, "model_dump") else args)
+                    if isinstance(args, GetDatasetSummaryRequest)
+                    else GetDatasetSummaryRequest.model_validate(args.model_dump() if hasattr(args, "model_dump") else args)
                 )
                 result = self.analyzer.get_dataset_summary(name=summary_args.name)
                 return self._format_result(result)

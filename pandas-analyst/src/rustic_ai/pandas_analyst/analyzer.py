@@ -726,6 +726,8 @@ class PandasDataAnalyzer(PythonExecExecutor, DataAnalyzer):
                                             model.max_unique_values = max_unique_values
                                         except (IndexError, ValueError):
                                             raise ValueError("Invalid max_unique_values value for value_counts")
+                                    if "normalize=true" in params.lower():
+                                        model.normalize = True
 
                         case _:
                             raise InvalidTransformationError(f"Unsupported transformation op: {op}")
@@ -843,6 +845,8 @@ class PandasDataAnalyzer(PythonExecExecutor, DataAnalyzer):
                             model = ValueCountsTransformation(op=op, columns=cols)
                             if "max_unique_values" in transformation:
                                 model.max_unique_values = transformation["max_unique_values"]
+                            if "normalize" in transformation:
+                                model.normalize = transformation["normalize"]
                         case _:
                             raise InvalidTransformationError("'columns' must be a list for value_counts.")
                 case _:
@@ -924,20 +928,23 @@ class PandasDataAnalyzer(PythonExecExecutor, DataAnalyzer):
                             if col in df.columns:
                                 df[col] = pd.to_numeric(df[col], errors=error_mode)
 
-            case UniqueValuesTransformation(columns=columns):
+            case UniqueValuesTransformation(columns=columns, limit=limit):
                 # Transform DataFrame to contain unique values as rows
                 result_data = {}
                 for col in columns:
                     if col in df.columns:
-                        result_data[col] = df[col].unique().tolist()
+                        unique_values = df[col].unique().tolist()
+                        if limit is not None:
+                            unique_values = unique_values[:limit]
+                        result_data[col] = unique_values
                 df = pd.DataFrame(result_data)
 
-            case ValueCountsTransformation(columns=columns):
+            case ValueCountsTransformation(columns=columns, normalize=normalize, max_unique_values=max_unique_values):
                 # Transform DataFrame to contain counts of unique values in specified columns
                 result_data = {}
                 for col in columns:
                     if col in df.columns:
-                        counts = df[col].value_counts().to_dict()
+                        counts = df[col].value_counts(normalize=normalize).head(max_unique_values).to_dict()
                         result_data[col] = counts
                 df = pd.DataFrame(dict([(k, pd.Series(v)) for k, v in result_data.items()]))
 
