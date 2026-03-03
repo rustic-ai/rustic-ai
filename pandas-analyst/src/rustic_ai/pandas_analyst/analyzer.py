@@ -459,27 +459,25 @@ class PandasDataAnalyzer(PythonExecExecutor, DataAnalyzer):
 
     def clean_data(self, request: CleanDatasetRequest) -> DatasetSummaryResponse:
         """
-                Apply common cleaning strategies such as dropna, f        from rustic_ai.data_analyst.models import (
-                    BaseTransformation,
-                    DropColumnsTransformation,
-                    FFillTransformation,
-                    FilterTransformation,
-                    RenameColumnsTransformation,
-                    RenameColumnTransformation,
-                    ToDatetimeTransformation,
-                    ToNumericTransformation,
-                )
-        illna, and deduplication.
+        Clean a dataset using common pandas-based strategies.
+        The cleaning behavior is controlled by ``request.strategy`` and may include:
+            - Dropping rows with missing values (``dropna`` key).
+            - Filling missing values with a provided value (``fillna`` key).
+            - Dropping duplicate rows (``drop_duplicates`` key).
 
-                Args:
-                    request (CleanDatasetRequest): Cleaning instructions.
+        The cleaned dataset is stored in ``self.datasets`` under the name returned by
+        ``request.get_cleaned_name()``, and a summary of the cleaned dataset is returned.
 
-                Returns:
-                    DatasetSummaryResponse: Summary of the cleaned dataset.
+        Args:
+            request (CleanDatasetRequest): Cleaning instructions, including the target
+                dataset name and the cleaning strategy to apply.
 
-                Raises:
-                    DatasetNotFoundError: If the dataset does not exist.
-                    DataCleaningError: If the cleaning operation fails.
+        Returns:
+            DatasetSummaryResponse: Summary of the cleaned dataset.
+
+        Raises:
+            DatasetNotFoundError: If the specified dataset does not exist.
+            DataCleaningError: If any cleaning operation fails.
         """
         logging.info(f"Cleaning dataset: {request.name} using strategy keys: {list(request.strategy.keys())}")
         if request.name not in self.datasets:
