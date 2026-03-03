@@ -317,6 +317,21 @@ class ReActAgent(Agent[ReActAgentConfig]):
         # Record start time for response
         start_time = int(time.time())
 
+        # Bind agent context to toolset for guild-scoped resource access
+        self.config.toolset.bind_agent_context(
+            org_id=self.get_organization(),
+            guild_id=self.guild_id,
+            agent_id=self.id,
+        )
+
+        # Validate that required plugins are configured for this toolset
+        # This provides early detection of configuration errors
+        all_preprocessors = self.config.request_preprocessors + self.config.iteration_preprocessors
+        self.config.toolset.validate_plugins(
+            request_preprocessors=all_preprocessors,
+            tool_wrappers=self.config.tool_wrappers,
+        )
+
         # Extract system messages and user query from incoming request
         incoming_system_messages: List[SystemMessage] = []
         user_query: Optional[str] = None

@@ -1,0 +1,222 @@
+{
+    "name": "Data Analyst Assistant",
+    "description": "An intelligent data analysis assistant powered by the ReAct pattern with Codex-style dataset enrichment. Upload CSV files and ask questions about your data - the assistant will load, query, and analyze your datasets automatically.",
+    "version": "v1",
+    "icon": null,
+    "intro_msg": "Welcome to the Data Analyst Assistant! I can help you analyze CSV data files. Just tell me which file to load and what you'd like to know about the data. I can calculate statistics, run SQL queries, describe datasets, and more. When you load a dataset, I'll automatically analyze its structure to provide better insights.",
+    "exposure": "public",
+    "author_id": "dummyuserid",
+    "organization_id": null,
+    "category_id": null,
+    "tags": [
+        "Data Analysis",
+        "CSV",
+        "SQL",
+        "Pandas",
+        "ReAct",
+        "Codex Enrichment"
+    ],
+    "commands": [],
+    "starter_prompts": [
+        "Load sales_data.csv and show me the first 5 rows",
+        "What is the average price of products in the dataset?",
+        "Load the employees file and tell me the total salary by department",
+        "Show me the schema of the loaded dataset",
+        "Find all products with quantity greater than 30"
+    ],
+    "spec": {
+        "name": "Data Analyst Guild",
+        "description": "Guild for data analysis using ReActAgent with DataAnalystReActToolset and Codex enrichment",
+        "properties": {},
+        "configuration_schema": {
+            "type": "object",
+            "properties": {
+                "default_model": {
+                    "type": "string",
+                    "default": "gpt-4o-mini",
+                    "description": "The LLM model to use for analysis"
+                }
+            }
+        },
+        "configuration": {},
+        "agents": [
+            {
+                "id": "react_data_analyst",
+                "name": "Data Analyst Agent",
+                "description": "A ReAct-based agent that can load, query, and analyze datasets using pandas and SQL",
+                "class_name": "rustic_ai.llm_agent.react.react_agent.ReActAgent",
+                "additional_topics": [],
+                "properties": {
+                    "model": "gpt-4o-mini",
+                    "max_iterations": 10,
+                    "temperature": 0.7,
+                    "system_prompt": "You are a Data Analyst Agent. You help users analyze data using pandas and SQL.\n\nYou have access to tools for loading, querying, and analyzing datasets:\n- load_file: Load a CSV, JSON, or Parquet file as a dataset\n- list_datasets: List all currently loaded datasets\n- get_schema: Get the schema/columns of a dataset\n- preview_dataset: Preview the first few rows of a dataset\n- describe_dataset: Get descriptive statistics for a dataset\n- query_dataset: Run SQL queries on datasets\n- summarize_dataset: Get a summary of a dataset\n- value_counts: Get value counts for a column\n- correlation_matrix: Get correlation matrix for numeric columns\n- transform_dataset: Apply transformations to a dataset\n- join_datasets: Join two datasets together\n- clean_dataset: Clean missing/invalid data\n\nUse the ReAct pattern to answer user questions about data:\n1. Think about what information you need\n2. Use tools to load and explore the data\n3. Analyze the results and provide insights\n\nIMPORTANT: When the user uploads a file, the file path will be provided in a system message. Use that exact path with the load_file tool to load the data.\n\nNOTE: If enrichment context is provided for a dataset, use that information to better understand the data structure, semantics, and recommended usage patterns.",
+                    "request_preprocessors": [
+                        {
+                            "kind": "rustic_ai.pandas_analyst.file_url_preprocessor.FileUrlExtractorPreprocessor"
+                        },
+                        {
+                            "kind": "rustic_ai.pandas_analyst.enrichment.preprocessor.EnrichmentContextPreprocessor"
+                        }
+                    ],
+                    "tool_wrappers": [
+                        {
+                            "kind": "rustic_ai.pandas_analyst.enrichment.emitter.DatasetLoadedEmitter",
+                            "sample_rows": 5
+                        }
+                    ],
+                    "toolset": {
+                        "kind": "rustic_ai.pandas_analyst.react_toolset.DataAnalystReActToolset",
+                        "filesystem_base_path": "/tmp",
+                        "filesystem_protocol": "file",
+                        "filesystem_options": {
+                            "auto_mkdir": true
+                        }
+                    }
+                },
+                "listen_to_default_topic": true,
+                "act_only_when_tagged": false,
+                "predicates": {},
+                "dependency_map": {},
+                "additional_dependencies": [],
+                "resources": {
+                    "num_cpus": null,
+                    "num_gpus": null,
+                    "custom_resources": {}
+                },
+                "qos": {
+                    "timeout": null,
+                    "retry_count": null,
+                    "latency": null
+                }
+            },
+            {
+                "id": "codex_enrichment_llm",
+                "name": "Codex Enrichment LLM",
+                "description": "LLM agent that generates rich dataset metadata for Codex-style enrichment",
+                "class_name": "rustic_ai.llm_agent.llm_agent.LLMAgent",
+                "additional_topics": [
+                    "enrichment_requests"
+                ],
+                "properties": {
+                    "model": "gpt-4o-mini",
+                    "default_system_prompt": "You are a data catalog expert. Analyze the provided dataset information and generate rich metadata as JSON.\n\nReturn a JSON object with these fields:\n- table_purpose: Brief description of what this table is for (1 sentence)\n- table_description: Detailed description of the table's contents and structure\n- grain_description: What each row in the table represents (e.g., \"One row per customer order\")\n- primary_key_candidates: Array of column names that could serve as primary keys\n- columns: Array of column objects, each with:\n  - name: Column name\n  - description: What this column represents\n  - semantic_type: One of (identifier, dimension, measure, timestamp, category, text)\n  - uniqueness: One of (unique, mostly_unique, low_cardinality, unknown)\n  - is_primary_key_candidate: boolean\n- freshness_indicators: Object with date range info if applicable\n- recommended_usage: Array of suggested analyses or queries\n- when_to_use: Guidance on when to use this dataset\n- limitations: Array of known data limitations or caveats\n\nBe concise but informative. Focus on practical insights that would help a data analyst work with this data effectively.\n\nReturn ONLY the JSON object, no additional text.",
+                    "temperature": 0.3
+                },
+                "listen_to_default_topic": false,
+                "act_only_when_tagged": false,
+                "predicates": {},
+                "dependency_map": {},
+                "additional_dependencies": [],
+                "resources": {
+                    "num_cpus": null,
+                    "num_gpus": null,
+                    "custom_resources": {}
+                },
+                "qos": {
+                    "timeout": null,
+                    "retry_count": null,
+                    "latency": null
+                }
+            }
+        ],
+        "dependency_map": {
+            "llm": {
+                "class_name": "rustic_ai.litellm.agent_ext.llm.LiteLLMResolver",
+                "properties": {
+                    "model": "gpt-4o-mini"
+                }
+            },
+            "filesystem": {
+                "class_name": "rustic_ai.core.guild.agent_ext.depends.filesystem.filesystem.FileSystemResolver",
+                "properties": {
+                    "path_base": "/tmp",
+                    "protocol": "file",
+                    "storage_options": {
+                        "auto_mkdir": true
+                    },
+                    "asynchronous": true
+                }
+            }
+        },
+        "routes": {
+            "steps": [
+                {
+                    "agent": {
+                        "id": null,
+                        "name": "Data Analyst Agent"
+                    },
+                    "agent_type": null,
+                    "method_name": null,
+                    "origin_filter": null,
+                    "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                    "destination": {
+                        "topics": "user_message_broadcast",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "mark_forwarded": true,
+                    "route_times": -1,
+                    "transformer": null,
+                    "agent_state_update": null,
+                    "guild_state_update": null,
+                    "process_status": "completed",
+                    "reason": "Send analysis results back to user"
+                },
+                {
+                    "agent": {
+                        "id": null,
+                        "name": "Data Analyst Agent"
+                    },
+                    "agent_type": null,
+                    "method_name": null,
+                    "origin_filter": null,
+                    "message_format": "rustic_ai.pandas_analyst.enrichment.models.DatasetLoadedEvent",
+                    "destination": {
+                        "topics": "enrichment_requests",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "mark_forwarded": true,
+                    "route_times": -1,
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest",
+                        "expression": "{'messages': [{'role': 'user', 'content': 'Analyze this dataset and generate enrichment metadata:\\n\\nDataset: ' & dataset_name & '\\nRows: ' & $string(row_count) & '\\nColumns: ' & $string(column_count) & '\\n\\nColumn Names: ' & $join(columns, ', ') & '\\n\\nSchema (column -> type):\\n' & $string(column_schema) & '\\n\\nSample Data (first ' & $string($count(sample_data)) & ' rows):\\n' & $string(sample_data)}]}"
+                    },
+                    "agent_state_update": null,
+                    "guild_state_update": null,
+                    "process_status": null,
+                    "reason": "Transform DatasetLoadedEvent to ChatCompletionRequest for enrichment LLM"
+                },
+                {
+                    "agent": {
+                        "id": null,
+                        "name": "Codex Enrichment LLM"
+                    },
+                    "agent_type": null,
+                    "method_name": null,
+                    "origin_filter": null,
+                    "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                    "destination": {
+                        "topics": "enrichment_results",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "mark_forwarded": true,
+                    "route_times": -1,
+                    "transformer": null,
+                    "agent_state_update": null,
+                    "guild_state_update": {
+                        "expression_type": "jsonata",
+                        "update_format": "json-merge-patch",
+                        "state_update": "($content := origin.payload.messages[0].content; $dataset_name := $match($content, /Dataset: (\\S+)/).groups[0]; $row_count := $number($match($content, /Rows: (\\d+)/).groups[0]); $column_count := $number($match($content, /Columns: (\\d+)/).groups[0]); $llm_response := payload.choices[0].message.content; $clean_json := $trim($replace($replace($llm_response, /^```json\\s*/, ''), /\\s*```$/, '')); $enrichment := $eval($clean_json); {'codex_enrichment': {'datasets': {$dataset_name: $merge([$enrichment, {'dataset_name': $dataset_name, 'row_count': $row_count, 'column_count': $column_count, 'enrichment_timestamp': $now()}])}}})"
+                    },
+                    "process_status": "completed",
+                    "reason": "Store enrichment response in guild state"
+                }
+            ]
+        },
+        "gateway": null
+    }
+}
