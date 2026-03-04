@@ -9,7 +9,6 @@ This test module validates:
 """
 
 import json
-import os
 from pathlib import Path
 import time
 
@@ -21,12 +20,10 @@ from rustic_ai.core.agents.testutils import ProbeAgent
 from rustic_ai.core.agents.utils import UserProxyAgent
 from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     AssistantMessage,
-    ChatCompletionRequest,
     ChatCompletionResponse,
     Choice,
     CompletionUsage,
     FinishReason,
-    UserMessage,
 )
 from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder
 from rustic_ai.core.guild.dsl import GuildSpec
@@ -146,6 +143,7 @@ class TestIterativeStudioE2E:
         assert "Mode Controller" in route_patterns
         assert "Bug Fixer" in route_patterns
         assert "Final Judge" in route_patterns
+
 
 class TestModeRouting:
     """Tests for mode-specific routing behavior using the parsed GuildSpec."""
@@ -392,7 +390,7 @@ class TestAgentConfiguration:
         # Verify DictCollector configuration
         collector = props.collector
         assert collector.collector_type == "dict", "Should use DictCollector, not ListCollector"
-        assert collector.key_field == "type", "DictCollector should use 'type' as key_field"
+        assert collector.key_field == "id", "DictCollector should use 'id' as key_field"
 
         # Verify CountingAggregator configuration
         agg = props.aggregator
