@@ -1,12 +1,16 @@
 from abc import ABC, abstractmethod
 from functools import cached_property
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from rustic_ai.core.guild.agent_ext.depends.llm.models import ChatCompletionTool
 from rustic_ai.core.guild.agent_ext.depends.llm.tools_manager import ToolSpec
 from rustic_ai.core.utils.basic_class_utils import get_class_from_name
+
+if TYPE_CHECKING:
+    from rustic_ai.llm_agent.plugins.request_preprocessor import RequestPreprocessor
+    from rustic_ai.llm_agent.plugins.tool_call_wrapper import ToolCallWrapper
 
 
 class ReActToolset(BaseModel, ABC):
@@ -77,6 +81,44 @@ class ReActToolset(BaseModel, ABC):
 
         Raises:
             ValueError: If the tool name is not recognized.
+        """
+        pass
+
+    def bind_agent_context(self, org_id: str, guild_id: str, agent_id: str) -> None:
+        """
+        Optional hook called by ReActAgent to provide guild context to the toolset.
+
+        Toolsets that need access to guild-scoped resources (like filesystems)
+        can override this method to configure themselves with the correct paths.
+
+        Args:
+            org_id: The organization ID.
+            guild_id: The guild ID.
+            agent_id: The agent ID.
+        """
+        pass
+
+    def validate_plugins(
+        self,
+        request_preprocessors: List["RequestPreprocessor"],
+        tool_wrappers: List["ToolCallWrapper"],
+    ) -> None:
+        """
+        Validate that required plugins are configured for this toolset.
+
+        Override this method in subclasses to enforce plugin dependencies.
+        Raise a ValueError with a descriptive message if required plugins
+        are missing.
+
+        This method is called by ReActAgent before processing begins,
+        allowing early detection of configuration errors.
+
+        Args:
+            request_preprocessors: The configured request preprocessors.
+            tool_wrappers: The configured tool wrappers.
+
+        Raises:
+            ValueError: If required plugins are not configured.
         """
         pass
 
@@ -215,3 +257,33 @@ class CompositeToolset(ReActToolset):
             if tool_name in toolset.tool_names:
                 return toolset.execute(tool_name, args)
         raise ValueError(f"Unknown tool: {tool_name}")
+
+    def bind_agent_context(self, org_id: str, guild_id: str, agent_id: str) -> None:
+        """
+        Propagate agent context to all child toolsets.
+
+        Args:
+            org_id: The organization ID.
+            guild_id: The guild ID.
+            agent_id: The agent ID.
+        """
+        for toolset in self.toolsets:
+            toolset.bind_agent_context(org_id, guild_id, agent_id)
+
+    def validate_plugins(
+        self,
+        request_preprocessors: List["RequestPreprocessor"],
+        tool_wrappers: List["ToolCallWrapper"],
+    ) -> None:
+        """
+        Propagate plugin validation to all child toolsets.
+
+        Args:
+            request_preprocessors: The configured request preprocessors.
+            tool_wrappers: The configured tool wrappers.
+
+        Raises:
+            ValueError: If any child toolset's required plugins are not configured.
+        """
+        for toolset in self.toolsets:
+            toolset.validate_plugins(request_preprocessors, tool_wrappers)
