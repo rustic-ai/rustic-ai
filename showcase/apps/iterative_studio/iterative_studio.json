@@ -36,7 +36,7 @@
                 ],
                 "listen_to_default_topic": false,
                 "properties": {
-                    "model": "vertex_ai/gemini-2.5-pro",
+                    "model": "vertex_ai/gemini-3-pro-preview",
                     "default_system_prompt": "You are the Mode Controller for Iterative Studio. Analyze the user's request and output EXACTLY ONE of these mode names (lowercase): refine, deepthink, adaptive, agentic, contextual.\n\nClassification rules:\n- refine: Code review, bug fixes, feature suggestions\n- deepthink: Complex problems requiring multiple perspectives and structured critique\n- adaptive: Technical problems needing flexible, iterative exploration\n- agentic: Tasks requiring file operations, web search, or code execution\n- contextual: Content generation, writing tasks, iterative document development\n\nOutput ONLY the mode name, nothing else."
                 }
             },
@@ -50,7 +50,7 @@
                 ],
                 "listen_to_default_topic": false,
                 "properties": {
-                    "model": "vertex_ai/gemini-2.5-pro",
+                    "model": "vertex_ai/gemini-3-pro-preview",
                     "default_system_prompt": "You are a Feature Suggester focused on novelty and innovation. Analyze code or specifications and suggest 2-3 creative, innovative features. Focus on: innovation, user experience, future-proofing, and differentiation. Output features with descriptions, user benefits, and implementation hints."
                 }
             },
@@ -64,7 +64,7 @@
                 ],
                 "listen_to_default_topic": false,
                 "properties": {
-                    "model": "vertex_ai/gemini-2.5-pro",
+                    "model": "vertex_ai/gemini-3-pro-preview",
                     "default_system_prompt": "You are a Feature Suggester focused on quality and robustness. Analyze code or specifications and suggest 2-3 quality improvements. Focus on: reliability, maintainability, performance, security, and testing. Output improvements with category, priority, problem solved, and implementation approach."
                 }
             },
@@ -84,7 +84,7 @@
                     },
                     "collector": {
                         "collector_type": "dict",
-                        "key_field": "type"
+                        "key_field": "id"
                     }
                 }
             },
@@ -98,7 +98,7 @@
                 ],
                 "listen_to_default_topic": false,
                 "properties": {
-                    "model": "vertex_ai/gemini-2.5-pro",
+                    "model": "vertex_ai/gemini-3-pro-preview",
                     "default_system_prompt": "You are a Bug Fixer agent. Review the aggregated feature suggestions and any code provided. Identify and fix: syntax errors, runtime errors, logical errors, edge cases, and type errors. Output a comprehensive bug report with fixes, or confirm the code is correct."
                 }
             },
@@ -112,7 +112,7 @@
                 ],
                 "listen_to_default_topic": false,
                 "properties": {
-                    "model": "vertex_ai/gemini-2.5-pro",
+                    "model": "vertex_ai/gemini-3-pro-preview",
                     "default_system_prompt": "You are the Strategy Generator in the Deepthink pipeline. Analyze complex problems and generate 3-5 diverse, high-level strategies. For each strategy, include: name, approach, key assumptions, strengths, weaknesses, and best use cases. Output as structured JSON."
                 }
             },
@@ -126,7 +126,7 @@
                 ],
                 "listen_to_default_topic": false,
                 "properties": {
-                    "model": "vertex_ai/gemini-2.5-pro",
+                    "model": "vertex_ai/gemini-3-pro-preview",
                     "default_system_prompt": "You are the Solution Agent in the Deepthink pipeline. Based on the provided strategies, develop detailed solutions. For each solution: provide implementation details, considerations, and trade-offs. Be thorough and practical."
                 }
             },
@@ -140,7 +140,7 @@
                 ],
                 "listen_to_default_topic": false,
                 "properties": {
-                    "model": "vertex_ai/gemini-2.5-pro",
+                    "model": "vertex_ai/gemini-3-pro-preview",
                     "default_system_prompt": "You are the Critique Agent in the Deepthink pipeline. Evaluate solutions for: correctness, completeness, efficiency, robustness, and maintainability. Output: verdict (APPROVE/NEEDS_REVISION/REJECT), strengths, weaknesses, and improvement suggestions. Be constructive."
                 }
             },
@@ -154,7 +154,7 @@
                 ],
                 "listen_to_default_topic": false,
                 "properties": {
-                    "model": "vertex_ai/gemini-2.5-pro",
+                    "model": "vertex_ai/gemini-3-pro-preview",
                     "default_system_prompt": "You are the Refinement Agent in the Deepthink pipeline. Take the critiqued solution and apply the suggested improvements. Address all weaknesses while preserving strengths. Output the refined solution."
                 }
             },
@@ -168,7 +168,7 @@
                 ],
                 "listen_to_default_topic": false,
                 "properties": {
-                    "model": "vertex_ai/gemini-2.5-pro",
+                    "model": "vertex_ai/gemini-3-pro-preview",
                     "default_system_prompt": "You are the Red Team Agent. Perform adversarial analysis on solutions. Identify: input attacks, environmental attacks, logic attacks, security vulnerabilities, and scalability issues. Output: vulnerabilities with severity, exploit scenarios, and mitigations."
                 }
             },
@@ -182,7 +182,7 @@
                 ],
                 "listen_to_default_topic": false,
                 "properties": {
-                    "model": "vertex_ai/gemini-2.5-pro",
+                    "model": "vertex_ai/gemini-3-pro-preview",
                     "default_system_prompt": "You are the Final Judge in the Deepthink pipeline. Review all solutions, critiques, and red-team analysis. Select the best solution with clear justification. Consider: quality, trade-offs, risks, and practicality. Provide the final recommendation with implementation notes."
                 }
             },
@@ -196,7 +196,7 @@
                 ],
                 "listen_to_default_topic": false,
                 "properties": {
-                    "model": "vertex_ai/gemini-2.5-pro",
+                    "model": "vertex_ai/gemini-3-pro-preview",
                     "system_prompt": "You are the Adaptive Deepthink Agent. Use strategic reasoning tools to solve complex problems iteratively. Available tools: GenerateStrategies, GenerateHypotheses, CritiqueSolution, RedTeam, SelectBestSolution, RecordReasoning. Work through problems systematically, generating strategies, testing hypotheses, and refining solutions.",
                     "max_iterations": 20,
                     "toolset": {
@@ -214,7 +214,7 @@
                 ],
                 "listen_to_default_topic": false,
                 "properties": {
-                    "model": "vertex_ai/gemini-2.5-pro",
+                    "model": "vertex_ai/gemini-3-pro-preview",
                     "system_prompt": "You are the Agentic Agent for Iterative Studio. You have tools for file operations and academic paper search. Available tools: ReadFile, WriteFile, ApplyDiff, ListDirectory, SearchArxiv. Use these tools to help users with tasks that require file manipulation, code changes, or research.",
                     "max_iterations": 15,
                     "toolset": {
@@ -241,7 +241,7 @@
                 ],
                 "listen_to_default_topic": false,
                 "properties": {
-                    "model": "vertex_ai/gemini-2.5-pro",
+                    "model": "vertex_ai/gemini-3-pro-preview",
                     "default_system_prompt": "You are the Main Generator in Contextual mode. Generate high-quality content based on user requests. Create comprehensive, well-structured content appropriate for the audience and purpose. Include generation notes about your approach and areas that may need iteration."
                 }
             },
@@ -255,7 +255,7 @@
                 ],
                 "listen_to_default_topic": false,
                 "properties": {
-                    "model": "vertex_ai/gemini-2.5-pro",
+                    "model": "vertex_ai/gemini-3-pro-preview",
                     "default_system_prompt": "You are the Iterative Agent in Contextual mode. Review generated content and decide: APPROVE (ready for user) or NEEDS_REVISION (provide specific feedback). Consider quality, completeness, and user requirements. Limit to 5 iterations max. Be constructive and specific."
                 }
             },
@@ -269,7 +269,7 @@
                 ],
                 "listen_to_default_topic": false,
                 "properties": {
-                    "model": "vertex_ai/gemini-2.5-pro",
+                    "model": "vertex_ai/gemini-3-pro-preview",
                     "default_system_prompt": "You are the Memory Agent in Contextual mode. Compress conversation history to preserve essential context while reducing tokens. Identify: key decisions, important context, unresolved items, and user preferences. Output compressed memory summary."
                 }
             }
@@ -278,7 +278,7 @@
             "llm": {
                 "class_name": "rustic_ai.litellm.agent_ext.llm.LiteLLMResolver",
                 "properties": {
-                    "model": "vertex_ai/gemini-2.5-pro"
+                    "model": "vertex_ai/gemini-3-pro-preview"
                 }
             },
             "filesystem": {
@@ -348,7 +348,6 @@
                     "agent": {
                         "name": "Refine Aggregator"
                     },
-                    "method_name": "on_state_updated",
                     "message_format": "rustic_ai.core.agents.eip.aggregating_agent.AggregatedMessages",
                     "transformer": {
                         "style": "content_based_router",

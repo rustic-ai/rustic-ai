@@ -19,7 +19,7 @@ from rustic_ai.core.guild.builders import GuildBuilder
 from rustic_ai.core.guild.dsl import GuildSpec
 
 # Path to the guild.json file
-GUILD_JSON_PATH = Path(__file__).parent.parent.parent / "apps" / "iterative_studio" / "guild.json"
+GUILD_JSON_PATH = Path(__file__).parent.parent.parent / "apps" / "iterative_studio" / "iterative_studio.json"
 
 
 class TestGuildSpecLoading:

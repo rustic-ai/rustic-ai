@@ -8,7 +8,7 @@ solution selection.
 import json
 from typing import List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, PrivateAttr
 
 from rustic_ai.core.guild.agent_ext.depends.llm.tools_manager import ToolSpec
 from rustic_ai.llm_agent.react.toolset import ReActToolset
@@ -110,11 +110,11 @@ class DeepthinkToolset(ReActToolset):
             kind: rustic_ai.showcase.iterative_studio.toolsets.deepthink_toolset.DeepthinkToolset
     """
 
-    # Internal reasoning history (not serialized)
-    _reasoning_history: List[dict] = []
-    _strategies: List[dict] = []
-    _hypotheses: List[dict] = []
-    _critiques: List[dict] = []
+    # Internal reasoning history (not serialized, per-instance)
+    _reasoning_history: List[dict] = PrivateAttr(default_factory=list)
+    _strategies: List[dict] = PrivateAttr(default_factory=list)
+    _hypotheses: List[dict] = PrivateAttr(default_factory=list)
+    _critiques: List[dict] = PrivateAttr(default_factory=list)
 
     def get_toolspecs(self) -> List[ToolSpec]:
         """Return the list of tool specifications available in this toolset."""
