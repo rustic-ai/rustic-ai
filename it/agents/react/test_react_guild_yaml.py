@@ -97,7 +97,8 @@ class TestReActGuildYAML:
                 assert guild.id == "react_skill_guild", f"Guild ID mismatch: {guild.id}"
                 assert guild.name == "ReAct Skill Test Guild", f"Guild name mismatch: {guild.name}"
                 assert (
-                    guild.description == "Guild for testing ReActAgent with CompositeToolset combining local and marketplace skills"
+                    guild.description
+                    == "Guild for testing ReActAgent with CompositeToolset combining local and marketplace skills"
                 ), f"Guild description mismatch: {guild.description}"
 
                 # Verify agents are registered
@@ -206,14 +207,20 @@ class TestReActGuildYAML:
 
                 # Verify first toolset is SkillToolset (local calculator)
                 skill_toolset = toolset.toolsets[0]
-                assert isinstance(skill_toolset, SkillToolset), f"First toolset should be SkillToolset: {type(skill_toolset)}"
-                assert skill_toolset.tool_prefix == "calc_", f"Tool prefix should be 'calc_': {skill_toolset.tool_prefix}"
+                assert isinstance(
+                    skill_toolset, SkillToolset
+                ), f"First toolset should be SkillToolset: {type(skill_toolset)}"
+                assert (
+                    skill_toolset.tool_prefix == "calc_"
+                ), f"Tool prefix should be 'calc_': {skill_toolset.tool_prefix}"
 
                 # Verify execution config on SkillToolset
                 exec_config = skill_toolset.execution_config
                 assert exec_config is not None, "Execution config should be present"
                 assert exec_config.timeout_seconds == 30, f"Timeout should be 30: {exec_config.timeout_seconds}"
-                assert exec_config.capture_stderr is True, f"Capture stderr should be True: {exec_config.capture_stderr}"
+                assert (
+                    exec_config.capture_stderr is True
+                ), f"Capture stderr should be True: {exec_config.capture_stderr}"
 
                 # Verify skill_paths are configured
                 skill_paths = skill_toolset.skill_paths
@@ -224,8 +231,12 @@ class TestReActGuildYAML:
                 assert isinstance(
                     marketplace_toolset, MarketplaceSkillToolset
                 ), f"Second toolset should be MarketplaceSkillToolset: {type(marketplace_toolset)}"
-                assert marketplace_toolset.source == "anthropic", f"Source should be 'anthropic': {marketplace_toolset.source}"
-                assert "pdf" in marketplace_toolset.skill_names, f"Should include 'pdf' skill: {marketplace_toolset.skill_names}"
+                assert (
+                    marketplace_toolset.source == "anthropic"
+                ), f"Source should be 'anthropic': {marketplace_toolset.source}"
+                assert (
+                    "pdf" in marketplace_toolset.skill_names
+                ), f"Should include 'pdf' skill: {marketplace_toolset.skill_names}"
 
             finally:
                 guild.shutdown()
@@ -436,9 +447,9 @@ class TestReActGuildYAML:
                     # Check that the tool name uses the correct prefix
                     for step in react_trace:
                         if step.get("action"):
-                            assert step["action"].startswith("calc_"), (
-                                f"Tool name should start with 'calc_': {step['action']}"
-                            )
+                            assert step["action"].startswith(
+                                "calc_"
+                            ), f"Tool name should start with 'calc_': {step['action']}"
 
             finally:
                 probe_agent.clear_messages()

@@ -56,12 +56,14 @@ class TestModularGuildErrorHandling:
         """Test that missing include files raise FileNotFoundError with context."""
         with tempfile.TemporaryDirectory() as tmpdir:
             guild_file = Path(tmpdir) / "guild.yaml"
-            guild_file.write_text("""
+            guild_file.write_text(
+                """
 id: test_guild
 name: Test Guild
 agents:
   - !include missing_agent.yaml
-""")
+"""
+            )
 
             with pytest.raises(FileNotFoundError) as exc_info:
                 GuildBuilder.from_yaml_file(str(guild_file))
@@ -74,7 +76,8 @@ agents:
         """Test that missing code files raise FileNotFoundError with context."""
         with tempfile.TemporaryDirectory() as tmpdir:
             guild_file = Path(tmpdir) / "guild.yaml"
-            guild_file.write_text("""
+            guild_file.write_text(
+                """
 id: test_guild
 name: Test Guild
 agents:
@@ -83,7 +86,8 @@ agents:
     class_name: rustic_ai.core.agents.eip.basic_wiring_agent.BasicWiringAgent
     properties:
       prompt: !code missing_prompt.md
-""")
+"""
+            )
 
             with pytest.raises(FileNotFoundError) as exc_info:
                 GuildBuilder.from_yaml_file(str(guild_file))
@@ -98,17 +102,21 @@ agents:
             a_file = Path(tmpdir) / "a.yaml"
             b_file = Path(tmpdir) / "b.yaml"
 
-            a_file.write_text("""
+            a_file.write_text(
+                """
 id: agent_a
 name: Agent A
 nested: !include b.yaml
-""")
+"""
+            )
 
-            b_file.write_text("""
+            b_file.write_text(
+                """
 id: agent_b
 name: Agent B
 nested: !include a.yaml
-""")
+"""
+            )
 
             with pytest.raises(ValueError) as exc_info:
                 with open(a_file) as f:
@@ -125,17 +133,21 @@ nested: !include a.yaml
             main_file = Path(tmpdir) / "main.yaml"
             bad_file = Path(tmpdir) / "bad.yaml"
 
-            main_file.write_text("""
+            main_file.write_text(
+                """
 id: test_guild
 agents: !include bad.yaml
-""")
+"""
+            )
 
-            bad_file.write_text("""
+            bad_file.write_text(
+                """
 this is: not
   valid: yaml:
     syntax
       - here
-""")
+"""
+            )
 
             with pytest.raises(yaml.YAMLError):
                 with open(main_file) as f:
@@ -147,10 +159,12 @@ this is: not
             main_file = Path(tmpdir) / "main.yaml"
             txt_file = Path(tmpdir) / "data.txt"
 
-            main_file.write_text("""
+            main_file.write_text(
+                """
 id: test_guild
 data: !include data.txt
-""")
+"""
+            )
 
             txt_file.write_text("This is plain text")
 
@@ -171,12 +185,14 @@ data: !include data.txt
             md_file = Path(tmpdir) / "prompt.md"
             json_file = Path(tmpdir) / "config.json"
 
-            main_file.write_text("""
+            main_file.write_text(
+                """
 id: test_guild
 txt_content: !code data.txt
 md_content: !code prompt.md
 json_content: !code config.json
-""")
+"""
+            )
 
             txt_file.write_text("Plain text content")
             md_file.write_text("# Markdown content")
@@ -208,11 +224,13 @@ agents:
         """Test that string content respects base_dir for includes."""
         with tempfile.TemporaryDirectory() as tmpdir:
             agent_file = Path(tmpdir) / "agent.yaml"
-            agent_file.write_text("""
+            agent_file.write_text(
+                """
 id: agent1
 name: Agent 1
 class_name: rustic_ai.core.agents.eip.basic_wiring_agent.BasicWiringAgent
-""")
+"""
+            )
 
             yaml_content = """
 id: test_guild
@@ -232,20 +250,26 @@ agents:
             b_file = Path(tmpdir) / "b.yaml"
             c_file = Path(tmpdir) / "c.yaml"
 
-            a_file.write_text("""
+            a_file.write_text(
+                """
 id: a
 nested: !include b.yaml
-""")
+"""
+            )
 
-            b_file.write_text("""
+            b_file.write_text(
+                """
 id: b
 nested: !include c.yaml
-""")
+"""
+            )
 
-            c_file.write_text("""
+            c_file.write_text(
+                """
 id: c
 value: deepest
-""")
+"""
+            )
 
             with open(a_file) as f:
                 data = load_yaml(f, base_dir=tmpdir)
@@ -269,19 +293,23 @@ value: deepest
             agent_file = agents_dir / "agent.yaml"
             prompt_file = prompts_dir / "system.md"
 
-            main_file.write_text("""
+            main_file.write_text(
+                """
 id: test_guild
 agents:
   - !include agents/agent.yaml
-""")
+"""
+            )
 
-            agent_file.write_text("""
+            agent_file.write_text(
+                """
 id: agent1
 name: Agent 1
 class_name: rustic_ai.core.agents.eip.basic_wiring_agent.BasicWiringAgent
 properties:
   prompt: !code ../prompts/system.md
-""")
+"""
+            )
 
             prompt_file.write_text("System prompt content")
 

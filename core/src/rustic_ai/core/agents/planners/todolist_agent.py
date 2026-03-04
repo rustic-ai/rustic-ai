@@ -112,9 +112,7 @@ class TaskUnblockedEvent(BaseModel):
     """Emitted when a task transitions from blocked to pending."""
 
     task_id: str = Field(description="ID of the task that was unblocked")
-    correlation_id: Optional[str] = Field(
-        default=None, description="Correlation ID for workflow routing"
-    )
+    correlation_id: Optional[str] = Field(default=None, description="Correlation ID for workflow routing")
     unblocked_at: str = Field(
         default_factory=lambda: datetime.now().isoformat(),
         description="Timestamp when the task was unblocked",
@@ -130,9 +128,7 @@ class TaskCompletedEvent(BaseModel):
     """Emitted when a task is marked done."""
 
     task_id: str = Field(description="ID of the completed task")
-    correlation_id: Optional[str] = Field(
-        default=None, description="Correlation ID for workflow routing"
-    )
+    correlation_id: Optional[str] = Field(default=None, description="Correlation ID for workflow routing")
     completed_at: str = Field(
         default_factory=lambda: datetime.now().isoformat(),
         description="Timestamp when the task was completed",

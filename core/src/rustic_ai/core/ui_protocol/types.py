@@ -22,8 +22,10 @@ class UpdateType(str, Enum):
 
 class DataFormat(BaseModel):
     """Base class for all message data formats."""
-    model_config = ConfigDict(alias_generator=to_camel, serialize_by_alias=True, validate_by_name=True,
-                              validate_by_alias=True)
+
+    model_config = ConfigDict(
+        alias_generator=to_camel, serialize_by_alias=True, validate_by_name=True, validate_by_alias=True
+    )
     title: Optional[str] = None
     description: Optional[str] = None
     update_id: Optional[str] = Field(default=None)

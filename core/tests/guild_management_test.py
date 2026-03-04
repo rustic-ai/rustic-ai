@@ -20,9 +20,7 @@ class CollectorAgent(Agent):
 
 class TestGuildManagement:
 
-    exec_engine_clz: str = (
-        "rustic_ai.core.guild.execution.sync.sync_exec_engine.SyncExecutionEngine"
-    )
+    exec_engine_clz: str = "rustic_ai.core.guild.execution.sync.sync_exec_engine.SyncExecutionEngine"
 
     @pytest.fixture
     def org_id(self):
@@ -72,7 +70,7 @@ class TestGuildManagement:
         rule = RoutingRule(
             agent=AgentTag(id="agent1", name="Agent One"),
             method_name="test_method",
-            destination=RoutingDestination(topics=["test.topic"])
+            destination=RoutingDestination(topics=["test.topic"]),
         )
 
         guild.routes.add_step(rule)
@@ -81,9 +79,7 @@ class TestGuildManagement:
 
         # 3. Remove Rule (Simulate Manager Logic)
         target_hashid = rule.hashid
-        guild.routes.steps = [
-            step for step in guild.routes.steps if step.hashid != target_hashid
-        ]
+        guild.routes.steps = [step for step in guild.routes.steps if step.hashid != target_hashid]
 
         assert len(guild.routes.steps) == 0
 

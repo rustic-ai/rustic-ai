@@ -3,7 +3,7 @@
 This toolset provides tools for the Agentic mode:
 - ReadFile: Read contents of a file
 - WriteFile: Write content to a file
-- ApplyDiff: Apply a unified diff to a file
+- ApplyDiff: pPerforms an exact string replacement
 - ListDirectory: List files in a directory
 """
 
@@ -21,9 +21,7 @@ from rustic_ai.llm_agent.react.toolset import ReActToolset
 class ReadFileParams(BaseModel):
     """Parameters for the ReadFile tool."""
 
-    file_path: str = Field(
-        description="Path to the file to read, relative to the working directory"
-    )
+    file_path: str = Field(description="Path to the file to read, relative to the working directory")
     start_line: Optional[int] = Field(
         default=None,
         ge=1,
@@ -39,12 +37,8 @@ class ReadFileParams(BaseModel):
 class WriteFileParams(BaseModel):
     """Parameters for the WriteFile tool."""
 
-    file_path: str = Field(
-        description="Path to the file to write, relative to the working directory"
-    )
-    content: str = Field(
-        description="Content to write to the file"
-    )
+    file_path: str = Field(description="Path to the file to write, relative to the working directory")
+    content: str = Field(description="Content to write to the file")
     create_directories: bool = Field(
         default=True,
         description="Create parent directories if they don't exist",
@@ -54,15 +48,9 @@ class WriteFileParams(BaseModel):
 class ApplyDiffParams(BaseModel):
     """Parameters for the ApplyDiff tool."""
 
-    file_path: str = Field(
-        description="Path to the file to modify, relative to the working directory"
-    )
-    old_content: str = Field(
-        description="The exact content to find and replace (must match exactly)"
-    )
-    new_content: str = Field(
-        description="The new content to replace the old content with"
-    )
+    file_path: str = Field(description="Path to the file to modify, relative to the working directory")
+    old_content: str = Field(description="The exact content to find and replace (must match exactly)")
+    new_content: str = Field(description="The new content to replace the old content with")
 
 
 class ListDirectoryParams(BaseModel):
@@ -125,7 +113,21 @@ class AgenticToolset(ReActToolset):
         resolved = (working_dir / file_path).resolve()
 
         # Security: Ensure the resolved path is within the working directory
-        if not str(resolved).startswith(str(working_dir.resolve())):
+        working_dir = self._get_working_dir().resolve()
+        resolved = (working_dir / file_path).resolve()
+        # Security: Ensure the resolved path is within the working directory using a path-aware check
+        try:
+            # Python 3.9+: preferred, explicit containment check
+            is_within = resolved.is_relative_to(working_dir)  # type: ignore[attr-defined]
+        except AttributeError:
+            # Fallback for older Python: use relative_to in a try/except
+            try:
+                resolved.relative_to(working_dir)
+                is_within = True
+            except ValueError:
+                is_within = False
+
+        if not is_within:
             raise ValueError(f"Path '{file_path}' is outside the allowed working directory")
 
         return resolved

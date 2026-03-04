@@ -1352,9 +1352,7 @@ Use the appropriate tools to help the user.
         agent._on_message(
             build_message_from_payload(
                 generator,
-                ChatCompletionRequest(
-                    messages=[UserMessage(content="Calculate 15 * 7 and tell me the result.")]
-                ),
+                ChatCompletionRequest(messages=[UserMessage(content="Calculate 15 * 7 and tell me the result.")]),
             )
         )
 
@@ -1441,9 +1439,7 @@ Use the appropriate tools to help the user.
         agent._on_message(
             build_message_from_payload(
                 generator,
-                ChatCompletionRequest(
-                    messages=[UserMessage(content="What is the current date and time?")]
-                ),
+                ChatCompletionRequest(messages=[UserMessage(content="What is the current date and time?")]),
             )
         )
 
@@ -1491,9 +1487,7 @@ Use the appropriate tools to help the user.
         agent._on_message(
             build_message_from_payload(
                 generator,
-                ChatCompletionRequest(
-                    messages=[UserMessage(content="Calculate the value of pi times 2.")]
-                ),
+                ChatCompletionRequest(messages=[UserMessage(content="Calculate the value of pi times 2.")]),
             )
         )
 
@@ -1909,7 +1903,9 @@ If you cannot actually execute because you don't have a file, explain what you w
                 generator,
                 ChatCompletionRequest(
                     messages=[
-                        UserMessage(content="What tools do you have available for working with PDF files? List them briefly.")
+                        UserMessage(
+                            content="What tools do you have available for working with PDF files? List them briefly."
+                        )
                     ]
                 ),
             )
@@ -2057,7 +2053,9 @@ When asked about web testing, describe your capabilities and available tools.
                 generator,
                 ChatCompletionRequest(
                     messages=[
-                        UserMessage(content="What tools do you have for testing web applications? Describe your capabilities.")
+                        UserMessage(
+                            content="What tools do you have for testing web applications? Describe your capabilities."
+                        )
                     ]
                 ),
             )
@@ -3026,9 +3024,7 @@ class TestAnthropicSkillsYAMLSpecs:
         agent._on_message(
             build_message_from_payload(
                 generator,
-                ChatCompletionRequest(
-                    messages=[UserMessage(content="What document processing tools do you have?")]
-                ),
+                ChatCompletionRequest(messages=[UserMessage(content="What document processing tools do you have?")]),
             )
         )
 
@@ -3205,9 +3201,7 @@ class TestMarketplaceSkillToolset:
         agent._on_message(
             build_message_from_payload(
                 generator,
-                ChatCompletionRequest(
-                    messages=[UserMessage(content="What PDF tools do you have available?")]
-                ),
+                ChatCompletionRequest(messages=[UserMessage(content="What PDF tools do you have available?")]),
             )
         )
 
@@ -3358,9 +3352,7 @@ class TestMarketplaceSkillToolsetWithMultipleSkills:
         agent._on_message(
             build_message_from_payload(
                 generator,
-                ChatCompletionRequest(
-                    messages=[UserMessage(content="What document tools do you have?")]
-                ),
+                ChatCompletionRequest(messages=[UserMessage(content="What document tools do you have?")]),
             )
         )
 

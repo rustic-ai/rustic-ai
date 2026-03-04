@@ -374,9 +374,7 @@ class TestReActAgentIntegration:
         agent._on_message(
             build_message_from_payload(
                 generator,
-                ChatCompletionRequest(
-                    messages=[UserMessage(content="Say 'Hello, World!' exactly as written.")]
-                ),
+                ChatCompletionRequest(messages=[UserMessage(content="Say 'Hello, World!' exactly as written.")]),
             )
         )
 

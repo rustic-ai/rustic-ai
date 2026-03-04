@@ -17,12 +17,19 @@ from rustic_ai.llm_agent import LLMCallWrapper
 class StructuredOutputPlugin(LLMCallWrapper):
     output_format_class_name: str
 
-    def preprocess(self, agent: Agent, ctx: ProcessContext[ChatCompletionRequest], request: ChatCompletionRequest,
-                   llm: LLM) -> ChatCompletionRequest:
+    def preprocess(
+        self, agent: Agent, ctx: ProcessContext[ChatCompletionRequest], request: ChatCompletionRequest, llm: LLM
+    ) -> ChatCompletionRequest:
         return request.model_copy(update={"response_format": self.output_format_class_name})
 
-    def postprocess(self, agent: Agent, ctx: ProcessContext[ChatCompletionRequest], final_prompt: ChatCompletionRequest,
-                    llm_response: ChatCompletionResponse, llm: LLM) -> Optional[List[BaseModel]]:
+    def postprocess(
+        self,
+        agent: Agent,
+        ctx: ProcessContext[ChatCompletionRequest],
+        final_prompt: ChatCompletionRequest,
+        llm_response: ChatCompletionResponse,
+        llm: LLM,
+    ) -> Optional[List[BaseModel]]:
         format_type = get_class_from_name(self.output_format_class_name)
         # If it's a Pydantic model class, convert to JSON schema
         if isinstance(format_type, type) and issubclass(format_type, BaseModel):

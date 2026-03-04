@@ -17,9 +17,7 @@ from rustic_ai.llm_agent.react.toolset import ReActToolset
 class GenerateStrategiesParams(BaseModel):
     """Parameters for the GenerateStrategies tool."""
 
-    problem: str = Field(
-        description="The problem or task to generate strategies for"
-    )
+    problem: str = Field(description="The problem or task to generate strategies for")
     num_strategies: int = Field(
         default=3,
         ge=1,
@@ -35,9 +33,7 @@ class GenerateStrategiesParams(BaseModel):
 class GenerateHypothesesParams(BaseModel):
     """Parameters for the GenerateHypotheses tool."""
 
-    strategy: str = Field(
-        description="The strategy to generate hypotheses for"
-    )
+    strategy: str = Field(description="The strategy to generate hypotheses for")
     context: Optional[str] = Field(
         default=None,
         description="Additional context about the problem domain",
@@ -47,9 +43,7 @@ class GenerateHypothesesParams(BaseModel):
 class CritiqueSolutionParams(BaseModel):
     """Parameters for the CritiqueSolution tool."""
 
-    solution: str = Field(
-        description="The solution to critique"
-    )
+    solution: str = Field(description="The solution to critique")
     criteria: Optional[List[str]] = Field(
         default=None,
         description="Specific criteria to evaluate against",
@@ -63,9 +57,7 @@ class CritiqueSolutionParams(BaseModel):
 class RedTeamParams(BaseModel):
     """Parameters for the RedTeam tool."""
 
-    solution: str = Field(
-        description="The solution to red-team"
-    )
+    solution: str = Field(description="The solution to red-team")
     attack_vectors: Optional[List[str]] = Field(
         default=None,
         description="Specific attack vectors or failure modes to consider",
@@ -75,9 +67,7 @@ class RedTeamParams(BaseModel):
 class SelectBestSolutionParams(BaseModel):
     """Parameters for the SelectBestSolution tool."""
 
-    solutions: List[str] = Field(
-        description="List of candidate solutions to compare"
-    )
+    solutions: List[str] = Field(description="List of candidate solutions to compare")
     criteria: Optional[List[str]] = Field(
         default=None,
         description="Criteria for selection (e.g., simplicity, robustness, efficiency)",
@@ -91,12 +81,8 @@ class SelectBestSolutionParams(BaseModel):
 class RecordReasoningParams(BaseModel):
     """Parameters for the RecordReasoning tool."""
 
-    stage: str = Field(
-        description="The reasoning stage (e.g., 'strategy', 'hypothesis', 'critique', 'refinement')"
-    )
-    content: str = Field(
-        description="The reasoning content to record"
-    )
+    stage: str = Field(description="The reasoning stage (e.g., 'strategy', 'hypothesis', 'critique', 'refinement')")
+    content: str = Field(description="The reasoning content to record")
     metadata: Optional[dict] = Field(
         default=None,
         description="Additional metadata about the reasoning step",
@@ -239,11 +225,13 @@ class DeepthinkToolset(ReActToolset):
         }
 
         # Record this step
-        self._strategies.append({
-            "problem": params.problem,
-            "constraints": params.constraints,
-            "num_requested": params.num_strategies,
-        })
+        self._strategies.append(
+            {
+                "problem": params.problem,
+                "constraints": params.constraints,
+                "num_requested": params.num_strategies,
+            }
+        )
 
         return json.dumps(
             {
@@ -283,10 +271,12 @@ class DeepthinkToolset(ReActToolset):
             },
         }
 
-        self._hypotheses.append({
-            "strategy": params.strategy,
-            "context": params.context,
-        })
+        self._hypotheses.append(
+            {
+                "strategy": params.strategy,
+                "context": params.context,
+            }
+        )
 
         return json.dumps(
             {
@@ -329,10 +319,12 @@ class DeepthinkToolset(ReActToolset):
             },
         }
 
-        self._critiques.append({
-            "solution_preview": params.solution[:200] + "..." if len(params.solution) > 200 else params.solution,
-            "criteria": criteria,
-        })
+        self._critiques.append(
+            {
+                "solution_preview": params.solution[:200] + "..." if len(params.solution) > 200 else params.solution,
+                "criteria": criteria,
+            }
+        )
 
         return json.dumps(
             {
@@ -401,10 +393,7 @@ class DeepthinkToolset(ReActToolset):
 
         selection_prompt = {
             "task": "select_best_solution",
-            "solutions": [
-                {"id": f"solution_{i}", "content": sol}
-                for i, sol in enumerate(params.solutions, 1)
-            ],
+            "solutions": [{"id": f"solution_{i}", "content": sol} for i, sol in enumerate(params.solutions, 1)],
             "problem": params.problem,
             "criteria": criteria,
             "guidance": (
@@ -415,9 +404,7 @@ class DeepthinkToolset(ReActToolset):
                 "4. Provide a clear recommendation with justification"
             ),
             "output_format": {
-                "comparison_matrix": {
-                    "solution_id": {"criterion": "score (1-10)"}
-                },
+                "comparison_matrix": {"solution_id": {"criterion": "score (1-10)"}},
                 "rankings": [
                     {
                         "rank": 1,

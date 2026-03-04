@@ -515,10 +515,7 @@ class TestToolsetSerialization:
         spec_data = data["spec"]
 
         # Find ReAct agents
-        react_agents = [
-            a for a in spec_data["agents"]
-            if "react" in a["class_name"].lower()
-        ]
+        react_agents = [a for a in spec_data["agents"] if "react" in a["class_name"].lower()]
 
         assert len(react_agents) >= 2, "Expected at least 2 ReAct agents"
 
@@ -536,10 +533,7 @@ class TestToolsetSerialization:
         spec_data = data["spec"]
 
         # Find the Agentic agent
-        agentic_agent = next(
-            (a for a in spec_data["agents"] if a["id"] == "agentic_agent"),
-            None
-        )
+        agentic_agent = next((a for a in spec_data["agents"] if a["id"] == "agentic_agent"), None)
 
         assert agentic_agent is not None, "Agentic agent not found"
 

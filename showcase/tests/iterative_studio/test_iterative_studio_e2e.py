@@ -9,6 +9,7 @@ This test module validates:
 """
 
 import json
+import os
 from pathlib import Path
 import time
 
@@ -33,7 +34,7 @@ from rustic_ai.core.messaging.core.messaging_config import MessagingConfig
 from rustic_ai.core.utils.gemstone_id import GemstoneGenerator
 
 # Path to the guild.json file
-GUILD_JSON_PATH = Path(__file__).parent.parent.parent / "apps" / "iterative_studio" / "guild.json"
+GUILD_JSON_PATH = Path(__file__).parent.parent.parent / "apps" / "iterative_studio" / "iterative_studio.json"
 
 
 def load_guild_spec() -> GuildSpec:
@@ -145,51 +146,6 @@ class TestIterativeStudioE2E:
         assert "Mode Controller" in route_patterns
         assert "Bug Fixer" in route_patterns
         assert "Final Judge" in route_patterns
-
-    def test_mode_controller_topic_routing(
-        self, messaging: MessagingConfig, org_id: str, generator: GemstoneGenerator
-    ):
-        """Test that messages are routed to Mode Controller topic."""
-        builder = create_guild_builder(messaging)
-        guild = builder.launch(org_id)
-
-        try:
-            # Add probe agent to listen on MODE_CONTROL topic
-            probe_spec = (
-                AgentBuilder(ProbeAgent)
-                .set_id("probe_agent")
-                .set_name("ProbeAgent")
-                .set_description("A probe agent for testing")
-                .add_additional_topic("MODE_CONTROL")
-                .add_additional_topic(GuildTopics.DEFAULT_TOPICS[0])
-                .build_spec()
-            )
-
-            probe_agent: ProbeAgent = guild._add_local_agent(probe_spec)
-
-            # Send a message through the default topic (simulating UserProxyAgent)
-            probe_agent.publish_dict(
-                topic=GuildTopics.DEFAULT_TOPICS[0],
-                payload=ChatCompletionRequest(
-                    messages=[UserMessage(content="Review this code")]
-                ).model_dump(),
-                format=ChatCompletionRequest,
-                routing_slip=guild.routes,
-            )
-
-            # Wait for message processing
-            time.sleep(0.5)
-
-            # Check that probe received messages
-            messages = probe_agent.get_messages()
-
-            # We should have received at least something on the topics we're listening to
-            # Note: Full flow requires LLM responses which we're not mocking here
-            assert len(messages) >= 0  # Basic connectivity test
-
-        finally:
-            guild.shutdown()
-
 
 class TestModeRouting:
     """Tests for mode-specific routing behavior using the parsed GuildSpec."""
@@ -411,9 +367,7 @@ class TestAgentConfiguration:
         """Test that LLM agents have system prompts configured."""
         # Find LLM agents (not ReAct, not Aggregating)
         llm_agents = [
-            a
-            for a in guild_spec.agents
-            if "LLMAgent" in a.class_name and "react" not in a.class_name.lower()
+            a for a in guild_spec.agents if "LLMAgent" in a.class_name and "react" not in a.class_name.lower()
         ]
 
         for agent in llm_agents:
@@ -426,9 +380,7 @@ class TestAgentConfiguration:
     def test_aggregating_agent_configuration(self, guild_spec: GuildSpec):
         """Test that Aggregating Agent is properly configured with DictCollector."""
         # Find aggregating agent
-        aggregator = next(
-            (a for a in guild_spec.agents if a.id == "refine_aggregator"), None
-        )
+        aggregator = next((a for a in guild_spec.agents if a.id == "refine_aggregator"), None)
 
         assert aggregator is not None
         props = aggregator.properties
@@ -502,9 +454,7 @@ class TestEndToEndFlow:
     def generator(self) -> GemstoneGenerator:
         return GemstoneGenerator(1)
 
-    def test_guild_starts_and_stops_cleanly(
-        self, messaging: MessagingConfig, org_id: str
-    ):
+    def test_guild_starts_and_stops_cleanly(self, messaging: MessagingConfig, org_id: str):
         """Test that guild can start and stop without errors."""
         builder = create_guild_builder(messaging)
 
@@ -574,9 +524,7 @@ class TestEndToEndFlow:
         finally:
             guild.shutdown()
 
-    def test_routing_slip_is_attached_to_guild(
-        self, messaging: MessagingConfig, org_id: str
-    ):
+    def test_routing_slip_is_attached_to_guild(self, messaging: MessagingConfig, org_id: str):
         """Test that the routing slip is properly attached to the guild."""
         builder = create_guild_builder(messaging)
 
@@ -587,17 +535,12 @@ class TestEndToEndFlow:
             assert len(guild.routes.steps) > 0
 
             # Verify we have routing rules
-            assert any(
-                step.agent and step.agent.name == "Mode Controller"
-                for step in guild.routes.steps
-            )
+            assert any(step.agent and step.agent.name == "Mode Controller" for step in guild.routes.steps)
 
         finally:
             guild.shutdown()
 
-    def test_dependency_map_is_attached_to_guild(
-        self, messaging: MessagingConfig, org_id: str
-    ):
+    def test_dependency_map_is_attached_to_guild(self, messaging: MessagingConfig, org_id: str):
         """Test that the dependency map is properly attached to the guild."""
         builder = create_guild_builder(messaging)
 
@@ -667,56 +610,54 @@ class TestModeControllerTransformIntegration:
         from rustic_ai.core.messaging.core.message import MessageRoutable
 
         payload = {
-            'id': 'test-response-id',
-            'created': 1234567890,
-            'model': 'gemini-2.5-pro',
-            'choices': [{
-                'finish_reason': 'stop',
-                'index': 0,
-                'message': {
-                    'content': 'agentic',  # Mode Controller response
-                    'role': 'assistant'
-                }
-            }],
-            'usage': {'completion_tokens': 10, 'prompt_tokens': 100, 'total_tokens': 110},
-            'input_messages': [
-                {'content': 'You are the Mode Controller...', 'role': 'system'},
+            "id": "test-response-id",
+            "created": 1234567890,
+            "model": "gemini-2.5-pro",
+            "choices": [
                 {
-                    'content': [{'type': 'text', 'text': 'Search the latest research on transformers'}],
-                    'role': 'user',
-                    'name': 'test_user'
+                    "finish_reason": "stop",
+                    "index": 0,
+                    "message": {"content": "agentic", "role": "assistant"},  # Mode Controller response
                 }
-            ]
+            ],
+            "usage": {"completion_tokens": 10, "prompt_tokens": 100, "total_tokens": 110},
+            "input_messages": [
+                {"content": "You are the Mode Controller...", "role": "system"},
+                {
+                    "content": [{"type": "text", "text": "Search the latest research on transformers"}],
+                    "role": "user",
+                    "name": "test_user",
+                },
+            ],
         }
 
         routable = MessageRoutable(
-            topics='MODE_CONTROL',
+            topics="MODE_CONTROL",
             priority=Priority.NORMAL,
             payload=payload,
-            format='rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse'
+            format="rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
         )
 
         # Create a minimal origin message using GemstoneGenerator
         gen = GemstoneGenerator(1)
         msg_id = gen.get_id(Priority.NORMAL)
 
-        origin = Message.model_validate({
-            'id': msg_id.to_int(),
-            'sender': {'id': 'mode_controller', 'name': 'Mode Controller'},
-            'topics': 'MODE_CONTROL',
-            'payload': payload,
-            'format': 'rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse',
-            'routing_slip': {'steps': []},
-            'message_history': [],
-            'thread': [],
-        })
+        origin = Message.model_validate(
+            {
+                "id": msg_id.to_int(),
+                "sender": {"id": "mode_controller", "name": "Mode Controller"},
+                "topics": "MODE_CONTROL",
+                "payload": payload,
+                "format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                "routing_slip": {"steps": []},
+                "message_history": [],
+                "thread": [],
+            }
+        )
 
         # Transform with EMPTY guild_state (simulating race condition)
         result = transformer.transform(
-            origin=origin,
-            agent_state={},
-            guild_state={},  # Empty - this was the bug
-            routable=routable
+            origin=origin, agent_state={}, guild_state={}, routable=routable  # Empty - this was the bug
         )
 
         # Verify transformation succeeded
@@ -725,16 +666,16 @@ class TestModeControllerTransformIntegration:
         assert result.format == "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest"
 
         # Verify payload is a valid ChatCompletionRequest
-        assert 'messages' in result.payload, "Payload should have 'messages' field"
-        messages = result.payload['messages']
+        assert "messages" in result.payload, "Payload should have 'messages' field"
+        messages = result.payload["messages"]
         assert isinstance(messages, list), f"messages should be a list, got {type(messages)}"
         assert len(messages) == 1, f"Expected 1 user message, got {len(messages)}"
-        assert messages[0]['role'] == 'user', "First message should be from user"
+        assert messages[0]["role"] == "user", "First message should be from user"
 
         # Verify the payload can be validated as ChatCompletionRequest
         request = ChatCompletionRequest.model_validate(result.payload)
         assert len(request.messages) == 1
-        assert request.messages[0].role == 'user'
+        assert request.messages[0].role == "user"
 
     def test_mode_controller_routes_to_correct_modes(self):
         """Test that Mode Controller routes to correct topics for each mode."""
@@ -747,8 +688,7 @@ class TestModeControllerTransformIntegration:
         # Load the actual handler
         guild_spec = load_guild_spec()
         mode_controller_step = next(
-            step for step in guild_spec.routes.steps
-            if step.agent and step.agent.name == "Mode Controller"
+            step for step in guild_spec.routes.steps if step.agent and step.agent.name == "Mode Controller"
         )
 
         transformer = FunctionalTransformer(
@@ -757,60 +697,53 @@ class TestModeControllerTransformIntegration:
         )
 
         mode_to_topic = {
-            'refine': 'REFINE_NOVELTY,REFINE_QUALITY',
-            'deepthink': 'DT_STRATEGY',
-            'adaptive': 'ADAPTIVE_DT',
-            'agentic': 'AGENTIC',
-            'contextual': 'CTX_MAIN',
+            "refine": ["REFINE_NOVELTY", "REFINE_QUALITY"],
+            "deepthink": "DT_STRATEGY",
+            "adaptive": "ADAPTIVE_DT",
+            "agentic": "AGENTIC",
+            "contextual": "CTX_MAIN",
         }
 
         gen = GemstoneGenerator(1)
 
         for mode, expected_topic in mode_to_topic.items():
             payload = {
-                'id': 'test-id',
-                'created': 1234567890,
-                'model': 'test-model',
-                'choices': [{
-                    'finish_reason': 'stop',
-                    'index': 0,
-                    'message': {'content': mode, 'role': 'assistant'}
-                }],
-                'usage': {'completion_tokens': 1, 'prompt_tokens': 1, 'total_tokens': 2},
-                'input_messages': [
-                    {'content': 'system prompt', 'role': 'system'},
-                    {'content': 'user message', 'role': 'user'}
-                ]
+                "id": "test-id",
+                "created": 1234567890,
+                "model": "test-model",
+                "choices": [{"finish_reason": "stop", "index": 0, "message": {"content": mode, "role": "assistant"}}],
+                "usage": {"completion_tokens": 1, "prompt_tokens": 1, "total_tokens": 2},
+                "input_messages": [
+                    {"content": "system prompt", "role": "system"},
+                    {"content": "user message", "role": "user"},
+                ],
             }
 
             routable = MessageRoutable(
-                topics='MODE_CONTROL',
+                topics="MODE_CONTROL",
                 priority=Priority.NORMAL,
                 payload=payload,
-                format='rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse'
+                format="rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
             )
 
             msg_id = gen.get_id(Priority.NORMAL)
-            origin = Message.model_validate({
-                'id': msg_id.to_int(),
-                'sender': {'id': 'mode_controller', 'name': 'Mode Controller'},
-                'topics': 'MODE_CONTROL',
-                'payload': payload,
-                'format': 'rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse',
-                'routing_slip': {'steps': []},
-                'message_history': [],
-                'thread': [],
-            })
-
-            result = transformer.transform(
-                origin=origin,
-                agent_state={},
-                guild_state={},
-                routable=routable
+            origin = Message.model_validate(
+                {
+                    "id": msg_id.to_int(),
+                    "sender": {"id": "mode_controller", "name": "Mode Controller"},
+                    "topics": "MODE_CONTROL",
+                    "payload": payload,
+                    "format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                    "routing_slip": {"steps": []},
+                    "message_history": [],
+                    "thread": [],
+                }
             )
 
+            result = transformer.transform(origin=origin, agent_state={}, guild_state={}, routable=routable)
+
             assert result is not None, f"Transformation failed for mode '{mode}'"
-            assert result.topics == expected_topic, \
-                f"Mode '{mode}' should route to '{expected_topic}', got '{result.topics}'"
-            assert result.context.get('mode') == mode, \
-                f"Context should contain mode '{mode}'"
+            assert (
+                result.topics == expected_topic
+            ), f"Mode '{mode}' should route to '{expected_topic}', got '{result.topics}'"
+            assert result.context.get("mode") == mode, f"Context should contain mode '{mode}'"

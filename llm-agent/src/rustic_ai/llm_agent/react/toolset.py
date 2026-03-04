@@ -146,9 +146,7 @@ class CompositeToolset(ReActToolset):
                 - pdf
     """
 
-    toolsets: List[ReActToolset] = Field(
-        min_length=1, description="List of toolsets to combine"
-    )
+    toolsets: List[ReActToolset] = Field(min_length=1, description="List of toolsets to combine")
 
     @field_validator("toolsets", mode="before")
     @classmethod

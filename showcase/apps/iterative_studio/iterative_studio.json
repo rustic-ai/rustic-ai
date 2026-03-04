@@ -320,7 +320,7 @@
                     "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
                     "transformer": {
                         "style": "content_based_router",
-                        "handler": "($response := $.payload.choices[0].message.content; $mode := $trim($lowercase($response)); $user_msgs := $append([], $filter($.payload.input_messages, function($m) { $m.role != 'system' })); $req := {'messages': $user_msgs}; $route := {'refine': 'REFINE_NOVELTY,REFINE_QUALITY', 'deepthink': 'DT_STRATEGY', 'adaptive': 'ADAPTIVE_DT', 'agentic': 'AGENTIC', 'contextual': 'CTX_MAIN'}; $topics := $lookup($route, $mode); {'topics': $topics ? $topics : 'CTX_MAIN', 'format': 'rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest', 'payload': $req, 'context': {'mode': $mode}})"
+                        "handler": "($response := $.payload.choices[0].message.content; $mode := $trim($lowercase($response)); $user_msgs := $append([], $filter($.payload.input_messages, function($m) { $m.role != 'system' })); $req := {'messages': $user_msgs}; $route := {'refine': ['REFINE_NOVELTY', 'REFINE_QUALITY'], 'deepthink': 'DT_STRATEGY', 'adaptive': 'ADAPTIVE_DT', 'agentic': 'AGENTIC', 'contextual': 'CTX_MAIN'}; $topics := $lookup($route, $mode); {'topics': $topics ? $topics : 'CTX_MAIN', 'format': 'rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest', 'payload': $req, 'context': {'mode': $mode}})"
                     },
                     "route_times": -1
                 },

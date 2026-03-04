@@ -347,9 +347,7 @@ class TestTodoListGuild:
         await asyncio.sleep(2)
 
         # Verify no TaskUnblockedEvent yet (parent still has one dependency)
-        unblocked_messages = [
-            m for m in probe_agent.get_messages() if "TaskUnblockedEvent" in m.format
-        ]
+        unblocked_messages = [m for m in probe_agent.get_messages() if "TaskUnblockedEvent" in m.format]
         assert len(unblocked_messages) == 0, "Parent should still be blocked"
 
         probe_agent.clear_messages()
@@ -831,9 +829,7 @@ class TestTodoListGuild:
         # Create user
         probe_agent.publish_dict(
             topic=GuildTopics.SYSTEM_TOPIC,
-            payload=UserAgentCreationRequest(
-                user_id="test_user_partial", user_name="test_user_partial"
-            ).model_dump(),
+            payload=UserAgentCreationRequest(user_id="test_user_partial", user_name="test_user_partial").model_dump(),
             format=UserAgentCreationRequest,
         )
         await asyncio.sleep(2)
@@ -946,9 +942,7 @@ class TestTodoListGuild:
         # Create user
         probe_agent.publish_dict(
             topic=GuildTopics.SYSTEM_TOPIC,
-            payload=UserAgentCreationRequest(
-                user_id="test_user_complex", user_name="test_user_complex"
-            ).model_dump(),
+            payload=UserAgentCreationRequest(user_id="test_user_complex", user_name="test_user_complex").model_dump(),
             format=UserAgentCreationRequest,
         )
         await asyncio.sleep(2)
