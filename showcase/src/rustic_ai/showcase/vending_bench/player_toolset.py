@@ -40,31 +40,36 @@ class VendingBenchToolspecsProvider(ToolspecsProvider):
         "You are operating a vending machine business in a simulation. Your goal is to maximize net worth.\n\n"
         "You have $500 starting capital and must pay a $2 daily fee. If you can't pay for 10 consecutive days, "
         "you go bankrupt.\n\n"
-        "IMPORTANT - How the simulation works:\n"
+        "=== MOST IMPORTANT: RESTOCKING ===\n"
+        "Your inventory will run out! You MUST restock to continue selling. Here's the REQUIRED workflow:\n\n"
+        "STEP 1 - ORDER: Send email to supplier@vendingsupply.com\n"
+        "   Example: 'I'd like to order 20 chips, 25 candy, 30 soda, 30 water, 15 energy_drink'\n"
+        "   Deliveries take 2-5 days, so ORDER EARLY before running out!\n\n"
+        "STEP 2 - WAIT: Use 'end_day' to advance time until delivery day arrives\n\n"
+        "STEP 3 - CHECK: Call 'read_emails' to look for 'Delivery Arrived' emails\n"
+        "   The email will contain an Order ID like 'ORD-ABC123'\n\n"
+        "STEP 4 - RESTOCK: Call 'restock' with delivery_id='ORD-ABC123'\n"
+        "   >>> WITHOUT THIS STEP, ITEMS STAY IN WAREHOUSE AND NEVER ENTER YOUR INVENTORY! <<<\n\n"
+        "DAILY ROUTINE (do this EVERY day):\n"
+        "1. read_emails - Check for 'Delivery Arrived' notifications\n"
+        "2. restock - If delivery arrived, call restock with the Order ID immediately\n"
+        "3. check_inventory - See what's running low\n"
+        "4. send_email - Order more supplies if inventory < 10 for any product\n"
+        "5. end_day - Advance to next day\n\n"
+        "=== Simulation mechanics ===\n"
         "- Customer purchases happen throughout each day based on demand\n"
-        "- Each action you take advances simulation time (shown in response)\n"
-        "- New customers only come when a new day starts\n"
-        "- Use 'wait' to let time pass (1 hour) or 'end_day' to skip to the next day\n"
-        "- Don't repeatedly check inventory/balance - take strategic actions instead!\n\n"
-        "Product wholesale costs: chips=$0.75, candy=$0.60, soda=$0.80, water=$0.50, energy_drink=$1.50\n"
-        "Default selling prices: chips=$1.50, candy=$1.25, soda=$2.00, water=$1.50, energy_drink=$3.00\n\n"
+        "- Each action advances simulation time (shown in response)\n"
+        "- Use 'end_day' to skip to next day after taking your actions\n\n"
+        "Product costs: chips=$0.75, candy=$0.60, soda=$0.80, water=$0.50, energy_drink=$1.50\n"
+        "Selling prices: chips=$1.50, candy=$1.25, soda=$2.00, water=$1.50, energy_drink=$3.00\n\n"
         "Demand factors:\n"
-        "- Weather affects drink demand (hot/sunny = more drinks, cold/rainy = fewer)\n"
-        "- Weekends have higher traffic than weekdays\n"
-        "- Higher prices reduce demand, lower prices increase it\n\n"
-        "CRITICAL - Restocking workflow:\n"
-        "1. Order supplies by sending email to supplier@vendingsupply.com (deliveries take 2-5 days)\n"
-        "2. Check emails regularly for 'Delivery Arrived' notifications\n"
-        "3. When you see a delivery email, note the Order ID (e.g., 'ORD-ABC123')\n"
-        "4. You MUST call the 'restock' tool with that Order ID as delivery_id to add items to inventory\n"
-        "5. Without calling restock, delivered items will NOT appear in your inventory!\n\n"
+        "- Hot/sunny weather = more drink sales\n"
+        "- Weekends = higher traffic\n"
+        "- Higher prices = lower demand\n\n"
         "Strategy tips:\n"
-        "- Check inventory once, then decide on restocking needs\n"
-        "- Order supplies BEFORE running out - plan 2-5 days ahead\n"
-        "- Read emails daily to check for delivery notifications and restock immediately\n"
-        "- Collect cash periodically to ensure you can pay the daily fee\n"
-        "- Use 'end_day' to advance time efficiently after taking actions\n"
-        "- Adjust prices based on weather and demand patterns"
+        "- Order supplies BEFORE running out (plan 2-5 days ahead)\n"
+        "- Always check emails after advancing days - deliveries arrive overnight\n"
+        "- Collect cash periodically to pay the daily fee"
     )
 
     def get_toolspecs(self) -> List[ToolSpec]:
@@ -92,7 +97,11 @@ class VendingBenchToolspecsProvider(ToolspecsProvider):
             ),
             ToolSpec(
                 name="read_emails",
-                description="Read emails from your inbox. Takes 25 minutes.",
+                description=(
+                    "Read emails from your inbox. IMPORTANT: Check for 'Delivery Arrived' emails! "
+                    "When you see one, extract the Order ID (e.g., 'ORD-ABC123') and immediately call "
+                    "'restock' with that ID to add items to your inventory. Takes 25 minutes."
+                ),
                 parameter_class=ReadEmailsRequest,
             ),
             ToolSpec(
@@ -134,9 +143,9 @@ class VendingBenchToolspecsProvider(ToolspecsProvider):
             ToolSpec(
                 name="end_day",
                 description=(
-                    "End the current day and skip to the start of the next day. Use this after you've "
-                    "taken your actions for the day. This is more efficient than waiting hour by hour. "
-                    "A new day means new customers and new demand!"
+                    "End the current day and skip to the start of the next day. AFTER calling this, "
+                    "always call 'read_emails' to check if any deliveries arrived overnight! "
+                    "If you see a 'Delivery Arrived' email, call 'restock' immediately with the Order ID."
                 ),
                 parameter_class=EndDayRequest,
             ),

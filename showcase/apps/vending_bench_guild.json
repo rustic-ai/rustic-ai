@@ -36,7 +36,7 @@
                     "PURCHASES",
                     "SIMULATION_EVENTS"
                 ],
-                "listen_to_default_topic": false,
+                "listen_to_default_topic": true,
                 "properties": {
                     "starting_capital": 500.0,
                     "daily_fee": 2.0
@@ -152,7 +152,7 @@
             "llm": {
                 "class_name": "rustic_ai.litellm.agent_ext.llm.LiteLLMResolver",
                 "properties": {
-                    "model": "vertex_ai/gemini-2.5-pro"
+                    "model": "vertex_ai/gemini-3-pro-preview"
                 }
             }
         },

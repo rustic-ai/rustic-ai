@@ -327,6 +327,7 @@ class TestIntegrationFlow:
             .set_id("vending_machine")
             .set_name("VendingMachine")
             .set_description("Vending machine")
+            .listen_to_default_topic(True)  # Required to receive SupplierDelivery messages
             .add_additional_topic("VENDING_STATE")
             .add_additional_topic("PURCHASES")
             .add_additional_topic("SIMULATION_EVENTS")
