@@ -92,7 +92,16 @@
                         "rustic_ai.showcase.vending_bench.messages.DayUpdateEvent",
                         "rustic_ai.showcase.vending_bench.messages.NightUpdateEvent",
                         "rustic_ai.showcase.vending_bench.messages.CustomerPurchaseEvent",
-                        "rustic_ai.showcase.vending_bench.status_tracker_agent.GoalFormat"
+                        "rustic_ai.showcase.vending_bench.status_tracker_agent.GoalFormat",
+                        "rustic_ai.showcase.vending_bench.supplier_messages.SupplierSearchResponse",
+                        "rustic_ai.showcase.vending_bench.supplier_messages.ViewSuppliersResponse",
+                        "rustic_ai.showcase.vending_bench.supplier_messages.ViewComplaintsResponse",
+                        "rustic_ai.showcase.vending_bench.supplier_messages.RespondToComplaintResponse",
+                        "rustic_ai.showcase.vending_bench.supplier_messages.NegotiationResponse",
+                        "rustic_ai.showcase.vending_bench.supplier_messages.DeliveryDelayNotification",
+                        "rustic_ai.showcase.vending_bench.supplier_messages.PartialDeliveryNotification",
+                        "rustic_ai.showcase.vending_bench.supplier_messages.SupplierFailureNotification",
+                        "rustic_ai.showcase.vending_bench.supplier_messages.BaitAndSwitchEvent"
                     ]
                 }
             },
@@ -359,6 +368,70 @@
                         "style": "simple",
                         "output_format": "rustic_ai.showcase.vending_bench.messages.AgentActionRequest",
                         "expression": "({'request_id': $.request_id, 'action_type': 'end_day', 'parameters': {}})"
+                    },
+                    "destination": {
+                        "topics": "TO_VENDING_BENCH"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Route SupplierSearchRequest from player to G2G as AgentActionRequest",
+                    "agent": {
+                        "name": "VendingBenchPlayer"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.supplier_messages.SupplierSearchRequest",
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.showcase.vending_bench.messages.AgentActionRequest",
+                        "expression": "({'request_id': $.request_id, 'action_type': 'search_suppliers', 'parameters': {'product_types': $.product_types, 'location': $.location}})"
+                    },
+                    "destination": {
+                        "topics": "TO_VENDING_BENCH"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Route ViewSuppliersRequest from player to G2G as AgentActionRequest",
+                    "agent": {
+                        "name": "VendingBenchPlayer"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.supplier_messages.ViewSuppliersRequest",
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.showcase.vending_bench.messages.AgentActionRequest",
+                        "expression": "({'request_id': $.request_id, 'action_type': 'view_suppliers', 'parameters': {'active_only': $.active_only, 'product_filter': $.product_filter}})"
+                    },
+                    "destination": {
+                        "topics": "TO_VENDING_BENCH"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Route ViewComplaintsRequest from player to G2G as AgentActionRequest",
+                    "agent": {
+                        "name": "VendingBenchPlayer"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.supplier_messages.ViewComplaintsRequest",
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.showcase.vending_bench.messages.AgentActionRequest",
+                        "expression": "({'request_id': $.request_id, 'action_type': 'view_complaints', 'parameters': {'status_filter': $.status_filter}})"
+                    },
+                    "destination": {
+                        "topics": "TO_VENDING_BENCH"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Route RespondToComplaintRequest from player to G2G as AgentActionRequest",
+                    "agent": {
+                        "name": "VendingBenchPlayer"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.supplier_messages.RespondToComplaintRequest",
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.showcase.vending_bench.messages.AgentActionRequest",
+                        "expression": "({'request_id': $.request_id, 'action_type': 'respond_complaint', 'parameters': {'complaint_id': $.complaint_id, 'action': $.action, 'refund_amount': $.refund_amount, 'response_message': $.response_message}})"
                     },
                     "destination": {
                         "topics": "TO_VENDING_BENCH"
@@ -690,6 +763,134 @@
                     "message_format": "rustic_ai.showcase.vending_bench.status_tracker_agent.GoalFormat",
                     "destination": {
                         "topics": "user_message_broadcast"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "DeliveryDelayNotification -> ChatCompletionRequest to player",
+                    "agent": {
+                        "name": "PlayerGateway"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.supplier_messages.DeliveryDelayNotification",
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest",
+                        "expression": "({'messages': [{'role': 'user', 'content': 'DELIVERY DELAY: Order ' & $.order_id & ' from ' & $.supplier_name & ' has been delayed by ' & $string($.delay_days) & ' days. New delivery: Day ' & $string($.new_delivery_day) & '. Reason: ' & $.reason & '. What would you like to do?'}]})"
+                    },
+                    "destination": {
+                        "topics": "PLAYER_INPUT"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Broadcast DeliveryDelayNotification to user for visibility",
+                    "agent": {
+                        "name": "PlayerGateway"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.supplier_messages.DeliveryDelayNotification",
+                    "destination": {
+                        "topics": "user_message_broadcast"
+                    },
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                        "expression": "({'choices': [{'message': {'role': 'assistant', 'content': '[DELAY] Order ' & $.order_id & ' delayed ' & $string($.delay_days) & ' days'}}]})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "PartialDeliveryNotification -> ChatCompletionRequest to player",
+                    "agent": {
+                        "name": "PlayerGateway"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.supplier_messages.PartialDeliveryNotification",
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest",
+                        "expression": "({'messages': [{'role': 'user', 'content': 'PARTIAL DELIVERY: Order ' & $.order_id & ' from ' & $.supplier_name & ' was only partially delivered. Missing items: ' & $string($.missing_products) & '. Reason: ' & $.reason & '. What would you like to do?'}]})"
+                    },
+                    "destination": {
+                        "topics": "PLAYER_INPUT"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Broadcast PartialDeliveryNotification to user for visibility",
+                    "agent": {
+                        "name": "PlayerGateway"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.supplier_messages.PartialDeliveryNotification",
+                    "destination": {
+                        "topics": "user_message_broadcast"
+                    },
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                        "expression": "({'choices': [{'message': {'role': 'assistant', 'content': '[PARTIAL] Order ' & $.order_id & ' - some items missing'}}]})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "SupplierFailureNotification -> ChatCompletionRequest to player",
+                    "agent": {
+                        "name": "PlayerGateway"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.supplier_messages.SupplierFailureNotification",
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest",
+                        "expression": "({'messages': [{'role': 'user', 'content': 'SUPPLIER BANKRUPT: ' & $.supplier_name & ' has gone out of business! ' & $.message & ' Affected orders: ' & $string($.affected_orders) & '. You need to find alternative suppliers. What would you like to do?'}]})"
+                    },
+                    "destination": {
+                        "topics": "PLAYER_INPUT"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Broadcast SupplierFailureNotification to user for visibility",
+                    "agent": {
+                        "name": "PlayerGateway"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.supplier_messages.SupplierFailureNotification",
+                    "destination": {
+                        "topics": "user_message_broadcast"
+                    },
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                        "expression": "({'choices': [{'message': {'role': 'assistant', 'content': '[BANKRUPT] ' & $.supplier_name & ' has ceased operations'}}]})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "BaitAndSwitchEvent -> ChatCompletionRequest to player",
+                    "agent": {
+                        "name": "PlayerGateway"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.supplier_messages.BaitAndSwitchEvent",
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest",
+                        "expression": "({'messages': [{'role': 'user', 'content': 'PRICE CHANGE: ' & $.supplier_name & ' charged $' & $string($.actual_total) & ' instead of quoted $' & $string($.quoted_total) & ' (extra $' & $string($.difference) & ')! Reason given: ' & $.reason_given & '. Consider finding more reliable suppliers. What would you like to do?'}]})"
+                    },
+                    "destination": {
+                        "topics": "PLAYER_INPUT"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Broadcast BaitAndSwitchEvent to user for visibility",
+                    "agent": {
+                        "name": "PlayerGateway"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.supplier_messages.BaitAndSwitchEvent",
+                    "destination": {
+                        "topics": "user_message_broadcast"
+                    },
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                        "expression": "({'choices': [{'message': {'role': 'assistant', 'content': '[OVERCHARGE] ' & $.supplier_name & ' charged extra $' & $string($.difference)}}]})"
                     },
                     "route_times": -1
                 }

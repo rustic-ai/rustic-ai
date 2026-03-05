@@ -401,6 +401,14 @@ class ActionType(str, Enum):
     SCRATCHPAD_WRITE = "scratchpad_write"
     WAIT = "wait"
     END_DAY = "end_day"
+    # New supplier-related actions
+    SEARCH_SUPPLIERS = "search_suppliers"
+    VIEW_SUPPLIERS = "view_suppliers"
+    START_NEGOTIATION = "start_negotiation"
+    NEGOTIATE = "negotiate"
+    # Customer complaint actions
+    VIEW_COMPLAINTS = "view_complaints"
+    RESPOND_COMPLAINT = "respond_complaint"
 
 
 class AgentActionRequest(BaseModel):
@@ -486,3 +494,6 @@ class DeliverySchedule(BaseModel):
     products: Dict[ProductType, int]
     expected_delivery_day: int
     ordered_on_day: int
+    supplier_id: str = Field(default="", description="ID of the supplier this order was placed with")
+    supplier_email: str = Field(default="", description="Email of the supplier for delivery notifications")
+    supplier_name: str = Field(default="Supplier", description="Name of the supplier")

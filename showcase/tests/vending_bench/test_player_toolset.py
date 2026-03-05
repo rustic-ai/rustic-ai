@@ -41,6 +41,10 @@ class TestVendingBenchToolspecsProvider:
             "restock",
             "scratchpad_read",
             "scratchpad_write",
+            "search_suppliers",
+            "view_suppliers",
+            "view_complaints",
+            "respond_complaint",
         ]
         for tool in expected_tools:
             assert tool in tool_names, f"Missing tool: {tool}"
@@ -69,7 +73,7 @@ class TestVendingBenchToolspecsProvider:
     def test_provider_chat_tools(self, provider: VendingBenchToolspecsProvider):
         """Test that provider can generate chat tools for LLM."""
         chat_tools = provider.chat_tools
-        assert len(chat_tools) == 11
+        assert len(chat_tools) == 15  # 11 original + 4 new supplier/complaint tools
 
         # Verify structure of a chat tool
         tool_names = [t.function.name for t in chat_tools]
@@ -94,7 +98,7 @@ class TestVendingBenchToolspecsProvider:
 
         # Should be the same object (cached)
         assert first_access is second_access
-        assert len(first_access) == 11
+        assert len(first_access) == 15  # 11 original + 4 new supplier/complaint tools
 
     def test_set_price_tool_has_required_fields(self, provider: VendingBenchToolspecsProvider):
         """Test that SetPriceRequest tool has the correct parameter schema."""

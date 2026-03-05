@@ -6,6 +6,7 @@ This agent:
 - Uses AI to generate realistic supplier responses
 - Manages delivery schedules
 - Provides scratchpad memory for agent notes
+- Integrates with multi-supplier registry for realistic dynamics
 """
 
 import logging
@@ -51,11 +52,18 @@ from rustic_ai.showcase.vending_bench.messages import (
     SupplierOrderConfirmation,
     WeatherType,
 )
+from rustic_ai.showcase.vending_bench.supplier_messages import (
+    ViewSuppliersRequest,
+    ViewSuppliersResponse,
+)
+from rustic_ai.showcase.vending_bench.supplier_registry import (
+    SupplierProfile,
+    SupplierRegistry,
+)
 
 logger = logging.getLogger(__name__)
 
 
-SUPPLIER_EMAIL = "orders@vendingsupply.com"
 OPERATOR_EMAIL = "operator@vendingbiz.com"
 
 SUPPLIER_SYSTEM_PROMPT = """You are a friendly and professional customer service representative for VendingSupply Co.
@@ -92,6 +100,7 @@ class SupplierAgent(Agent[SupplierAgentProps]):
 
     Handles email-based ordering with natural language processing,
     manages delivery schedules, and provides scratchpad memory.
+    Integrates with multi-supplier registry for realistic dynamics.
     """
 
     def __init__(self):
@@ -115,6 +124,9 @@ class SupplierAgent(Agent[SupplierAgentProps]):
             day_of_week=0,
         )
 
+        # Multi-supplier registry (starts empty - agent must search for suppliers)
+        self.registry: SupplierRegistry = SupplierRegistry()
+
     def _load_state_from_guild(self):
         """Load persisted state from guild state."""
         guild_state = self.get_guild_state() or {}
@@ -129,10 +141,7 @@ class SupplierAgent(Agent[SupplierAgentProps]):
 
         # Load pending orders
         orders_data = guild_state.get("supplier_pending_orders", {})
-        self.pending_orders = {
-            k: DeliverySchedule(**v) if isinstance(v, dict) else v
-            for k, v in orders_data.items()
-        }
+        self.pending_orders = {k: DeliverySchedule(**v) if isinstance(v, dict) else v for k, v in orders_data.items()}
 
         # Load scratchpad
         self.scratchpad = guild_state.get("scratchpad", {})
@@ -144,6 +153,11 @@ class SupplierAgent(Agent[SupplierAgentProps]):
         sim_time_data = guild_state.get("supplier_simulation_time")
         if sim_time_data:
             self.simulation_time = SimulationTime(**sim_time_data) if isinstance(sim_time_data, dict) else sim_time_data
+
+        # Load supplier registry
+        registry_data = guild_state.get("supplier_registry")
+        if registry_data:
+            self.registry = SupplierRegistry(**registry_data) if isinstance(registry_data, dict) else registry_data
 
     def _persist_state(self, ctx: ProcessContext):
         """Persist current state to guild state."""
@@ -157,8 +171,13 @@ class SupplierAgent(Agent[SupplierAgentProps]):
                 "scratchpad": self.scratchpad,
                 "supplier_current_day": self.current_day,
                 "supplier_simulation_time": self.simulation_time.model_dump(),
+                "supplier_registry": self.registry.model_dump(),
             },
         )
+
+    def _get_supplier_by_email(self, email_address: str) -> Optional[SupplierProfile]:
+        """Find a supplier by email address."""
+        return self.registry.get_supplier_by_email(email_address)
 
     def _parse_order_from_email(self, body: str) -> Optional[Dict[ProductType, int]]:
         """Parse order quantities from email body using simple pattern matching.
@@ -232,7 +251,12 @@ class SupplierAgent(Agent[SupplierAgentProps]):
         return self.current_day + delay
 
     def _create_order_confirmation_email(
-        self, order: Dict[ProductType, int], order_id: str, delivery_day: int, total_cost: float
+        self,
+        order: Dict[ProductType, int],
+        order_id: str,
+        delivery_day: int,
+        total_cost: float,
+        supplier: SupplierProfile,
     ) -> Email:
         """Create an order confirmation email."""
         items_text = "\n".join(
@@ -256,18 +280,18 @@ Your order will be delivered to your vending machine location.
 Please ensure someone is available to receive and restock the products.
 
 Best regards,
-VendingSupply Co."""
+{supplier.name}"""
 
         return Email(
-            from_address=SUPPLIER_EMAIL,
+            from_address=supplier.email,
             to_address=OPERATOR_EMAIL,
             subject=f"Order Confirmation - {order_id}",
             body=body,
         )
 
-    def _create_clarification_email(self, original_subject: str) -> Email:
+    def _create_clarification_email(self, original_subject: str, supplier: SupplierProfile) -> Email:
         """Create an email asking for order clarification."""
-        body = """Thank you for contacting VendingSupply Co.
+        body = f"""Thank you for contacting {supplier.name}.
 
 We'd be happy to help you with your order, but we need a bit more information.
 
@@ -286,18 +310,18 @@ Example order format:
 "I'd like to order 20 chips, 15 candy, and 25 soda"
 
 Best regards,
-VendingSupply Co."""
+{supplier.name}"""
 
         return Email(
-            from_address=SUPPLIER_EMAIL,
+            from_address=supplier.email,
             to_address=OPERATOR_EMAIL,
             subject=f"Re: {original_subject} - Please Clarify Order",
             body=body,
         )
 
-    def _create_product_catalog_email(self) -> Email:
+    def _create_product_catalog_email(self, supplier: SupplierProfile) -> Email:
         """Create an email with the product catalog."""
-        body = """Here is our complete product catalog:
+        body = f"""Here is our complete product catalog:
 
 SNACKS:
 - Chips: $0.75/unit (minimum order: 10)
@@ -318,12 +342,12 @@ Orders are typically delivered within 2-5 business days.
 Let us know if you have any questions!
 
 Best regards,
-VendingSupply Co."""
+{supplier.name}"""
 
         return Email(
-            from_address=SUPPLIER_EMAIL,
+            from_address=supplier.email,
             to_address=OPERATOR_EMAIL,
-            subject="VendingSupply Co. - Product Catalog",
+            subject=f"{supplier.name} - Product Catalog",
             body=body,
         )
 
@@ -365,23 +389,41 @@ VendingSupply Co."""
 
         request = ctx.payload
 
-        # Record sent email
-        sent_email = Email(
-            from_address=OPERATOR_EMAIL,
-            to_address=request.to_address,
-            subject=request.subject,
-            body=request.body,
-        )
-        self.sent_emails.append(sent_email)
+        # Validate that the email address is a known supplier
+        supplier = self._get_supplier_by_email(request.to_address)
 
-        # Process if sent to supplier
-        if SUPPLIER_EMAIL in request.to_address.lower() or "supplier" in request.to_address.lower():
-            self._process_supplier_email(ctx, request, llm)
-        else:
-            # Persist state changes
+        if supplier is None:
+            # Check if they're trying to send to a supplier-like address without searching first
+            if "supplier" in request.to_address.lower() or "@vend" in request.to_address.lower():
+                # Persist state (no changes, just maintaining consistency)
+                self._persist_state(ctx)
+
+                # Return error - must search for suppliers first
+                response = SendEmailResponse(
+                    request_id=request.request_id,
+                    success=False,
+                    message=(
+                        f"Unknown supplier email address: {request.to_address}. "
+                        "You must first use 'search_suppliers' to discover suppliers, then "
+                        "use 'view_suppliers' to see known supplier email addresses before ordering."
+                    ),
+                    time_elapsed_minutes=TIME_COSTS["send_email"],
+                    simulation_time=self.simulation_time,
+                )
+                ctx.send(response)
+                logger.warning(f"Rejected email to unknown supplier: {request.to_address}")
+                return
+
+            # Not a supplier email - just a generic email send
+            sent_email = Email(
+                from_address=OPERATOR_EMAIL,
+                to_address=request.to_address,
+                subject=request.subject,
+                body=request.body,
+            )
+            self.sent_emails.append(sent_email)
             self._persist_state(ctx)
 
-            # Generic send confirmation
             response = SendEmailResponse(
                 request_id=request.request_id,
                 success=True,
@@ -390,9 +432,24 @@ VendingSupply Co."""
                 simulation_time=self.simulation_time,
             )
             ctx.send(response)
+            return
 
-    def _process_supplier_email(self, ctx: ProcessContext[SendEmailRequest], request: SendEmailRequest, llm: LLM):
-        """Process an email sent to the supplier."""
+        # Valid supplier email - record and process
+        sent_email = Email(
+            from_address=OPERATOR_EMAIL,
+            to_address=request.to_address,
+            subject=request.subject,
+            body=request.body,
+        )
+        self.sent_emails.append(sent_email)
+
+        # Process the supplier email
+        self._process_supplier_email(ctx, request, llm, supplier)
+
+    def _process_supplier_email(
+        self, ctx: ProcessContext[SendEmailRequest], request: SendEmailRequest, llm: LLM, supplier: SupplierProfile
+    ):
+        """Process an email sent to a known supplier."""
         body_lower = request.body.lower()
 
         # Check if this looks like an order
@@ -410,10 +467,15 @@ VendingSupply Co."""
                 products=order,
                 expected_delivery_day=delivery_day,
                 ordered_on_day=self.current_day,
+                supplier_id=supplier.supplier_id,
+                supplier_email=supplier.email,
+                supplier_name=supplier.name,
             )
 
             # Create confirmation email
-            confirmation_email = self._create_order_confirmation_email(order, order_id, delivery_day, total_cost)
+            confirmation_email = self._create_order_confirmation_email(
+                order, order_id, delivery_day, total_cost, supplier
+            )
             self.inbox.append(confirmation_email)
 
             # Send order confirmation message
@@ -426,11 +488,13 @@ VendingSupply Co."""
             )
             ctx.send(confirmation)
 
-            logger.info(f"Order {order_id} placed: {order}, total=${total_cost:.2f}, delivery day {delivery_day}")
+            logger.info(
+                f"Order {order_id} placed with {supplier.name}: {order}, total=${total_cost:.2f}, delivery day {delivery_day}"
+            )
 
         elif "catalog" in body_lower or "products" in body_lower or "prices" in body_lower:
             # Send product catalog
-            catalog_email = self._create_product_catalog_email()
+            catalog_email = self._create_product_catalog_email(supplier)
             self.inbox.append(catalog_email)
 
         else:
@@ -447,7 +511,7 @@ VendingSupply Co."""
                     if response.choices and response.choices[0].message:
                         ai_response = response.choices[0].message.content
                         reply_email = Email(
-                            from_address=SUPPLIER_EMAIL,
+                            from_address=supplier.email,
                             to_address=OPERATOR_EMAIL,
                             subject=f"Re: {request.subject}",
                             body=ai_response,
@@ -455,10 +519,10 @@ VendingSupply Co."""
                         self.inbox.append(reply_email)
                 except Exception as e:
                     logger.warning(f"LLM response failed: {e}, using default clarification")
-                    clarification_email = self._create_clarification_email(request.subject)
+                    clarification_email = self._create_clarification_email(request.subject, supplier)
                     self.inbox.append(clarification_email)
             else:
-                clarification_email = self._create_clarification_email(request.subject)
+                clarification_email = self._create_clarification_email(request.subject, supplier)
                 self.inbox.append(clarification_email)
 
         # Persist state changes (inbox, pending_orders, etc.)
@@ -500,15 +564,17 @@ VendingSupply Co."""
 
             # Send delivery notification email
             items_text = ", ".join(f"{qty} {p.value}" for p, qty in order.products.items())
+            supplier_name = order.supplier_name or "Supplier"
+            supplier_email = order.supplier_email or "supplier@unknown.com"
             delivery_body = (
                 f"Your order has been delivered!\n\n"
                 f"Order ID: {order.order_id}\n"
                 f"Items: {items_text}\n\n"
                 f"Please restock your vending machine at your earliest convenience.\n\n"
-                f"Best regards,\nVendingSupply Co."
+                f"Best regards,\n{supplier_name}"
             )
             delivery_email = Email(
-                from_address=SUPPLIER_EMAIL,
+                from_address=supplier_email,
                 to_address=OPERATOR_EMAIL,
                 subject=f"Delivery Arrived - Order {order.order_id}",
                 body=delivery_body,
@@ -567,3 +633,32 @@ VendingSupply Co."""
         )
         ctx.send(response)
         logger.debug(f"Scratchpad write: {request.key} = {request.value[:50]}...")
+
+    @agent.processor(ViewSuppliersRequest)
+    def handle_view_suppliers(self, ctx: ProcessContext[ViewSuppliersRequest]):
+        """Handle request to view known suppliers."""
+        self._load_state_from_guild()
+
+        request = ctx.payload
+
+        # Filter suppliers
+        if request.active_only:
+            suppliers = list(self.registry.get_active_suppliers().values())
+        else:
+            suppliers = list(self.registry.suppliers.values())
+
+        # Apply product filter if specified
+        if request.product_filter:
+            suppliers = [s for s in suppliers if request.product_filter in s.products_offered]
+
+        total_active = sum(1 for s in self.registry.suppliers.values() if s.is_active)
+
+        response = ViewSuppliersResponse(
+            request_id=request.request_id,
+            suppliers=suppliers,
+            total_active=total_active,
+            message=f"Found {len(suppliers)} suppliers matching your criteria",
+        )
+        ctx.send(response)
+
+        logger.debug(f"Viewed suppliers: {len(suppliers)} returned")

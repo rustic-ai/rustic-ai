@@ -77,6 +77,14 @@ TIME_COSTS: Dict[str, int] = {
     # Time management actions
     "wait": 60,  # Wait for 1 hour
     "end_day": 720,  # Skip to end of current day (12 hours max)
+    # Supplier discovery and negotiation actions
+    "search_suppliers": 60,  # Search for new suppliers (1 hour)
+    "view_suppliers": 5,  # View known suppliers (5 minutes)
+    "start_negotiation": 30,  # Start price negotiation (30 minutes)
+    "negotiate": 30,  # Continue negotiation exchange (30 minutes)
+    # Customer complaint actions
+    "view_complaints": 5,  # View open complaints (5 minutes)
+    "respond_complaint": 30,  # Respond to a complaint (30 minutes)
 }
 
 # Day duration settings

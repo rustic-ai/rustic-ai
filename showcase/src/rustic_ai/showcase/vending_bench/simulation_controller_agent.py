@@ -69,6 +69,19 @@ from rustic_ai.showcase.vending_bench.messages import (
     WaitResponse,
     WeatherType,
 )
+from rustic_ai.showcase.vending_bench.supplier_messages import (
+    NegotiationExchangeRequest,
+    NegotiationResponse,
+    RespondToComplaintRequest,
+    RespondToComplaintResponse,
+    StartNegotiationRequest,
+    SupplierSearchRequest,
+    SupplierSearchResponse,
+    ViewComplaintsRequest,
+    ViewComplaintsResponse,
+    ViewSuppliersRequest,
+    ViewSuppliersResponse,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -263,6 +276,52 @@ class SimulationControllerAgent(Agent[SimulationControllerAgentProps]):
         """Record an action in the statistics."""
         self.action_counts[action] = self.action_counts.get(action, 0) + 1
 
+    def _process_wait(self, request_id: str, hours: int, ctx: ProcessContext) -> WaitResponse:
+        """Process wait logic and return response. Core logic shared by inline and message-based handling."""
+        hours = min(max(hours, 1), 12)  # Clamp between 1 and 12
+        minutes_to_wait = hours * 60
+
+        events = []
+        day_changed = self._advance_time(minutes_to_wait, ctx)
+        if day_changed:
+            events.append("DayUpdateEvent")
+
+        return WaitResponse(
+            request_id=request_id,
+            hours_waited=hours,
+            time_elapsed_minutes=minutes_to_wait,
+            simulation_time=self.get_simulation_time(),
+            events_during_wait=events,
+        )
+
+    def _process_end_day(self, request_id: str, ctx: ProcessContext) -> EndDayResponse:
+        """Process end day logic and return response. Core logic shared by inline and message-based handling."""
+        previous_day = self.current_day
+
+        # Calculate minutes remaining until end of day (1440 minutes total)
+        total_day_minutes = self.config.day_duration_minutes + self.config.night_duration_minutes
+        minutes_to_end = total_day_minutes - self.current_time_minutes
+
+        # If already past the day, just advance a small amount to trigger transition
+        if minutes_to_end <= 0:
+            minutes_to_end = 1
+
+        self._advance_time(minutes_to_end, ctx)
+
+        day_summary = (
+            f"Day {previous_day} ended. Sales: {self.daily_sales} items, "
+            f"Revenue: ${self.daily_revenue:.2f}. Now starting Day {self.current_day}."
+        )
+
+        return EndDayResponse(
+            request_id=request_id,
+            previous_day=previous_day,
+            new_day=self.current_day,
+            time_elapsed_minutes=minutes_to_end,
+            simulation_time=self.get_simulation_time(),
+            day_summary=day_summary,
+        )
+
     @agent.processor(SimulationControlRequest)
     def handle_simulation_control(self, ctx: ProcessContext[SimulationControlRequest]):
         """Handle simulation control commands."""
@@ -413,12 +472,108 @@ class SimulationControllerAgent(Agent[SimulationControllerAgentProps]):
             ctx.send(internal_request)
 
         elif action_type == ActionType.WAIT:
+            # Process inline to avoid self-message filtering (messaging excludes sender from non-self-inbox topics)
             hours = request.parameters.get("hours", 1)
-            internal_request = WaitRequest(request_id=request.request_id, hours=hours)
-            ctx.send(internal_request)
+            wait_response = self._process_wait(request.request_id, hours, ctx)
+            current_time = self.get_simulation_time()
+            response_dict = wait_response.model_dump()
+            response_dict["simulation_time"] = current_time.model_dump()
+            wrapped = AgentActionResponse(
+                request_id=request.request_id,
+                action_type=ActionType.WAIT,
+                success=True,
+                response=response_dict,
+                simulation_time=current_time,
+            )
+            ctx.send(wrapped)
 
         elif action_type == ActionType.END_DAY:
-            internal_request = EndDayRequest(request_id=request.request_id)
+            # Process inline to avoid self-message filtering (messaging excludes sender from non-self-inbox topics)
+            end_day_response = self._process_end_day(request.request_id, ctx)
+            current_time = self.get_simulation_time()
+            response_dict = end_day_response.model_dump()
+            response_dict["simulation_time"] = current_time.model_dump()
+            wrapped = AgentActionResponse(
+                request_id=request.request_id,
+                action_type=ActionType.END_DAY,
+                success=True,
+                response=response_dict,
+                simulation_time=current_time,
+            )
+            ctx.send(wrapped)
+
+        elif action_type == ActionType.SEARCH_SUPPLIERS:
+            product_types_raw = request.parameters.get("product_types", [])
+            product_types = [ProductType(p) for p in product_types_raw] if product_types_raw else []
+            location = request.parameters.get("location", "")
+            internal_request = SupplierSearchRequest(
+                request_id=request.request_id,
+                product_types=product_types,
+                location=location,
+            )
+            ctx.send(internal_request)
+
+        elif action_type == ActionType.VIEW_SUPPLIERS:
+            active_only = request.parameters.get("active_only", True)
+            product_filter_raw = request.parameters.get("product_filter")
+            product_filter = ProductType(product_filter_raw) if product_filter_raw else None
+            internal_request = ViewSuppliersRequest(
+                request_id=request.request_id,
+                active_only=active_only,
+                product_filter=product_filter,
+            )
+            ctx.send(internal_request)
+
+        elif action_type == ActionType.START_NEGOTIATION:
+            supplier_id = request.parameters.get("supplier_id", "")
+            product_type_raw = request.parameters.get("product_type")
+            product_type = ProductType(product_type_raw) if product_type_raw else None
+            target_discount = request.parameters.get("target_discount", 0.10)
+            internal_request = StartNegotiationRequest(
+                request_id=request.request_id,
+                supplier_id=supplier_id,
+                product_type=product_type,
+                target_discount=target_discount,
+            )
+            ctx.send(internal_request)
+
+        elif action_type == ActionType.NEGOTIATE:
+            negotiation_id = request.parameters.get("negotiation_id", "")
+            message = request.parameters.get("message", "")
+            offer_price = request.parameters.get("offer_price")
+            internal_request = NegotiationExchangeRequest(
+                request_id=request.request_id,
+                negotiation_id=negotiation_id,
+                message=message,
+                offer_price=float(offer_price) if offer_price else None,
+            )
+            ctx.send(internal_request)
+
+        elif action_type == ActionType.VIEW_COMPLAINTS:
+            status_filter_raw = request.parameters.get("status_filter")
+            from rustic_ai.showcase.vending_bench.supplier_messages import (
+                ComplaintStatus,
+            )
+
+            status_filter = ComplaintStatus(status_filter_raw) if status_filter_raw else None
+            internal_request = ViewComplaintsRequest(
+                request_id=request.request_id,
+                status_filter=status_filter,
+            )
+            ctx.send(internal_request)
+
+        elif action_type == ActionType.RESPOND_COMPLAINT:
+            complaint_id = request.parameters.get("complaint_id", "")
+            action = request.parameters.get("action", "")
+            refund_amount = request.parameters.get("refund_amount")
+            response_message = request.parameters.get("response_message", "")
+            internal_request = RespondToComplaintRequest(
+                request_id=request.request_id,
+                complaint_id=complaint_id,
+                action=action,
+                refund_amount=float(refund_amount) if refund_amount else None,
+                response_message=response_message,
+            )
             ctx.send(internal_request)
 
         # Advance time based on action (skip for wait and end_day which handle their own time)
@@ -444,54 +599,14 @@ class SimulationControllerAgent(Agent[SimulationControllerAgentProps]):
     def handle_wait(self, ctx: ProcessContext[WaitRequest]):
         """Handle wait requests - let time pass."""
         request = ctx.payload
-        hours = min(max(request.hours, 1), 12)  # Clamp between 1 and 12
-        minutes_to_wait = hours * 60
-
-        events = []
-        starting_day = self.current_day
-
-        day_changed = self._advance_time(minutes_to_wait, ctx)
-        if day_changed:
-            events.append("DayUpdateEvent")
-
-        response = WaitResponse(
-            request_id=request.request_id,
-            hours_waited=hours,
-            time_elapsed_minutes=minutes_to_wait,
-            simulation_time=self.get_simulation_time(),
-            events_during_wait=events,
-        )
+        response = self._process_wait(request.request_id, request.hours, ctx)
         ctx.send(response)
 
     @agent.processor(EndDayRequest)
     def handle_end_day(self, ctx: ProcessContext[EndDayRequest]):
         """Handle end day requests - skip to the next day."""
         request = ctx.payload
-        previous_day = self.current_day
-
-        # Calculate minutes remaining until end of day (1440 minutes total)
-        total_day_minutes = self.config.day_duration_minutes + self.config.night_duration_minutes
-        minutes_to_end = total_day_minutes - self.current_time_minutes
-
-        # If already past the day, just advance a small amount to trigger transition
-        if minutes_to_end <= 0:
-            minutes_to_end = 1
-
-        self._advance_time(minutes_to_end, ctx)
-
-        day_summary = (
-            f"Day {previous_day} ended. Sales: {self.daily_sales} items, "
-            f"Revenue: ${self.daily_revenue:.2f}. Now starting Day {self.current_day}."
-        )
-
-        response = EndDayResponse(
-            request_id=request.request_id,
-            previous_day=previous_day,
-            new_day=self.current_day,
-            time_elapsed_minutes=minutes_to_end,
-            simulation_time=self.get_simulation_time(),
-            day_summary=day_summary,
-        )
+        response = self._process_end_day(request.request_id, ctx)
         ctx.send(response)
 
     # Forward responses back to G2G gateway
@@ -700,3 +815,82 @@ class SimulationControllerAgent(Agent[SimulationControllerAgentProps]):
 
             # Update inventory cache
             self.inventory[purchase.product] = available - actual_quantity
+
+    # Response forwarders for new supplier and complaint actions
+
+    @agent.processor(SupplierSearchResponse)
+    def forward_supplier_search_response(self, ctx: ProcessContext[SupplierSearchResponse]):
+        """Forward supplier search response to G2G."""
+        response = ctx.payload
+        current_time = self.get_simulation_time()
+        response_dict = response.model_dump()
+        wrapped = AgentActionResponse(
+            request_id=response.request_id,
+            action_type=ActionType.SEARCH_SUPPLIERS,
+            success=True,
+            response=response_dict,
+            simulation_time=current_time,
+        )
+        ctx.send(wrapped)
+
+    @agent.processor(ViewSuppliersResponse)
+    def forward_view_suppliers_response(self, ctx: ProcessContext[ViewSuppliersResponse]):
+        """Forward view suppliers response to G2G."""
+        response = ctx.payload
+        current_time = self.get_simulation_time()
+        response_dict = response.model_dump()
+        wrapped = AgentActionResponse(
+            request_id=response.request_id,
+            action_type=ActionType.VIEW_SUPPLIERS,
+            success=True,
+            response=response_dict,
+            simulation_time=current_time,
+        )
+        ctx.send(wrapped)
+
+    @agent.processor(NegotiationResponse)
+    def forward_negotiation_response(self, ctx: ProcessContext[NegotiationResponse]):
+        """Forward negotiation response to G2G."""
+        response = ctx.payload
+        current_time = self.get_simulation_time()
+        response_dict = response.model_dump()
+        # Determine action type based on whether this is a start or continuation
+        action_type = ActionType.NEGOTIATE if response.negotiation_id else ActionType.START_NEGOTIATION
+        wrapped = AgentActionResponse(
+            request_id=response.request_id,
+            action_type=action_type,
+            success=not response.is_rejected,
+            response=response_dict,
+            simulation_time=current_time,
+        )
+        ctx.send(wrapped)
+
+    @agent.processor(ViewComplaintsResponse)
+    def forward_view_complaints_response(self, ctx: ProcessContext[ViewComplaintsResponse]):
+        """Forward view complaints response to G2G."""
+        response = ctx.payload
+        current_time = self.get_simulation_time()
+        response_dict = response.model_dump()
+        wrapped = AgentActionResponse(
+            request_id=response.request_id,
+            action_type=ActionType.VIEW_COMPLAINTS,
+            success=True,
+            response=response_dict,
+            simulation_time=current_time,
+        )
+        ctx.send(wrapped)
+
+    @agent.processor(RespondToComplaintResponse)
+    def forward_respond_complaint_response(self, ctx: ProcessContext[RespondToComplaintResponse]):
+        """Forward respond to complaint response to G2G."""
+        response = ctx.payload
+        current_time = self.get_simulation_time()
+        response_dict = response.model_dump()
+        wrapped = AgentActionResponse(
+            request_id=response.request_id,
+            action_type=ActionType.RESPOND_COMPLAINT,
+            success=response.success,
+            response=response_dict,
+            simulation_time=current_time,
+        )
+        ctx.send(wrapped)

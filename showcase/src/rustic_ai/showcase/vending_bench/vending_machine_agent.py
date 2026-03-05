@@ -50,6 +50,11 @@ from rustic_ai.showcase.vending_bench.messages import (
     VendingMachineState,
     WeatherType,
 )
+from rustic_ai.showcase.vending_bench.supplier_messages import (
+    BaitAndSwitchEvent,
+    ComplaintResolution,
+    PartialDeliveryNotification,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -114,8 +119,7 @@ class VendingMachineAgent(Agent[VendingMachineAgentProps]):
         # Load pending deliveries
         deliveries_data = guild_state.get("vm_pending_deliveries", {})
         self.pending_deliveries = {
-            k: SupplierDelivery(**v) if isinstance(v, dict) else v
-            for k, v in deliveries_data.items()
+            k: SupplierDelivery(**v) if isinstance(v, dict) else v for k, v in deliveries_data.items()
         }
 
     def _persist_pending_deliveries(self, ctx: ProcessContext):
@@ -346,4 +350,63 @@ class VendingMachineAgent(Agent[VendingMachineAgentProps]):
         # Just log the update
         logger.info(
             f"Day {event.day} started. Weather: {event.weather.value}. Remaining cash: ${event.remaining_cash:.2f}"
+        )
+
+    @agent.processor(BaitAndSwitchEvent)
+    def handle_bait_and_switch(self, ctx: ProcessContext[BaitAndSwitchEvent]):
+        """Handle bait-and-switch pricing from adversarial suppliers.
+
+        Deducts the extra amount charged from operator cash.
+        """
+        event = ctx.payload
+        extra_charge = event.difference
+
+        if self.operator_cash >= extra_charge:
+            self.operator_cash -= extra_charge
+            logger.warning(
+                f"Bait-and-switch: Charged extra ${extra_charge:.2f} for order {event.order_id}. "
+                f"New operator cash: ${self.operator_cash:.2f}"
+            )
+        else:
+            # Use machine cash if operator cash insufficient
+            remaining = extra_charge - self.operator_cash
+            self.operator_cash = 0.0
+            if self.machine_cash >= remaining:
+                self.machine_cash -= remaining
+            else:
+                # Not enough cash - go into debt (negative balance)
+                self.operator_cash = -(remaining - self.machine_cash)
+                self.machine_cash = 0.0
+            logger.warning(
+                f"Bait-and-switch: Insufficient funds for extra ${extra_charge:.2f}. "
+                f"Operator cash now: ${self.operator_cash:.2f}"
+            )
+
+        # Persist state change
+        self.update_state(
+            ctx,
+            update_format=StateUpdateFormat.JSON_MERGE_PATCH,
+            update={"operator_cash": self.operator_cash, "machine_cash": self.machine_cash},
+        )
+
+    @agent.processor(PartialDeliveryNotification)
+    def handle_partial_delivery(self, ctx: ProcessContext[PartialDeliveryNotification]):
+        """Handle notification of partial delivery.
+
+        Log the event - actual inventory update happens via SupplierDelivery.
+        """
+        notification = ctx.payload
+        missing_items = ", ".join(f"{qty} {p.value}" for p, qty in notification.missing_products.items())
+        logger.warning(f"Partial delivery for order {notification.order_id}: Missing items - {missing_items}")
+
+    @agent.processor(ComplaintResolution)
+    def handle_complaint_resolution(self, ctx: ProcessContext[ComplaintResolution]):
+        """Handle complaint resolution - refund is processed by CustomerComplaintAgent.
+
+        This is mainly for logging and tracking.
+        """
+        resolution = ctx.payload
+        logger.info(
+            f"Complaint {resolution.complaint_id} resolved: {resolution.resolution_type}, "
+            f"refund=${resolution.refund_amount:.2f}"
         )

@@ -27,6 +27,9 @@ from rustic_ai.showcase.vending_bench.simulation_controller_agent import (
     SimulationControllerAgent,
 )
 from rustic_ai.showcase.vending_bench.supplier_agent import SupplierAgent
+from rustic_ai.showcase.vending_bench.supplier_discovery_agent import SupplierDiscoveryAgent
+from rustic_ai.showcase.vending_bench.supplier_simulator_agent import SupplierSimulatorAgent
+from rustic_ai.showcase.vending_bench.customer_complaint_agent import CustomerComplaintAgent
 from rustic_ai.showcase.vending_bench.vending_machine_agent import VendingMachineAgent
 
 
@@ -130,6 +133,54 @@ def evaluator_spec():
 
 
 @pytest.fixture
+def supplier_discovery_spec():
+    """Build spec for SupplierDiscoveryAgent."""
+    return (
+        AgentBuilder(SupplierDiscoveryAgent)
+        .set_id("supplier_discovery")
+        .set_name("SupplierDiscovery")
+        .set_description("Test supplier discovery agent")
+        .listen_to_default_topic(True)
+        .add_additional_topic("SUPPLIER_SEARCH")
+        .add_additional_topic("EMAIL")
+        .build_spec()
+    )
+
+
+@pytest.fixture
+def supplier_simulator_spec():
+    """Build spec for SupplierSimulatorAgent."""
+    return (
+        AgentBuilder(SupplierSimulatorAgent)
+        .set_id("supplier_simulator")
+        .set_name("SupplierSimulator")
+        .set_description("Test supplier simulator agent")
+        .listen_to_default_topic(True)
+        .add_additional_topic("SUPPLIER_SIMULATION")
+        .add_additional_topic("EMAIL")
+        .add_additional_topic("SIMULATION_EVENTS")
+        .build_spec()
+    )
+
+
+@pytest.fixture
+def customer_complaint_spec():
+    """Build spec for CustomerComplaintAgent."""
+    return (
+        AgentBuilder(CustomerComplaintAgent)
+        .set_id("customer_complaints")
+        .set_name("CustomerComplaints")
+        .set_description("Test customer complaint agent")
+        .set_properties({"enable_complaints": True, "base_complaint_rate": 0.5})  # Higher rate for testing
+        .listen_to_default_topic(True)
+        .add_additional_topic("COMPLAINTS")
+        .add_additional_topic("EMAIL")
+        .add_additional_topic("SIMULATION_EVENTS")
+        .build_spec()
+    )
+
+
+@pytest.fixture
 def probe_spec():
     """Build spec for ProbeAgent."""
     return (
@@ -144,6 +195,9 @@ def probe_spec():
         .add_additional_topic("SIMULATION_CONTROL")
         .add_additional_topic("EMAIL")
         .add_additional_topic("EVALUATION")
+        .add_additional_topic("COMPLAINTS")
+        .add_additional_topic("SUPPLIER_SEARCH")
+        .add_additional_topic("SUPPLIER_SIMULATION")
         .build_spec()
     )
 
