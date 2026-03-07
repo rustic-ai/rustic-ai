@@ -1574,7 +1574,7 @@ class TestAnthropicSkillsRepository:
 
         The xlsx skill is one of the most complex, containing:
         - SKILL.md with comprehensive Excel processing documentation
-        - recalc.py: 6KB+ script for Excel formula recalculation using LibreOffice
+        - scripts/recalc.py: 6KB+ script for Excel formula recalculation using LibreOffice
 
         This tests that we can handle skills with substantial Python scripts.
         """
@@ -1591,7 +1591,7 @@ class TestAnthropicSkillsRepository:
             assert (installed_path / "SKILL.md").exists()
 
             # Verify recalc.py is present (the main script for xlsx skill)
-            recalc_script = installed_path / "recalc.py"
+            recalc_script = installed_path / "scripts" / "recalc.py"
             assert recalc_script.exists(), "recalc.py should be present in xlsx skill"
 
             # Verify it's substantial (the real script is 6KB+)
