@@ -2,8 +2,12 @@ import os
 
 from pydantic import BaseModel
 import pytest
+import shortuuid
 
 from rustic_ai.core.guild.agent_ext.depends.dependency_resolver import DependencySpec
+from rustic_ai.core.guild.agent_ext.depends.filesystem.filesystem import (
+    FileSystemResolver,
+)
 from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     ChatCompletionRequest,
     UserMessage,
@@ -40,7 +44,18 @@ class TestStructuredOutputPlugin:
                 properties={"model": "vertex_ai/gemini-3-pro-preview", "conf": {
                     "vertex_location": "global"
                 }}
-            )}
+            ),
+            "filesystem": DependencySpec(
+                class_name=FileSystemResolver.get_qualified_class_name(),
+                properties={
+                    "path_base": f"/tmp/tests/{shortuuid.uuid()}",
+                    "protocol": "file",
+                    "storage_options": {
+                        "auto_mkdir": True,
+                    },
+                },
+            ),
+        }
         agent_spec: AgentSpec = (
             AgentBuilder(LLMAgent)
             .set_name("LLM Agent")
