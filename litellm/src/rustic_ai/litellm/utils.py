@@ -22,10 +22,7 @@ def transform_response_format(value: Optional[Union[dict, str]]):
         return None
     result: JsonDict = {
         "type": "json_schema",
-        "json_schema": {
-            "schema": {},
-            "strict": True
-        },
+        "json_schema": {"schema": {}, "strict": True},
     }
     if isinstance(value, dict):
         result["json_schema"]["schema"] = value

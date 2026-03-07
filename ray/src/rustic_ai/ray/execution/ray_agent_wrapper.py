@@ -47,7 +47,9 @@ class RayAgentWrapper(AgentWrapper):
 
         self._is_running = False
 
-        super().__init__(guild_spec, agent_spec, messaging_config, machine_id, client_type, client_properties, organization_id)
+        super().__init__(
+            guild_spec, agent_spec, messaging_config, machine_id, client_type, client_properties, organization_id
+        )
 
     def run(self) -> None:
         """

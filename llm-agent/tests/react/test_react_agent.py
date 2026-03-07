@@ -340,9 +340,7 @@ class TestReActAgent:
             agent._on_message(
                 build_message_from_payload(
                     generator,
-                    ChatCompletionRequest(
-                        messages=[UserMessage(content="What is the answer?")]
-                    ),
+                    ChatCompletionRequest(messages=[UserMessage(content="What is the answer?")]),
                 )
             )
 
@@ -405,9 +403,7 @@ class TestReActAgent:
             agent._on_message(
                 build_message_from_payload(
                     generator,
-                    ChatCompletionRequest(
-                        messages=[UserMessage(content="What is 2 + 2?")]
-                    ),
+                    ChatCompletionRequest(messages=[UserMessage(content="What is 2 + 2?")]),
                 )
             )
 

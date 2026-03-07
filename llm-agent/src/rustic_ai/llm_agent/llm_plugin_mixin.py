@@ -151,6 +151,4 @@ class LLMPluginMixin(BaseModel):
 
     def has_plugins(self) -> bool:
         """Check if any plugins are configured."""
-        return bool(
-            self.request_preprocessors or self.llm_request_wrappers or self.response_postprocessors
-        )
+        return bool(self.request_preprocessors or self.llm_request_wrappers or self.response_postprocessors)

@@ -62,9 +62,7 @@ class LLMAgent(Agent[LLMAgentConfig]):
         predicate=lambda self, msg: LLMAgentUtils.has_attachments(msg),
         depends_on=["llm", "filesystem:guild_fs:True"],
     )
-    def invoke_llm_with_attachments(
-        self, ctx: ProcessContext[ChatCompletionRequest], llm: LLM, guild_fs: FileSystem
-    ):
+    def invoke_llm_with_attachments(self, ctx: ProcessContext[ChatCompletionRequest], llm: LLM, guild_fs: FileSystem):
         """
         Invoke the LLM with attachments. Converts filesystem image paths to base64 data URLs.
         """

@@ -50,14 +50,10 @@ class TestStructuredResponse:
 
         chat_completion_request = ChatCompletionRequest(
             messages=[UserMessage(content="5 important events in the XIX century")],
-            response_format=get_qualified_class_name(EventsList)
+            response_format=get_qualified_class_name(EventsList),
         )
 
-        probe_agent.publish(
-            guild.DEFAULT_TOPIC,
-            payload=chat_completion_request,
-            in_response_to=1
-        )
+        probe_agent.publish(guild.DEFAULT_TOPIC, payload=chat_completion_request, in_response_to=1)
 
         time.sleep(1)
 
@@ -79,11 +75,7 @@ class TestStructuredResponse:
             .set_name("Test Agent")
             .set_description("A test agent")
             .set_properties(
-                LiteLLMConf(
-                    model="gemini-3-pro-preview",
-                    vertex_location="global",
-                    enable_json_schema_validation=True
-                )
+                LiteLLMConf(model="gemini-3-pro-preview", vertex_location="global", enable_json_schema_validation=True)
             )
             .build_spec()
         )
@@ -93,7 +85,7 @@ class TestStructuredResponse:
 
         chat_completion_request = ChatCompletionRequest(
             messages=[UserMessage(content="List ingredients of Chocolate Chip Cookies.")],
-            response_format={"type": "array", "items": {"type": "string"}, "maxItems": 6}
+            response_format={"type": "array", "items": {"type": "string"}, "maxItems": 6},
         )
 
         probe_agent.publish_dict(
