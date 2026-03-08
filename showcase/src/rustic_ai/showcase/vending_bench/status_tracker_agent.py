@@ -11,12 +11,11 @@ This agent:
 import logging
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, ConfigDict, Field
-
 from rustic_ai.core.guild import agent
 from rustic_ai.core.guild.agent import Agent, ProcessContext
 from rustic_ai.core.guild.dsl import BaseAgentProps
 from rustic_ai.core.state.models import StateUpdateFormat
+from rustic_ai.core.ui_protocol.types import TextFormat, VegaLiteFormat, TableFormat
 from rustic_ai.showcase.vending_bench.messages import (
     CheckBalanceResponse,
     CheckInventoryResponse,
@@ -30,32 +29,6 @@ from rustic_ai.showcase.vending_bench.messages import (
 )
 
 logger = logging.getLogger(__name__)
-
-
-class Phase:
-    """UI phase categories."""
-
-    plan = "plan"
-    simulate = "simulate"
-    run = "run"
-
-
-class GoalFormat(BaseModel):
-    """Format for goal component that can hold any component type with dynamic fields."""
-
-    component: str
-    position: int = Field(gt=0, description="The position of the element in the goal tab.")
-    category: str
-    title: Optional[str] = None
-    text: Optional[str] = None
-    spec: Optional[Dict[str, Any]] = None
-    data: Optional[List[Dict[str, Any]]] = None
-    headers: Optional[List[Dict[str, str]]] = None
-    update_id: Optional[str] = Field(default=None, alias="updateId")
-    update_type: Optional[str] = Field(default=None, alias="updateType")
-    items: Optional[List[Dict[str, Any]]] = None
-
-    model_config = ConfigDict(populate_by_name=True, serialize_by_alias=True)
 
 
 class VendingBenchStatusTrackerProps(BaseAgentProps):
@@ -155,7 +128,7 @@ class VendingBenchStatusTrackerAgent(Agent[VendingBenchStatusTrackerProps]):
             },
         )
 
-    def _generate_summary_update(self) -> GoalFormat:
+    def _generate_summary_update(self) -> TextFormat:
         """Generate the status overview markdown."""
         summary_content = f"""<table>
 <tr><td><b>Current Day</b></td><td>{self.current_day}</td></tr>
@@ -166,17 +139,14 @@ class VendingBenchStatusTrackerAgent(Agent[VendingBenchStatusTrackerProps]):
 <tr><td><b>Emails Sent</b></td><td>{len(self.emails_sent)}</td></tr>
 <tr><td><b>Emails Received</b></td><td>{len(self.emails_received)}</td></tr>
 </table>"""
-        return GoalFormat(
-            component="updateMarkdownFormat",
+        return TextFormat(
             title="Status Overview",
-            position=1,
-            category=Phase.plan,
             update_id="vb_status_overview",
             update_type="replace",
             text=summary_content,
         )
 
-    def _generate_net_worth_chart(self) -> GoalFormat:
+    def _generate_net_worth_chart(self) -> VegaLiteFormat:
         """Generate the net worth progression line chart (hourly tracking)."""
         # Add a continuous time index for proper x-axis ordering across days
         chart_data = []
@@ -225,17 +195,15 @@ class VendingBenchStatusTrackerAgent(Agent[VendingBenchStatusTrackerProps]):
                 "mark": {"line": {"strokeWidth": 2}},
             },
         }
-        return GoalFormat(
-            component="updateVegaLiteFormat",
+        return VegaLiteFormat(
             title="Net Worth Over Time",
-            position=2,
-            category=Phase.plan,
             update_id="vb_net_worth_chart",
             update_type="replace",
             spec=spec,
+            theme={"light": "quartz"}
         )
 
-    def _generate_cash_breakdown_chart(self) -> GoalFormat:
+    def _generate_cash_breakdown_chart(self) -> VegaLiteFormat:
         """Generate the cash breakdown chart showing machine_cash, operator_cash, and inventory_value over time."""
         # Transform cash_breakdown_history to flat format for multi-line chart
         chart_data = []
@@ -306,17 +274,15 @@ class VendingBenchStatusTrackerAgent(Agent[VendingBenchStatusTrackerProps]):
                 "mark": {"line": {"strokeWidth": 2}},
             },
         }
-        return GoalFormat(
-            component="updateVegaLiteFormat",
+        return VegaLiteFormat(
             title="Cash Breakdown Over Time",
-            position=6,
-            category=Phase.plan,
             update_id="vb_cash_breakdown_chart",
             update_type="replace",
             spec=spec,
+            theme={"light": "quartz"}
         )
 
-    def _generate_inventory_line_chart(self) -> GoalFormat:
+    def _generate_inventory_line_chart(self) -> VegaLiteFormat:
         """Generate the inventory levels line chart showing quantity changes over time."""
         # Transform inventory_history to flat format for multi-line chart
         chart_data = []
@@ -377,17 +343,15 @@ class VendingBenchStatusTrackerAgent(Agent[VendingBenchStatusTrackerProps]):
                 "mark": {"line": {"strokeWidth": 2}},
             },
         }
-        return GoalFormat(
-            component="updateVegaLiteFormat",
+        return VegaLiteFormat(
             title="Inventory Over Time",
-            position=3,
-            category=Phase.plan,
             update_id="vb_inventory_chart",
             update_type="replace",
             spec=spec,
+            theme={"light": "quartz"}
         )
 
-    def _generate_email_table(self) -> Optional[GoalFormat]:
+    def _generate_email_table(self) -> Optional[TableFormat]:
         """Generate the email activity table. Returns None if no emails exist."""
         # Return None if no emails to display
         if not self.emails_sent and not self.emails_received:
@@ -422,18 +386,15 @@ class VendingBenchStatusTrackerAgent(Agent[VendingBenchStatusTrackerProps]):
             {"dataKey": "subject", "label": "Subject"},
         ]
 
-        return GoalFormat(
-            component="updateTableFormat",
+        return TableFormat(
             title=f"Email Activity ({len(self.emails_sent)} sent, {len(self.emails_received)} received)",
-            position=4,
-            category=Phase.plan,
             update_id="vb_email_table",
             update_type="replace",
             data=all_emails[:15],  # Show last 15 emails
             headers=headers,
         )
 
-    def _generate_sales_chart(self) -> GoalFormat:
+    def _generate_sales_chart(self) -> VegaLiteFormat:
         """Generate daily sales chart."""
         spec = {
             "$schema": "https://vega.github.io/schema/vega-lite/v6.json",
@@ -474,14 +435,12 @@ class VendingBenchStatusTrackerAgent(Agent[VendingBenchStatusTrackerProps]):
             "resolve": {"scale": {"y": "independent"}},
             "config": {"view": {"stroke": "transparent"}},
         }
-        return GoalFormat(
-            component="updateVegaLiteFormat",
+        return VegaLiteFormat(
             title="Daily Sales & Revenue",
-            position=5,
-            category=Phase.plan,
             update_id="vb_sales_chart",
             update_type="replace",
             spec=spec,
+            theme={"light": "quartz"}
         )
 
     def _track_net_worth(self, day: int, hour: int, net_worth: float, revenue: float):

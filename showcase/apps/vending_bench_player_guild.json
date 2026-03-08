@@ -9,7 +9,6 @@
     "organization_id": null,
     "category_id": null,
     "tags": [
-        "Goal-Native",
         "Benchmark",
         "LLM Agent",
         "G2G"
@@ -92,7 +91,6 @@
                         "rustic_ai.showcase.vending_bench.messages.DayUpdateEvent",
                         "rustic_ai.showcase.vending_bench.messages.NightUpdateEvent",
                         "rustic_ai.showcase.vending_bench.messages.CustomerPurchaseEvent",
-                        "rustic_ai.showcase.vending_bench.status_tracker_agent.GoalFormat",
                         "rustic_ai.showcase.vending_bench.supplier_messages.SupplierSearchResponse",
                         "rustic_ai.showcase.vending_bench.supplier_messages.ViewSuppliersResponse",
                         "rustic_ai.showcase.vending_bench.supplier_messages.ViewComplaintsResponse",
@@ -163,38 +161,6 @@
                     },
                     "destination": {
                         "topics": "PLAYER_INPUT"
-                    },
-                    "route_times": -1
-                },
-                {
-                    "description": "Broadcast G2G SimulationControlResponse to user for debugging",
-                    "agent": {
-                        "name": "PlayerGateway"
-                    },
-                    "message_format": "rustic_ai.showcase.vending_bench.messages.SimulationControlResponse",
-                    "destination": {
-                        "topics": "user_message_broadcast"
-                    },
-                    "transformer": {
-                        "style": "simple",
-                        "output_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
-                        "expression": "({'choices': [{'message': {'role': 'assistant', 'content': '[G2G PlayerGateway] Received SimulationControlResponse: ' & $string($)}}]})"
-                    },
-                    "route_times": -1
-                },
-                {
-                    "description": "Broadcast G2G AgentActionResponse to user for debugging",
-                    "agent": {
-                        "name": "PlayerGateway"
-                    },
-                    "message_format": "rustic_ai.showcase.vending_bench.messages.AgentActionResponse",
-                    "destination": {
-                        "topics": "user_message_broadcast"
-                    },
-                    "transformer": {
-                        "style": "simple",
-                        "output_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
-                        "expression": "({'choices': [{'message': {'role': 'assistant', 'content': '[G2G PlayerGateway] Received AgentActionResponse: ' & $string($)}}]})"
                     },
                     "route_times": -1
                 },
@@ -752,17 +718,6 @@
                     "transformer": {
                         "style": "content_based_router",
                         "handler": "($response := $.payload; $choice := $response.choices[0]; $msg := $choice.message; $has_tool_calls := $exists($msg.tool_calls) and $count($msg.tool_calls) > 0; $has_tool_calls ? {} : {'topics': 'user_message_broadcast', 'format': 'rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse', 'payload': $response, 'process_status': 'completed'})"
-                    },
-                    "route_times": -1
-                },
-                {
-                    "description": "GoalFormat from VendingBench -> User (UI visualizations)",
-                    "agent": {
-                        "name": "PlayerGateway"
-                    },
-                    "message_format": "rustic_ai.showcase.vending_bench.status_tracker_agent.GoalFormat",
-                    "destination": {
-                        "topics": "user_message_broadcast"
                     },
                     "route_times": -1
                 },

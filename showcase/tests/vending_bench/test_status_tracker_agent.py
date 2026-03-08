@@ -2,20 +2,20 @@
 
 import pytest
 
+from rustic_ai.core.ui_protocol.types import CanvasFormat
 from rustic_ai.showcase.vending_bench.config import ProductType
 from rustic_ai.showcase.vending_bench.messages import SimulationStatus
 from rustic_ai.showcase.vending_bench.status_tracker_agent import (
-    GoalFormat,
     VendingBenchStatusTrackerAgent,
 )
 
 
-class TestGoalFormat:
-    """Tests for the GoalFormat model."""
+class TestCanvasFormat:
+    """Tests for the CanvasFormat model."""
 
     def test_goal_format_markdown(self):
-        """Test creating a markdown GoalFormat."""
-        goal = GoalFormat(
+        """Test creating a markdown CanvasFormat."""
+        goal = CanvasFormat(
             component="updateMarkdownFormat",
             title="Test Title",
             text="# Hello World",
@@ -31,13 +31,13 @@ class TestGoalFormat:
         assert goal.category == "plan"
 
     def test_goal_format_vegalite(self):
-        """Test creating a VegaLite GoalFormat."""
+        """Test creating a VegaLite CanvasFormat."""
         spec = {
             "$schema": "https://vega.github.io/schema/vega-lite/v6.json",
             "data": {"values": [{"x": 1, "y": 2}]},
             "mark": "point",
         }
-        goal = GoalFormat(
+        goal = CanvasFormat(
             component="updateVegaLiteFormat",
             title="Test Chart",
             spec=spec,
@@ -50,10 +50,10 @@ class TestGoalFormat:
         assert goal.spec == spec
 
     def test_goal_format_table(self):
-        """Test creating a table GoalFormat."""
+        """Test creating a table CanvasFormat."""
         data = [{"name": "Item 1", "value": 100}]
         headers = [{"dataKey": "name", "label": "Name"}, {"dataKey": "value", "label": "Value"}]
-        goal = GoalFormat(
+        goal = CanvasFormat(
             component="updateTableFormat",
             title="Test Table",
             data=data,

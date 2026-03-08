@@ -9,7 +9,6 @@
     "organization_id": null,
     "category_id": null,
     "tags": [
-        "Goal-Native",
         "Benchmark",
         "Simulation",
         "LLM Agent",
@@ -149,7 +148,8 @@
                     "SIMULATION_CONTROL",
                     "VENDING_STATE",
                     "EMAIL",
-                    "SCRATCHPAD"
+                    "SCRATCHPAD",
+                    "PURCHASES"
                 ],
                 "listen_to_default_topic": true,
                 "properties": {
@@ -167,10 +167,11 @@
                 "additional_topics": [
                     "EVALUATION",
                     "SIMULATION_EVENTS",
+                    "SIMULATION_CONTROL",
                     "VENDING_STATE",
                     "PURCHASES"
                 ],
-                "listen_to_default_topic": false,
+                "listen_to_default_topic": true,
                 "properties": {
                     "emit_daily_reports": true,
                     "starting_net_worth": 500.0
@@ -188,7 +189,7 @@
                     "EMAIL",
                     "PURCHASES"
                 ],
-                "listen_to_default_topic": false,
+                "listen_to_default_topic": true,
                 "properties": {}
             },
             {
@@ -265,38 +266,6 @@
                     "transformer": {
                         "style": "content_based_router",
                         "handler": "({'topics': 'SIMULATION_CONTROL', 'format': $.format, 'payload': $.payload})"
-                    },
-                    "route_times": -1
-                },
-                {
-                    "description": "Broadcast G2G SimulationControlRequest to user for debugging",
-                    "agent": {
-                        "name": "VendingBenchGateway"
-                    },
-                    "message_format": "rustic_ai.showcase.vending_bench.messages.SimulationControlRequest",
-                    "destination": {
-                        "topics": "user_message_broadcast"
-                    },
-                    "transformer": {
-                        "style": "simple",
-                        "output_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
-                        "expression": "({'choices': [{'message': {'role': 'assistant', 'content': '[G2G VendingBenchGateway] Received SimulationControlRequest: ' & $string($)}}]})"
-                    },
-                    "route_times": -1
-                },
-                {
-                    "description": "Broadcast G2G AgentActionRequest to user for debugging",
-                    "agent": {
-                        "name": "VendingBenchGateway"
-                    },
-                    "message_format": "rustic_ai.showcase.vending_bench.messages.AgentActionRequest",
-                    "destination": {
-                        "topics": "user_message_broadcast"
-                    },
-                    "transformer": {
-                        "style": "simple",
-                        "output_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
-                        "expression": "({'choices': [{'message': {'role': 'assistant', 'content': '[G2G VendingBenchGateway] Received AgentActionRequest: ' & $string($)}}]})"
                     },
                     "route_times": -1
                 },
@@ -623,6 +592,18 @@
                     "route_times": -1
                 },
                 {
+                    "description": "Route SupplierDelivery from SupplierSimulator to VENDING_STATE",
+                    "agent": {
+                        "name": "SupplierSimulator"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.SupplierDelivery",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'VENDING_STATE', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1
+                },
+                {
                     "description": "Route SupplierSearchRequest to SUPPLIER_REGISTRY",
                     "agent": {
                         "name": "SimController"
@@ -924,7 +905,7 @@
                 {
                     "description": "Broadcast purchase trigger to chat when player sends email to supplier",
                     "agent": {
-                        "name": "SupplierAgent"
+                        "name": "Supplier"
                     },
                     "message_format": "rustic_ai.showcase.vending_bench.messages.SendEmailRequest",
                     "destination": {
@@ -940,7 +921,7 @@
                 {
                     "description": "Broadcast order confirmation to chat when player places an order",
                     "agent": {
-                        "name": "SupplierAgent"
+                        "name": "Supplier"
                     },
                     "message_format": "rustic_ai.showcase.vending_bench.messages.SupplierOrderConfirmation",
                     "destination": {
@@ -954,9 +935,9 @@
                     "route_times": -1
                 },
                 {
-                    "description": "Broadcast delivery and payment to chat when order is delivered",
+                    "description": "Broadcast delivery and payment to chat when order is delivered (Supplier)",
                     "agent": {
-                        "name": "SupplierAgent"
+                        "name": "Supplier"
                     },
                     "message_format": "rustic_ai.showcase.vending_bench.messages.SupplierDelivery",
                     "destination": {
@@ -970,15 +951,65 @@
                     "route_times": -1
                 },
                 {
-                    "description": "Route GoalFormat from StatusTracker to user_message_broadcast for UI updates",
+                    "description": "Broadcast delivery and payment to chat when order is delivered (SupplierSimulator)",
                     "agent": {
-                        "name": "StatusTracker"
+                        "name": "SupplierSimulator"
                     },
-                    "message_format": "rustic_ai.showcase.vending_bench.status_tracker_agent.GoalFormat",
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.SupplierDelivery",
                     "destination": {
                         "topics": "user_message_broadcast"
                     },
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                        "expression": "({'choices': [{'message': {'role': 'assistant', 'content': '💰 **PAYMENT COMPLETE - DELIVERY ARRIVED**\\n\\nOrder ID: ' & $.order_id & '\\nDelivery Day: ' & $string($.delivery_day) & '\\nProducts Delivered: ' & $join($each($.products, function($v, $k) { $string($v) & 'x ' & $k }), ', ') & '\\n\\n⚠️ Remember to call restock with this Order ID to add items to your inventory!'}}]})"
+                    },
                     "route_times": -1
+                },
+                {
+                    "description": "Route TextFormat from StatusTracker to user_message_broadcast for UI updates",
+                    "agent": {
+                        "name": "StatusTracker"
+                    },
+                    "message_format": "rustic_ai.core.ui_protocol.types.TextFormat",
+                    "destination": {
+                        "topics": "user_message_broadcast"
+                    },
+                    "route_times": -1,
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'user_message_broadcast', 'format': 'updateMarkdownFormat', 'payload': $.payload})"
+                    }
+                },
+                {
+                    "description": "Route VegaLiteFormat from StatusTracker to user_message_broadcast for UI updates",
+                    "agent": {
+                        "name": "StatusTracker"
+                    },
+                    "message_format": "rustic_ai.core.ui_protocol.types.VegaLiteFormat",
+                    "destination": {
+                        "topics": "user_message_broadcast"
+                    },
+                    "route_times": -1,
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'user_message_broadcast', 'format': 'updateVegaLiteFormat', 'payload': $.payload})"
+                    }
+                },
+                {
+                    "description": "Route TableFormat from StatusTracker to user_message_broadcast for UI updates",
+                    "agent": {
+                        "name": "StatusTracker"
+                    },
+                    "message_format": "rustic_ai.core.ui_protocol.types.TableFormat",
+                    "destination": {
+                        "topics": "user_message_broadcast"
+                    },
+                    "route_times": -1,
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'user_message_broadcast', 'format': 'updateTableFormat', 'payload': $.payload})"
+                    }
                 }
             ]
         }
