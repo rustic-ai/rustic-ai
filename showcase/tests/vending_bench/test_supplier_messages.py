@@ -2,8 +2,6 @@
 Tests for supplier simulation message types.
 """
 
-import pytest
-
 from rustic_ai.showcase.vending_bench.config import ProductType
 from rustic_ai.showcase.vending_bench.supplier_messages import (
     BaitAndSwitchEvent,
@@ -27,8 +25,6 @@ from rustic_ai.showcase.vending_bench.supplier_messages import (
     ViewSuppliersResponse,
 )
 from rustic_ai.showcase.vending_bench.supplier_registry import (
-    SupplierBehaviorType,
-    SupplierProductInfo,
     SupplierProfile,
 )
 

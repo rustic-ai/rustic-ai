@@ -6,6 +6,7 @@ and weather conditions.
 """
 
 import random
+import math
 from typing import Dict
 
 from rustic_ai.showcase.vending_bench.config import (
@@ -135,7 +136,7 @@ def poisson_sample(lam: float) -> int:
         return 0
 
     # Use inverse transform sampling
-    L = 2.71828 ** (-lam)  # e^(-lambda)
+    L = math.exp(-lam)  # e^(-lambda)
     k = 0
     p = 1.0
 

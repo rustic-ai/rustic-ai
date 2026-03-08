@@ -8,12 +8,12 @@ This agent:
 - Maintains a registry of discovered suppliers
 """
 
+import re
 import logging
 import random
 from typing import Dict, List, Optional
 
 from pydantic import Field
-from rustic_ai.serpapi.agent import SERPQuery
 import shortuuid
 
 from rustic_ai.core.guild import agent
@@ -21,6 +21,7 @@ from rustic_ai.core.guild.agent import Agent, ProcessContext
 from rustic_ai.core.guild.agent_ext.depends.llm.models import ChatCompletionResponse
 from rustic_ai.core.guild.dsl import BaseAgentProps
 from rustic_ai.core.state.models import StateUpdateFormat
+from rustic_ai.serpapi.agent import SERPQuery
 from rustic_ai.showcase.vending_bench.config import DEFAULT_COSTS, ProductType
 from rustic_ai.showcase.vending_bench.messages import Email
 from rustic_ai.showcase.vending_bench.supplier_config import (
@@ -30,6 +31,11 @@ from rustic_ai.showcase.vending_bench.supplier_config import (
     OPERATOR_EMAIL,
     PRICE_GOUGING_MULTIPLIER_MAX,
     PRICE_GOUGING_MULTIPLIER_MIN,
+)
+from rustic_ai.showcase.vending_bench.state_keys import (
+    CURRENT_DAY,
+    PENDING_SUPPLIER_SEARCHES,
+    SUPPLIER_REGISTRY,
 )
 from rustic_ai.showcase.vending_bench.supplier_messages import (
     SupplierSearchRequest,
@@ -69,15 +75,15 @@ class SupplierDiscoveryAgent(Agent[SupplierDiscoveryAgentProps]):
         guild_state = self.get_guild_state() or {}
 
         # Load registry
-        registry_data = guild_state.get("supplier_registry")
+        registry_data = guild_state.get(SUPPLIER_REGISTRY)
         if registry_data:
             self.registry = SupplierRegistry(**registry_data) if isinstance(registry_data, dict) else registry_data
 
         # Load current day
-        self.current_day = guild_state.get("current_day", 1)
+        self.current_day = guild_state.get(CURRENT_DAY, 1)
 
         # Load pending searches
-        searches_data = guild_state.get("pending_supplier_searches", {})
+        searches_data = guild_state.get(PENDING_SUPPLIER_SEARCHES, {})
         self.pending_searches = {
             k: SupplierSearchRequest(**v) if isinstance(v, dict) else v for k, v in searches_data.items()
         }
@@ -88,8 +94,8 @@ class SupplierDiscoveryAgent(Agent[SupplierDiscoveryAgentProps]):
             ctx,
             update_format=StateUpdateFormat.JSON_MERGE_PATCH,
             update={
-                "supplier_registry": self.registry.model_dump(),
-                "pending_supplier_searches": {k: v.model_dump() for k, v in self.pending_searches.items()},
+                SUPPLIER_REGISTRY: self.registry.model_dump(),
+                PENDING_SUPPLIER_SEARCHES: {k: v.model_dump() for k, v in self.pending_searches.items()},
             },
         )
 
@@ -303,8 +309,6 @@ Use 'view_suppliers' to see all known suppliers and their details.""",
 
         # Try to parse supplier names from research content
         # Look for common patterns in research results
-        import re
-
         # Extract potential company names and emails from research
         # Pattern for company names (words ending in common business suffixes)
         company_patterns = [

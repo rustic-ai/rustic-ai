@@ -69,6 +69,14 @@ from rustic_ai.showcase.vending_bench.messages import (
     WaitResponse,
     WeatherType,
 )
+from rustic_ai.showcase.vending_bench.state_keys import (
+    CURRENT_DAY,
+    CURRENT_TIME_MINUTES,
+    DAYS_WITHOUT_PAYMENT,
+    MACHINE_CASH,
+    OPERATOR_CASH,
+    VM_INVENTORY,
+)
 from rustic_ai.showcase.vending_bench.supplier_messages import (
     NegotiationExchangeRequest,
     NegotiationResponse,
@@ -115,7 +123,7 @@ class SimulationControllerAgent(Agent[SimulationControllerAgentProps]):
         # Financial tracking
         self.operator_cash: float = self.config.starting_capital
         self.machine_cash: float = 0.0
-        self.inventory: Dict[ProductType, int] = {p: DEFAULT_STOCK[p] for p in ProductType}
+        # Note: Inventory is managed by VendingMachineAgent and read from guild state when needed
         self.prices: Dict[ProductType, float] = {p: DEFAULT_PRICES[p] for p in ProductType}
 
         # Bankruptcy tracking
@@ -129,6 +137,9 @@ class SimulationControllerAgent(Agent[SimulationControllerAgentProps]):
         # Daily tracking
         self.daily_sales: int = 0
         self.daily_revenue: float = 0.0
+
+        # Track whether NightUpdateEvent has been emitted for current day
+        self._night_emitted_for_day: int = 0
 
     @property
     def is_daytime(self) -> bool:
@@ -145,10 +156,20 @@ class SimulationControllerAgent(Agent[SimulationControllerAgentProps]):
             day_of_week=self.day_of_week,
         )
 
+    def _get_inventory_from_guild_state(self) -> Dict[ProductType, int]:
+        """Read inventory from guild state (managed by VendingMachineAgent)."""
+        guild_state = self.get_guild_state() or {}
+        vm_inventory = guild_state.get(VM_INVENTORY, {})
+        # Convert string keys back to ProductType enum
+        inventory: Dict[ProductType, int] = {}
+        for product in ProductType:
+            inventory[product] = vm_inventory.get(product.value, DEFAULT_STOCK[product])
+        return inventory
+
     def get_vending_state(self) -> VendingMachineState:
         """Get current vending machine state."""
         return VendingMachineState(
-            inventory=self.inventory,
+            inventory=self._get_inventory_from_guild_state(),
             machine_cash=self.machine_cash,
             operator_cash=self.operator_cash,
             prices=self.prices,
@@ -186,17 +207,32 @@ class SimulationControllerAgent(Agent[SimulationControllerAgentProps]):
             self._transition_to_new_day(ctx)
 
         # Check for night transition (end of business hours)
-        if not day_changed and self.current_time_minutes >= self.config.day_duration_minutes:
-            # Just entered night - but don't emit NightUpdateEvent multiple times
-            pass
+        if (
+            not day_changed
+            and self.current_time_minutes >= self.config.day_duration_minutes
+            and self._night_emitted_for_day != self.current_day
+        ):
+            # Just entered night - emit NightUpdateEvent once per day
+            self._night_emitted_for_day = self.current_day
+            ending_inventory = self._get_inventory_from_guild_state()
+            night_event = NightUpdateEvent(
+                day=self.current_day,
+                total_sales_today=self.daily_sales,
+                total_revenue_today=self.daily_revenue,
+                ending_inventory=ending_inventory,
+                machine_cash=self.machine_cash,
+                operator_cash=self.operator_cash,
+                simulation_time=self.get_simulation_time(),
+            )
+            ctx.send(night_event)
 
         # Persist current time to guild state so other agents can read it
         self.update_guild_state(
             ctx,
             update_format=StateUpdateFormat.JSON_MERGE_PATCH,
             update={
-                "current_day": self.current_day,
-                "current_time_minutes": self.current_time_minutes,
+                CURRENT_DAY: self.current_day,
+                CURRENT_TIME_MINUTES: self.current_time_minutes,
             },
         )
 
@@ -205,11 +241,13 @@ class SimulationControllerAgent(Agent[SimulationControllerAgentProps]):
     def _transition_to_new_day(self, ctx: ProcessContext):
         """Handle transition to a new day."""
         # Emit night update for the ending day
+        # Read inventory from guild state (managed by VendingMachineAgent)
+        ending_inventory = self._get_inventory_from_guild_state()
         night_event = NightUpdateEvent(
             day=self.current_day,
             total_sales_today=self.daily_sales,
             total_revenue_today=self.daily_revenue,
-            ending_inventory=self.inventory.copy(),
+            ending_inventory=ending_inventory,
             machine_cash=self.machine_cash,
             operator_cash=self.operator_cash,
             simulation_time=self.get_simulation_time(),
@@ -229,9 +267,6 @@ class SimulationControllerAgent(Agent[SimulationControllerAgentProps]):
         fee = self.config.daily_fee
         if self.operator_cash >= fee:
             self.operator_cash -= fee
-            self.days_without_payment = 0
-        elif self.machine_cash >= fee:
-            self.machine_cash -= fee
             self.days_without_payment = 0
         else:
             # Can't pay fee
@@ -263,10 +298,10 @@ class SimulationControllerAgent(Agent[SimulationControllerAgentProps]):
             ctx,
             update_format=StateUpdateFormat.JSON_MERGE_PATCH,
             update={
-                "current_day": self.current_day,
-                "operator_cash": self.operator_cash,
-                "machine_cash": self.machine_cash,
-                "days_without_payment": self.days_without_payment,
+                CURRENT_DAY: self.current_day,
+                OPERATOR_CASH: self.operator_cash,
+                MACHINE_CASH: self.machine_cash,
+                DAYS_WITHOUT_PAYMENT: self.days_without_payment,
             },
         )
 
@@ -399,7 +434,7 @@ class SimulationControllerAgent(Agent[SimulationControllerAgentProps]):
         self.weather = WeatherType.SUNNY
         self.operator_cash = self.config.starting_capital
         self.machine_cash = 0.0
-        self.inventory = {p: DEFAULT_STOCK[p] for p in ProductType}
+        # Note: Inventory is managed by VendingMachineAgent, not reset here
         self.prices = {p: DEFAULT_PRICES[p] for p in ProductType}
         self.days_without_payment = 0
         self.total_sales = 0
@@ -407,6 +442,7 @@ class SimulationControllerAgent(Agent[SimulationControllerAgentProps]):
         self.daily_sales = 0
         self.daily_revenue = 0.0
         self.action_counts = {}
+        self._night_emitted_for_day = 0
 
     @agent.processor(AgentActionRequest)
     def handle_agent_action(self, ctx: ProcessContext[AgentActionRequest]):
@@ -795,26 +831,19 @@ class SimulationControllerAgent(Agent[SimulationControllerAgentProps]):
     def handle_purchase(self, ctx: ProcessContext[CustomerPurchaseEvent]):
         """Track customer purchase for daily totals.
 
-        Only counts sales that can actually be fulfilled from available inventory.
+        Note: Inventory management is handled by VendingMachineAgent.
+        This handler only tracks statistics for reporting purposes.
+        The actual sale fulfillment (checking available stock) is done
+        by VendingMachineAgent when it processes the same event.
         """
         purchase = ctx.payload
 
-        # Check available inventory before counting the sale
-        available = self.inventory.get(purchase.product, 0)
-        actual_quantity = min(purchase.quantity, available)
-
-        if actual_quantity > 0:
-            # Calculate actual revenue based on actual quantity sold
-            unit_price = purchase.price_paid / purchase.quantity if purchase.quantity > 0 else 0
-            actual_revenue = actual_quantity * unit_price
-
-            self.daily_sales += actual_quantity
-            self.daily_revenue += actual_revenue
-            self.total_sales += actual_quantity
-            self.total_revenue += actual_revenue
-
-            # Update inventory cache
-            self.inventory[purchase.product] = available - actual_quantity
+        # Track the purchase for daily/total statistics
+        # VendingMachineAgent handles actual inventory fulfillment
+        self.daily_sales += purchase.quantity
+        self.daily_revenue += purchase.price_paid
+        self.total_sales += purchase.quantity
+        self.total_revenue += purchase.price_paid
 
     # Response forwarders for new supplier and complaint actions
 

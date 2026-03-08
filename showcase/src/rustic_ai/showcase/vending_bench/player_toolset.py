@@ -8,9 +8,8 @@ which gets routed via G2G to the VendingBench guild.
 
 from typing import List, Optional
 
-from rustic_ai.llm_agent.tools.tools_manager_plugin import ToolspecsProvider
-
 from rustic_ai.core.guild.agent_ext.depends.llm.tools_manager import ToolSpec
+from rustic_ai.llm_agent.tools.tools_manager_plugin import ToolspecsProvider
 
 from .messages import (
     CheckBalanceRequest,

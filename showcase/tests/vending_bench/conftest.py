@@ -14,6 +14,9 @@ from rustic_ai.showcase.vending_bench.config import (
     STARTING_CAPITAL,
     ProductType,
 )
+from rustic_ai.showcase.vending_bench.customer_complaint_agent import (
+    CustomerComplaintAgent,
+)
 from rustic_ai.showcase.vending_bench.customer_simulator_agent import (
     CustomerSimulatorAgent,
 )
@@ -27,9 +30,12 @@ from rustic_ai.showcase.vending_bench.simulation_controller_agent import (
     SimulationControllerAgent,
 )
 from rustic_ai.showcase.vending_bench.supplier_agent import SupplierAgent
-from rustic_ai.showcase.vending_bench.supplier_discovery_agent import SupplierDiscoveryAgent
-from rustic_ai.showcase.vending_bench.supplier_simulator_agent import SupplierSimulatorAgent
-from rustic_ai.showcase.vending_bench.customer_complaint_agent import CustomerComplaintAgent
+from rustic_ai.showcase.vending_bench.supplier_discovery_agent import (
+    SupplierDiscoveryAgent,
+)
+from rustic_ai.showcase.vending_bench.supplier_simulator_agent import (
+    SupplierSimulatorAgent,
+)
 from rustic_ai.showcase.vending_bench.vending_machine_agent import VendingMachineAgent
 
 

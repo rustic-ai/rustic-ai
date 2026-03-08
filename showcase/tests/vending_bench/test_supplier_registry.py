@@ -2,8 +2,6 @@
 Tests for supplier registry data models.
 """
 
-import pytest
-
 from rustic_ai.showcase.vending_bench.config import ProductType
 from rustic_ai.showcase.vending_bench.supplier_registry import (
     NegotiationState,

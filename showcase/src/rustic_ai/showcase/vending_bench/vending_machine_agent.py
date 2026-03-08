@@ -50,6 +50,12 @@ from rustic_ai.showcase.vending_bench.messages import (
     VendingMachineState,
     WeatherType,
 )
+from rustic_ai.showcase.vending_bench.state_keys import (
+    MACHINE_CASH,
+    OPERATOR_CASH,
+    VM_INVENTORY,
+    VM_PENDING_DELIVERIES,
+)
 from rustic_ai.showcase.vending_bench.supplier_messages import (
     BaitAndSwitchEvent,
     ComplaintResolution,
@@ -117,7 +123,7 @@ class VendingMachineAgent(Agent[VendingMachineAgentProps]):
         guild_state = self.get_guild_state() or {}
 
         # Load pending deliveries
-        deliveries_data = guild_state.get("vm_pending_deliveries", {})
+        deliveries_data = guild_state.get(VM_PENDING_DELIVERIES, {})
         self.pending_deliveries = {
             k: SupplierDelivery(**v) if isinstance(v, dict) else v for k, v in deliveries_data.items()
         }
@@ -128,7 +134,17 @@ class VendingMachineAgent(Agent[VendingMachineAgentProps]):
             ctx,
             update_format=StateUpdateFormat.JSON_MERGE_PATCH,
             update={
-                "vm_pending_deliveries": {k: v.model_dump() for k, v in self.pending_deliveries.items()},
+                VM_PENDING_DELIVERIES: {k: v.model_dump() for k, v in self.pending_deliveries.items()},
+            },
+        )
+
+    def _persist_inventory_to_guild(self, ctx: ProcessContext):
+        """Persist inventory to guild state so other agents can read it."""
+        self.update_guild_state(
+            ctx,
+            update_format=StateUpdateFormat.JSON_MERGE_PATCH,
+            update={
+                VM_INVENTORY: {p.value: q for p, q in self.inventory.items()},
             },
         )
 
@@ -227,7 +243,7 @@ class VendingMachineAgent(Agent[VendingMachineAgentProps]):
         self.update_state(
             ctx,
             update_format=StateUpdateFormat.JSON_MERGE_PATCH,
-            update={"machine_cash": self.machine_cash, "operator_cash": self.operator_cash},
+            update={MACHINE_CASH: self.machine_cash, OPERATOR_CASH: self.operator_cash},
         )
 
         response = CollectCashResponse(
@@ -294,12 +310,15 @@ class VendingMachineAgent(Agent[VendingMachineAgentProps]):
             self.inventory[product] = current + can_add
             products_restocked[product] = can_add
 
-        # Persist state change (inventory)
+        # Persist state change (inventory) to agent state
         self.update_state(
             ctx,
             update_format=StateUpdateFormat.JSON_MERGE_PATCH,
             update={"inventory": {p.value: q for p, q in self.inventory.items()}},
         )
+
+        # Persist inventory to guild state so other agents can track it
+        self._persist_inventory_to_guild(ctx)
 
         # Persist pending deliveries (after removing the restocked one)
         self._persist_pending_deliveries(ctx)
@@ -337,6 +356,9 @@ class VendingMachineAgent(Agent[VendingMachineAgentProps]):
             self.total_sales += actual_quantity
             self.total_revenue += revenue
 
+            # Persist inventory to guild state so other agents can track it
+            self._persist_inventory_to_guild(ctx)
+
             logger.debug(f"Sale: {actual_quantity}x {product.value} @ ${self.prices[product]:.2f} = ${revenue:.2f}")
 
     @agent.processor(DayUpdateEvent)
@@ -345,6 +367,10 @@ class VendingMachineAgent(Agent[VendingMachineAgentProps]):
         event = ctx.payload
 
         self._update_simulation_time(event.simulation_time)
+
+        # Persist inventory to guild state at start of each day
+        # This ensures other agents have access to current inventory
+        self._persist_inventory_to_guild(ctx)
 
         # Daily fee is already deducted by simulation controller before this event
         # Just log the update
@@ -386,7 +412,7 @@ class VendingMachineAgent(Agent[VendingMachineAgentProps]):
         self.update_state(
             ctx,
             update_format=StateUpdateFormat.JSON_MERGE_PATCH,
-            update={"operator_cash": self.operator_cash, "machine_cash": self.machine_cash},
+            update={OPERATOR_CASH: self.operator_cash, MACHINE_CASH: self.machine_cash},
         )
 
     @agent.processor(PartialDeliveryNotification)

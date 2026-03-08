@@ -15,7 +15,7 @@ from rustic_ai.core.guild import agent
 from rustic_ai.core.guild.agent import Agent, ProcessContext
 from rustic_ai.core.guild.dsl import BaseAgentProps
 from rustic_ai.core.state.models import StateUpdateFormat
-from rustic_ai.core.ui_protocol.types import TextFormat, VegaLiteFormat, TableFormat
+from rustic_ai.core.ui_protocol.types import TableFormat, TextFormat, VegaLiteFormat
 from rustic_ai.showcase.vending_bench.messages import (
     CheckBalanceResponse,
     CheckInventoryResponse,
@@ -26,6 +26,22 @@ from rustic_ai.showcase.vending_bench.messages import (
     SendEmailResponse,
     SimulationControlResponse,
     SimulationStatus,
+)
+from rustic_ai.showcase.vending_bench.state_keys import (
+    CURRENT_DAY,
+    CURRENT_TIME_MINUTES,
+    TRACKER_CASH_BREAKDOWN_HISTORY,
+    TRACKER_CURRENT_DAY,
+    TRACKER_CURRENT_DAY_REVENUE,
+    TRACKER_CURRENT_DAY_SALES,
+    TRACKER_CURRENT_NET_WORTH,
+    TRACKER_DAILY_SALES,
+    TRACKER_EMAILS_RECEIVED,
+    TRACKER_EMAILS_SENT,
+    TRACKER_INVENTORY_HISTORY,
+    TRACKER_NET_WORTH_HISTORY,
+    TRACKER_TOTAL_REVENUE,
+    TRACKER_TOTAL_SALES,
 )
 
 logger = logging.getLogger(__name__)
@@ -91,19 +107,19 @@ class VendingBenchStatusTrackerAgent(Agent[VendingBenchStatusTrackerProps]):
         guild_state = self.get_guild_state() or {}
 
         # Only load if guild state has tracker data (indicates a resumed session)
-        if guild_state.get("tracker_net_worth_history") is not None:
-            self.net_worth_history = guild_state.get("tracker_net_worth_history", [])
-            self.cash_breakdown_history = guild_state.get("tracker_cash_breakdown_history", [])
-            self.inventory_history = guild_state.get("tracker_inventory_history", [])
-            self.emails_sent = guild_state.get("tracker_emails_sent", [])
-            self.emails_received = guild_state.get("tracker_emails_received", [])
-            self.daily_sales = guild_state.get("tracker_daily_sales", [])
-            self.total_sales = guild_state.get("tracker_total_sales", 0)
-            self.total_revenue = guild_state.get("tracker_total_revenue", 0.0)
-            self.current_day_sales = guild_state.get("tracker_current_day_sales", 0)
-            self.current_day_revenue = guild_state.get("tracker_current_day_revenue", 0.0)
-            self.current_day = guild_state.get("tracker_current_day", 1)
-            self.current_net_worth = guild_state.get("tracker_current_net_worth", 500.0)
+        if guild_state.get(TRACKER_NET_WORTH_HISTORY) is not None:
+            self.net_worth_history = guild_state.get(TRACKER_NET_WORTH_HISTORY, [])
+            self.cash_breakdown_history = guild_state.get(TRACKER_CASH_BREAKDOWN_HISTORY, [])
+            self.inventory_history = guild_state.get(TRACKER_INVENTORY_HISTORY, [])
+            self.emails_sent = guild_state.get(TRACKER_EMAILS_SENT, [])
+            self.emails_received = guild_state.get(TRACKER_EMAILS_RECEIVED, [])
+            self.daily_sales = guild_state.get(TRACKER_DAILY_SALES, [])
+            self.total_sales = guild_state.get(TRACKER_TOTAL_SALES, 0)
+            self.total_revenue = guild_state.get(TRACKER_TOTAL_REVENUE, 0.0)
+            self.current_day_sales = guild_state.get(TRACKER_CURRENT_DAY_SALES, 0)
+            self.current_day_revenue = guild_state.get(TRACKER_CURRENT_DAY_REVENUE, 0.0)
+            self.current_day = guild_state.get(TRACKER_CURRENT_DAY, 1)
+            self.current_net_worth = guild_state.get(TRACKER_CURRENT_NET_WORTH, 500.0)
 
         self._state_initialized = True
 
@@ -113,18 +129,18 @@ class VendingBenchStatusTrackerAgent(Agent[VendingBenchStatusTrackerProps]):
             ctx,
             update_format=StateUpdateFormat.JSON_MERGE_PATCH,
             update={
-                "tracker_net_worth_history": self.net_worth_history,
-                "tracker_cash_breakdown_history": self.cash_breakdown_history,
-                "tracker_inventory_history": self.inventory_history,
-                "tracker_emails_sent": self.emails_sent,
-                "tracker_emails_received": self.emails_received,
-                "tracker_daily_sales": self.daily_sales,
-                "tracker_total_sales": self.total_sales,
-                "tracker_total_revenue": self.total_revenue,
-                "tracker_current_day_sales": self.current_day_sales,
-                "tracker_current_day_revenue": self.current_day_revenue,
-                "tracker_current_day": self.current_day,
-                "tracker_current_net_worth": self.current_net_worth,
+                TRACKER_NET_WORTH_HISTORY: self.net_worth_history,
+                TRACKER_CASH_BREAKDOWN_HISTORY: self.cash_breakdown_history,
+                TRACKER_INVENTORY_HISTORY: self.inventory_history,
+                TRACKER_EMAILS_SENT: self.emails_sent,
+                TRACKER_EMAILS_RECEIVED: self.emails_received,
+                TRACKER_DAILY_SALES: self.daily_sales,
+                TRACKER_TOTAL_SALES: self.total_sales,
+                TRACKER_TOTAL_REVENUE: self.total_revenue,
+                TRACKER_CURRENT_DAY_SALES: self.current_day_sales,
+                TRACKER_CURRENT_DAY_REVENUE: self.current_day_revenue,
+                TRACKER_CURRENT_DAY: self.current_day,
+                TRACKER_CURRENT_NET_WORTH: self.current_net_worth,
             },
         )
 
@@ -610,9 +626,9 @@ class VendingBenchStatusTrackerAgent(Agent[VendingBenchStatusTrackerProps]):
         # Read current time from guild state (updated by simulation controller)
         # This is more reliable than the time in the response, which may be stale
         guild_state = self.get_guild_state() or {}
-        self.current_day = guild_state.get("current_day", response.simulation_time.current_day)
+        self.current_day = guild_state.get(CURRENT_DAY, response.simulation_time.current_day)
         current_time_minutes = guild_state.get(
-            "current_time_minutes", response.simulation_time.current_time_minutes
+            CURRENT_TIME_MINUTES, response.simulation_time.current_time_minutes
         )
         # Convert to hour (simulation time: 0 = 8 AM, so hour = 8 + minutes/60)
         current_hour = 8 + (current_time_minutes // 60)
@@ -665,9 +681,9 @@ class VendingBenchStatusTrackerAgent(Agent[VendingBenchStatusTrackerProps]):
         # Read current time from guild state (updated by simulation controller)
         # This is more reliable than the time in the response, which may be stale
         guild_state = self.get_guild_state() or {}
-        self.current_day = guild_state.get("current_day", response.simulation_time.current_day)
+        self.current_day = guild_state.get(CURRENT_DAY, response.simulation_time.current_day)
         current_time_minutes = guild_state.get(
-            "current_time_minutes", response.simulation_time.current_time_minutes
+            CURRENT_TIME_MINUTES, response.simulation_time.current_time_minutes
         )
         current_hour = 8 + (current_time_minutes // 60)
 

@@ -52,6 +52,15 @@ from rustic_ai.showcase.vending_bench.messages import (
     SupplierOrderConfirmation,
     WeatherType,
 )
+from rustic_ai.showcase.vending_bench.state_keys import (
+    SCRATCHPAD,
+    SUPPLIER_CURRENT_DAY,
+    SUPPLIER_INBOX,
+    SUPPLIER_PENDING_ORDERS,
+    SUPPLIER_REGISTRY,
+    SUPPLIER_SENT_EMAILS,
+    SUPPLIER_SIMULATION_TIME,
+)
 from rustic_ai.showcase.vending_bench.supplier_messages import (
     ViewSuppliersRequest,
     ViewSuppliersResponse,
@@ -132,30 +141,30 @@ class SupplierAgent(Agent[SupplierAgentProps]):
         guild_state = self.get_guild_state() or {}
 
         # Load inbox
-        inbox_data = guild_state.get("supplier_inbox", [])
+        inbox_data = guild_state.get(SUPPLIER_INBOX, [])
         self.inbox = [Email(**e) if isinstance(e, dict) else e for e in inbox_data]
 
         # Load sent emails
-        sent_data = guild_state.get("supplier_sent_emails", [])
+        sent_data = guild_state.get(SUPPLIER_SENT_EMAILS, [])
         self.sent_emails = [Email(**e) if isinstance(e, dict) else e for e in sent_data]
 
         # Load pending orders
-        orders_data = guild_state.get("supplier_pending_orders", {})
+        orders_data = guild_state.get(SUPPLIER_PENDING_ORDERS, {})
         self.pending_orders = {k: DeliverySchedule(**v) if isinstance(v, dict) else v for k, v in orders_data.items()}
 
         # Load scratchpad
-        self.scratchpad = guild_state.get("scratchpad", {})
+        self.scratchpad = guild_state.get(SCRATCHPAD, {})
 
         # Load current day
-        self.current_day = guild_state.get("supplier_current_day", 1)
+        self.current_day = guild_state.get(SUPPLIER_CURRENT_DAY, 1)
 
         # Load simulation time
-        sim_time_data = guild_state.get("supplier_simulation_time")
+        sim_time_data = guild_state.get(SUPPLIER_SIMULATION_TIME)
         if sim_time_data:
             self.simulation_time = SimulationTime(**sim_time_data) if isinstance(sim_time_data, dict) else sim_time_data
 
         # Load supplier registry
-        registry_data = guild_state.get("supplier_registry")
+        registry_data = guild_state.get(SUPPLIER_REGISTRY)
         if registry_data:
             self.registry = SupplierRegistry(**registry_data) if isinstance(registry_data, dict) else registry_data
 
@@ -165,13 +174,13 @@ class SupplierAgent(Agent[SupplierAgentProps]):
             ctx,
             update_format=StateUpdateFormat.JSON_MERGE_PATCH,
             update={
-                "supplier_inbox": [e.model_dump() for e in self.inbox],
-                "supplier_sent_emails": [e.model_dump() for e in self.sent_emails],
-                "supplier_pending_orders": {k: v.model_dump() for k, v in self.pending_orders.items()},
-                "scratchpad": self.scratchpad,
-                "supplier_current_day": self.current_day,
-                "supplier_simulation_time": self.simulation_time.model_dump(),
-                "supplier_registry": self.registry.model_dump(),
+                SUPPLIER_INBOX: [e.model_dump() for e in self.inbox],
+                SUPPLIER_SENT_EMAILS: [e.model_dump() for e in self.sent_emails],
+                SUPPLIER_PENDING_ORDERS: {k: v.model_dump() for k, v in self.pending_orders.items()},
+                SCRATCHPAD: self.scratchpad,
+                SUPPLIER_CURRENT_DAY: self.current_day,
+                SUPPLIER_SIMULATION_TIME: self.simulation_time.model_dump(),
+                SUPPLIER_REGISTRY: self.registry.model_dump(),
             },
         )
 

@@ -18,11 +18,15 @@ from rustic_ai.showcase.vending_bench.evaluator_agent import EvaluatorAgent
 from rustic_ai.showcase.vending_bench.messages import (
     CustomerPurchaseEvent,
     DayUpdateEvent,
+    NightUpdateEvent,
     SimulationControlCommand,
     SimulationControlRequest,
     SimulationControlResponse,
     SimulationStatus,
     WeatherType,
+)
+from rustic_ai.showcase.vending_bench.simulation_controller_agent import (
+    SimulationControllerAgentProps,
 )
 from rustic_ai.showcase.vending_bench.simulation_controller_agent import (
     SimulationControllerAgent,
@@ -228,6 +232,92 @@ class TestSimulationController:
         statuses = [r.payload["simulation_status"] for r in control_responses]
         assert SimulationStatus.RUNNING.value in statuses
         assert SimulationStatus.PAUSED.value in statuses
+
+        guild.shutdown()
+
+    def test_bankruptcy_flow(self, org_id):
+        """SimulationControllerAgent should trigger bankruptcy after consecutive days without payment."""
+        # Configure agent with low starting capital, high daily fee, and short bankruptcy threshold
+        sim_spec = (
+            AgentBuilder(SimulationControllerAgent)
+            .set_id("simulation_controller")
+            .set_name("SimController")
+            .set_description("Test simulation controller")
+            .set_properties(
+                SimulationControllerAgentProps(
+                    starting_capital=5.0,  # Very low capital
+                    daily_fee=10.0,  # High daily fee (can't pay on day 1)
+                    bankruptcy_days=2,  # Bankrupt after 2 days without payment
+                    day_duration_minutes=60,  # Short days for faster testing
+                    night_duration_minutes=60,
+                ).model_dump()
+            )
+            .listen_to_default_topic(True)
+            .add_additional_topic("SIMULATION_CONTROL")
+            .add_additional_topic("SIMULATION_EVENTS")
+            .build_spec()
+        )
+
+        builder = GuildBuilder(
+            guild_id=f"bankruptcy_test_{shortuuid.uuid()}",
+            guild_name="Bankruptcy Test Guild",
+            guild_description="Test guild for bankruptcy flow",
+        ).set_messaging(
+            "rustic_ai.core.messaging.backend",
+            "InMemoryMessagingBackend",
+            {},
+        )
+
+        builder.add_agent_spec(sim_spec)
+        guild = builder.launch(org_id)
+
+        probe_spec = (
+            AgentBuilder(ProbeAgent)
+            .set_id(f"probe_{shortuuid.uuid()}")
+            .set_name("ProbeAgent")
+            .set_description("Test probe")
+            .listen_to_default_topic(True)
+            .add_additional_topic("SIMULATION_CONTROL")
+            .add_additional_topic("SIMULATION_EVENTS")
+            .build_spec()
+        )
+        probe: ProbeAgent = guild._add_local_agent(probe_spec)
+
+        # Start simulation
+        start_request = SimulationControlRequest(command=SimulationControlCommand.START)
+        probe.publish_dict(
+            guild.DEFAULT_TOPIC,
+            start_request.model_dump(),
+            format=get_qualified_class_name(SimulationControlRequest),
+        )
+        time.sleep(0.3)
+
+        # Advance time to trigger day transitions (each STEP advances 25 minutes)
+        # We need to go through multiple days to trigger bankruptcy
+        for _ in range(10):  # Advance enough to go through several days
+            step_request = SimulationControlRequest(command=SimulationControlCommand.STEP)
+            probe.publish_dict(
+                guild.DEFAULT_TOPIC,
+                step_request.model_dump(),
+                format=get_qualified_class_name(SimulationControlRequest),
+            )
+            time.sleep(0.2)
+
+        messages = probe.get_messages()
+
+        # Check for bankruptcy status in control responses
+        control_responses = [m for m in messages if m.format == get_qualified_class_name(SimulationControlResponse)]
+
+        # Should eventually have a BANKRUPT status
+        statuses = [r.payload.get("simulation_status") for r in control_responses]
+        assert SimulationStatus.BANKRUPT.value in statuses, f"Expected BANKRUPT status, got: {statuses}"
+
+        # Verify we got day update events with increasing days_without_payment
+        day_events = [m for m in messages if m.format == get_qualified_class_name(DayUpdateEvent)]
+        days_without_payment_values = [e.payload.get("days_without_payment", 0) for e in day_events]
+
+        # Should have escalating days without payment before bankruptcy
+        assert any(d >= 1 for d in days_without_payment_values), "Should have days without payment before bankruptcy"
 
         guild.shutdown()
 

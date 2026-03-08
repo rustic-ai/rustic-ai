@@ -9,7 +9,6 @@ import shortuuid
 from rustic_ai.core.agents.testutils import ProbeAgent
 from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder
 from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
-from rustic_ai.showcase.vending_bench.config import ProductType
 from rustic_ai.showcase.vending_bench.messages import (
     DayUpdateEvent,
     Email,
@@ -17,10 +16,6 @@ from rustic_ai.showcase.vending_bench.messages import (
     WeatherType,
 )
 from rustic_ai.showcase.vending_bench.supplier_messages import (
-    ComplaintResolution,
-    ComplaintStatus,
-    ComplaintType,
-    CustomerComplaint,
     RespondToComplaintRequest,
     RespondToComplaintResponse,
     ViewComplaintsRequest,

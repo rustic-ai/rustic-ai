@@ -8,6 +8,7 @@ This agent generates realistic customer purchase patterns based on:
 - Random variation
 """
 
+import random
 import logging
 from typing import Dict
 
@@ -87,8 +88,6 @@ class CustomerSimulatorAgent(Agent[CustomerSimulatorAgentProps]):
 
             # Generate individual purchase events
             # Distribute throughout the day (0-720 minutes of business hours)
-            import random
-
             for i in range(demand):
                 # Random time during business hours (8 AM = 0, 8 PM = 720)
                 time_of_day = random.randint(0, 719)

@@ -2,70 +2,11 @@
 
 import pytest
 
-from rustic_ai.core.ui_protocol.types import CanvasFormat
-from rustic_ai.showcase.vending_bench.config import ProductType
+from rustic_ai.core.ui_protocol.types import TableFormat, TextFormat, VegaLiteFormat
 from rustic_ai.showcase.vending_bench.messages import SimulationStatus
 from rustic_ai.showcase.vending_bench.status_tracker_agent import (
     VendingBenchStatusTrackerAgent,
 )
-
-
-class TestCanvasFormat:
-    """Tests for the CanvasFormat model."""
-
-    def test_goal_format_markdown(self):
-        """Test creating a markdown CanvasFormat."""
-        goal = CanvasFormat(
-            component="updateMarkdownFormat",
-            title="Test Title",
-            text="# Hello World",
-            position=1,
-            category="plan",
-            update_id="test_id",
-            update_type="replace",
-        )
-        assert goal.component == "updateMarkdownFormat"
-        assert goal.title == "Test Title"
-        assert goal.text == "# Hello World"
-        assert goal.position == 1
-        assert goal.category == "plan"
-
-    def test_goal_format_vegalite(self):
-        """Test creating a VegaLite CanvasFormat."""
-        spec = {
-            "$schema": "https://vega.github.io/schema/vega-lite/v6.json",
-            "data": {"values": [{"x": 1, "y": 2}]},
-            "mark": "point",
-        }
-        goal = CanvasFormat(
-            component="updateVegaLiteFormat",
-            title="Test Chart",
-            spec=spec,
-            position=2,
-            category="plan",
-            update_id="chart_id",
-            update_type="replace",
-        )
-        assert goal.component == "updateVegaLiteFormat"
-        assert goal.spec == spec
-
-    def test_goal_format_table(self):
-        """Test creating a table CanvasFormat."""
-        data = [{"name": "Item 1", "value": 100}]
-        headers = [{"dataKey": "name", "label": "Name"}, {"dataKey": "value", "label": "Value"}]
-        goal = CanvasFormat(
-            component="updateTableFormat",
-            title="Test Table",
-            data=data,
-            headers=headers,
-            position=3,
-            category="plan",
-            update_id="table_id",
-            update_type="replace",
-        )
-        assert goal.component == "updateTableFormat"
-        assert goal.data == data
-        assert goal.headers == headers
 
 
 class TestVendingBenchStatusTrackerAgent:
@@ -87,9 +28,8 @@ class TestVendingBenchStatusTrackerAgent:
 
         summary = agent._generate_summary_update()
 
-        assert summary.component == "updateMarkdownFormat"
+        assert isinstance(summary, TextFormat)
         assert summary.title == "Status Overview"
-        assert summary.position == 1
         assert "Day 5" in summary.text or "5" in summary.text
         assert "550.00" in summary.text
         assert "100" in summary.text
@@ -106,9 +46,8 @@ class TestVendingBenchStatusTrackerAgent:
 
         chart = agent._generate_net_worth_chart()
 
-        assert chart.component == "updateVegaLiteFormat"
+        assert isinstance(chart, VegaLiteFormat)
         assert chart.title == "Net Worth Over Time"
-        assert chart.position == 2
         assert chart.spec is not None
         # Chart data includes time_index for continuous x-axis across days
         chart_data = chart.spec["data"]["values"]
@@ -140,9 +79,8 @@ class TestVendingBenchStatusTrackerAgent:
 
         chart = agent._generate_inventory_line_chart()
 
-        assert chart.component == "updateVegaLiteFormat"
+        assert isinstance(chart, VegaLiteFormat)
         assert chart.title == "Inventory Over Time"
-        assert chart.position == 3
         assert chart.spec is not None
         # One snapshot with 5 products = 5 data entries
         assert len(chart.spec["data"]["values"]) == 5
@@ -158,9 +96,8 @@ class TestVendingBenchStatusTrackerAgent:
 
         table = agent._generate_email_table()
 
-        assert table.component == "updateTableFormat"
+        assert isinstance(table, TableFormat)
         assert "Email Activity" in table.title
-        assert table.position == 4
         assert table.data is not None
         assert table.headers is not None
         assert len(table.data) == 2
@@ -174,9 +111,8 @@ class TestVendingBenchStatusTrackerAgent:
 
         chart = agent._generate_sales_chart()
 
-        assert chart.component == "updateVegaLiteFormat"
+        assert isinstance(chart, VegaLiteFormat)
         assert chart.title == "Daily Sales & Revenue"
-        assert chart.position == 5
         assert chart.spec is not None
 
     def test_net_worth_history_appends_new_time_points(self, agent):
@@ -430,9 +366,8 @@ class TestVendingBenchStatusTrackerAgent:
 
         chart = agent._generate_cash_breakdown_chart()
 
-        assert chart.component == "updateVegaLiteFormat"
+        assert isinstance(chart, VegaLiteFormat)
         assert chart.title == "Cash Breakdown Over Time"
-        assert chart.position == 6
         assert chart.spec is not None
 
         # Each snapshot creates 3 entries (one per component)

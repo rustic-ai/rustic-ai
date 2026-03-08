@@ -38,7 +38,7 @@ PARTIAL_DELIVERY_FRACTION_MAX = 0.8  # Maximum fraction delivered in partial
 SUPPLIER_BANKRUPTCY_PROBABILITY = 0.02  # 2% monthly chance of going bankrupt
 
 # Customer complaint settings
-BASE_COMPLAINT_RATE = 0.02  # 2% base daily complaint rate
+BASE_COMPLAINT_RATE = 0.10  # 10% base daily complaint rate
 OUT_OF_STOCK_COMPLAINT_BONUS = 0.05  # +5% if frequently out of stock
 HIGH_PRICE_COMPLAINT_BONUS = 0.03  # +3% if prices are high
 

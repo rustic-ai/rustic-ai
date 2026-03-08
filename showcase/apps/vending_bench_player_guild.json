@@ -15,8 +15,7 @@
     ],
     "commands": [],
     "starter_prompts": [
-        "Start the vending machine simulation",
-        "Help me grow my vending machine business"
+        "Start the vending machine simulation"
     ],
     "spec": {
         "name": "VendingBenchPlayer",

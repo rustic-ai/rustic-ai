@@ -12,7 +12,6 @@ from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 from rustic_ai.showcase.vending_bench.config import ProductType
 from rustic_ai.showcase.vending_bench.messages import (
     DayUpdateEvent,
-    Email,
     SimulationTime,
     WeatherType,
 )
@@ -25,14 +24,7 @@ from rustic_ai.showcase.vending_bench.supplier_messages import (
     StartNegotiationRequest,
     SupplierFailureNotification,
 )
-from rustic_ai.showcase.vending_bench.supplier_registry import (
-    NegotiationState,
-    PendingSupplierOrder,
-    SupplierBehaviorType,
-    SupplierProductInfo,
-    SupplierProfile,
-    SupplierRegistry,
-)
+from rustic_ai.showcase.vending_bench.supplier_registry import SupplierBehaviorType
 
 
 class TestSupplierSimulatorAgent:

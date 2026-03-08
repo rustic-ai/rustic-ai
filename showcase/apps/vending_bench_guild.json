@@ -15,12 +15,7 @@
         "Business"
     ],
     "commands": [],
-    "starter_prompts": [
-        "Start the simulation",
-        "Check my inventory",
-        "What's my current balance?",
-        "Order supplies from the supplier"
-    ],
+    "starter_prompts": [],
     "spec": {
         "name": "VendingBench",
         "description": "Vending machine business simulation benchmark for LLM agents",
@@ -135,7 +130,7 @@
                 ],
                 "listen_to_default_topic": false,
                 "properties": {
-                    "base_complaint_rate": 0.02,
+                    "base_complaint_rate": 0.10,
                     "enable_complaints": true
                 }
             },
@@ -672,6 +667,22 @@
                     "transformer": {
                         "style": "content_based_router",
                         "handler": "({'topics': 'EMAIL', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Broadcast customer complaint Email to chat UI",
+                    "agent": {
+                        "name": "CustomerComplaints"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.Email",
+                    "destination": {
+                        "topics": "user_message_broadcast"
+                    },
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                        "expression": "({'choices': [{'message': {'role': 'assistant', 'content': '📨 **CUSTOMER COMPLAINT RECEIVED**\\n\\nFrom: ' & $.from_address & '\\nSubject: ' & $.subject & '\\n\\n' & $.body & '\\n\\n⚠️ Use view_complaints and respond_to_complaint tools to handle this complaint.'}}]})"
                     },
                     "route_times": -1
                 },

@@ -26,6 +26,7 @@ from rustic_ai.showcase.vending_bench.messages import (
     SetPriceRequest,
     SetPriceResponse,
 )
+from rustic_ai.showcase.vending_bench.supplier_messages import BaitAndSwitchEvent
 
 
 class TestVendingMachineAgent:
@@ -317,5 +318,168 @@ class TestVendingMachineAgent:
         latest_inv = inv_responses[-1].payload
         expected_chips = DEFAULT_STOCK[ProductType.CHIPS] - 3
         assert latest_inv["inventory"]["chips"] == expected_chips
+
+        guild.shutdown()
+
+    def test_bait_and_switch_partial_funds(self, org_id, vending_machine_spec):
+        """VendingMachineAgent should use machine cash when operator cash is insufficient for bait-and-switch."""
+        builder = GuildBuilder(
+            guild_id=f"vm_test_{shortuuid.uuid()}",
+            guild_name="VM Test Guild",
+            guild_description="Test guild",
+        ).set_messaging(
+            "rustic_ai.core.messaging.backend",
+            "InMemoryMessagingBackend",
+            {},
+        )
+
+        builder.add_agent_spec(vending_machine_spec)
+        guild = builder.launch(org_id)
+
+        probe_spec = (
+            AgentBuilder(ProbeAgent)
+            .set_id(f"probe_{shortuuid.uuid()}")
+            .set_name("ProbeAgent")
+            .set_description("Test probe")
+            .listen_to_default_topic(True)
+            .add_additional_topic("VENDING_STATE")
+            .add_additional_topic("PURCHASES")
+            .build_spec()
+        )
+        probe: ProbeAgent = guild._add_local_agent(probe_spec)
+
+        # First, add some machine cash via purchases
+        purchase = CustomerPurchaseEvent(
+            product=ProductType.SODA,
+            quantity=10,
+            price_paid=2.0,  # $20 in machine
+            day=1,
+            time_of_day_minutes=100,
+        )
+        probe.publish_dict(
+            "PURCHASES",
+            purchase.model_dump(),
+            format=get_qualified_class_name(CustomerPurchaseEvent),
+        )
+        time.sleep(0.3)
+
+        # Send bait-and-switch event with amount greater than operator cash
+        # Starting capital is $500, so charge $510 extra to use some machine cash
+        bait_switch = BaitAndSwitchEvent(
+            order_id="test_order_1",
+            supplier_id="supplier_1",
+            supplier_name="Shady Supplier",
+            quoted_total=100.0,
+            actual_total=610.0,
+            difference=510.0,  # $510 extra - more than $500 operator cash
+            day_occurred=1,
+        )
+        probe.publish_dict(
+            guild.DEFAULT_TOPIC,
+            bait_switch.model_dump(),
+            format=get_qualified_class_name(BaitAndSwitchEvent),
+        )
+        time.sleep(0.3)
+
+        # Check balance
+        balance_request = CheckBalanceRequest()
+        probe.publish_dict(
+            "VENDING_STATE",
+            balance_request.model_dump(),
+            format=get_qualified_class_name(CheckBalanceRequest),
+        )
+        time.sleep(0.5)
+
+        messages = probe.get_messages()
+        balance_responses = [m for m in messages if m.format == get_qualified_class_name(CheckBalanceResponse)]
+        latest_balance = balance_responses[-1].payload
+
+        # Operator cash should be 0 (depleted)
+        assert latest_balance["operator_cash"] == 0.0
+        # Machine cash should be reduced: $20 - ($510 - $500) = $20 - $10 = $10
+        assert latest_balance["machine_cash"] == 10.0
+
+        guild.shutdown()
+
+    def test_bait_and_switch_creates_debt(self, org_id, vending_machine_spec):
+        """VendingMachineAgent should go into debt (negative operator cash) when funds are exhausted."""
+        builder = GuildBuilder(
+            guild_id=f"vm_test_{shortuuid.uuid()}",
+            guild_name="VM Test Guild",
+            guild_description="Test guild",
+        ).set_messaging(
+            "rustic_ai.core.messaging.backend",
+            "InMemoryMessagingBackend",
+            {},
+        )
+
+        builder.add_agent_spec(vending_machine_spec)
+        guild = builder.launch(org_id)
+
+        probe_spec = (
+            AgentBuilder(ProbeAgent)
+            .set_id(f"probe_{shortuuid.uuid()}")
+            .set_name("ProbeAgent")
+            .set_description("Test probe")
+            .listen_to_default_topic(True)
+            .add_additional_topic("VENDING_STATE")
+            .add_additional_topic("PURCHASES")
+            .build_spec()
+        )
+        probe: ProbeAgent = guild._add_local_agent(probe_spec)
+
+        # Add some machine cash via purchases
+        purchase = CustomerPurchaseEvent(
+            product=ProductType.SODA,
+            quantity=5,
+            price_paid=2.0,  # $10 in machine
+            day=1,
+            time_of_day_minutes=100,
+        )
+        probe.publish_dict(
+            "PURCHASES",
+            purchase.model_dump(),
+            format=get_qualified_class_name(CustomerPurchaseEvent),
+        )
+        time.sleep(0.3)
+
+        # Send bait-and-switch that exceeds all available funds
+        # Starting capital $500 + machine cash $10 = $510 total
+        # Charge $600 extra to create $90 debt
+        bait_switch = BaitAndSwitchEvent(
+            order_id="test_order_2",
+            supplier_id="supplier_2",
+            supplier_name="Very Shady Supplier",
+            quoted_total=50.0,
+            actual_total=650.0,
+            difference=600.0,  # $600 extra - more than total available
+            day_occurred=1,
+        )
+        probe.publish_dict(
+            guild.DEFAULT_TOPIC,
+            bait_switch.model_dump(),
+            format=get_qualified_class_name(BaitAndSwitchEvent),
+        )
+        time.sleep(0.3)
+
+        # Check balance
+        balance_request = CheckBalanceRequest()
+        probe.publish_dict(
+            "VENDING_STATE",
+            balance_request.model_dump(),
+            format=get_qualified_class_name(CheckBalanceRequest),
+        )
+        time.sleep(0.5)
+
+        messages = probe.get_messages()
+        balance_responses = [m for m in messages if m.format == get_qualified_class_name(CheckBalanceResponse)]
+        latest_balance = balance_responses[-1].payload
+
+        # Machine cash should be 0 (depleted)
+        assert latest_balance["machine_cash"] == 0.0
+        # Operator cash should be negative (debt): -($600 - $500 - $10) = -$90
+        assert latest_balance["operator_cash"] == -90.0
+        # Net worth should reflect the debt
+        assert latest_balance["net_worth"] < 0
 
         guild.shutdown()

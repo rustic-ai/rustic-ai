@@ -41,6 +41,11 @@ from rustic_ai.showcase.vending_bench.supplier_config import (
     PARTIAL_DELIVERY_PROBABILITY,
     SUPPLIER_BANKRUPTCY_PROBABILITY,
 )
+from rustic_ai.showcase.vending_bench.state_keys import (
+    CURRENT_DAY,
+    SUPPLIER_REGISTRY,
+    SUPPLIER_SIMULATION_TIME,
+)
 from rustic_ai.showcase.vending_bench.supplier_messages import (
     BaitAndSwitchEvent,
     DeliveryDelayNotification,
@@ -91,15 +96,15 @@ class SupplierSimulatorAgent(Agent[SupplierSimulatorAgentProps]):
         guild_state = self.get_guild_state() or {}
 
         # Load registry
-        registry_data = guild_state.get("supplier_registry")
+        registry_data = guild_state.get(SUPPLIER_REGISTRY)
         if registry_data:
             self.registry = SupplierRegistry(**registry_data) if isinstance(registry_data, dict) else registry_data
 
         # Load current day
-        self.current_day = guild_state.get("current_day", 1)
+        self.current_day = guild_state.get(CURRENT_DAY, 1)
 
         # Load simulation time
-        sim_time_data = guild_state.get("supplier_simulation_time")
+        sim_time_data = guild_state.get(SUPPLIER_SIMULATION_TIME)
         if sim_time_data:
             self.simulation_time = SimulationTime(**sim_time_data) if isinstance(sim_time_data, dict) else sim_time_data
 
@@ -109,7 +114,7 @@ class SupplierSimulatorAgent(Agent[SupplierSimulatorAgentProps]):
             ctx,
             update_format=StateUpdateFormat.JSON_MERGE_PATCH,
             update={
-                "supplier_registry": self.registry.model_dump(),
+                SUPPLIER_REGISTRY: self.registry.model_dump(),
             },
         )
 

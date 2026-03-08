@@ -10,10 +10,9 @@ This agent:
 
 import logging
 import random
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
 from pydantic import Field
-import shortuuid
 
 from rustic_ai.core.guild import agent
 from rustic_ai.core.guild.agent import Agent, ProcessContext
@@ -25,6 +24,16 @@ from rustic_ai.showcase.vending_bench.messages import (
     Email,
     SimulationTime,
     WeatherType,
+)
+from rustic_ai.showcase.vending_bench.state_keys import (
+    COMPLAINT_SIMULATION_TIME,
+    CURRENT_DAY,
+    CUSTOMER_COMPLAINTS,
+    HIGH_PRICE_DAYS,
+    OPERATOR_CASH,
+    OUT_OF_STOCK_DAYS,
+    REPUTATION_SCORE,
+    VM_INVENTORY,
 )
 from rustic_ai.showcase.vending_bench.supplier_config import (
     BASE_COMPLAINT_RATE,
@@ -112,21 +121,21 @@ class CustomerComplaintAgent(Agent[CustomerComplaintAgentProps]):
         guild_state = self.get_guild_state() or {}
 
         # Load complaints
-        complaints_data = guild_state.get("customer_complaints", {})
+        complaints_data = guild_state.get(CUSTOMER_COMPLAINTS, {})
         self.complaints = {k: CustomerComplaint(**v) if isinstance(v, dict) else v for k, v in complaints_data.items()}
 
         # Load reputation
-        self.reputation_score = guild_state.get("reputation_score", INITIAL_REPUTATION_SCORE)
+        self.reputation_score = guild_state.get(REPUTATION_SCORE, INITIAL_REPUTATION_SCORE)
 
         # Load current day
-        self.current_day = guild_state.get("current_day", 1)
+        self.current_day = guild_state.get(CURRENT_DAY, 1)
 
         # Load tracking factors
-        self.out_of_stock_days = guild_state.get("out_of_stock_days", 0)
-        self.high_price_days = guild_state.get("high_price_days", 0)
+        self.out_of_stock_days = guild_state.get(OUT_OF_STOCK_DAYS, 0)
+        self.high_price_days = guild_state.get(HIGH_PRICE_DAYS, 0)
 
         # Load simulation time
-        sim_time_data = guild_state.get("complaint_simulation_time")
+        sim_time_data = guild_state.get(COMPLAINT_SIMULATION_TIME)
         if sim_time_data:
             self.simulation_time = SimulationTime(**sim_time_data) if isinstance(sim_time_data, dict) else sim_time_data
 
@@ -136,13 +145,34 @@ class CustomerComplaintAgent(Agent[CustomerComplaintAgentProps]):
             ctx,
             update_format=StateUpdateFormat.JSON_MERGE_PATCH,
             update={
-                "customer_complaints": {k: v.model_dump() for k, v in self.complaints.items()},
-                "reputation_score": self.reputation_score,
-                "out_of_stock_days": self.out_of_stock_days,
-                "high_price_days": self.high_price_days,
-                "complaint_simulation_time": self.simulation_time.model_dump(),
+                CUSTOMER_COMPLAINTS: {k: v.model_dump() for k, v in self.complaints.items()},
+                REPUTATION_SCORE: self.reputation_score,
+                OUT_OF_STOCK_DAYS: self.out_of_stock_days,
+                HIGH_PRICE_DAYS: self.high_price_days,
+                COMPLAINT_SIMULATION_TIME: self.simulation_time.model_dump(),
             },
         )
+
+    def _check_out_of_stock(self) -> bool:
+        """Check if any product is out of stock by reading inventory from guild state.
+
+        Returns:
+            True if any product has quantity <= 0, False otherwise.
+        """
+        guild_state = self.get_guild_state() or {}
+        vm_inventory = guild_state.get(VM_INVENTORY, {})
+
+        # If no inventory data available, assume not out of stock
+        if not vm_inventory:
+            return False
+
+        # Check if any product is out of stock (quantity <= 0)
+        for product in ProductType:
+            quantity = vm_inventory.get(product.value, 0)
+            if quantity <= 0:
+                return True
+
+        return False
 
     def _calculate_complaint_rate(self) -> float:
         """Calculate the effective complaint rate based on various factors."""
@@ -208,9 +238,8 @@ class CustomerComplaintAgent(Agent[CustomerComplaintAgentProps]):
             self._persist_state(ctx)
             return
 
-        # Check for out-of-stock conditions (would need inventory data)
-        # For now, use a simple random factor
-        if random.random() < 0.2:
+        # Check for out-of-stock conditions by reading actual inventory from guild state
+        if self._check_out_of_stock():
             self.out_of_stock_days += 1
         else:
             self.out_of_stock_days = max(0, self.out_of_stock_days - 1)
@@ -325,7 +354,7 @@ Customer: {customer_email}""",
 
         # Get operator cash from guild state
         guild_state = self.get_guild_state() or {}
-        operator_cash = guild_state.get("operator_cash", 500.0)
+        operator_cash = guild_state.get(OPERATOR_CASH, 500.0)
 
         refund_amount = 0.0
         reputation_change = 0.0
@@ -375,7 +404,7 @@ Customer: {customer_email}""",
                 self.update_guild_state(
                     ctx,
                     update_format=StateUpdateFormat.JSON_MERGE_PATCH,
-                    update={"operator_cash": operator_cash},
+                    update={OPERATOR_CASH: operator_cash},
                 )
             else:
                 response = RespondToComplaintResponse(
