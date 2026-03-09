@@ -108,6 +108,7 @@ class TestCustomerComplaintAgent:
 
         # With 50% complaint rate over 8+ days, we should have at least one email
         email_messages = [m for m in messages if m.format == get_qualified_class_name(Email)]
+        assert len(email_messages) >= 1, "Agent should generate at least one complaint email"
 
         # Verify the agent is working by requesting to view complaints
         view_request = ViewComplaintsRequest()

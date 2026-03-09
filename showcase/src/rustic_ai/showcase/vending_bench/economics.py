@@ -5,9 +5,9 @@ Implements demand calculation based on price elasticity, day-of-week effects,
 and weather conditions.
 """
 
-import random
 import math
-from typing import Dict
+import random
+from typing import Dict, Optional
 
 from rustic_ai.showcase.vending_bench.config import (
     BASE_DEMAND,
@@ -73,7 +73,7 @@ def calculate_demand(
     current_price: float,
     day_of_week: int,
     weather: WeatherType,
-    base_price: float = None,
+    base_price: Optional[float] = None,
     add_randomness: bool = True,
 ) -> int:
     """Calculate expected demand for a product.

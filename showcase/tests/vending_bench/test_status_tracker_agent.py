@@ -1,5 +1,7 @@
 """Tests for the VendingBench Status Tracker Agent."""
 
+from typing import cast
+
 import pytest
 
 from rustic_ai.core.ui_protocol.types import TableFormat, TextFormat, VegaLiteFormat
@@ -201,7 +203,7 @@ class TestVendingBenchStatusTrackerAgent:
         ]
 
         for data in test_data:
-            current_hour = 8 + (data["time"] // 60)
+            current_hour = 8 + (cast(int, data["time"]) // 60)
             entry_exists = False
             for entry in agent.inventory_history:
                 entry_hour = 8 + (entry.get("time", 0) // 60)
@@ -241,7 +243,7 @@ class TestVendingBenchStatusTrackerAgent:
         # Try to add another entry for hour 9 (time=65 is still hour 9)
         new_data = {"day": 1, "time": 65, "inventory": {"chips": 17, "candy": 22}}
 
-        current_hour = 8 + (new_data["time"] // 60)
+        current_hour = 8 + (cast(int, new_data["time"]) // 60)
         entry_exists = False
         for entry in agent.inventory_history:
             entry_hour = 8 + (entry.get("time", 0) // 60)

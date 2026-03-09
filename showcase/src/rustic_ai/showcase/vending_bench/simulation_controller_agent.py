@@ -495,7 +495,7 @@ class SimulationControllerAgent(Agent[SimulationControllerAgentProps]):
         self._night_emitted_for_day = 0
 
     @agent.processor(AgentActionRequest)
-    def handle_agent_action(self, ctx: ProcessContext[AgentActionRequest]):
+    def handle_agent_action(self, ctx: ProcessContext[AgentActionRequest]):  # noqa: C901
         """Handle generic action requests from external agents via G2G.
 
         Routes the action to the appropriate handler and advances time.

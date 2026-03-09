@@ -12,8 +12,8 @@ The goal is to identify where the flow breaks after the first tool call.
 """
 
 import time
-from typing import List, Optional
-from unittest.mock import MagicMock, patch
+from typing import List
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -29,22 +29,23 @@ from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     FunctionCall,
 )
 from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder
-from rustic_ai.core.guild.dsl import AgentSpec
+from rustic_ai.core.guild.g2g.gateway_agent import GatewayAgent
 from rustic_ai.core.messaging import MessagingConfig
-from rustic_ai.llm_agent.llm_agent import LLMAgent
+from rustic_ai.core.messaging.core.message import (
+    RoutingDestination,
+    RoutingRule,
+    RoutingSlip,
+)
 from rustic_ai.llm_agent.tools.tools_manager_plugin import ToolsManagerPlugin
 from rustic_ai.showcase.vending_bench.messages import (
     ActionType,
-    AgentActionRequest,
     AgentActionResponse,
-    SimulationControlCommand,
-    SimulationControlRequest,
-    SimulationControlResponse,
-    SimulationStatus,
     SimulationTime,
     WeatherType,
 )
-from rustic_ai.showcase.vending_bench.player_toolset import VendingBenchToolspecsProvider
+from rustic_ai.showcase.vending_bench.player_toolset import (
+    VendingBenchToolspecsProvider,
+)
 from rustic_ai.showcase.vending_bench.supplier_messages import SupplierSearchRequest
 
 
@@ -311,7 +312,7 @@ class TestLLMAgentFlow:
             .add_additional_topic("PLAYER_INPUT")
             .build_spec()
         )
-        probe: ProbeAgent = guild._add_local_agent(probe_spec)
+        guild._add_local_agent(probe_spec)
 
         time.sleep(0.3)
 
@@ -442,7 +443,7 @@ class TestLLMAgentFlow:
         from jsonata import Jsonata
 
         # The transformation expression from the routing rule
-        expression = "({'messages': [{'role': 'user', 'content': 'Simulation ' & $.simulation_status & '! Day: ' & $string($.simulation_time.current_day) & ', Weather: ' & $.simulation_time.weather & '. ' & $.message & ' What action would you like to take?'}]})"
+        expression = "({'messages': [{'role': 'user', 'content': 'Simulation ' & $.simulation_status & '! Day: ' & $string($.simulation_time.current_day) & ', Weather: ' & $.simulation_time.weather & '. ' & $.message & ' What action would you like to take?'}]})"  # noqa: E501
 
         # Sample SimulationControlResponse payload
         payload = {
@@ -482,7 +483,7 @@ class TestLLMAgentFlow:
         from jsonata import Jsonata
 
         # The transformation expression from the routing rule
-        expression = "({'messages': [{'role': 'user', 'content': 'Action: ' & $.action_type & ' - ' & ($.success ? 'Success' : 'Failed: ' & $.error_message) & '. Response: ' & $string($.response) & '. Day ' & $string($.simulation_time.current_day) & ', ' & $.simulation_time.weather & ' weather. What would you like to do next?'}]})"
+        expression = "({'messages': [{'role': 'user', 'content': 'Action: ' & $.action_type & ' - ' & ($.success ? 'Success' : 'Failed: ' & $.error_message) & '. Response: ' & $string($.response) & '. Day ' & $string($.simulation_time.current_day) & ', ' & $.simulation_time.weather & ' weather. What would you like to do next?'}]})"  # noqa: E501
 
         # Sample AgentActionResponse payload
         payload = {
@@ -531,8 +532,6 @@ class TestRealLLMAgentFlow:
 
         This simulates what happens when VendingBench responds to the player.
         """
-        from rustic_ai.core.guild.g2g.gateway_agent import GatewayAgent
-        from rustic_ai.core.messaging.core.message import RoutingSlip, RoutingRule, RoutingDestination
 
         # Build the guild with routes that transform AgentActionResponse
         routes = RoutingSlip(steps=[
@@ -587,7 +586,7 @@ class TestRealLLMAgentFlow:
             })
             .build_spec()
         )
-        gateway = guild._add_local_agent(gateway_spec)
+        guild._add_local_agent(gateway_spec)
 
         # Add probe to observe messages
         probe_spec = (
@@ -633,7 +632,7 @@ class TestRealLLMAgentFlow:
         # Check if MockLLMAgent received a ChatCompletionRequest
         print(f"\n[Test] MockLLMAgent received {len(mock_llm.received_requests)} requests")
         for i, req in enumerate(mock_llm.received_requests):
-            print(f"  Request {i+1}: {str(req.messages)[:100]}...")
+            print(f"  Request {i + 1}: {str(req.messages)[:100]}...")
 
         # The routing should transform AgentActionResponse to ChatCompletionRequest
         # But this might not work as expected because we're not going through the actual G2G flow

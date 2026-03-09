@@ -8,9 +8,9 @@ This agent:
 - Maintains a registry of discovered suppliers
 """
 
-import re
 import logging
 import random
+import re
 from typing import Dict, List, Optional
 
 from pydantic import Field
@@ -24,6 +24,11 @@ from rustic_ai.core.state.models import StateUpdateFormat
 from rustic_ai.serpapi.agent import SERPQuery
 from rustic_ai.showcase.vending_bench.config import DEFAULT_COSTS, ProductType
 from rustic_ai.showcase.vending_bench.messages import Email
+from rustic_ai.showcase.vending_bench.state_keys import (
+    CURRENT_DAY,
+    PENDING_SUPPLIER_SEARCHES,
+    SUPPLIER_REGISTRY,
+)
 from rustic_ai.showcase.vending_bench.supplier_config import (
     ADVERSARIAL_SUPPLIER_PROBABILITY,
     HONEST_SUPPLIER_PROBABILITY,
@@ -31,11 +36,6 @@ from rustic_ai.showcase.vending_bench.supplier_config import (
     OPERATOR_EMAIL,
     PRICE_GOUGING_MULTIPLIER_MAX,
     PRICE_GOUGING_MULTIPLIER_MIN,
-)
-from rustic_ai.showcase.vending_bench.state_keys import (
-    CURRENT_DAY,
-    PENDING_SUPPLIER_SEARCHES,
-    SUPPLIER_REGISTRY,
 )
 from rustic_ai.showcase.vending_bench.supplier_messages import (
     SupplierSearchRequest,

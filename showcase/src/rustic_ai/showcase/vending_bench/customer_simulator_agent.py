@@ -8,8 +8,8 @@ This agent generates realistic customer purchase patterns based on:
 - Random variation
 """
 
-import random
 import logging
+import random
 from typing import Dict
 
 from pydantic import Field

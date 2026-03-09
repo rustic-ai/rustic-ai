@@ -18,7 +18,6 @@ from rustic_ai.showcase.vending_bench.evaluator_agent import EvaluatorAgent
 from rustic_ai.showcase.vending_bench.messages import (
     CustomerPurchaseEvent,
     DayUpdateEvent,
-    NightUpdateEvent,
     SimulationControlCommand,
     SimulationControlRequest,
     SimulationControlResponse,
@@ -26,10 +25,8 @@ from rustic_ai.showcase.vending_bench.messages import (
     WeatherType,
 )
 from rustic_ai.showcase.vending_bench.simulation_controller_agent import (
-    SimulationControllerAgentProps,
-)
-from rustic_ai.showcase.vending_bench.simulation_controller_agent import (
     SimulationControllerAgent,
+    SimulationControllerAgentProps,
 )
 from rustic_ai.showcase.vending_bench.vending_machine_agent import VendingMachineAgent
 

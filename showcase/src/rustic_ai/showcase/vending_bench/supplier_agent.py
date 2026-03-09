@@ -197,7 +197,7 @@ class SupplierAgent(Agent[SupplierAgentProps]):
         Returns:
             Dictionary of product -> quantity, or None if parsing fails
         """
-        order = {}
+        order: Dict[ProductType, int] = {}
         body_lower = body.lower()
 
         # Look for patterns like "20 chips", "10 units of soda", "candy: 15"

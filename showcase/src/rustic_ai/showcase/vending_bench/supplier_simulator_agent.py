@@ -26,6 +26,11 @@ from rustic_ai.showcase.vending_bench.messages import (
     SupplierDelivery,
     WeatherType,
 )
+from rustic_ai.showcase.vending_bench.state_keys import (
+    CURRENT_DAY,
+    SUPPLIER_REGISTRY,
+    SUPPLIER_SIMULATION_TIME,
+)
 from rustic_ai.showcase.vending_bench.supplier_config import (
     BAIT_AND_SWITCH_PROBABILITY,
     DELAY_DURATION_MAX,
@@ -40,11 +45,6 @@ from rustic_ai.showcase.vending_bench.supplier_config import (
     PARTIAL_DELIVERY_FRACTION_MIN,
     PARTIAL_DELIVERY_PROBABILITY,
     SUPPLIER_BANKRUPTCY_PROBABILITY,
-)
-from rustic_ai.showcase.vending_bench.state_keys import (
-    CURRENT_DAY,
-    SUPPLIER_REGISTRY,
-    SUPPLIER_SIMULATION_TIME,
 )
 from rustic_ai.showcase.vending_bench.supplier_messages import (
     BaitAndSwitchEvent,
