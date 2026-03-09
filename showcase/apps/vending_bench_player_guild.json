@@ -47,7 +47,7 @@
                 "listen_to_default_topic": false,
                 "properties": {
                     "model": "gpt-4o",
-                    "default_system_prompt": "You are operating a vending machine business in a simulation. Your goal is to maximize net worth over time.\n\nYou have $500 starting capital and must pay a $2 daily fee. If you can't pay the fee for 10 consecutive days, you go bankrupt.\n\nIMPORTANT SIMULATION MECHANICS:\n- Customer purchases happen throughout each day based on demand, weather, and prices\n- Each action advances simulation time (check_inventory=5min, read_emails=25min, etc.)\n- New customers come when a new day starts - use 'end_day' to advance efficiently\n- Don't spam status checks - take strategic actions instead!\n\nSTRATEGY:\n1. Check inventory and balance ONCE to assess the situation\n2. Order supplies via email to supplier@vendingsupply.com BEFORE running out (deliveries take 2-5 days)\n3. Adjust prices based on weather (hot=more drinks, cold=more snacks)\n4. Use 'end_day' to advance to the next day after taking your actions\n5. Collect cash periodically to ensure you can pay the daily fee\n\nAnalyze the current state and decide on your next action. Be efficient with your time!",
+                    "default_system_prompt": "You are an autonomous vending machine business operator in a simulation. Your goal is to maximize net worth over 30+ days.\n\nCRITICAL: You MUST call a tool on EVERY turn. Never respond with just text - always take an action!\n\n=== CORE RULES ===\n- Starting capital: $500 | Daily fee: $2 | Bankruptcy: 10 days unable to pay\n- Customers buy automatically throughout each day based on weather and prices\n- Deliveries take 2-5 days - order BEFORE you run out!\n\n=== AUTONOMOUS OPERATION LOOP ===\nYou are running autonomously. After each tool result, immediately decide your next action:\n\n1. START OF SESSION: search_suppliers → check_inventory → check_balance\n2. EACH DAY: read_emails (check deliveries) → restock if needed → strategic actions → end_day\n3. REPEAT: Continue the loop, advancing days to let customers buy and deliveries arrive\n\n=== KEY ACTIONS ===\n- search_suppliers: MUST do this first to discover suppliers (you start with none!)\n- send_email: Order supplies from discovered suppliers (e.g., 'I'd like to order 20 chips, 15 soda')\n- read_emails: Check for delivery confirmations\n- restock: Add delivered items to inventory (use Order ID from delivery email)\n- end_day: Advance to next day - USE THIS FREQUENTLY to progress the simulation!\n- collect_cash: Move cash from machine to operator account for paying fees\n\n=== TIME EFFICIENCY ===\n- Don't repeatedly check inventory/balance - take action based on what you know\n- Use 'end_day' to advance time quickly after your daily actions\n- The simulation progresses when YOU advance time - be proactive!\n\nRemember: ALWAYS call a tool. Start by searching for suppliers, then build your supply chain!",
                     "llm_request_wrappers": [
                         {
                             "kind": "rustic_ai.llm_agent.tools.tools_manager_plugin.ToolsManagerPlugin",
@@ -573,22 +573,6 @@
                         "style": "simple",
                         "output_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest",
                         "expression": "({'messages': [{'role': 'user', 'content': $.day_summary & ' Weather: ' & $.simulation_time.weather & '. What would you like to do next?'}]})"
-                    },
-                    "destination": {
-                        "topics": "PLAYER_INPUT"
-                    },
-                    "route_times": -1
-                },
-                {
-                    "description": "CustomerPurchaseEvent -> ChatCompletionRequest to player (sales notification)",
-                    "agent": {
-                        "name": "PlayerGateway"
-                    },
-                    "message_format": "rustic_ai.showcase.vending_bench.messages.CustomerPurchaseEvent",
-                    "transformer": {
-                        "style": "simple",
-                        "output_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest",
-                        "expression": "({'messages': [{'role': 'user', 'content': 'SALE: Sold ' & $string($.quantity) & ' ' & $.product & ' for $' & $string($.price_paid) & ' on Day ' & $string($.day) & '.'}]})"
                     },
                     "destination": {
                         "topics": "PLAYER_INPUT"

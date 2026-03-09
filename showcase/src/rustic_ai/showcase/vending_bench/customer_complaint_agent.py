@@ -187,10 +187,10 @@ class CustomerComplaintAgent(Agent[CustomerComplaintAgentProps]):
             rate += HIGH_PRICE_COMPLAINT_BONUS
 
         # Lower reputation = more complaints
-        if self.reputation_score < 50:
-            rate *= 1.5
-        elif self.reputation_score < 30:
+        if self.reputation_score < 30:
             rate *= 2.0
+        elif self.reputation_score < 50:
+            rate *= 1.5
 
         return min(rate, 0.3)  # Cap at 30% daily complaint chance
 

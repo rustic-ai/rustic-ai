@@ -12,6 +12,7 @@ Keys are organized by the agent that primarily owns/manages them.
 # Shared simulation state (read by multiple agents)
 CURRENT_DAY = "current_day"
 CURRENT_TIME_MINUTES = "current_time_minutes"
+SIMULATION_STATUS = "simulation_status"
 
 # Financial state
 OPERATOR_CASH = "operator_cash"

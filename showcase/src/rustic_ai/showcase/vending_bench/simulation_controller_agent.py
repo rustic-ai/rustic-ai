@@ -75,6 +75,7 @@ from rustic_ai.showcase.vending_bench.state_keys import (
     DAYS_WITHOUT_PAYMENT,
     MACHINE_CASH,
     OPERATOR_CASH,
+    SIMULATION_STATUS,
     VM_INVENTORY,
 )
 from rustic_ai.showcase.vending_bench.supplier_messages import (
@@ -140,6 +141,44 @@ class SimulationControllerAgent(Agent[SimulationControllerAgentProps]):
 
         # Track whether NightUpdateEvent has been emitted for current day
         self._night_emitted_for_day: int = 0
+
+        # Flag to track if initial state has been loaded from guild
+        self._state_initialized: bool = False
+
+    def _load_state_from_guild(self):
+        """Load persisted state from guild state.
+
+        This ensures simulation status and other state survives agent re-instantiation.
+        """
+        if self._state_initialized:
+            return
+
+        guild_state = self.get_guild_state() or {}
+
+        # Load simulation status - critical for time advancement
+        status_str = guild_state.get(SIMULATION_STATUS)
+        if status_str:
+            try:
+                self.status = SimulationStatus(status_str)
+            except ValueError:
+                pass  # Keep default PAUSED if invalid
+
+        # Load other simulation state
+        self.current_day = guild_state.get(CURRENT_DAY, self.current_day)
+        self.current_time_minutes = guild_state.get(CURRENT_TIME_MINUTES, self.current_time_minutes)
+        self.operator_cash = guild_state.get(OPERATOR_CASH, self.operator_cash)
+        self.machine_cash = guild_state.get(MACHINE_CASH, self.machine_cash)
+        self.days_without_payment = guild_state.get(DAYS_WITHOUT_PAYMENT, self.days_without_payment)
+
+        self._state_initialized = True
+
+    def _persist_status(self, ctx: ProcessContext):
+        """Persist simulation status to guild state."""
+        self.update_guild_state(
+            ctx,
+            update_format=StateUpdateFormat.JSON_MERGE_PATCH,
+            update={SIMULATION_STATUS: self.status.value},
+        )
 
     @property
     def is_daytime(self) -> bool:
@@ -269,7 +308,7 @@ class SimulationControllerAgent(Agent[SimulationControllerAgentProps]):
             self.operator_cash -= fee
             self.days_without_payment = 0
         else:
-            # Can't pay fee
+            # Can't pay fee from either source
             self.days_without_payment += 1
             logger.warning(
                 f"Day {self.current_day}: Unable to pay daily fee. Days without payment: {self.days_without_payment}"
@@ -360,12 +399,16 @@ class SimulationControllerAgent(Agent[SimulationControllerAgentProps]):
     @agent.processor(SimulationControlRequest)
     def handle_simulation_control(self, ctx: ProcessContext[SimulationControlRequest]):
         """Handle simulation control commands."""
+        self._load_state_from_guild()
+
         request = ctx.payload
         command = request.command
+        status_changed = False
 
         if command == SimulationControlCommand.START:
             if self.status == SimulationStatus.PAUSED:
                 self.status = SimulationStatus.RUNNING
+                status_changed = True
                 # Emit initial day event
                 self.weather = self._generate_weather()
                 day_event = DayUpdateEvent(
@@ -385,6 +428,7 @@ class SimulationControllerAgent(Agent[SimulationControllerAgentProps]):
         elif command == SimulationControlCommand.PAUSE:
             if self.status == SimulationStatus.RUNNING:
                 self.status = SimulationStatus.PAUSED
+                status_changed = True
                 message = "Simulation paused"
             else:
                 message = f"Cannot pause: simulation is {self.status.value}"
@@ -392,12 +436,14 @@ class SimulationControllerAgent(Agent[SimulationControllerAgentProps]):
         elif command == SimulationControlCommand.RESUME:
             if self.status == SimulationStatus.PAUSED:
                 self.status = SimulationStatus.RUNNING
+                status_changed = True
                 message = "Simulation resumed"
             else:
                 message = f"Cannot resume: simulation is {self.status.value}"
 
         elif command == SimulationControlCommand.RESET:
             self._reset_simulation()
+            status_changed = True
             message = "Simulation reset"
 
         elif command == SimulationControlCommand.GET_STATUS:
@@ -413,6 +459,10 @@ class SimulationControllerAgent(Agent[SimulationControllerAgentProps]):
 
         else:
             message = f"Unknown command: {command}"
+
+        # Persist status if it changed
+        if status_changed:
+            self._persist_status(ctx)
 
         response = SimulationControlResponse(
             request_id=request.request_id,
@@ -450,6 +500,8 @@ class SimulationControllerAgent(Agent[SimulationControllerAgentProps]):
 
         Routes the action to the appropriate handler and advances time.
         """
+        self._load_state_from_guild()
+
         request = ctx.payload
         action_type = request.action_type
 
@@ -620,6 +672,8 @@ class SimulationControllerAgent(Agent[SimulationControllerAgentProps]):
     @agent.processor(TimeAdvanceRequest)
     def handle_time_advance(self, ctx: ProcessContext[TimeAdvanceRequest]):
         """Handle explicit time advance requests."""
+        self._load_state_from_guild()
+
         request = ctx.payload
 
         day_changed = self._advance_time(request.minutes, ctx)
@@ -634,6 +688,8 @@ class SimulationControllerAgent(Agent[SimulationControllerAgentProps]):
     @agent.processor(WaitRequest)
     def handle_wait(self, ctx: ProcessContext[WaitRequest]):
         """Handle wait requests - let time pass."""
+        self._load_state_from_guild()
+
         request = ctx.payload
         response = self._process_wait(request.request_id, request.hours, ctx)
         ctx.send(response)
@@ -641,6 +697,8 @@ class SimulationControllerAgent(Agent[SimulationControllerAgentProps]):
     @agent.processor(EndDayRequest)
     def handle_end_day(self, ctx: ProcessContext[EndDayRequest]):
         """Handle end day requests - skip to the next day."""
+        self._load_state_from_guild()
+
         request = ctx.payload
         response = self._process_end_day(request.request_id, ctx)
         ctx.send(response)
@@ -649,6 +707,8 @@ class SimulationControllerAgent(Agent[SimulationControllerAgentProps]):
     @agent.processor(CheckInventoryResponse)
     def forward_inventory_response(self, ctx: ProcessContext[CheckInventoryResponse]):
         """Forward inventory response to G2G."""
+        self._load_state_from_guild()
+
         response = ctx.payload
         current_time = self.get_simulation_time()
         response_dict = response.model_dump()
@@ -836,6 +896,8 @@ class SimulationControllerAgent(Agent[SimulationControllerAgentProps]):
         The actual sale fulfillment (checking available stock) is done
         by VendingMachineAgent when it processes the same event.
         """
+        self._load_state_from_guild()
+
         purchase = ctx.payload
 
         # Track the purchase for daily/total statistics

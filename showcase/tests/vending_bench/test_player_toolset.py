@@ -68,7 +68,10 @@ class TestVendingBenchToolspecsProvider:
     def test_provider_has_additional_system_prompt(self, provider: VendingBenchToolspecsProvider):
         """Test that provider has an additional system prompt."""
         assert provider.additional_system_prompt is not None
-        assert "vending machine" in provider.additional_system_prompt.lower()
+        # Check for key instruction phrases in the prompt
+        prompt_lower = provider.additional_system_prompt.lower()
+        assert "tool" in prompt_lower  # Must mention tools
+        assert "end_day" in prompt_lower  # Must mention end_day action
 
     def test_provider_chat_tools(self, provider: VendingBenchToolspecsProvider):
         """Test that provider can generate chat tools for LLM."""

@@ -239,8 +239,8 @@ class VendingMachineAgent(Agent[VendingMachineAgentProps]):
         self.operator_cash += amount_collected
         self.machine_cash = 0.0
 
-        # Persist state change
-        self.update_state(
+        # Persist state change to guild state so all agents see consistent balances
+        self.update_guild_state(
             ctx,
             update_format=StateUpdateFormat.JSON_MERGE_PATCH,
             update={MACHINE_CASH: self.machine_cash, OPERATOR_CASH: self.operator_cash},
@@ -356,8 +356,13 @@ class VendingMachineAgent(Agent[VendingMachineAgentProps]):
             self.total_sales += actual_quantity
             self.total_revenue += revenue
 
-            # Persist inventory to guild state so other agents can track it
+            # Persist inventory and machine cash to guild state so other agents can track it
             self._persist_inventory_to_guild(ctx)
+            self.update_guild_state(
+                ctx,
+                update_format=StateUpdateFormat.JSON_MERGE_PATCH,
+                update={MACHINE_CASH: self.machine_cash},
+            )
 
             logger.debug(f"Sale: {actual_quantity}x {product.value} @ ${self.prices[product]:.2f} = ${revenue:.2f}")
 
@@ -408,8 +413,8 @@ class VendingMachineAgent(Agent[VendingMachineAgentProps]):
                 f"Operator cash now: ${self.operator_cash:.2f}"
             )
 
-        # Persist state change
-        self.update_state(
+        # Persist state change to guild state so all agents see consistent balances
+        self.update_guild_state(
             ctx,
             update_format=StateUpdateFormat.JSON_MERGE_PATCH,
             update={OPERATOR_CASH: self.operator_cash, MACHINE_CASH: self.machine_cash},
