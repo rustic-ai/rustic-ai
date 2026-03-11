@@ -437,14 +437,16 @@ agents:
             probe_agent.publish_dict(
                 topic="default_topic",
                 payload={
-                    "messages": [{
-                        "role": "user",
-                        "content": (
-                            "I have 3 boxes with 5 apples each. "
-                            "If I add 7 more apples, then give away half of all apples, "
-                            "how many apples do I have left?"
-                        )
-                    }]
+                    "messages": [
+                        {
+                            "role": "user",
+                            "content": (
+                                "I have 3 boxes with 5 apples each. "
+                                "If I add 7 more apples, then give away half of all apples, "
+                                "how many apples do I have left?"
+                            ),
+                        }
+                    ]
                 },
                 format=ChatCompletionRequest,
             )
@@ -538,7 +540,9 @@ agents:
             answer = response.choices[0].message.content or ""
             assert "Hello, World!" in answer, f"Answer should contain greeting: {answer}"
             # Should have no tool calls
-            assert len(response.choices[0].provider_specific_fields.get("react_trace", [])) == 0, "Should not have used any tools"
+            assert (
+                len(response.choices[0].provider_specific_fields.get("react_trace", [])) == 0
+            ), "Should not have used any tools"
 
         finally:
             probe_agent.clear_messages()

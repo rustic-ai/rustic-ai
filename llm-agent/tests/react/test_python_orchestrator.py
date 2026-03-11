@@ -22,16 +22,8 @@ class GreetParams(BaseModel):
 class SimpleToolset(ReActToolset):
     def get_toolspecs(self):
         return [
-            ToolSpec(
-                name="add_numbers",
-                description="Adds two numbers",
-                parameter_class=AddParams
-            ),
-            ToolSpec(
-                name="greet_user",
-                description="Greets a user",
-                parameter_class=GreetParams
-            )
+            ToolSpec(name="add_numbers", description="Adds two numbers", parameter_class=AddParams),
+            ToolSpec(name="greet_user", description="Greets a user", parameter_class=GreetParams),
         ]
 
     def execute(self, tool_name, args):

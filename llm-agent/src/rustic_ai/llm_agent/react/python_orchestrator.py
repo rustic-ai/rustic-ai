@@ -34,9 +34,7 @@ class PythonOrchestratorToolset(ReActToolset):
     inner_toolset: ReActToolset = Field(
         description="The toolset containing tools that can be called from within the Python code."
     )
-    tool_name: str = Field(
-        default="python_orchestrator", description="Name of the tool exposed to the LLM."
-    )
+    tool_name: str = Field(default="python_orchestrator", description="Name of the tool exposed to the LLM.")
     allowed_modules: List[str] = Field(
         default_factory=lambda: ["json", "math", "datetime", "re", "random"],
         description="List of modules allowed to be imported in the executed code.",
@@ -93,9 +91,7 @@ class PythonOrchestratorToolset(ReActToolset):
             raise ValueError(f"Unknown tool: {tool_name}")
 
         if not isinstance(args, PythonOrchestratorParams):
-            raise TypeError(
-                f"Expected args to be PythonOrchestratorParams, got {type(args).__name__}"
-            )
+            raise TypeError(f"Expected args to be PythonOrchestratorParams, got {type(args).__name__}")
 
         code = args.code
         return self._execute_code(code)
@@ -108,9 +104,7 @@ class PythonOrchestratorToolset(ReActToolset):
         tool_bindings = self._create_tool_bindings()
 
         # Initialize the executor with allowed modules
-        executor = PythonExecExecutor(
-            whitelisted_imports=set(self.allowed_modules)
-        )
+        executor = PythonExecExecutor(whitelisted_imports=set(self.allowed_modules))
 
         # Inject the tool functions into the executor's scope
         # PythonExecExecutor maintains _local_vars internally for the execution context

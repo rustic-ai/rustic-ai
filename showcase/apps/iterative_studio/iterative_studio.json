@@ -1,0 +1,493 @@
+{
+    "name": "Iterative Studio",
+    "description": "A multi-mode AI platform with 5 operational modes: Refine, Deepthink, Adaptive Deepthink, Agentic, and Contextual. Based on the Iterative Contextual Refinements system. Original project link: https://github.com/ryoiki-tokuiten/Iterative-Contextual-Refinements",
+    "version": "v1",
+    "icon": null,
+    "intro_msg": "Welcome to Iterative Studio! I support 5 operational modes:\n\n1. **Refine** - Code refinement with feature suggestions and bug fixing\n2. **Deepthink** - Multi-agent strategic reasoning for complex problems\n3. **Adaptive** - Flexible strategic reasoning with self-guided tools\n4. **Agentic** - Tool-based refinement with file operations and research\n5. **Contextual** - Iterative content generation with memory\n\nJust describe what you need, and I'll automatically select the best mode for your task!",
+    "exposure": "public",
+    "author_id": "dummyuserid",
+    "organization_id": null,
+    "category_id": null,
+    "tags": [
+        "Multi-Agent",
+        "Reasoning",
+        "Code",
+        "Research",
+        "Content"
+    ],
+    "commands": [],
+    "starter_prompts": [
+        "Review this code and suggest improvements",
+        "Help me solve this complex technical problem",
+        "Search for papers on transformer architectures",
+        "Write a technical blog post about microservices"
+    ],
+    "spec": {
+        "name": "Iterative Studio",
+        "description": "Multi-mode AI platform with routing-based orchestration",
+        "agents": [
+            {
+                "id": "mode_controller",
+                "name": "Mode Controller",
+                "description": "Classifies user requests into operational modes",
+                "class_name": "rustic_ai.llm_agent.llm_agent.LLMAgent",
+                "additional_topics": [
+                    "MODE_CONTROL"
+                ],
+                "listen_to_default_topic": false,
+                "properties": {
+                    "model": "vertex_ai/gemini-3-pro-preview",
+                    "default_system_prompt": "You are the Mode Controller for Iterative Studio. Analyze the user's request and output EXACTLY ONE of these mode names (lowercase): refine, deepthink, adaptive, agentic, contextual.\n\nClassification rules:\n- refine: Code review, bug fixes, feature suggestions\n- deepthink: Complex problems requiring multiple perspectives and structured critique\n- adaptive: Technical problems needing flexible, iterative exploration\n- agentic: Tasks requiring file operations, web search, or code execution\n- contextual: Content generation, writing tasks, iterative document development\n\nOutput ONLY the mode name, nothing else."
+                }
+            },
+            {
+                "id": "feature_novelty",
+                "name": "Feature Suggester (Novelty)",
+                "description": "Suggests novel and innovative features",
+                "class_name": "rustic_ai.llm_agent.llm_agent.LLMAgent",
+                "additional_topics": [
+                    "REFINE_NOVELTY"
+                ],
+                "listen_to_default_topic": false,
+                "properties": {
+                    "model": "vertex_ai/gemini-3-pro-preview",
+                    "default_system_prompt": "You are a Feature Suggester focused on novelty and innovation. Analyze code or specifications and suggest 2-3 creative, innovative features. Focus on: innovation, user experience, future-proofing, and differentiation. Output features with descriptions, user benefits, and implementation hints."
+                }
+            },
+            {
+                "id": "feature_quality",
+                "name": "Feature Suggester (Quality)",
+                "description": "Suggests quality and robustness improvements",
+                "class_name": "rustic_ai.llm_agent.llm_agent.LLMAgent",
+                "additional_topics": [
+                    "REFINE_QUALITY"
+                ],
+                "listen_to_default_topic": false,
+                "properties": {
+                    "model": "vertex_ai/gemini-3-pro-preview",
+                    "default_system_prompt": "You are a Feature Suggester focused on quality and robustness. Analyze code or specifications and suggest 2-3 quality improvements. Focus on: reliability, maintainability, performance, security, and testing. Output improvements with category, priority, problem solved, and implementation approach."
+                }
+            },
+            {
+                "id": "refine_aggregator",
+                "name": "Refine Aggregator",
+                "description": "Aggregates feature suggestions from novelty and quality agents",
+                "class_name": "rustic_ai.core.agents.eip.aggregating_agent.AggregatingAgent",
+                "additional_topics": [
+                    "REFINE_AGGREGATE"
+                ],
+                "listen_to_default_topic": false,
+                "properties": {
+                    "aggregator": {
+                        "aggregation_check": "count",
+                        "count": 2
+                    },
+                    "collector": {
+                        "collector_type": "dict",
+                        "key_field": "id"
+                    }
+                }
+            },
+            {
+                "id": "bug_fixer",
+                "name": "Bug Fixer",
+                "description": "Fixes bugs in code and validates suggestions",
+                "class_name": "rustic_ai.llm_agent.llm_agent.LLMAgent",
+                "additional_topics": [
+                    "REFINE_BUGFIX"
+                ],
+                "listen_to_default_topic": false,
+                "properties": {
+                    "model": "vertex_ai/gemini-3-pro-preview",
+                    "default_system_prompt": "You are a Bug Fixer agent. Review the aggregated feature suggestions and any code provided. Identify and fix: syntax errors, runtime errors, logical errors, edge cases, and type errors. Output a comprehensive bug report with fixes, or confirm the code is correct."
+                }
+            },
+            {
+                "id": "strategy_gen",
+                "name": "Strategy Generator",
+                "description": "Generates strategies for complex problems",
+                "class_name": "rustic_ai.llm_agent.llm_agent.LLMAgent",
+                "additional_topics": [
+                    "DT_STRATEGY"
+                ],
+                "listen_to_default_topic": false,
+                "properties": {
+                    "model": "vertex_ai/gemini-3-pro-preview",
+                    "default_system_prompt": "You are the Strategy Generator in the Deepthink pipeline. Analyze complex problems and generate 3-5 diverse, high-level strategies. For each strategy, include: name, approach, key assumptions, strengths, weaknesses, and best use cases. Output as structured JSON."
+                }
+            },
+            {
+                "id": "solution_agent",
+                "name": "Solution Agent",
+                "description": "Generates solutions based on strategies",
+                "class_name": "rustic_ai.llm_agent.llm_agent.LLMAgent",
+                "additional_topics": [
+                    "DT_SOLUTION"
+                ],
+                "listen_to_default_topic": false,
+                "properties": {
+                    "model": "vertex_ai/gemini-3-pro-preview",
+                    "default_system_prompt": "You are the Solution Agent in the Deepthink pipeline. Based on the provided strategies, develop detailed solutions. For each solution: provide implementation details, considerations, and trade-offs. Be thorough and practical."
+                }
+            },
+            {
+                "id": "critique_agent",
+                "name": "Critique Agent",
+                "description": "Critiques proposed solutions",
+                "class_name": "rustic_ai.llm_agent.llm_agent.LLMAgent",
+                "additional_topics": [
+                    "DT_CRITIQUE"
+                ],
+                "listen_to_default_topic": false,
+                "properties": {
+                    "model": "vertex_ai/gemini-3-pro-preview",
+                    "default_system_prompt": "You are the Critique Agent in the Deepthink pipeline. Evaluate solutions for: correctness, completeness, efficiency, robustness, and maintainability. Output: verdict (APPROVE/NEEDS_REVISION/REJECT), strengths, weaknesses, and improvement suggestions. Be constructive."
+                }
+            },
+            {
+                "id": "refinement_agent",
+                "name": "Refinement Agent",
+                "description": "Refines solutions based on critique",
+                "class_name": "rustic_ai.llm_agent.llm_agent.LLMAgent",
+                "additional_topics": [
+                    "DT_REFINEMENT"
+                ],
+                "listen_to_default_topic": false,
+                "properties": {
+                    "model": "vertex_ai/gemini-3-pro-preview",
+                    "default_system_prompt": "You are the Refinement Agent in the Deepthink pipeline. Take the critiqued solution and apply the suggested improvements. Address all weaknesses while preserving strengths. Output the refined solution."
+                }
+            },
+            {
+                "id": "red_team",
+                "name": "Red Team Agent",
+                "description": "Performs adversarial analysis on solutions",
+                "class_name": "rustic_ai.llm_agent.llm_agent.LLMAgent",
+                "additional_topics": [
+                    "DT_REDTEAM"
+                ],
+                "listen_to_default_topic": false,
+                "properties": {
+                    "model": "vertex_ai/gemini-3-pro-preview",
+                    "default_system_prompt": "You are the Red Team Agent. Perform adversarial analysis on solutions. Identify: input attacks, environmental attacks, logic attacks, security vulnerabilities, and scalability issues. Output: vulnerabilities with severity, exploit scenarios, and mitigations."
+                }
+            },
+            {
+                "id": "final_judge",
+                "name": "Final Judge",
+                "description": "Selects the best solution",
+                "class_name": "rustic_ai.llm_agent.llm_agent.LLMAgent",
+                "additional_topics": [
+                    "DT_JUDGE"
+                ],
+                "listen_to_default_topic": false,
+                "properties": {
+                    "model": "vertex_ai/gemini-3-pro-preview",
+                    "default_system_prompt": "You are the Final Judge in the Deepthink pipeline. Review all solutions, critiques, and red-team analysis. Select the best solution with clear justification. Consider: quality, trade-offs, risks, and practicality. Provide the final recommendation with implementation notes."
+                }
+            },
+            {
+                "id": "adaptive_dt",
+                "name": "Adaptive Deepthink Agent",
+                "description": "Self-contained strategic reasoning agent with tools",
+                "class_name": "rustic_ai.llm_agent.react.react_agent.ReActAgent",
+                "additional_topics": [
+                    "ADAPTIVE_DT"
+                ],
+                "listen_to_default_topic": false,
+                "properties": {
+                    "model": "vertex_ai/gemini-3-pro-preview",
+                    "system_prompt": "You are the Adaptive Deepthink Agent. Use strategic reasoning tools to solve complex problems iteratively. Available tools: GenerateStrategies, GenerateHypotheses, CritiqueSolution, RedTeam, SelectBestSolution, RecordReasoning. Work through problems systematically, generating strategies, testing hypotheses, and refining solutions.",
+                    "max_iterations": 20,
+                    "toolset": {
+                        "kind": "rustic_ai.showcase.iterative_studio.toolsets.deepthink_toolset.DeepthinkToolset"
+                    }
+                }
+            },
+            {
+                "id": "agentic_agent",
+                "name": "Agentic Agent",
+                "description": "Tool-based refinement agent with file ops and search",
+                "class_name": "rustic_ai.llm_agent.react.react_agent.ReActAgent",
+                "additional_topics": [
+                    "AGENTIC"
+                ],
+                "listen_to_default_topic": false,
+                "properties": {
+                    "model": "vertex_ai/gemini-3-pro-preview",
+                    "system_prompt": "You are the Agentic Agent for Iterative Studio. You have tools for file operations and academic paper search. Available tools: ReadFile, WriteFile, ApplyDiff, ListDirectory, SearchArxiv. Use these tools to help users with tasks that require file manipulation, code changes, or research.",
+                    "max_iterations": 15,
+                    "toolset": {
+                        "kind": "rustic_ai.llm_agent.react.toolset.CompositeToolset",
+                        "toolsets": [
+                            {
+                                "kind": "rustic_ai.showcase.iterative_studio.toolsets.agentic_toolset.AgenticToolset",
+                                "working_dir": "/tmp/iterative_studio"
+                            },
+                            {
+                                "kind": "rustic_ai.showcase.iterative_studio.toolsets.arxiv_toolset.ArxivToolset"
+                            }
+                        ]
+                    }
+                }
+            },
+            {
+                "id": "ctx_main",
+                "name": "Main Generator",
+                "description": "Main content generator for contextual mode",
+                "class_name": "rustic_ai.llm_agent.llm_agent.LLMAgent",
+                "additional_topics": [
+                    "CTX_MAIN"
+                ],
+                "listen_to_default_topic": false,
+                "properties": {
+                    "model": "vertex_ai/gemini-3-pro-preview",
+                    "default_system_prompt": "You are the Main Generator in Contextual mode. Generate high-quality content based on user requests. Create comprehensive, well-structured content appropriate for the audience and purpose. Include generation notes about your approach and areas that may need iteration."
+                }
+            },
+            {
+                "id": "ctx_iterative",
+                "name": "Iterative Agent",
+                "description": "Reviews and suggests improvements for content",
+                "class_name": "rustic_ai.llm_agent.llm_agent.LLMAgent",
+                "additional_topics": [
+                    "CTX_ITERATE"
+                ],
+                "listen_to_default_topic": false,
+                "properties": {
+                    "model": "vertex_ai/gemini-3-pro-preview",
+                    "default_system_prompt": "You are the Iterative Agent in Contextual mode. Review generated content and decide: APPROVE (ready for user) or NEEDS_REVISION (provide specific feedback). Consider quality, completeness, and user requirements. Limit to 5 iterations max. Be constructive and specific."
+                }
+            },
+            {
+                "id": "ctx_memory",
+                "name": "Memory Agent",
+                "description": "Compresses conversation history",
+                "class_name": "rustic_ai.llm_agent.llm_agent.LLMAgent",
+                "additional_topics": [
+                    "CTX_MEMORY"
+                ],
+                "listen_to_default_topic": false,
+                "properties": {
+                    "model": "vertex_ai/gemini-3-pro-preview",
+                    "default_system_prompt": "You are the Memory Agent in Contextual mode. Compress conversation history to preserve essential context while reducing tokens. Identify: key decisions, important context, unresolved items, and user preferences. Output compressed memory summary."
+                }
+            }
+        ],
+        "dependency_map": {
+            "llm": {
+                "class_name": "rustic_ai.litellm.agent_ext.llm.LiteLLMResolver",
+                "properties": {
+                    "model": "vertex_ai/gemini-3-pro-preview"
+                }
+            },
+            "filesystem": {
+                "class_name": "rustic_ai.core.guild.agent_ext.depends.filesystem.FileSystemResolver",
+                "properties": {
+                    "path_base": "/tmp/iterative_studio",
+                    "protocol": "file",
+                    "storage_options": {
+                        "auto_mkdir": true
+                    }
+                },
+                "scope": "guild"
+            },
+            "kb_backend": {
+                "class_name": "rustic_ai.core.knowledgebase.kbindex_backend_memory.InMemoryKBIndexBackendResolver",
+                "properties": {},
+                "scope": "guild"
+            }
+        },
+        "routes": {
+            "steps": [
+                {
+                    "agent_type": "rustic_ai.core.agents.utils.user_proxy_agent.UserProxyAgent",
+                    "method_name": "unwrap_and_forward_message",
+                    "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest",
+                    "destination": {
+                        "topics": "MODE_CONTROL"
+                    },
+                    "guild_state_update": {
+                        "state_update": "({'original_request': $.payload})",
+                        "update_format": "json-merge-patch"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "Mode Controller"
+                    },
+                    "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "($response := $.payload.choices[0].message.content; $mode := $trim($lowercase($response)); $user_msgs := $append([], $filter($.payload.input_messages, function($m) { $m.role != 'system' })); $req := {'messages': $user_msgs}; $route := {'refine': ['REFINE_NOVELTY', 'REFINE_QUALITY'], 'deepthink': 'DT_STRATEGY', 'adaptive': 'ADAPTIVE_DT', 'agentic': 'AGENTIC', 'contextual': 'CTX_MAIN'}; $topics := $lookup($route, $mode); {'topics': $topics ? $topics : 'CTX_MAIN', 'format': 'rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest', 'payload': $req, 'context': {'mode': $mode}})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "Feature Suggester (Novelty)"
+                    },
+                    "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                    "destination": {
+                        "topics": "REFINE_AGGREGATE"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "Feature Suggester (Quality)"
+                    },
+                    "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                    "destination": {
+                        "topics": "REFINE_AGGREGATE"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "Refine Aggregator"
+                    },
+                    "message_format": "rustic_ai.core.agents.eip.aggregating_agent.AggregatedMessages",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "($msgs := $.payload.messages; $combined := $join($map($msgs, function($m) { $m.data.choices[0].message.content }), '\\n\\n---\\n\\n'); {'topics': 'REFINE_BUGFIX', 'format': 'rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest', 'payload': {'messages': [{'role': 'user', 'content': 'Review and fix any issues in these feature suggestions:\\n\\n' & $combined}]}})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "Bug Fixer"
+                    },
+                    "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                    "destination": {
+                        "topics": "user_message_broadcast"
+                    },
+                    "process_status": "completed",
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "Strategy Generator"
+                    },
+                    "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'DT_SOLUTION', 'format': 'rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest', 'payload': {'messages': [{'role': 'user', 'content': 'Based on these strategies, develop detailed solutions:\\n\\n' & $.payload.choices[0].message.content}]}})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "Solution Agent"
+                    },
+                    "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'DT_CRITIQUE', 'format': 'rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest', 'payload': {'messages': [{'role': 'user', 'content': 'Critique this solution:\\n\\n' & $.payload.choices[0].message.content}]}})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "Critique Agent"
+                    },
+                    "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "($content := $.payload.choices[0].message.content; $needs_revision := $contains($uppercase($content), 'NEEDS_REVISION'); $iteration := $.context.dt_iteration ? $.context.dt_iteration : 0; $needs_revision and $iteration < 2 ? {'topics': 'DT_REFINEMENT', 'format': 'rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest', 'context': {'dt_iteration': $iteration + 1}, 'payload': {'messages': [{'role': 'user', 'content': 'Refine based on this critique:\\n\\n' & $content}]}} : {'topics': 'DT_REDTEAM', 'format': 'rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest', 'payload': {'messages': [{'role': 'user', 'content': 'Red-team this solution:\\n\\n' & $content}]}})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "Refinement Agent"
+                    },
+                    "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'DT_CRITIQUE', 'format': 'rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest', 'payload': {'messages': [{'role': 'user', 'content': 'Critique this refined solution:\\n\\n' & $.payload.choices[0].message.content}]}})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "Red Team Agent"
+                    },
+                    "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'DT_JUDGE', 'format': 'rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest', 'payload': {'messages': [{'role': 'user', 'content': 'Make the final decision based on this red-team analysis:\\n\\n' & $.payload.choices[0].message.content}]}})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "Final Judge"
+                    },
+                    "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                    "destination": {
+                        "topics": "user_message_broadcast"
+                    },
+                    "process_status": "completed",
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "Adaptive Deepthink Agent"
+                    },
+                    "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                    "destination": {
+                        "topics": "user_message_broadcast"
+                    },
+                    "process_status": "completed",
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "Agentic Agent"
+                    },
+                    "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                    "destination": {
+                        "topics": "user_message_broadcast"
+                    },
+                    "process_status": "completed",
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "Main Generator"
+                    },
+                    "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'CTX_ITERATE', 'format': 'rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest', 'payload': {'messages': [{'role': 'user', 'content': 'Review this content and decide if it needs revision:\\n\\n' & $.payload.choices[0].message.content}]}})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "Iterative Agent"
+                    },
+                    "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "($content := $.payload.choices[0].message.content; $approved := $contains($uppercase($content), 'APPROVE'); $iteration := $.context.ctx_iteration ? $.context.ctx_iteration : 0; $approved or $iteration >= 4 ? {'topics': 'CTX_MEMORY', 'format': 'rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest', 'payload': {'messages': [{'role': 'user', 'content': 'Compress and finalize:\\n\\n' & $content}]}} : {'topics': 'CTX_MAIN', 'format': 'rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest', 'context': {'ctx_iteration': $iteration + 1}, 'payload': {'messages': [{'role': 'user', 'content': 'Revise based on this feedback:\\n\\n' & $content}]}})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "Memory Agent"
+                    },
+                    "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                    "destination": {
+                        "topics": "user_message_broadcast"
+                    },
+                    "process_status": "completed",
+                    "route_times": -1
+                }
+            ]
+        }
+    }
+}

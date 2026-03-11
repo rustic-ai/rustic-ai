@@ -1468,10 +1468,12 @@ class CaptureToolWrapper(ToolCallWrapper):
     ):
         """Capture the tool call."""
         CaptureToolWrapper.call_count += 1
-        CaptureToolWrapper.captured_calls.append({
-            "tool_name": tool_name,
-            "tool_input": tool_input,
-        })
+        CaptureToolWrapper.captured_calls.append(
+            {
+                "tool_name": tool_name,
+                "tool_input": tool_input,
+            }
+        )
         return tool_input
 
     def postprocess(
@@ -1483,10 +1485,12 @@ class CaptureToolWrapper(ToolCallWrapper):
         tool_output: str,
     ) -> ToolCallResult:
         """Capture the tool result."""
-        CaptureToolWrapper.captured_results.append({
-            "tool_name": tool_name,
-            "tool_output": tool_output,
-        })
+        CaptureToolWrapper.captured_results.append(
+            {
+                "tool_name": tool_name,
+                "tool_output": tool_output,
+            }
+        )
         return ToolCallResult(output=tool_output)
 
 
@@ -1587,10 +1591,12 @@ class ErrorHandlingToolWrapper(ToolCallWrapper):
         error: Exception,
     ) -> Optional[str]:
         """Handle errors by returning a fallback message."""
-        ErrorHandlingToolWrapper.handled_errors.append({
-            "tool_name": tool_name,
-            "error": str(error),
-        })
+        ErrorHandlingToolWrapper.handled_errors.append(
+            {
+                "tool_name": tool_name,
+                "error": str(error),
+            }
+        )
         return f"Error handled: {error}"
 
 

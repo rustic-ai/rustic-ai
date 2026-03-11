@@ -272,8 +272,7 @@ def test_add_routing_rule(guild_manager, metastore_engine):
 
     # 4. Verify route was added to in-memory guild
     in_memory_routes = [
-        (step.method_name, step.agent.id if step.agent else None)
-        for step in guild_manager.guild.routes.steps
+        (step.method_name, step.agent.id if step.agent else None) for step in guild_manager.guild.routes.steps
     ]
     assert (rule.method_name, rule.agent.id) in in_memory_routes, "Route should be added to in-memory guild"
 
@@ -283,10 +282,7 @@ def test_add_routing_rule(guild_manager, metastore_engine):
         new_spec = guild_model.to_guild_spec()
 
         if new_spec.routes:
-            spec_routes = [
-                (s.method_name, s.agent.id if s.agent else None)
-                for s in new_spec.routes.steps
-            ]
+            spec_routes = [(s.method_name, s.agent.id if s.agent else None) for s in new_spec.routes.steps]
             assert (rule.method_name, rule.agent.id) in spec_routes, "Added route should be in generated spec"
 
 

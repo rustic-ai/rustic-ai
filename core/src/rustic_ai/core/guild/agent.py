@@ -73,6 +73,7 @@ class Agent(Generic[APT], metaclass=AgentMetaclass):  # type: ignore
     """
     Base class for all agents
     """
+
     def __init__(
         self,
         agent_spec: AgentSpec[APT],
