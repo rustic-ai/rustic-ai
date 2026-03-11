@@ -30,7 +30,7 @@ soundfile = { version = "^0.13.1" }
 sentencepiece = { version = "^0.2.0" }
 diffusers = { version = "^0.33.1" }
 protobuf = { version = "^5" }
-pillow = { version = "^11.2.1" }
+pillow = { version = "^12.1.1" }
 sentence-transformers = "^4.1.0"
 
 [tool.poetry-monorepo.deps]
