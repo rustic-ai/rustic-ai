@@ -1,0 +1,838 @@
+{
+    "name": "VendingBenchPlayer",
+    "description": "A guild that plays the VendingBench benchmark via G2G communication with the VendingBench simulation guild.",
+    "version": "v1",
+    "icon": "🎮",
+    "intro_msg": "Welcome to VendingBench Player! I'm an AI agent operating a vending machine business via G2G communication.",
+    "exposure": "public",
+    "author_id": "dummyuserid",
+    "organization_id": null,
+    "category_id": null,
+    "tags": [
+        "Benchmark",
+        "LLM Agent",
+        "G2G"
+    ],
+    "commands": [],
+    "starter_prompts": [
+        "Start the vending machine simulation"
+    ],
+    "spec": {
+        "name": "VendingBenchPlayer",
+        "description": "LLM Agent-based player for VendingBench benchmark using G2G communication",
+        "configuration_schema": {
+            "type": "object",
+            "properties": {
+                "vending_bench_id": {
+                    "type": "string",
+                    "title": "VendingBench Guild id"
+                }
+            },
+            "required": [
+                "vending_bench_id"
+            ]
+        },
+        "configuration": {
+            "vending_bench_id": "vending_bench_guild"
+        },
+        "agents": [
+            {
+                "id": "player_agent",
+                "name": "VendingBenchPlayer",
+                "description": "LLM Agent that operates the vending machine. Uses VendingBenchToolspecsProvider for tool definitions.",
+                "class_name": "rustic_ai.llm_agent.llm_agent.LLMAgent",
+                "additional_topics": [
+                    "PLAYER_INPUT"
+                ],
+                "listen_to_default_topic": false,
+                "properties": {
+                    "model": "gpt-4o",
+                    "default_system_prompt": "You are an autonomous vending machine business operator in a simulation. Your goal is to maximize net worth over 30+ days.\n\nCRITICAL: You MUST call a tool on EVERY turn. Never respond with just text - always take an action!\n\n=== CORE RULES ===\n- Starting capital: $500 | Daily fee: $2 | Bankruptcy: 10 days unable to pay\n- Customers buy automatically throughout each day based on weather and prices\n- Deliveries take 2-5 days - order BEFORE you run out!\n\n=== AUTONOMOUS OPERATION LOOP ===\nYou are running autonomously. After each tool result, immediately decide your next action:\n\n1. START OF SESSION: search_suppliers → check_inventory → check_balance\n2. EACH DAY: read_emails (check deliveries) → restock if needed → strategic actions → end_day\n3. REPEAT: Continue the loop, advancing days to let customers buy and deliveries arrive\n\n=== KEY ACTIONS ===\n- search_suppliers: MUST do this first to discover suppliers (you start with none!)\n- send_email: Order supplies from discovered suppliers (e.g., 'I'd like to order 20 chips, 15 soda')\n- read_emails: Check for delivery confirmations\n- restock: Add delivered items to inventory (use Order ID from delivery email)\n- end_day: Advance to next day - USE THIS FREQUENTLY to progress the simulation!\n- collect_cash: Move cash from machine to operator account for paying fees\n\n=== TIME EFFICIENCY ===\n- Don't repeatedly check inventory/balance - take action based on what you know\n- Use 'end_day' to advance time quickly after your daily actions\n- The simulation progresses when YOU advance time - be proactive!\n\nRemember: ALWAYS call a tool. Start by searching for suppliers, then build your supply chain!",
+                    "llm_request_wrappers": [
+                        {
+                            "kind": "rustic_ai.llm_agent.tools.tools_manager_plugin.ToolsManagerPlugin",
+                            "toolset": {
+                                "kind": "rustic_ai.showcase.vending_bench.player_toolset.VendingBenchToolspecsProvider"
+                            }
+                        }
+                    ]
+                }
+            },
+            {
+                "id": "gateway",
+                "name": "PlayerGateway",
+                "description": "Gateway agent for receiving G2G responses from VendingBench guild.",
+                "class_name": "rustic_ai.core.guild.g2g.gateway_agent.GatewayAgent",
+                "additional_topics": [],
+                "listen_to_default_topic": true,
+                "properties": {
+                    "input_formats": [
+                        "*"
+                    ],
+                    "output_formats": [
+                        "*"
+                    ],
+                    "returned_formats": [
+                        "rustic_ai.showcase.vending_bench.messages.SimulationControlResponse",
+                        "rustic_ai.showcase.vending_bench.messages.AgentActionResponse",
+                        "rustic_ai.showcase.vending_bench.messages.CheckInventoryResponse",
+                        "rustic_ai.showcase.vending_bench.messages.CheckBalanceResponse",
+                        "rustic_ai.showcase.vending_bench.messages.SetPriceResponse",
+                        "rustic_ai.showcase.vending_bench.messages.CollectCashResponse",
+                        "rustic_ai.showcase.vending_bench.messages.RestockResponse",
+                        "rustic_ai.showcase.vending_bench.messages.ReadEmailsResponse",
+                        "rustic_ai.showcase.vending_bench.messages.SendEmailResponse",
+                        "rustic_ai.showcase.vending_bench.messages.ScratchpadReadResponse",
+                        "rustic_ai.showcase.vending_bench.messages.ScratchpadWriteResponse",
+                        "rustic_ai.showcase.vending_bench.messages.WaitResponse",
+                        "rustic_ai.showcase.vending_bench.messages.EndDayResponse",
+                        "rustic_ai.showcase.vending_bench.messages.EvaluationResult",
+                        "rustic_ai.showcase.vending_bench.messages.DayUpdateEvent",
+                        "rustic_ai.showcase.vending_bench.messages.NightUpdateEvent",
+                        "rustic_ai.showcase.vending_bench.messages.CustomerPurchaseEvent",
+                        "rustic_ai.showcase.vending_bench.supplier_messages.SupplierSearchResponse",
+                        "rustic_ai.showcase.vending_bench.supplier_messages.ViewSuppliersResponse",
+                        "rustic_ai.showcase.vending_bench.supplier_messages.ViewComplaintsResponse",
+                        "rustic_ai.showcase.vending_bench.supplier_messages.RespondToComplaintResponse",
+                        "rustic_ai.showcase.vending_bench.supplier_messages.NegotiationResponse",
+                        "rustic_ai.showcase.vending_bench.supplier_messages.DeliveryDelayNotification",
+                        "rustic_ai.showcase.vending_bench.supplier_messages.PartialDeliveryNotification",
+                        "rustic_ai.showcase.vending_bench.supplier_messages.SupplierFailureNotification",
+                        "rustic_ai.showcase.vending_bench.supplier_messages.BaitAndSwitchEvent"
+                    ]
+                }
+            },
+            {
+                "id": "envoy_to_vending_bench",
+                "name": "EnvoyToVendingBench",
+                "description": "Envoy agent for sending requests to VendingBench guild via G2G.",
+                "class_name": "rustic_ai.core.guild.g2g.envoy_agent.EnvoyAgent",
+                "additional_topics": [
+                    "TO_VENDING_BENCH"
+                ],
+                "listen_to_default_topic": false,
+                "properties": {
+                    "target_guild": "{{ vending_bench_id }}",
+                    "formats_to_forward": [
+                        "rustic_ai.showcase.vending_bench.messages.SimulationControlRequest",
+                        "rustic_ai.showcase.vending_bench.messages.AgentActionRequest",
+                        "rustic_ai.showcase.vending_bench.messages.WaitRequest",
+                        "rustic_ai.showcase.vending_bench.messages.EndDayRequest"
+                    ]
+                }
+            }
+        ],
+        "dependency_map": {
+            "llm": {
+                "class_name": "rustic_ai.litellm.agent_ext.llm.LiteLLMResolver",
+                "properties": {
+                    "model": "vertex_ai/gemini-3-pro-preview"
+                }
+            }
+        },
+        "routes": {
+            "steps": [
+                {
+                    "description": "First user message starts the simulation",
+                    "agent_type": "rustic_ai.core.agents.utils.user_proxy_agent.UserProxyAgent",
+                    "method_name": "unwrap_and_forward_message",
+                    "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest",
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.showcase.vending_bench.messages.SimulationControlRequest",
+                        "expression": "({'command': 'start', 'config': {}})"
+                    },
+                    "destination": {
+                        "topics": "TO_VENDING_BENCH"
+                    },
+                    "route_times": 1
+                },
+                {
+                    "description": "SimulationControlResponse -> ChatCompletionRequest to player",
+                    "agent": {
+                        "name": "PlayerGateway"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.SimulationControlResponse",
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest",
+                        "expression": "({'messages': [{'role': 'user', 'content': 'Simulation ' & $.simulation_status & '! Day: ' & $string($.simulation_time.current_day) & ', Weather: ' & $.simulation_time.weather & '. ' & $.message & ' What action would you like to take?'}]})"
+                    },
+                    "destination": {
+                        "topics": "PLAYER_INPUT"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Route CheckInventoryRequest from player to G2G as AgentActionRequest",
+                    "agent": {
+                        "name": "VendingBenchPlayer"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.CheckInventoryRequest",
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.showcase.vending_bench.messages.AgentActionRequest",
+                        "expression": "({'request_id': $.request_id, 'action_type': 'check_inventory', 'parameters': {}})"
+                    },
+                    "destination": {
+                        "topics": "TO_VENDING_BENCH"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Route CheckBalanceRequest from player to G2G as AgentActionRequest",
+                    "agent": {
+                        "name": "VendingBenchPlayer"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.CheckBalanceRequest",
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.showcase.vending_bench.messages.AgentActionRequest",
+                        "expression": "({'request_id': $.request_id, 'action_type': 'check_balance', 'parameters': {}})"
+                    },
+                    "destination": {
+                        "topics": "TO_VENDING_BENCH"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Route SetPriceRequest from player to G2G as AgentActionRequest",
+                    "agent": {
+                        "name": "VendingBenchPlayer"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.SetPriceRequest",
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.showcase.vending_bench.messages.AgentActionRequest",
+                        "expression": "({'request_id': $.request_id, 'action_type': 'set_price', 'parameters': {'product': $.product, 'new_price': $.new_price}})"
+                    },
+                    "destination": {
+                        "topics": "TO_VENDING_BENCH"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Route CollectCashRequest from player to G2G as AgentActionRequest",
+                    "agent": {
+                        "name": "VendingBenchPlayer"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.CollectCashRequest",
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.showcase.vending_bench.messages.AgentActionRequest",
+                        "expression": "({'request_id': $.request_id, 'action_type': 'collect_cash', 'parameters': {}})"
+                    },
+                    "destination": {
+                        "topics": "TO_VENDING_BENCH"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Route RestockRequest from player to G2G as AgentActionRequest",
+                    "agent": {
+                        "name": "VendingBenchPlayer"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.RestockRequest",
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.showcase.vending_bench.messages.AgentActionRequest",
+                        "expression": "({'request_id': $.request_id, 'action_type': 'restock', 'parameters': {'delivery_id': $.delivery_id}})"
+                    },
+                    "destination": {
+                        "topics": "TO_VENDING_BENCH"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Route ReadEmailsRequest from player to G2G as AgentActionRequest",
+                    "agent": {
+                        "name": "VendingBenchPlayer"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.ReadEmailsRequest",
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.showcase.vending_bench.messages.AgentActionRequest",
+                        "expression": "({'request_id': $.request_id, 'action_type': 'read_emails', 'parameters': {'unread_only': $.unread_only}})"
+                    },
+                    "destination": {
+                        "topics": "TO_VENDING_BENCH"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Route SendEmailRequest from player to G2G as AgentActionRequest",
+                    "agent": {
+                        "name": "VendingBenchPlayer"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.SendEmailRequest",
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.showcase.vending_bench.messages.AgentActionRequest",
+                        "expression": "({'request_id': $.request_id, 'action_type': 'send_email', 'parameters': {'to_address': $.to_address, 'subject': $.subject, 'body': $.body}})"
+                    },
+                    "destination": {
+                        "topics": "TO_VENDING_BENCH"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Route ScratchpadReadRequest from player to G2G as AgentActionRequest",
+                    "agent": {
+                        "name": "VendingBenchPlayer"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.ScratchpadReadRequest",
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.showcase.vending_bench.messages.AgentActionRequest",
+                        "expression": "({'request_id': $.request_id, 'action_type': 'scratchpad_read', 'parameters': {'key': $.key}})"
+                    },
+                    "destination": {
+                        "topics": "TO_VENDING_BENCH"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Route ScratchpadWriteRequest from player to G2G as AgentActionRequest",
+                    "agent": {
+                        "name": "VendingBenchPlayer"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.ScratchpadWriteRequest",
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.showcase.vending_bench.messages.AgentActionRequest",
+                        "expression": "({'request_id': $.request_id, 'action_type': 'scratchpad_write', 'parameters': {'key': $.key, 'value': $.value}})"
+                    },
+                    "destination": {
+                        "topics": "TO_VENDING_BENCH"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Route WaitRequest from player to G2G as AgentActionRequest",
+                    "agent": {
+                        "name": "VendingBenchPlayer"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.WaitRequest",
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.showcase.vending_bench.messages.AgentActionRequest",
+                        "expression": "({'request_id': $.request_id, 'action_type': 'wait', 'parameters': {'hours': $.hours}})"
+                    },
+                    "destination": {
+                        "topics": "TO_VENDING_BENCH"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Route EndDayRequest from player to G2G as AgentActionRequest",
+                    "agent": {
+                        "name": "VendingBenchPlayer"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.EndDayRequest",
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.showcase.vending_bench.messages.AgentActionRequest",
+                        "expression": "({'request_id': $.request_id, 'action_type': 'end_day', 'parameters': {}})"
+                    },
+                    "destination": {
+                        "topics": "TO_VENDING_BENCH"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Route SupplierSearchRequest from player to G2G as AgentActionRequest",
+                    "agent": {
+                        "name": "VendingBenchPlayer"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.supplier_messages.SupplierSearchRequest",
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.showcase.vending_bench.messages.AgentActionRequest",
+                        "expression": "({'request_id': $.request_id, 'action_type': 'search_suppliers', 'parameters': {'product_types': $.product_types, 'location': $.location}})"
+                    },
+                    "destination": {
+                        "topics": "TO_VENDING_BENCH"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Route ViewSuppliersRequest from player to G2G as AgentActionRequest",
+                    "agent": {
+                        "name": "VendingBenchPlayer"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.supplier_messages.ViewSuppliersRequest",
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.showcase.vending_bench.messages.AgentActionRequest",
+                        "expression": "({'request_id': $.request_id, 'action_type': 'view_suppliers', 'parameters': {'active_only': $.active_only, 'product_filter': $.product_filter}})"
+                    },
+                    "destination": {
+                        "topics": "TO_VENDING_BENCH"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Route ViewComplaintsRequest from player to G2G as AgentActionRequest",
+                    "agent": {
+                        "name": "VendingBenchPlayer"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.supplier_messages.ViewComplaintsRequest",
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.showcase.vending_bench.messages.AgentActionRequest",
+                        "expression": "({'request_id': $.request_id, 'action_type': 'view_complaints', 'parameters': {'status_filter': $.status_filter}})"
+                    },
+                    "destination": {
+                        "topics": "TO_VENDING_BENCH"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Route RespondToComplaintRequest from player to G2G as AgentActionRequest",
+                    "agent": {
+                        "name": "VendingBenchPlayer"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.supplier_messages.RespondToComplaintRequest",
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.showcase.vending_bench.messages.AgentActionRequest",
+                        "expression": "({'request_id': $.request_id, 'action_type': 'respond_complaint', 'parameters': {'complaint_id': $.complaint_id, 'action': $.action, 'refund_amount': $.refund_amount, 'response_message': $.response_message}})"
+                    },
+                    "destination": {
+                        "topics": "TO_VENDING_BENCH"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "CheckInventoryResponse -> ChatCompletionRequest to player",
+                    "agent": {
+                        "name": "PlayerGateway"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.CheckInventoryResponse",
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest",
+                        "expression": "({'messages': [{'role': 'user', 'content': 'Inventory check complete (took ' & $string($.time_elapsed_minutes) & ' min). Current inventory: ' & $string($.inventory) & '. Day ' & $string($.simulation_time.current_day) & ', ' & $.simulation_time.weather & ' weather. What would you like to do next?'}]})"
+                    },
+                    "destination": {
+                        "topics": "PLAYER_INPUT"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "CheckBalanceResponse -> ChatCompletionRequest to player",
+                    "agent": {
+                        "name": "PlayerGateway"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.CheckBalanceResponse",
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest",
+                        "expression": "({'messages': [{'role': 'user', 'content': 'Balance check complete (took ' & $string($.time_elapsed_minutes) & ' min). Machine cash: $' & $string($.machine_cash) & ', Operator cash: $' & $string($.operator_cash) & ', Inventory value: $' & $string($.inventory_value) & ', Net worth: $' & $string($.net_worth) & '. Day ' & $string($.simulation_time.current_day) & '. What would you like to do next?'}]})"
+                    },
+                    "destination": {
+                        "topics": "PLAYER_INPUT"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "SetPriceResponse -> ChatCompletionRequest to player",
+                    "agent": {
+                        "name": "PlayerGateway"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.SetPriceResponse",
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest",
+                        "expression": "({'messages': [{'role': 'user', 'content': $.message & ' (took ' & $string($.time_elapsed_minutes) & ' min). ' & $.product & ' price changed from $' & $string($.old_price) & ' to $' & $string($.new_price) & '. What would you like to do next?'}]})"
+                    },
+                    "destination": {
+                        "topics": "PLAYER_INPUT"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "CollectCashResponse -> ChatCompletionRequest to player",
+                    "agent": {
+                        "name": "PlayerGateway"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.CollectCashResponse",
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest",
+                        "expression": "({'messages': [{'role': 'user', 'content': 'Cash collected (took ' & $string($.time_elapsed_minutes) & ' min). Collected $' & $string($.amount_collected) & '. New operator balance: $' & $string($.new_operator_balance) & '. What would you like to do next?'}]})"
+                    },
+                    "destination": {
+                        "topics": "PLAYER_INPUT"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "RestockResponse -> ChatCompletionRequest to player",
+                    "agent": {
+                        "name": "PlayerGateway"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.RestockResponse",
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest",
+                        "expression": "({'messages': [{'role': 'user', 'content': $.message & ' (took ' & $string($.time_elapsed_minutes) & ' min). Products restocked: ' & $string($.products_restocked) & '. What would you like to do next?'}]})"
+                    },
+                    "destination": {
+                        "topics": "PLAYER_INPUT"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "ReadEmailsResponse -> ChatCompletionRequest to player",
+                    "agent": {
+                        "name": "PlayerGateway"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.ReadEmailsResponse",
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest",
+                        "expression": "({'messages': [{'role': 'user', 'content': 'Emails retrieved (took ' & $string($.time_elapsed_minutes) & ' min). ' & ($count($.emails) > 0 ? 'You have ' & $string($count($.emails)) & ' emails: ' & $string($.emails) : 'No emails in inbox.') & ' What would you like to do next?'}]})"
+                    },
+                    "destination": {
+                        "topics": "PLAYER_INPUT"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "SendEmailResponse -> ChatCompletionRequest to player",
+                    "agent": {
+                        "name": "PlayerGateway"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.SendEmailResponse",
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest",
+                        "expression": "({'messages': [{'role': 'user', 'content': $.message & ' (took ' & $string($.time_elapsed_minutes) & ' min). What would you like to do next?'}]})"
+                    },
+                    "destination": {
+                        "topics": "PLAYER_INPUT"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "ScratchpadReadResponse -> ChatCompletionRequest to player",
+                    "agent": {
+                        "name": "PlayerGateway"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.ScratchpadReadResponse",
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest",
+                        "expression": "({'messages': [{'role': 'user', 'content': 'Scratchpad data (took ' & $string($.time_elapsed_minutes) & ' min): ' & $string($.data) & '. What would you like to do next?'}]})"
+                    },
+                    "destination": {
+                        "topics": "PLAYER_INPUT"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "ScratchpadWriteResponse -> ChatCompletionRequest to player",
+                    "agent": {
+                        "name": "PlayerGateway"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.ScratchpadWriteResponse",
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest",
+                        "expression": "({'messages': [{'role': 'user', 'content': $.message & ' (took ' & $string($.time_elapsed_minutes) & ' min). What would you like to do next?'}]})"
+                    },
+                    "destination": {
+                        "topics": "PLAYER_INPUT"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "WaitResponse -> ChatCompletionRequest to player",
+                    "agent": {
+                        "name": "PlayerGateway"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.WaitResponse",
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest",
+                        "expression": "({'messages': [{'role': 'user', 'content': 'Waited ' & $string($.hours_waited) & ' hour(s) (' & $string($.time_elapsed_minutes) & ' min). ' & ($count($.events_during_wait) > 0 ? 'Events: ' & $string($.events_during_wait) & '. ' : '') & 'Day ' & $string($.simulation_time.current_day) & ', ' & $.simulation_time.weather & ' weather. What would you like to do next?'}]})"
+                    },
+                    "destination": {
+                        "topics": "PLAYER_INPUT"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "EndDayResponse -> ChatCompletionRequest to player",
+                    "agent": {
+                        "name": "PlayerGateway"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.EndDayResponse",
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest",
+                        "expression": "({'messages': [{'role': 'user', 'content': $.day_summary & ' Weather: ' & $.simulation_time.weather & '. What would you like to do next?'}]})"
+                    },
+                    "destination": {
+                        "topics": "PLAYER_INPUT"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Broadcast CustomerPurchaseEvent to user for visibility",
+                    "agent": {
+                        "name": "PlayerGateway"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.CustomerPurchaseEvent",
+                    "destination": {
+                        "topics": "user_message_broadcast"
+                    },
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                        "expression": "({'choices': [{'message': {'role': 'assistant', 'content': '[SALE] ' & $.product & ' x' & $string($.quantity) & ' = $' & $string($.price_paid) & ' (Day ' & $string($.day) & ', ' & $string($.time_of_day_minutes) & ' min)'}}]})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Broadcast DayUpdateEvent to user for visibility",
+                    "agent": {
+                        "name": "PlayerGateway"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.DayUpdateEvent",
+                    "destination": {
+                        "topics": "user_message_broadcast"
+                    },
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                        "expression": "({'choices': [{'message': {'role': 'assistant', 'content': '[DAY START] Day ' & $string($.day) & ' - Weather: ' & $.weather & ', Fee: $' & $string($.daily_fee_deducted) & ', Cash: $' & $string($.remaining_cash)}}]})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Broadcast NightUpdateEvent to user for visibility",
+                    "agent": {
+                        "name": "PlayerGateway"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.NightUpdateEvent",
+                    "destination": {
+                        "topics": "user_message_broadcast"
+                    },
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                        "expression": "({'choices': [{'message': {'role': 'assistant', 'content': '[DAY END] Day ' & $string($.day) & ' - Sales: ' & $string($.total_sales_today) & ' items, Revenue: $' & $string($.total_revenue_today)}}]})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "DayUpdateEvent -> ChatCompletionRequest to player",
+                    "agent": {
+                        "name": "PlayerGateway"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.DayUpdateEvent",
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest",
+                        "expression": "({'messages': [{'role': 'user', 'content': 'Day ' & $string($.day) & ' has started! Weather: ' & $.weather & '. Daily fee of $' & $string($.daily_fee_deducted) & ' was deducted. Remaining cash: $' & $string($.remaining_cash) & '. ' & ($.days_without_payment > 0 ? 'WARNING: ' & $string($.days_without_payment) & ' days without payment!' : '') & ' What would you like to do?'}]})"
+                    },
+                    "destination": {
+                        "topics": "PLAYER_INPUT"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "NightUpdateEvent -> ChatCompletionRequest to player",
+                    "agent": {
+                        "name": "PlayerGateway"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.NightUpdateEvent",
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest",
+                        "expression": "({'messages': [{'role': 'user', 'content': 'Day ' & $string($.day) & ' has ended. Sales today: ' & $string($.total_sales_today) & ' items for $' & $string($.total_revenue_today) & '. Ending inventory: ' & $string($.ending_inventory) & '. What would you like to do next?'}]})"
+                    },
+                    "destination": {
+                        "topics": "PLAYER_INPUT"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "AgentActionResponse -> ChatCompletionRequest to player",
+                    "agent": {
+                        "name": "PlayerGateway"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.AgentActionResponse",
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest",
+                        "expression": "({'messages': [{'role': 'user', 'content': 'Action: ' & $.action_type & ' - ' & ($.success ? 'Success' : 'Failed: ' & $.error_message) & '. Response: ' & $string($.response) & '. Day ' & $string($.simulation_time.current_day) & ', ' & $.simulation_time.weather & ' weather. What would you like to do next?'}]})"
+                    },
+                    "destination": {
+                        "topics": "PLAYER_INPUT"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "EvaluationResult -> Final response to user",
+                    "agent": {
+                        "name": "PlayerGateway"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.EvaluationResult",
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                        "expression": "({'choices': [{'message': {'role': 'assistant', 'content': 'SIMULATION ENDED!\\n\\n' & $.success_message & '\\n\\nFinal Stats:\\n- Days survived: ' & $string($.days_survived) & '\\n- Final net worth: $' & $string($.final_net_worth) & '\\n- Starting net worth: $' & $string($.starting_net_worth) & '\\n- Net worth change: $' & $string($.net_worth_change) & '\\n- Total sales: ' & $string($.total_sales) & '\\n- Total revenue: $' & $string($.total_revenue) & '\\n- Bankrupt: ' & ($.bankrupt ? 'Yes' : 'No')}}]})"
+                    },
+                    "destination": {
+                        "topics": "user_message_broadcast"
+                    },
+                    "route_times": -1,
+                    "process_status": "completed"
+                },
+                {
+                    "description": "LLM response without tool calls -> User (final answer)",
+                    "agent": {
+                        "name": "VendingBenchPlayer"
+                    },
+                    "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "($response := $.payload; $choice := $response.choices[0]; $msg := $choice.message; $has_tool_calls := $exists($msg.tool_calls) and $count($msg.tool_calls) > 0; $has_tool_calls ? {} : {'topics': 'user_message_broadcast', 'format': 'rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse', 'payload': $response, 'process_status': 'completed'})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "DeliveryDelayNotification -> ChatCompletionRequest to player",
+                    "agent": {
+                        "name": "PlayerGateway"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.supplier_messages.DeliveryDelayNotification",
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest",
+                        "expression": "({'messages': [{'role': 'user', 'content': 'DELIVERY DELAY: Order ' & $.order_id & ' from ' & $.supplier_name & ' has been delayed by ' & $string($.delay_days) & ' days. New delivery: Day ' & $string($.new_delivery_day) & '. Reason: ' & $.reason & '. What would you like to do?'}]})"
+                    },
+                    "destination": {
+                        "topics": "PLAYER_INPUT"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Broadcast DeliveryDelayNotification to user for visibility",
+                    "agent": {
+                        "name": "PlayerGateway"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.supplier_messages.DeliveryDelayNotification",
+                    "destination": {
+                        "topics": "user_message_broadcast"
+                    },
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                        "expression": "({'choices': [{'message': {'role': 'assistant', 'content': '[DELAY] Order ' & $.order_id & ' delayed ' & $string($.delay_days) & ' days'}}]})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "PartialDeliveryNotification -> ChatCompletionRequest to player",
+                    "agent": {
+                        "name": "PlayerGateway"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.supplier_messages.PartialDeliveryNotification",
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest",
+                        "expression": "({'messages': [{'role': 'user', 'content': 'PARTIAL DELIVERY: Order ' & $.order_id & ' from ' & $.supplier_name & ' was only partially delivered. Missing items: ' & $string($.missing_products) & '. Reason: ' & $.reason & '. What would you like to do?'}]})"
+                    },
+                    "destination": {
+                        "topics": "PLAYER_INPUT"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Broadcast PartialDeliveryNotification to user for visibility",
+                    "agent": {
+                        "name": "PlayerGateway"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.supplier_messages.PartialDeliveryNotification",
+                    "destination": {
+                        "topics": "user_message_broadcast"
+                    },
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                        "expression": "({'choices': [{'message': {'role': 'assistant', 'content': '[PARTIAL] Order ' & $.order_id & ' - some items missing'}}]})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "SupplierFailureNotification -> ChatCompletionRequest to player",
+                    "agent": {
+                        "name": "PlayerGateway"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.supplier_messages.SupplierFailureNotification",
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest",
+                        "expression": "({'messages': [{'role': 'user', 'content': 'SUPPLIER BANKRUPT: ' & $.supplier_name & ' has gone out of business! ' & $.message & ' Affected orders: ' & $string($.affected_orders) & '. You need to find alternative suppliers. What would you like to do?'}]})"
+                    },
+                    "destination": {
+                        "topics": "PLAYER_INPUT"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Broadcast SupplierFailureNotification to user for visibility",
+                    "agent": {
+                        "name": "PlayerGateway"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.supplier_messages.SupplierFailureNotification",
+                    "destination": {
+                        "topics": "user_message_broadcast"
+                    },
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                        "expression": "({'choices': [{'message': {'role': 'assistant', 'content': '[BANKRUPT] ' & $.supplier_name & ' has ceased operations'}}]})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "BaitAndSwitchEvent -> ChatCompletionRequest to player",
+                    "agent": {
+                        "name": "PlayerGateway"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.supplier_messages.BaitAndSwitchEvent",
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest",
+                        "expression": "({'messages': [{'role': 'user', 'content': 'PRICE CHANGE: ' & $.supplier_name & ' charged $' & $string($.actual_total) & ' instead of quoted $' & $string($.quoted_total) & ' (extra $' & $string($.difference) & ')! Reason given: ' & $.reason_given & '. Consider finding more reliable suppliers. What would you like to do?'}]})"
+                    },
+                    "destination": {
+                        "topics": "PLAYER_INPUT"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Broadcast BaitAndSwitchEvent to user for visibility",
+                    "agent": {
+                        "name": "PlayerGateway"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.supplier_messages.BaitAndSwitchEvent",
+                    "destination": {
+                        "topics": "user_message_broadcast"
+                    },
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                        "expression": "({'choices': [{'message': {'role': 'assistant', 'content': '[OVERCHARGE] ' & $.supplier_name & ' charged extra $' & $string($.difference)}}]})"
+                    },
+                    "route_times": -1
+                }
+            ]
+        }
+    }
+}

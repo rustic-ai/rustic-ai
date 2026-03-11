@@ -1,0 +1,1028 @@
+{
+    "name": "VendingBench",
+    "description": "VendingBench benchmark - a simulation environment for testing LLM agents' ability to operate a vending machine business over extended time horizons. Based on arxiv:2502.15840.",
+    "version": "v1",
+    "icon": "🎰",
+    "intro_msg": "Welcome to VendingBench! You are operating a vending machine business. Your goal is to maintain profitability by managing inventory, setting prices, and placing orders with suppliers. You'll need to pay a $2 daily fee - if you can't pay for 10 consecutive days, you'll go bankrupt.",
+    "exposure": "public",
+    "author_id": "dummyuserid",
+    "organization_id": null,
+    "category_id": null,
+    "tags": [
+        "Benchmark",
+        "Simulation",
+        "LLM Agent",
+        "Business"
+    ],
+    "commands": [],
+    "starter_prompts": [],
+    "spec": {
+        "name": "VendingBench",
+        "description": "Vending machine business simulation benchmark for LLM agents",
+        "agents": [
+            {
+                "id": "vending_machine",
+                "name": "VendingMachine",
+                "description": "Manages vending machine state including inventory, cash, and prices.",
+                "class_name": "rustic_ai.showcase.vending_bench.vending_machine_agent.VendingMachineAgent",
+                "additional_topics": [
+                    "VENDING_STATE",
+                    "PURCHASES",
+                    "SIMULATION_EVENTS"
+                ],
+                "listen_to_default_topic": true,
+                "properties": {
+                    "starting_capital": 500.0,
+                    "daily_fee": 2.0
+                }
+            },
+            {
+                "id": "customer_simulator",
+                "name": "CustomerSimulator",
+                "description": "Simulates customer purchases based on prices, weather, and day of week.",
+                "class_name": "rustic_ai.showcase.vending_bench.customer_simulator_agent.CustomerSimulatorAgent",
+                "additional_topics": [
+                    "SIMULATION_EVENTS",
+                    "VENDING_STATE"
+                ],
+                "listen_to_default_topic": false,
+                "properties": {
+                    "demand_variance": 0.2
+                }
+            },
+            {
+                "id": "supplier",
+                "name": "Supplier",
+                "description": "Handles email-based ordering and delivery scheduling.",
+                "class_name": "rustic_ai.showcase.vending_bench.supplier_agent.SupplierAgent",
+                "additional_topics": [
+                    "EMAIL",
+                    "ORDERS",
+                    "SIMULATION_EVENTS",
+                    "SCRATCHPAD",
+                    "SUPPLIER_REGISTRY"
+                ],
+                "listen_to_default_topic": false,
+                "properties": {
+                    "delivery_days_min": 2,
+                    "delivery_days_max": 5,
+                    "use_ai_responses": true
+                }
+            },
+            {
+                "id": "supplier_discovery",
+                "name": "SupplierDiscovery",
+                "description": "Discovers new suppliers via web research and manages supplier registry.",
+                "class_name": "rustic_ai.showcase.vending_bench.supplier_discovery_agent.SupplierDiscoveryAgent",
+                "additional_topics": [
+                    "RESEARCH",
+                    "SUPPLIER_REGISTRY"
+                ],
+                "listen_to_default_topic": false,
+                "properties": {
+                    "search_timeout_minutes": 60,
+                    "max_suppliers_per_search": 3
+                }
+            },
+            {
+                "id": "google_research",
+                "name": "GoogleResearch",
+                "description": "Performs web research using Google Search to discover supplier information.",
+                "class_name": "rustic_ai.vertexai.agents.google_research_agent.GoogleResearchAgent",
+                "additional_topics": [
+                    "RESEARCH"
+                ],
+                "listen_to_default_topic": false,
+                "properties": {
+                    "model_id": "gemini-2.5-pro",
+                    "system_prompt": "You are a Supplier Research Agent. Search for vending machine product suppliers, wholesalers, and distributors. For each supplier found, extract: company name, contact email (or generate a plausible one like orders@companyname.com), location, and products they offer (chips, candy, soda, water, energy drinks). Return a structured list of suppliers with their details. Focus on finding legitimate wholesale suppliers for vending machine operators.",
+                    "temperature": 0.3,
+                    "max_output_tokens": 2048
+                }
+            },
+            {
+                "id": "supplier_simulator",
+                "name": "SupplierSimulator",
+                "description": "Simulates individual supplier behaviors with adversarial elements.",
+                "class_name": "rustic_ai.showcase.vending_bench.supplier_simulator_agent.SupplierSimulatorAgent",
+                "additional_topics": [
+                    "SUPPLIER_SIMULATION",
+                    "SIMULATION_EVENTS",
+                    "EMAIL",
+                    "SUPPLIER_REGISTRY"
+                ],
+                "listen_to_default_topic": false,
+                "properties": {
+                    "use_ai_responses": true,
+                    "delivery_days_min": 2,
+                    "delivery_days_max": 5
+                }
+            },
+            {
+                "id": "customer_complaints",
+                "name": "CustomerComplaints",
+                "description": "Generates and manages customer complaints requiring refunds.",
+                "class_name": "rustic_ai.showcase.vending_bench.customer_complaint_agent.CustomerComplaintAgent",
+                "additional_topics": [
+                    "COMPLAINTS",
+                    "SIMULATION_EVENTS",
+                    "EMAIL"
+                ],
+                "listen_to_default_topic": false,
+                "properties": {
+                    "base_complaint_rate": 0.10,
+                    "enable_complaints": true
+                }
+            },
+            {
+                "id": "simulation_controller",
+                "name": "SimController",
+                "description": "Controls simulation lifecycle, time progression, and day/night cycles.",
+                "class_name": "rustic_ai.showcase.vending_bench.simulation_controller_agent.SimulationControllerAgent",
+                "additional_topics": [
+                    "SIMULATION_CONTROL",
+                    "VENDING_STATE",
+                    "EMAIL",
+                    "SCRATCHPAD",
+                    "PURCHASES"
+                ],
+                "listen_to_default_topic": true,
+                "properties": {
+                    "starting_capital": 500.0,
+                    "daily_fee": 2.0,
+                    "bankruptcy_days": 10,
+                    "auto_advance_time": true
+                }
+            },
+            {
+                "id": "evaluator",
+                "name": "Evaluator",
+                "description": "Tracks metrics and produces evaluation results.",
+                "class_name": "rustic_ai.showcase.vending_bench.evaluator_agent.EvaluatorAgent",
+                "additional_topics": [
+                    "EVALUATION",
+                    "SIMULATION_EVENTS",
+                    "SIMULATION_CONTROL",
+                    "VENDING_STATE",
+                    "PURCHASES"
+                ],
+                "listen_to_default_topic": true,
+                "properties": {
+                    "emit_daily_reports": true,
+                    "starting_net_worth": 500.0
+                }
+            },
+            {
+                "id": "status_tracker",
+                "name": "StatusTracker",
+                "description": "Tracks simulation metrics and displays UI visualizations including charts for net worth, inventory, sales, and email activity.",
+                "class_name": "rustic_ai.showcase.vending_bench.status_tracker_agent.VendingBenchStatusTrackerAgent",
+                "additional_topics": [
+                    "SIMULATION_CONTROL",
+                    "SIMULATION_EVENTS",
+                    "VENDING_STATE",
+                    "EMAIL",
+                    "PURCHASES"
+                ],
+                "listen_to_default_topic": true,
+                "properties": {}
+            },
+            {
+                "id": "gateway",
+                "name": "VendingBenchGateway",
+                "description": "Gateway agent for G2G communication with external guilds.",
+                "class_name": "rustic_ai.core.guild.g2g.gateway_agent.GatewayAgent",
+                "additional_topics": [],
+                "listen_to_default_topic": true,
+                "properties": {
+                    "input_formats": [
+                        "rustic_ai.showcase.vending_bench.messages.AgentActionRequest",
+                        "rustic_ai.showcase.vending_bench.messages.SimulationControlRequest"
+                    ],
+                    "output_formats": [
+                        "*"
+                    ],
+                    "returned_formats": [
+                        "*"
+                    ]
+                }
+            }
+        ],
+        "dependency_map": {
+            "llm": {
+                "class_name": "rustic_ai.litellm.agent_ext.llm.LiteLLMResolver",
+                "properties": {
+                    "model": "vertex_ai/gemini-3-pro-preview"
+                }
+            }
+        },
+        "routes": {
+            "steps": [
+                {
+                    "description": "Route SimulationControlRequest from UserProxy to SIMULATION_CONTROL",
+                    "agent_type": "rustic_ai.core.agents.utils.user_proxy_agent.UserProxyAgent",
+                    "method_name": "unwrap_and_forward_message",
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.SimulationControlRequest",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'SIMULATION_CONTROL', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Route AgentActionRequest from UserProxy to SIMULATION_CONTROL",
+                    "agent_type": "rustic_ai.core.agents.utils.user_proxy_agent.UserProxyAgent",
+                    "method_name": "unwrap_and_forward_message",
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.AgentActionRequest",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'SIMULATION_CONTROL', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Route SimulationControlRequest from Gateway to SIMULATION_CONTROL",
+                    "agent": {
+                        "name": "VendingBenchGateway"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.SimulationControlRequest",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'SIMULATION_CONTROL', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Route AgentActionRequest from Gateway to SIMULATION_CONTROL",
+                    "agent": {
+                        "name": "VendingBenchGateway"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.AgentActionRequest",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'SIMULATION_CONTROL', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "SimController"
+                    },
+                    "method_name": "handle_simulation_control",
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.SimulationControlResponse",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'default_topic', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "SimController"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.DayUpdateEvent",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'SIMULATION_EVENTS', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "SimController"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.NightUpdateEvent",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'SIMULATION_EVENTS', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "CustomerSimulator"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.CustomerPurchaseEvent",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'PURCHASES', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Forward CustomerPurchaseEvent to default_topic for G2G visibility",
+                    "agent": {
+                        "name": "VendingMachine"
+                    },
+                    "method_name": "handle_purchase",
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.CustomerPurchaseEvent",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'default_topic', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "SimController"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.AgentActionResponse",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'default_topic', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "SimController"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.CheckInventoryRequest",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'VENDING_STATE', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "SimController"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.CheckBalanceRequest",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'VENDING_STATE', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "SimController"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.SetPriceRequest",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'VENDING_STATE', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "SimController"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.CollectCashRequest",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'VENDING_STATE', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "SimController"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.RestockRequest",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'VENDING_STATE', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "SimController"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.ReadEmailsRequest",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'EMAIL', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "SimController"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.SendEmailRequest",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'EMAIL', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "SimController"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.ScratchpadReadRequest",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'SCRATCHPAD', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "SimController"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.ScratchpadWriteRequest",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'SCRATCHPAD', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "SimController"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.WaitRequest",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'SIMULATION_CONTROL', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "SimController"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.EndDayRequest",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'SIMULATION_CONTROL', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "VendingMachine"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.CheckInventoryResponse",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'SIMULATION_CONTROL', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "VendingMachine"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.CheckBalanceResponse",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'SIMULATION_CONTROL', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "VendingMachine"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.SetPriceResponse",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'SIMULATION_CONTROL', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "VendingMachine"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.CollectCashResponse",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'SIMULATION_CONTROL', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "VendingMachine"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.RestockResponse",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'SIMULATION_CONTROL', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "Supplier"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.ReadEmailsResponse",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'SIMULATION_CONTROL', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "Supplier"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.SendEmailResponse",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'SIMULATION_CONTROL', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "Supplier"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.ScratchpadReadResponse",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'SIMULATION_CONTROL', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "Supplier"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.ScratchpadWriteResponse",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'SIMULATION_CONTROL', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "SimController"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.WaitResponse",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'default_topic', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "SimController"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.EndDayResponse",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'default_topic', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "Supplier"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.SupplierDelivery",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'VENDING_STATE', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Route SupplierDelivery from SupplierSimulator to VENDING_STATE",
+                    "agent": {
+                        "name": "SupplierSimulator"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.SupplierDelivery",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'VENDING_STATE', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Route SupplierSearchRequest to SUPPLIER_REGISTRY",
+                    "agent": {
+                        "name": "SimController"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.supplier_messages.SupplierSearchRequest",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'SUPPLIER_REGISTRY', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Route SupplierSearchResponse to SIMULATION_CONTROL",
+                    "agent": {
+                        "name": "SupplierDiscovery"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.supplier_messages.SupplierSearchResponse",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'SIMULATION_CONTROL', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Route SERPQuery from SupplierDiscovery to RESEARCH topic for GoogleResearch",
+                    "agent": {
+                        "name": "SupplierDiscovery"
+                    },
+                    "message_format": "rustic_ai.serpapi.agent.SERPQuery",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'RESEARCH', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Route ChatCompletionResponse from GoogleResearch back to RESEARCH for SupplierDiscovery",
+                    "agent": {
+                        "name": "GoogleResearch"
+                    },
+                    "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'RESEARCH', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Route Email from SupplierDiscovery to EMAIL topic",
+                    "agent": {
+                        "name": "SupplierDiscovery"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.Email",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'EMAIL', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Route Email from CustomerComplaints to EMAIL topic",
+                    "agent": {
+                        "name": "CustomerComplaints"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.Email",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'EMAIL', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Broadcast customer complaint Email to chat UI",
+                    "agent": {
+                        "name": "CustomerComplaints"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.Email",
+                    "destination": {
+                        "topics": "user_message_broadcast"
+                    },
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                        "expression": "({'choices': [{'message': {'role': 'assistant', 'content': '📨 **CUSTOMER COMPLAINT RECEIVED**\\n\\nFrom: ' & $.from_address & '\\nSubject: ' & $.subject & '\\n\\n' & $.body & '\\n\\n⚠️ Use view_complaints and respond_to_complaint tools to handle this complaint.'}}]})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Route Email from SupplierSimulator to EMAIL topic",
+                    "agent": {
+                        "name": "SupplierSimulator"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.Email",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'EMAIL', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Route ViewSuppliersRequest to SUPPLIER_REGISTRY",
+                    "agent": {
+                        "name": "SimController"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.supplier_messages.ViewSuppliersRequest",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'SUPPLIER_REGISTRY', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Route ViewSuppliersResponse to SIMULATION_CONTROL",
+                    "agent": {
+                        "name": "Supplier"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.supplier_messages.ViewSuppliersResponse",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'SIMULATION_CONTROL', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Route ViewComplaintsRequest to COMPLAINTS",
+                    "agent": {
+                        "name": "SimController"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.supplier_messages.ViewComplaintsRequest",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'COMPLAINTS', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Route ViewComplaintsResponse to SIMULATION_CONTROL",
+                    "agent": {
+                        "name": "CustomerComplaints"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.supplier_messages.ViewComplaintsResponse",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'SIMULATION_CONTROL', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Route RespondToComplaintRequest to COMPLAINTS",
+                    "agent": {
+                        "name": "SimController"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.supplier_messages.RespondToComplaintRequest",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'COMPLAINTS', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Route RespondToComplaintResponse to SIMULATION_CONTROL",
+                    "agent": {
+                        "name": "CustomerComplaints"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.supplier_messages.RespondToComplaintResponse",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'SIMULATION_CONTROL', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Route NegotiationResponse to SIMULATION_CONTROL",
+                    "agent": {
+                        "name": "SupplierSimulator"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.supplier_messages.NegotiationResponse",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'SIMULATION_CONTROL', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Route StartNegotiationRequest to SUPPLIER_SIMULATION",
+                    "agent": {
+                        "name": "SimController"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.supplier_messages.StartNegotiationRequest",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'SUPPLIER_SIMULATION', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Route NegotiationExchangeRequest to SUPPLIER_SIMULATION",
+                    "agent": {
+                        "name": "SimController"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.supplier_messages.NegotiationExchangeRequest",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'SUPPLIER_SIMULATION', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Route BaitAndSwitchEvent to VENDING_STATE for internal processing",
+                    "agent": {
+                        "name": "SupplierSimulator"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.supplier_messages.BaitAndSwitchEvent",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'VENDING_STATE', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Route BaitAndSwitchEvent to default_topic for G2G visibility",
+                    "agent": {
+                        "name": "SupplierSimulator"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.supplier_messages.BaitAndSwitchEvent",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'default_topic', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Route PartialDeliveryNotification to VENDING_STATE for internal processing",
+                    "agent": {
+                        "name": "SupplierSimulator"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.supplier_messages.PartialDeliveryNotification",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'VENDING_STATE', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Route PartialDeliveryNotification to default_topic for G2G visibility",
+                    "agent": {
+                        "name": "SupplierSimulator"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.supplier_messages.PartialDeliveryNotification",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'default_topic', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Route DeliveryDelayNotification to default_topic for visibility",
+                    "agent": {
+                        "name": "SupplierSimulator"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.supplier_messages.DeliveryDelayNotification",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'default_topic', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Route SupplierFailureNotification to default_topic for visibility",
+                    "agent": {
+                        "name": "SupplierSimulator"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.supplier_messages.SupplierFailureNotification",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'default_topic', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Route ComplaintResolution to VENDING_STATE",
+                    "agent": {
+                        "name": "CustomerComplaints"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.supplier_messages.ComplaintResolution",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'VENDING_STATE', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "Evaluator"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.EvaluationResult",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'default_topic', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1,
+                    "process_status": "completed"
+                },
+                {
+                    "agent": {
+                        "name": "Evaluator"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.NetWorthReport",
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'default_topic', 'format': $.format, 'payload': $.payload})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Broadcast purchase trigger to chat when player sends email to supplier",
+                    "agent": {
+                        "name": "Supplier"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.SendEmailRequest",
+                    "destination": {
+                        "topics": "user_message_broadcast"
+                    },
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                        "expression": "({'choices': [{'message': {'role': 'assistant', 'content': '📧 **PURCHASE INITIATED**\\n\\nSending order to: ' & $.to_address & '\\nSubject: ' & $.subject & '\\n\\nOrder Details:\\n' & $.body}}]})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Broadcast order confirmation to chat when player places an order",
+                    "agent": {
+                        "name": "Supplier"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.SupplierOrderConfirmation",
+                    "destination": {
+                        "topics": "user_message_broadcast"
+                    },
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                        "expression": "({'choices': [{'message': {'role': 'assistant', 'content': '📦 **ORDER CONFIRMED**\\n\\nOrder ID: ' & $.order_id & '\\nTotal Cost: $' & $string($round($.total_cost, 2)) & '\\nExpected Delivery: Day ' & $string($.expected_delivery_day) & '\\n\\n' & $.confirmation_message}}]})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Broadcast delivery and payment to chat when order is delivered (Supplier)",
+                    "agent": {
+                        "name": "Supplier"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.SupplierDelivery",
+                    "destination": {
+                        "topics": "user_message_broadcast"
+                    },
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                        "expression": "({'choices': [{'message': {'role': 'assistant', 'content': '💰 **PAYMENT COMPLETE - DELIVERY ARRIVED**\\n\\nOrder ID: ' & $.order_id & '\\nDelivery Day: ' & $string($.delivery_day) & '\\nProducts Delivered: ' & $join($each($.products, function($v, $k) { $string($v) & 'x ' & $k }), ', ') & '\\n\\n⚠️ Remember to call restock with this Order ID to add items to your inventory!'}}]})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Broadcast delivery and payment to chat when order is delivered (SupplierSimulator)",
+                    "agent": {
+                        "name": "SupplierSimulator"
+                    },
+                    "message_format": "rustic_ai.showcase.vending_bench.messages.SupplierDelivery",
+                    "destination": {
+                        "topics": "user_message_broadcast"
+                    },
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                        "expression": "({'choices': [{'message': {'role': 'assistant', 'content': '💰 **PAYMENT COMPLETE - DELIVERY ARRIVED**\\n\\nOrder ID: ' & $.order_id & '\\nDelivery Day: ' & $string($.delivery_day) & '\\nProducts Delivered: ' & $join($each($.products, function($v, $k) { $string($v) & 'x ' & $k }), ', ') & '\\n\\n⚠️ Remember to call restock with this Order ID to add items to your inventory!'}}]})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Route TextFormat from StatusTracker to user_message_broadcast for UI updates",
+                    "agent": {
+                        "name": "StatusTracker"
+                    },
+                    "message_format": "rustic_ai.core.ui_protocol.types.TextFormat",
+                    "destination": {
+                        "topics": "user_message_broadcast"
+                    },
+                    "route_times": -1,
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'user_message_broadcast', 'format': 'updateMarkdownFormat', 'payload': $.payload})"
+                    }
+                },
+                {
+                    "description": "Route VegaLiteFormat from StatusTracker to user_message_broadcast for UI updates",
+                    "agent": {
+                        "name": "StatusTracker"
+                    },
+                    "message_format": "rustic_ai.core.ui_protocol.types.VegaLiteFormat",
+                    "destination": {
+                        "topics": "user_message_broadcast"
+                    },
+                    "route_times": -1,
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'user_message_broadcast', 'format': 'updateVegaLiteFormat', 'payload': $.payload})"
+                    }
+                },
+                {
+                    "description": "Route TableFormat from StatusTracker to user_message_broadcast for UI updates",
+                    "agent": {
+                        "name": "StatusTracker"
+                    },
+                    "message_format": "rustic_ai.core.ui_protocol.types.TableFormat",
+                    "destination": {
+                        "topics": "user_message_broadcast"
+                    },
+                    "route_times": -1,
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'topics': 'user_message_broadcast', 'format': 'updateTableFormat', 'payload': $.payload})"
+                    }
+                }
+            ]
+        }
+    }
+}
