@@ -1,5 +1,4 @@
 import asyncio
-import os
 from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel
@@ -27,7 +26,6 @@ from rustic_ai.core.agents.system.models import (
 from rustic_ai.core.agents.testutils import ProbeAgent
 from rustic_ai.core.agents.utils import UserProxyAgent
 from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder, RouteBuilder
-from rustic_ai.core.guild.metastore import Metastore
 from rustic_ai.core.messaging.core.message import (
     AgentTag,
     Message,
@@ -69,17 +67,8 @@ class TestSplitterGuild:
         return slip
 
     @pytest.fixture
-    def rgdatabase(self):
-        db = "sqlite:///splitter_demo.db"
-
-        if os.path.exists("splitter_demo.db"):
-            os.remove("splitter_demo.db")
-
-        Metastore.initialize_engine(db)
-        Metastore.get_engine(db)
-        Metastore.create_db()
-        yield db
-        Metastore.drop_db()
+    def rgdatabase(self, database):
+        return database
 
     @pytest.fixture(
         params=[

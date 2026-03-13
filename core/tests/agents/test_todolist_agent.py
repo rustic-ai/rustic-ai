@@ -1,6 +1,5 @@
 import asyncio
 from datetime import datetime, timedelta
-import os
 import time
 
 import pytest
@@ -22,7 +21,6 @@ from rustic_ai.core.agents.system.models import UserAgentCreationRequest
 from rustic_ai.core.agents.testutils import ProbeAgent
 from rustic_ai.core.agents.utils import UserProxyAgent
 from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder
-from rustic_ai.core.guild.metastore import Metastore
 from rustic_ai.core.messaging.core.message import AgentTag, Message
 from rustic_ai.core.utils import GemstoneGenerator, Priority
 from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
@@ -56,17 +54,8 @@ class TestTodoListGuild:
         raise TimeoutError("Timeout waiting for matching message.")
 
     @pytest.fixture
-    def rgdatabase(self):
-        db = "sqlite:///test_todolist_guild.db"
-
-        if os.path.exists("test_todolist_guild.db"):
-            os.remove("test_todolist_guild.db")
-
-        Metastore.initialize_engine(db)
-        Metastore.get_engine(db)
-        Metastore.create_db()
-        yield db
-        Metastore.drop_db()
+    def rgdatabase(self, database):
+        return database
 
     @pytest.fixture
     def todolist_guild(self, rgdatabase):
