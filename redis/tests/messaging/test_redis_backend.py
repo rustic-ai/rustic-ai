@@ -1,5 +1,6 @@
 import socket
 from unittest.mock import Mock, patch
+import uuid
 
 import fakeredis
 import pytest
@@ -9,6 +10,9 @@ from rustic_ai.redis.messaging.connection_manager import RedisBackendConfig
 from rustic_ai.redis.messaging.exceptions import RedisConnectionFailureError
 
 from rustic_ai.testing.messaging.base_test_backend import BaseTestBackendABC
+from rustic_ai.testing.messaging.base_test_delivery_guarantees import (
+    BaseTestBackendDeliveryGuarantees,
+)
 
 
 class TestRedisBackend(BaseTestBackendABC):
@@ -19,6 +23,26 @@ class TestRedisBackend(BaseTestBackendABC):
         storage = RedisMessagingBackend(fake_redis_client)
         yield storage
         storage.cleanup()
+
+
+class TestRedisDeliveryGuarantees(BaseTestBackendDeliveryGuarantees):
+    @pytest.fixture
+    def backend(self):
+        fake_redis_client = fakeredis.FakeStrictRedis()
+        storage = RedisMessagingBackend(fake_redis_client)
+        yield storage
+        storage.cleanup()
+
+    @pytest.fixture
+    def topic(self) -> str:
+        return f"dg_topic_{uuid.uuid4().hex[:8]}"
+
+    @pytest.fixture
+    def namespace(self) -> str:
+        return f"dg_ns_{uuid.uuid4().hex[:8]}"
+
+    def test_handler_failure_no_position_advance(self, backend, generator, topic, namespace):
+        super().test_handler_failure_no_position_advance(backend, generator, topic, namespace)
 
 
 class TestRedisBackendConfiguration:
