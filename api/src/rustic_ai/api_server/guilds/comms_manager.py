@@ -92,7 +92,14 @@ class GuildCommunicationManager:
         loop: asyncio.AbstractEventLoop,
     ) -> Callable[[Message], None]:
         def on_message(message: Message) -> None:
-            logging.debug(f"Received message: {message}")
+            logging.debug(
+                "Websocket delivery candidate guild=%s user=%s message_id=%s topic=%s sender=%s",
+                guild_id,
+                user_id,
+                message.id,
+                message.topic_published_to,
+                message.sender.id if message.sender else None,
+            )
 
             try:
                 coroutine = self.send_message(guild_id, user_id, message, websocket)
@@ -155,9 +162,22 @@ class GuildCommunicationManager:
             messaging: MessagingInterface = await self.get_or_create_messaging_interface(guild_spec)
             guild_client: Client = await self.create_guild_client(guild_id, user_id, messaging, websocket, loop)
             messaging.subscribe(UserProxyAgent.get_user_notifications_topic(user_id), guild_client)
+            logging.debug(
+                "Registered websocket client id=%s guild=%s user=%s notifications_topic=%s",
+                guild_client.id,
+                guild_id,
+                user_id,
+                UserProxyAgent.get_user_notifications_topic(user_id),
+            )
 
             user_agent_tag = AgentTag(id=self.get_socket_agent_id(user_id), name=user_name)
 
+            logging.debug(
+                "Publishing user agent creation request guild=%s user=%s topic=%s",
+                guild_id,
+                user_id,
+                GuildTopics.SYSTEM_TOPIC,
+            )
             guild_client.publish(
                 Message(
                     self._gemstone.get_id(Priority.NORMAL),
@@ -220,7 +240,15 @@ class GuildCommunicationManager:
                         message_history = [ProcessEntry.model_validate(entry) for entry in history]
 
                         try:
-                            logging.debug(f"Received message: {data}")
+                            logging.debug(
+                                "Websocket ingress guild=%s user=%s normalized_id=%s inbox_topic=%s thread=%s format=%s",
+                                guild_id,
+                                user_id,
+                                data["id"],
+                                UserProxyAgent.get_user_inbox_topic(user_id),
+                                data["thread"],
+                                data.get("format", "UNKNOWN"),
+                            )
                             message = Message(
                                 idg,
                                 topics=UserProxyAgent.get_user_inbox_topic(user_id),
@@ -232,7 +260,13 @@ class GuildCommunicationManager:
                                 message_history=message_history,
                             )
 
-                            logging.debug(f"Publishing message: {message.model_dump_json()}")
+                            logging.debug(
+                                "Publishing websocket ingress message guild=%s user=%s message_id=%s topic=%s",
+                                guild_id,
+                                user_id,
+                                message.id,
+                                UserProxyAgent.get_user_inbox_topic(user_id),
+                            )
 
                             if message:
                                 guild_client.publish(message)

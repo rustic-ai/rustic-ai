@@ -92,6 +92,15 @@ class UserProxyAgent(Agent[UserProxyAgentProps], GuildRefreshMixin):
     def unwrap_and_forward_message(self, ctx: ProcessContext[Message]) -> None:
 
         unwrapped_message = ctx.payload
+        logging.debug(
+            "UserProxyAgent[%s] received inbox wrapper_id=%s wrapper_topic=%s inner_id=%s inner_topics=%s sender=%s",
+            self.user_id,
+            ctx.message.id,
+            ctx.message.topic_published_to,
+            unwrapped_message.id,
+            unwrapped_message.topics,
+            unwrapped_message.sender.id if unwrapped_message.sender else None,
+        )
 
         msg_content = json.dumps(unwrapped_message.payload)
 
@@ -150,10 +159,27 @@ class UserProxyAgent(Agent[UserProxyAgentProps], GuildRefreshMixin):
             for routing_rule in unwrapped_message.routing_slip.steps:
                 ctx.add_routing_step(routing_rule)
 
+        logging.debug(
+            "UserProxyAgent[%s] forwarding inner_id=%s notifications_topic=%s direct_topics=%s broadcast=%s guild_routes=%s",
+            self.user_id,
+            unwrapped_message.id,
+            self.user_notifications_topic,
+            unwrapped_message.topics,
+            not unwrapped_message.recipient_list,
+            len(self.guild_spec.routes.steps),
+        )
         ctx.send_dict(unwrapped_message.payload, format=unwrapped_message.format)
 
     @processor(JsonDict, predicate=outgoing_message_filter)
     def forward_message_to_user(self, ctx: ProcessContext[JsonDict]) -> None:
+        logging.debug(
+            "UserProxyAgent[%s] forwarding outbound message_id=%s from_topic=%s to_notifications_topic=%s sender=%s",
+            self.user_id,
+            ctx.message.id,
+            ctx.message.topic_published_to,
+            self.user_notifications_topic,
+            ctx.message.sender.id if ctx.message.sender else None,
+        )
 
         routing_entry = RoutingRule(
             agent=ctx.agent.get_agent_tag(),

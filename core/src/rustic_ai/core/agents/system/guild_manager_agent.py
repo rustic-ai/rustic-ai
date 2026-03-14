@@ -724,8 +724,22 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
             )
 
             user_topic = UserProxyAgent.get_user_inbox_topic(user_id)
+            logging.debug(
+                "Creating UserProxyAgent guild=%s user=%s agent_id=%s inbox_topic=%s notifications_topic=%s",
+                self.guild_id,
+                user_id,
+                user_agent_spec.id,
+                user_topic,
+                UserProxyAgent.get_user_notifications_topic(user_id),
+            )
 
             self._add_agent(user_agent_spec)
+            logging.debug(
+                "Created UserProxyAgent guild=%s user=%s agent_id=%s",
+                self.guild_id,
+                user_id,
+                user_agent_spec.id,
+            )
 
             agent_addition_response = UserAgentCreationResponse(
                 user_id=user_id,
