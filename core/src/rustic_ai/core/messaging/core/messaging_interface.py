@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, List, Optional, Set
+from typing import Callable, Dict, List, Optional, Set
 
 from rustic_ai.core.guild.dsl import GuildTopics
 from rustic_ai.core.messaging.core.client import Client
@@ -115,17 +115,14 @@ class MessagingInterface:
             message_copy = message.model_copy(deep=True)
             message_copy.topic_published_to = otopic
             self.backend.store_message(self.namespace, ntopic, message_copy)
-            if not self.backend.supports_subscription():  # pragma: no cover
-                self._notify_new_message(message_copy.model_copy(deep=True))
 
-    def _notify_new_message(self, message: Message) -> None:
+    def _enrich_message(self, message: Message) -> None:
         """
-        Notify all subscribers of a new published message.
+        Enrich a message with its history if requested.
 
         Args:
-            message (Message): The message instance that was published.
+            message (Message): The message to enrich in place.
         """
-        assert message.topic_published_to is not None
         if message.enrich_with_history:
             fetch_length = (
                 message.enrich_with_history
@@ -142,22 +139,52 @@ class MessagingInterface:
             if message.session_state is None:
                 message.session_state = {}
             message.session_state["enriched_history"] = prev_messages_json
-        recipients = self.subscribers.get(self._get_namespaced_topic(message.topic_published_to), set())
-        recipients_map = {r: r.split("$")[-1] for r in recipients}
 
-        for recipient_client, recipient_id in recipients_map.items():
-            if (
-                recipient_client in self.clients
-                and recipient_id != message.sender.id
-                and not message.topic_published_to.startswith(f"{GuildTopics.AGENT_SELF_INBOX_PREFIX}")
-            ):  # pragma: no cover
-                self.clients[recipient_client].notify_new_message(message)
-            elif (
-                recipient_client in self.clients
-                and recipient_id == message.sender.id
-                and message.topic_published_to.startswith(f"{GuildTopics.AGENT_SELF_INBOX_PREFIX}")
-            ):
-                self.clients[recipient_client].notify_new_message(message)
+    def _should_deliver_to(self, message: Message, client: Client) -> bool:
+        """
+        Determine whether a message should be delivered to a given client.
+
+        Applies self-send filtering: sender does not receive its own messages on normal topics,
+        but does receive on self-inbox topics.
+
+        Args:
+            message (Message): The message to evaluate.
+            client (Client): The client to evaluate delivery for.
+
+        Returns:
+            bool: True if the message should be delivered.
+        """
+        assert message.topic_published_to is not None
+        recipient_id = client.id.split("$")[-1]
+        if (
+            recipient_id != message.sender.id
+            and not message.topic_published_to.startswith(f"{GuildTopics.AGENT_SELF_INBOX_PREFIX}")
+        ):
+            return True
+        elif (
+            recipient_id == message.sender.id
+            and message.topic_published_to.startswith(f"{GuildTopics.AGENT_SELF_INBOX_PREFIX}")
+        ):
+            return True
+        return False
+
+    def _make_client_handler(self, client: Client) -> Callable[[Message], None]:
+        """
+        Create a per-client message handler closure with enrichment and self-send filtering.
+
+        Args:
+            client (Client): The client to create a handler for.
+
+        Returns:
+            Callable[[Message], None]: A handler that enriches and filters messages before delivering.
+        """
+
+        def handler(message: Message) -> None:
+            self._enrich_message(message)
+            if self._should_deliver_to(message, client):
+                client.notify_new_message(message)
+
+        return handler
 
     def subscribe(self, topic: str, client: Client) -> None:
         """
@@ -173,35 +200,10 @@ class MessagingInterface:
 
         if namespaced_topic not in self.subscribers:
             self.subscribers[namespaced_topic] = set()
-            self._backend_subscribe(namespaced_topic)
         self.subscribers[namespaced_topic].add(client.id)
 
-    def _backend_subscribe(self, topic: str) -> None:
-        """
-        Subscribe a topic to the storage backend.
-
-        Args:
-            topic (str): The topic to subscribe to.
-        """
-        self.backend.subscribe(self._get_namespaced_topic(topic), self._backend_subscription_handler)
-
-    def _backend_subscription_handler(self, message: Message) -> None:
-        """
-        Handle new messages from the storage backend.
-
-        Args:
-            message (Message): The message instance that was published.
-        """
-        self._notify_new_message(message)
-
-    def _backend_unsubscribe(self, topic: str) -> None:
-        """
-        Unsubscribe a topic from the storage backend.
-
-        Args:
-            topic (str): The topic to unsubscribe from.
-        """
-        self.backend.unsubscribe(self._get_namespaced_topic(topic))
+        handler = self._make_client_handler(client)
+        self.backend.subscribe(namespaced_topic, handler, client_id=client.id)
 
     def unsubscribe(self, topic: str, client: Client) -> None:
         """
@@ -215,8 +217,8 @@ class MessagingInterface:
         if namespaced_topic in self.subscribers:
             self.subscribers[namespaced_topic].discard(client.id)
             if not self.subscribers[namespaced_topic]:
-                self._backend_unsubscribe(namespaced_topic)
                 self.subscribers.pop(namespaced_topic, None)
+        self.backend.unsubscribe(namespaced_topic, client_id=client.id)
 
     def get_messages(self, topic: str) -> List[Message]:
         """
@@ -300,7 +302,10 @@ class MessagingInterface:
         Shutdown the message bus and clean up resources.
         """
         for client in self.clients.values():
-            client.disconnect()
+            try:
+                client.disconnect()
+            except Exception:
+                logging.exception("Error disconnecting client %s", client.id)
         self.backend.cleanup()
         self.clients = {}
         self.subscribers = {}
@@ -373,8 +378,26 @@ class MessagingInterface:
             message_copy = message.model_copy(deep=True)
             message_copy.topic_published_to = topic
             self.backend.store_message(self.shared_namespace, ntopic, message_copy)
-            if not self.backend.supports_subscription():  # pragma: no cover
-                self._notify_shared_message(message_copy.model_copy(deep=True))
+
+    def _make_shared_client_handler(self, client: Client) -> Callable[[Message], None]:
+        """
+        Create a per-client handler for shared namespace topics.
+
+        Shared topics don't have self-inbox semantics — sender simply never receives its own messages.
+
+        Args:
+            client (Client): The client to create a handler for.
+
+        Returns:
+            Callable[[Message], None]: A handler that filters self-sends before delivering.
+        """
+
+        def handler(message: Message) -> None:
+            recipient_id = client.id.split("$")[-1]
+            if recipient_id != message.sender.id:
+                client.notify_new_message(message)
+
+        return handler
 
     def subscribe_shared(self, topic: str, client: Client) -> None:
         """
@@ -395,8 +418,10 @@ class MessagingInterface:
 
         if namespaced_topic not in self.shared_subscribers:
             self.shared_subscribers[namespaced_topic] = set()
-            self.backend.subscribe(namespaced_topic, self._shared_backend_subscription_handler)
         self.shared_subscribers[namespaced_topic].add(client.id)
+
+        handler = self._make_shared_client_handler(client)
+        self.backend.subscribe(namespaced_topic, handler, client_id=client.id)
 
     def unsubscribe_shared(self, topic: str, client: Client) -> None:
         """
@@ -413,30 +438,5 @@ class MessagingInterface:
         if namespaced_topic in self.shared_subscribers:
             self.shared_subscribers[namespaced_topic].discard(client.id)
             if not self.shared_subscribers[namespaced_topic]:
-                self.backend.unsubscribe(namespaced_topic)
                 self.shared_subscribers.pop(namespaced_topic, None)
-
-    def _shared_backend_subscription_handler(self, message: Message) -> None:
-        """
-        Handle new messages from the shared namespace backend.
-
-        Args:
-            message: The message instance that was published.
-        """
-        self._notify_shared_message(message)
-
-    def _notify_shared_message(self, message: Message) -> None:
-        """
-        Notify all subscribers of a new message in the shared namespace.
-
-        Args:
-            message: The message instance that was published.
-        """
-        assert message.topic_published_to is not None
-        namespaced_topic = self._get_shared_namespaced_topic(message.topic_published_to)
-        recipients = self.shared_subscribers.get(namespaced_topic, set())
-        recipients_map = {r: r.split("$")[-1] for r in recipients}
-
-        for recipient_client, recipient_id in recipients_map.items():
-            if recipient_client in self.clients and recipient_id != message.sender.id:
-                self.clients[recipient_client].notify_new_message(message)
+        self.backend.unsubscribe(namespaced_topic, client_id=client.id)

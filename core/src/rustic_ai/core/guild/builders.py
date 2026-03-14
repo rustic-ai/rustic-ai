@@ -38,7 +38,11 @@ from rustic_ai.core.guild.dsl import (
 from rustic_ai.core.guild.dsl import KeyConstants as GSKC
 from rustic_ai.core.guild.execution import SyncExecutionEngine
 from rustic_ai.core.guild.metaprog.constants import MetaclassConstants
-from rustic_ai.core.messaging import Client, MessageTrackingClient, MessagingConfig
+from rustic_ai.core.messaging import (
+    Client,
+    MessagingConfig,
+    SimpleClient,
+)
 from rustic_ai.core.messaging.core.message import (
     AgentTag,
     ExpressionType,
@@ -846,10 +850,10 @@ class GuildHelper:
         Returns:
             Type[Client]: The default messaging client.
         """
-        client_type: Type[Client] = MessageTrackingClient
+        client_type: Type[Client] = SimpleClient
         if os.environ.get(EnvConstants.RUSTIC_AI_CLIENT_TYPE):  # pragma: no cover
             client_type = class_utils.get_client_class(
-                os.environ.get(EnvConstants.RUSTIC_AI_CLIENT_TYPE, MessageTrackingClient.get_qualified_class_name())
+                os.environ.get(EnvConstants.RUSTIC_AI_CLIENT_TYPE, SimpleClient.get_qualified_class_name())
             )
 
         return client_type
@@ -872,7 +876,7 @@ class GuildHelper:
             if client_type_cname:
                 client_type = class_utils.get_client_class(client_type_cname)
             else:  # pragma: no cover
-                client_type = MessageTrackingClient
+                client_type = SimpleClient
 
         return client_type
 
