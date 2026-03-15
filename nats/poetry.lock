@@ -2144,7 +2144,7 @@ files = [
 
 [[package]]
 name = "rusticai-core"
-version = "1.1.0"
+version = "1.2.0"
 description = "Rustic AI’s modular, agentic AI framework for building human-centered, multi-agent workflows"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -2181,7 +2181,7 @@ url = "../core"
 
 [[package]]
 name = "rusticai-testing"
-version = "1.1.0"
+version = "1.2.0"
 description = "Test Utilities for Rustic AI Framework"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -2717,10 +2717,7 @@ enabler = ["pytest-enabler (>=2.2)"]
 test = ["big-O", "jaraco.functools", "jaraco.itertools", "jaraco.test", "more_itertools", "pytest (>=6,!=8.1.*)", "pytest-ignore-flaky"]
 type = ["pytest-mypy"]
 
-[extras]
-test = []
-
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.13,<3.14"
-content-hash = "c03392e287de0ea235b76d92e3dd88df108a5db6ca312641b2629cfe39fd8a18"
+content-hash = "82fdcf4066d1518c33dee172d80a285018cd2eac402f375e7c91cd46efe803f3"
