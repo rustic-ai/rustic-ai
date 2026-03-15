@@ -117,22 +117,35 @@ class UserProxyAgent(Agent[UserProxyAgentProps], GuildRefreshMixin):
 
         # Publish the message to the notification topic so it is recorded
         # This is useful for when user fetches historical messages
-        notification_rule = RoutingRule(
-            agent=ctx.agent.get_agent_tag(),
-            destination=RoutingDestination(
-                topics=self.user_notifications_topic,
-                priority=unwrapped_message.priority,
-                recipient_list=unwrapped_message.recipient_list + tagged_users,
-            ),
-            mark_forwarded=True,
+        # notification_rule = RoutingRule(
+        #     agent=ctx.agent.get_agent_tag(),
+        #     destination=RoutingDestination(
+        #         topics=self.user_notifications_topic,
+        #         priority=unwrapped_message.priority,
+        #         recipient_list=unwrapped_message.recipient_list + tagged_users,
+        #     ),
+        #     mark_forwarded=True,
+        # )
+
+        # ctx.add_routing_step(notification_rule)
+
+        ctx._direct_send(
+            priority=unwrapped_message.priority,
+            payload=unwrapped_message.payload,
+            format=unwrapped_message.format,
+            topics=[self.user_notifications_topic],
+            recipient_list=unwrapped_message.recipient_list + tagged_users,
+            forward_header=ForwardHeader(origin_message_id=ctx.message.id, on_behalf_of=ctx.message.sender),
         )
 
-        ctx.add_routing_step(notification_rule)
+        topics = unwrapped_message.topics if unwrapped_message.topics else GuildTopics.DEFAULT_TOPICS
+        if isinstance(topics, str):
+            topics = [topics]
 
         routing_entry = RoutingRule(
             agent=ctx.agent.get_agent_tag(),
             destination=RoutingDestination(
-                topics=unwrapped_message.topics,
+                topics=topics,
                 priority=unwrapped_message.priority,
                 recipient_list=unwrapped_message.recipient_list + tagged_users,
             ),
@@ -147,7 +160,7 @@ class UserProxyAgent(Agent[UserProxyAgentProps], GuildRefreshMixin):
             broadcast_route = RoutingRule(
                 agent=ctx.agent.get_agent_tag(),
                 destination=RoutingDestination(
-                    topics=UserProxyAgent.BROADCAST_TOPIC,
+                    topics=[UserProxyAgent.BROADCAST_TOPIC],
                     priority=unwrapped_message.priority,
                     recipient_list=unwrapped_message.recipient_list + tagged_users,
                 ),
@@ -164,7 +177,7 @@ class UserProxyAgent(Agent[UserProxyAgentProps], GuildRefreshMixin):
             self.user_id,
             unwrapped_message.id,
             self.user_notifications_topic,
-            unwrapped_message.topics,
+            topics,
             not unwrapped_message.recipient_list,
             len(self.guild_spec.routes.steps),
         )

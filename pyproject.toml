@@ -9,7 +9,7 @@ authors = [{name = "Dragonscale Industries Inc.", email = "dev@dragonscale.ai"}]
 readme = "README.md"
 requires-python = ">=3.13,<3.14"
 urls = { Homepage = "https://www.rustic.ai/", Repository = "https://github.com/rustic-ai/rustic-ai" }
-dynamic = [ "dependencies" ]
+dynamic = [ "version", "dependencies" ]
 
 [tool.poetry]
 package-mode = false

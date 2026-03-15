@@ -152,6 +152,6 @@ class TestMCPPlaywrightIntegration:
         await asyncio.sleep(8)
 
         messages = probe_agent.get_messages()
-        messages = [msg for msg in messages if msg.topics == "mcp_requests"]
+        messages = [msg for msg in messages if "mcp_requests" in msg.topics]
         assert messages[-1].payload["results"][0]["type"] == "text"
         assert "Also known as split testing" in messages[-1].payload["results"][0]["content"]

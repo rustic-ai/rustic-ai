@@ -11,6 +11,10 @@ license = "Apache-2.0"
 readme = "README.md"
 requires-python = ">=3.13,<3.14"
 urls = { Homepage = "https://www.rustic.ai/", Repository = "https://github.com/dragonscale-ai/rustic-ai", "Rustic AI Core" = "https://pypi.org/project/rusticai-core/" }
+dependencies = [
+    "nats-py>=2.9.0,<3.0.0",
+    "rusticai-core>=1.1.0,<2.0.0",
+]
 
 
 [tool.poetry]

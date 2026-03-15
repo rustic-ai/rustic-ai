@@ -163,6 +163,19 @@ class KVStoreAgent(Agent):
 
 
 class BaseTestKVStore(ABC):
+    MESSAGE_WAIT_TIMEOUT_S = 5.0
+    MESSAGE_POLL_INTERVAL_S = 0.1
+
+    def _wait_for_messages(self, probe_agent: ProbeAgent, expected_count: int):
+        deadline = time.monotonic() + self.MESSAGE_WAIT_TIMEOUT_S
+
+        while time.monotonic() < deadline:
+            messages = probe_agent.get_messages()
+            if len(messages) >= expected_count:
+                return messages
+            time.sleep(self.MESSAGE_POLL_INTERVAL_S)
+
+        return probe_agent.get_messages()
 
     @pytest.fixture
     @abstractmethod
@@ -201,7 +214,7 @@ class BaseTestKVStore(ABC):
             format=KVPut,
         )
 
-        time.sleep(0.5)
+        self._wait_for_messages(probe_agent, 1)
 
         probe_agent.publish_dict(
             topic="default_topic",
@@ -209,12 +222,7 @@ class BaseTestKVStore(ABC):
             format=KVGet,
         )
 
-        slept = 1
-        while len(probe_agent.get_messages()) < 2 and slept < 50:
-            time.sleep(0.1)
-            slept += 1
-
-        messages = probe_agent.get_messages()
+        messages = self._wait_for_messages(probe_agent, 2)
 
         assert len(messages) == 2
 
@@ -232,7 +240,7 @@ class BaseTestKVStore(ABC):
             format=KVPut,
         )
 
-        time.sleep(0.5)
+        self._wait_for_messages(probe_agent, 1)
 
         probe_agent.publish_dict(
             topic="default_topic",
@@ -240,9 +248,7 @@ class BaseTestKVStore(ABC):
             format=KVGet,
         )
 
-        time.sleep(0.5)
-
-        messages = probe_agent.get_messages()
+        messages = self._wait_for_messages(probe_agent, 2)
 
         assert len(messages) == 2
 
@@ -260,7 +266,7 @@ class BaseTestKVStore(ABC):
             format=KVDel,
         )
 
-        time.sleep(0.5)
+        self._wait_for_messages(probe_agent, 1)
 
         probe_agent.publish_dict(
             topic="default_topic",
@@ -268,7 +274,7 @@ class BaseTestKVStore(ABC):
             format=KVGet,
         )
 
-        time.sleep(0.5)
+        self._wait_for_messages(probe_agent, 2)
 
         probe_agent.publish_dict(
             topic="default_topic",
@@ -276,9 +282,7 @@ class BaseTestKVStore(ABC):
             format=KVGet,
         )
 
-        time.sleep(0.1)
-
-        messages = probe_agent.get_messages()
+        messages = self._wait_for_messages(probe_agent, 3)
 
         assert len(messages) == 3
 
@@ -300,7 +304,7 @@ class BaseTestKVStore(ABC):
             format=KVDel,
         )
 
-        time.sleep(0.5)
+        self._wait_for_messages(probe_agent, 1)
 
         probe_agent.publish_dict(
             topic="default_topic",
@@ -308,9 +312,7 @@ class BaseTestKVStore(ABC):
             format=KVGet,
         )
 
-        time.sleep(0.5)
-
-        messages = probe_agent.get_messages()
+        messages = self._wait_for_messages(probe_agent, 2)
 
         assert len(messages) == 2
 
