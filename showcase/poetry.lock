@@ -5819,7 +5819,7 @@ files = [
 
 [[package]]
 name = "rusticai-chroma"
-version = "1.1.0"
+version = "1.2.0"
 description = "Rustic AI module for leveraging ChromaDB"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -5840,7 +5840,7 @@ url = "../chroma"
 
 [[package]]
 name = "rusticai-core"
-version = "1.1.0"
+version = "1.2.0"
 description = "Rustic AI’s modular, agentic AI framework for building human-centered, multi-agent workflows"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -5877,7 +5877,7 @@ url = "../core"
 
 [[package]]
 name = "rusticai-langchain"
-version = "1.1.0"
+version = "1.2.0"
 description = "Rustic AI module with LangChain integrations"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -5900,7 +5900,7 @@ url = "../langchain"
 
 [[package]]
 name = "rusticai-litellm"
-version = "1.1.0"
+version = "1.2.0"
 description = "Rustic AI module leveraging LiteLLM for LLMs"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -5924,7 +5924,7 @@ url = "../litellm"
 
 [[package]]
 name = "rusticai-llm-agent"
-version = "1.1.0"
+version = "1.2.0"
 description = "A complete set of LLM agents"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -5945,7 +5945,7 @@ url = "../llm-agent"
 
 [[package]]
 name = "rusticai-pandas-analyst"
-version = "0.0.1"
+version = "0.1.0"
 description = "Pandas and DuckDB powered implementation of data analyst dependency."
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -5968,7 +5968,7 @@ url = "../pandas-analyst"
 
 [[package]]
 name = "rusticai-playwright"
-version = "1.1.0"
+version = "1.2.0"
 description = "Rustic AI module for scraping using playwright"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -5991,7 +5991,7 @@ url = "../playwright"
 
 [[package]]
 name = "rusticai-serpapi"
-version = "1.1.0"
+version = "1.2.0"
 description = "Rustic AI module supporting Search through SerpApi"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -6012,7 +6012,7 @@ url = "../serpapi"
 
 [[package]]
 name = "rusticai-vertexai"
-version = "1.1.0"
+version = "1.2.0"
 description = "Rustic AI module with Vertex AI integrations"
 optional = false
 python-versions = ">=3.13,<3.14"
