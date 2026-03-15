@@ -8,10 +8,16 @@ from typing import Callable, Dict, Optional, Set, Tuple, Union
 
 import redis
 
+from rustic_ai.core.messaging.core.dead_letter import (
+    build_dead_letter_message,
+    resolve_dead_letter_namespace,
+    resolve_dead_letter_topic,
+)
 from rustic_ai.core.messaging.core.message import Message
 from rustic_ai.core.utils.gemstone_id import GemstoneID
 from rustic_ai.redis.messaging.connection_manager import RedisBackendConfig
 from rustic_ai.redis.messaging.exceptions import RedisConnectionFailureError
+from rustic_ai.redis.messaging.message_store import RedisMessageStore
 from rustic_ai.redis.messaging.retry_utils import (
     calculate_exponential_backoff,
     execute_with_retry,
@@ -55,7 +61,7 @@ class RedisPubSubManager:
         self.reconnection_active = False
 
         # Per-client delivery: (topic, client_id) -> handler
-        self._client_handlers: Dict[Tuple[str, str], Callable[[Message], None]] = {}
+        self._client_handlers: Dict[Tuple[str, str], Tuple[Callable[[Message], None], Optional[str]]] = {}
         # topic -> set of client_ids subscribed via per-client path
         self._topic_client_ids: Dict[str, Set[str]] = {}
         # Per-client worker infrastructure
@@ -64,6 +70,7 @@ class RedisPubSubManager:
         # Fanout subscription handlers (for per-client topics, we register ONE internal handler per topic)
         # Key: topic, Value: the fanout callable (already registered in pub/sub)
         self._fanout_topics: Set[str] = set()
+        self._dead_letter_store = RedisMessageStore(client, config)
 
     def setup(self) -> None:
         """Initialize pub/sub connection with retry logic."""
@@ -93,7 +100,8 @@ class RedisPubSubManager:
             self.pubsub = self.client.pubsub(ignore_subscribe_messages=True)
             # For fakeredis compatibility, handle case where run_in_thread might not work exactly like real redis
             try:
-                self.redis_thread = self.pubsub.run_in_thread(sleep_time=0.001, daemon=True)  # type: ignore
+                sleep_time = self.config.pubsub_poll_sleep_time if self.config else 0.01
+                self.redis_thread = self.pubsub.run_in_thread(sleep_time=sleep_time, daemon=True)  # type: ignore
             except AttributeError:
                 # Fallback for test environments that might not have run_in_thread
                 self.redis_thread = None
@@ -159,7 +167,13 @@ class RedisPubSubManager:
     # Legacy per-topic subscribe (client_id=None)
     # =========================================================================
 
-    def subscribe(self, topic: str, handler: Callable[[Message], None], client_id: Optional[str] = None) -> None:
+    def subscribe(
+        self,
+        topic: str,
+        handler: Callable[[Message], None],
+        client_id: Optional[str] = None,
+        namespace: Optional[str] = None,
+    ) -> None:
         """
         Subscribe to a topic with retry logic.
 
@@ -180,13 +194,19 @@ class RedisPubSubManager:
                 self.subscriptions[topic] = handler
         else:
             # Per-client subscribe
-            self._subscribe_per_client(topic, handler, client_id)
+            self._subscribe_per_client(topic, handler, client_id, namespace)
 
-    def _subscribe_per_client(self, topic: str, handler: Callable[[Message], None], client_id: str) -> None:
+    def _subscribe_per_client(
+        self,
+        topic: str,
+        handler: Callable[[Message], None],
+        client_id: str,
+        namespace: Optional[str],
+    ) -> None:
         """Register a per-client subscription with sequential delivery and backlog replay."""
         with self.lock:
             # Store per-client handler
-            self._client_handlers[(topic, client_id)] = handler
+            self._client_handlers[(topic, client_id)] = (handler, namespace)
 
             # Track which clients are subscribed to this topic
             if topic not in self._topic_client_ids:
@@ -209,6 +229,7 @@ class RedisPubSubManager:
             needs_fanout_subscribe = topic not in self._fanout_topics
 
         if needs_fanout_subscribe:
+
             def fanout_handler(msg: Message, _topic=topic) -> None:
                 self._fanout_to_clients(_topic, msg)
 
@@ -224,9 +245,15 @@ class RedisPubSubManager:
                 self._fanout_topics.add(topic)
 
         # Replay backlog: deliver messages since last processed position
-        self._replay_backlog(topic, client_id, handler)
+        self._replay_backlog(topic, client_id, handler, namespace)
 
-    def _replay_backlog(self, topic: str, client_id: str, handler: Callable[[Message], None]) -> None:
+    def _replay_backlog(
+        self,
+        topic: str,
+        client_id: str,
+        handler: Callable[[Message], None],
+        namespace: Optional[str],
+    ) -> None:
         """Replay messages from last processed position for crash recovery."""
         last_id = self._load_position(client_id, topic)
 
@@ -249,7 +276,7 @@ class RedisPubSubManager:
                 # Filter: only messages AFTER last_id (not including it)
                 backlog = [m for m in messages if m.id > last_id]
                 for msg in backlog:
-                    self._enqueue_for_client(client_id, topic, handler, msg)
+                    self._enqueue_for_client(client_id, namespace, topic, handler, msg)
         except Exception as e:
             logging.warning(f"Error replaying backlog for client {client_id} on topic {topic}: {e}")
 
@@ -259,18 +286,24 @@ class RedisPubSubManager:
             client_ids = list(self._topic_client_ids.get(topic, set()))
             handlers = {cid: self._client_handlers.get((topic, cid)) for cid in client_ids}
 
-        for client_id, handler in handlers.items():
-            if handler is not None:
-                self._enqueue_for_client(client_id, topic, handler, message.model_copy(deep=True))
+        for client_id, handler_info in handlers.items():
+            if handler_info is not None:
+                handler, namespace = handler_info
+                self._enqueue_for_client(client_id, namespace, topic, handler, message.model_copy(deep=True))
 
     def _enqueue_for_client(
-        self, client_id: str, topic: str, handler: Callable[[Message], None], message: Message
+        self,
+        client_id: str,
+        namespace: Optional[str],
+        topic: str,
+        handler: Callable[[Message], None],
+        message: Message,
     ) -> None:
         """Enqueue a message for a specific client's worker thread."""
         with self.lock:
             q = self._client_queues.get(client_id)
         if q is not None:
-            q.put((topic, handler, message))
+            q.put((namespace, topic, handler, message))
 
     def _client_worker_loop(self, client_id: str) -> None:
         """Worker thread for a single client — processes messages sequentially."""
@@ -282,20 +315,13 @@ class RedisPubSubManager:
             except KeyError:
                 break  # Queue removed (client unsubscribed all topics)
 
-            topic, handler, message = item
+            namespace, topic, handler, message = item
             try:
                 handler(message)
                 # Handler succeeded — advance position
                 self._save_position(client_id, topic, message.id)
-            except Exception:
-                logging.exception(
-                    "Handler failed for client %s on topic %s message %s — position NOT advanced, requeueing",
-                    client_id,
-                    topic,
-                    message.id,
-                )
-                # Re-enqueue so the message is retried (at-least-once semantics)
-                self._enqueue_for_client(client_id, topic, handler, message)
+            except Exception as exc:
+                self._handle_delivery_failure(client_id, namespace, topic, message, exc)
             finally:
                 self._client_queues[client_id].task_done()
 
@@ -317,6 +343,55 @@ class RedisPubSubManager:
             self.client.set(key, str(message_id))
         except Exception as e:
             logging.warning(f"Error saving position for {client_id}/{topic}: {e}")
+
+    def _handle_delivery_failure(
+        self,
+        client_id: str,
+        namespace: Optional[str],
+        topic: str,
+        message: Message,
+        error: Exception,
+    ) -> None:
+        logging.exception(
+            "Handler failed for client %s on topic %s message %s; dead-lettering and advancing position",
+            client_id,
+            topic,
+            message.id,
+        )
+
+        dead_letter_topic = resolve_dead_letter_topic(topic, namespace)
+        dead_letter_namespace = resolve_dead_letter_namespace(topic, namespace)
+
+        if topic != dead_letter_topic:
+            try:
+                dead_letter_message = build_dead_letter_message(
+                    backend_name=self.__class__.__name__,
+                    client_id=client_id,
+                    original_topic=topic,
+                    original_message=message,
+                    error=error,
+                )
+                self._dead_letter_store.store_message(
+                    dead_letter_namespace,
+                    dead_letter_topic,
+                    dead_letter_message,
+                    self.publish,
+                )
+            except Exception:
+                logging.exception(
+                    "Failed to publish dead-letter message for client %s topic %s message %s",
+                    client_id,
+                    topic,
+                    message.id,
+                )
+        else:
+            logging.error(
+                "Dead-letter handler failed for client %s message %s; skipping recursive dead-letter publish",
+                client_id,
+                message.id,
+            )
+
+        self._save_position(client_id, topic, message.id)
 
     def _subscribe_internal(self, topic: str, handler: Callable[[Message], None]) -> None:
         """Internal subscribe without storing in subscriptions dict."""
@@ -353,6 +428,7 @@ class RedisPubSubManager:
                 with self.lock:
                     if self.pubsub:
                         self.pubsub.unsubscribe(topic)
+
             execute_with_retry(f"Unsubscribe from {topic}", unsubscribe_operation, self.config, self.shutdown_event)
             logging.debug(f"Unsubscribed from topic: {topic}")
         else:
@@ -369,9 +445,7 @@ class RedisPubSubManager:
                 remaining_clients = set()
 
             # Check if this client still has other topic subscriptions
-            client_still_has_subscriptions = any(
-                k[1] == client_id for k in self._client_handlers
-            )
+            client_still_has_subscriptions = any(k[1] == client_id for k in self._client_handlers)
 
         if not remaining_clients:
             # No more clients on this topic — unsubscribe from Redis pub/sub fanout
@@ -383,6 +457,7 @@ class RedisPubSubManager:
                 with self.lock:
                     if self.pubsub:
                         self.pubsub.unsubscribe(topic)
+
             try:
                 execute_with_retry(
                     f"Unsubscribe fanout from {topic}", unsubscribe_operation, self.config, self.shutdown_event
@@ -506,6 +581,7 @@ class RedisPubSubManager:
 
         # Re-subscribe fanout handlers for per-client topics
         for topic in fanout_topics_snapshot:
+
             def fanout_handler(msg: Message, _topic=topic) -> None:
                 self._fanout_to_clients(_topic, msg)
 

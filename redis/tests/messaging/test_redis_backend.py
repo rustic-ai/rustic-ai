@@ -41,8 +41,8 @@ class TestRedisDeliveryGuarantees(BaseTestBackendDeliveryGuarantees):
     def namespace(self) -> str:
         return f"dg_ns_{uuid.uuid4().hex[:8]}"
 
-    def test_handler_failure_no_position_advance(self, backend, generator, topic, namespace):
-        super().test_handler_failure_no_position_advance(backend, generator, topic, namespace)
+    def test_handler_failure_dead_letters_and_advances_position(self, backend, generator, topic, namespace):
+        super().test_handler_failure_dead_letters_and_advances_position(backend, generator, topic, namespace)
 
 
 class TestRedisBackendConfiguration:
@@ -68,6 +68,7 @@ class TestRedisBackendConfiguration:
         assert config.pubsub_retry_max_delay == 60.0
         assert config.pubsub_retry_multiplier == 2.0
         assert config.pubsub_health_check_interval == 10.0
+        assert config.pubsub_poll_sleep_time == 0.01
 
         # Fail-fast settings
         assert config.pubsub_max_retry_attempts == 5
@@ -83,6 +84,7 @@ class TestRedisBackendConfiguration:
             pubsub_retry_enabled=False,
             pubsub_max_retry_attempts=3,
             pubsub_crash_on_failure=False,
+            pubsub_poll_sleep_time=0.001,
         )
 
         assert config.host == "redis.example.com"
@@ -91,6 +93,30 @@ class TestRedisBackendConfiguration:
         assert config.pubsub_retry_enabled is False
         assert config.pubsub_max_retry_attempts == 3
         assert config.pubsub_crash_on_failure is False
+        assert config.pubsub_poll_sleep_time == 0.001
+
+    @patch("rustic_ai.redis.messaging.connection_manager.redis.StrictRedis")
+    def test_pubsub_poll_sleep_time_is_used(self, mock_redis):
+        mock_redis_instance = Mock()
+        mock_redis.return_value = mock_redis_instance
+
+        mock_pubsub = Mock()
+        mock_thread = Mock()
+        mock_thread.is_alive.return_value = False
+        mock_pubsub.run_in_thread.return_value = mock_thread
+        mock_redis_instance.pubsub.return_value = mock_pubsub
+
+        backend = RedisMessagingBackend(
+            RedisBackendConfig(
+                host="localhost",
+                port=6379,
+                pubsub_retry_enabled=False,
+                pubsub_poll_sleep_time=0.123,
+            )
+        )
+
+        mock_pubsub.run_in_thread.assert_called_once_with(sleep_time=0.123, daemon=True)
+        backend.cleanup()
 
     @patch("rustic_ai.redis.messaging.connection_manager.redis.StrictRedis")
     def test_redis_client_initialization_with_keepalive(self, mock_redis):

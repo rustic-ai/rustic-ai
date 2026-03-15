@@ -54,8 +54,8 @@ class TestNATSDeliveryGuarantees(BaseTestBackendDeliveryGuarantees):
     def namespace(self) -> str:
         return f"dg_ns_{uuid.uuid4().hex[:8]}"
 
-    def test_handler_failure_no_position_advance(self, backend, generator, topic, namespace):
-        super().test_handler_failure_no_position_advance(backend, generator, topic, namespace)
+    def test_handler_failure_dead_letters_and_advances_position(self, backend, generator, topic, namespace):
+        super().test_handler_failure_dead_letters_and_advances_position(backend, generator, topic, namespace)
 
 
 class TestNATSBackendConfiguration:

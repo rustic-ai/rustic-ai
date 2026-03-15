@@ -6,10 +6,19 @@ import threading
 import time
 from typing import Any, Callable, Dict, Optional
 
+from rustic_ai.core.messaging.core.dead_letter import (
+    build_dead_letter_message,
+    resolve_dead_letter_namespace,
+    resolve_dead_letter_topic,
+)
 from rustic_ai.core.messaging.core.message import Message
 from rustic_ai.nats.messaging.connection_manager import NATSBackendConfig
 from rustic_ai.nats.messaging.exceptions import NATSConnectionFailureError
-from rustic_ai.nats.messaging.message_store import _js_subject, _sanitize
+from rustic_ai.nats.messaging.message_store import (
+    NATSMessageStore,
+    _js_subject,
+    _sanitize,
+)
 from rustic_ai.nats.messaging.retry_utils import (
     calculate_exponential_backoff,
     execute_with_retry,
@@ -53,6 +62,7 @@ class NATSPubSubManager:
         self._handlers: Dict[str, Callable] = {}  # topic -> Message handler (core pub/sub)
         # Per-client push consumers: (topic, client_id) -> NATS JetStream Subscription
         self._push_subscriptions: Dict[tuple, Any] = {}
+        self._push_namespaces: Dict[tuple, Optional[str]] = {}
         # Per-client locks for cross-topic sequential delivery.
         # Each push consumer for a client runs its handler via run_in_executor,
         # which means handlers for different topics can race. The lock ensures
@@ -64,6 +74,7 @@ class NATSPubSubManager:
         self._reconnection_lock = threading.Lock()
         self._reconnection_active = False
         self._lock = threading.RLock()
+        self._dead_letter_store = NATSMessageStore(js, run_async, config)
 
     def setup(self) -> None:
         """Initialize pub/sub and start health monitoring if configured."""
@@ -110,7 +121,13 @@ class NATSPubSubManager:
     # Core pub/sub (legacy, client_id=None)
     # =========================================================================
 
-    def subscribe(self, topic: str, handler: Callable[[Message], None], client_id: Optional[str] = None) -> None:
+    def subscribe(
+        self,
+        topic: str,
+        handler: Callable[[Message], None],
+        client_id: Optional[str] = None,
+        namespace: Optional[str] = None,
+    ) -> None:
         """
         Subscribe to a topic.
 
@@ -138,18 +155,17 @@ class NATSPubSubManager:
             logging.debug("Subscribed NATS handler to topic=%s", topic)
         else:
             # Per-client durable push consumer
-            self._subscribe_push_consumer(topic, handler, client_id)
+            self._subscribe_push_consumer(topic, handler, client_id, namespace)
 
     def _subscribe_push_consumer(
-        self, topic: str, handler: Callable[[Message], None], client_id: str
+        self, topic: str, handler: Callable[[Message], None], client_id: str, namespace: Optional[str]
     ) -> None:
         """
         Create a durable JetStream push consumer for per-client delivery.
 
         Consumer semantics:
         - DeliverPolicy.ALL: replay all messages (unacked) from stream beginning
-        - AckPolicy.EXPLICIT: each message must be acked (auto-acked by nats-py on success)
-        - ack_wait=120s: redelivery window on handler failure
+        - AckPolicy.EXPLICIT: each message must be acked after success or dead-lettering
         - Sequential: await run_in_executor ensures one message processed at a time
         """
         consumer_name = f"eo_{_sanitize(client_id)}_{_sanitize(topic)}"
@@ -174,13 +190,23 @@ class NATSPubSubManager:
 
             captured_handler = handler
 
-            def locked_handler(msg: Message) -> None:
+            def locked_handler(msg: Message) -> bool:
                 """Run the handler under a per-client lock for cross-topic sequential delivery."""
                 with client_lock:
-                    captured_handler(msg)
+                    try:
+                        captured_handler(msg)
+                    except Exception as e:
+                        logging.exception(
+                            "Handler failed for client %s on topic %s message %s; dead-lettering and acknowledging",
+                            client_id,
+                            topic,
+                            msg.id,
+                        )
+                        self._store_dead_letter_sync(namespace, topic, client_id, msg, e)
+                        return False
+                    return True
 
             async def push_handler(nats_msg):
-                success = False
                 try:
                     data = nats_msg.data.decode("utf-8")
                     message = Message.from_json(data)
@@ -191,20 +217,15 @@ class NATSPubSubManager:
                         consumer_name,
                     )
                     loop = asyncio.get_event_loop()
-                    # AWAIT ensures ack/nak fires AFTER handler completes.
+                    # AWAIT ensures ack fires AFTER handler / dead-letter handling completes.
                     # locked_handler ensures cross-topic sequential delivery per client.
                     await loop.run_in_executor(None, locked_handler, message)
-                    success = True
                 except Exception as e:
-                    logging.error(
+                    logging.exception(
                         "Error in push consumer callback topic=%s consumer=%s: %s", topic, consumer_name, e
                     )
                 finally:
-                    if success:
-                        await nats_msg.ack()
-                    else:
-                        # Nak triggers immediate redelivery (at-least-once semantics)
-                        await nats_msg.nak()
+                    await nats_msg.ack()
 
             # Create the durable push consumer (manual_ack=True → explicit ack/nak)
             sub = await self._js.subscribe(
@@ -224,6 +245,7 @@ class NATSPubSubManager:
             sub = self._run_async(_create_push_consumer())
             with self._lock:
                 self._push_subscriptions[(topic, client_id)] = sub
+                self._push_namespaces[(topic, client_id)] = namespace
             logging.debug(
                 "Created push consumer name=%s topic=%s client_id=%s", consumer_name, topic, client_id
             )
@@ -295,6 +317,7 @@ class NATSPubSubManager:
             # Per-client push consumer unsubscribe
             with self._lock:
                 sub = self._push_subscriptions.pop((topic, client_id), None)
+                self._push_namespaces.pop((topic, client_id), None)
                 # Clean up client lock if no more push subscriptions for this client
                 has_remaining = any(k[1] == client_id for k in self._push_subscriptions)
                 if not has_remaining:
@@ -330,6 +353,46 @@ class NATSPubSubManager:
             logging.debug("Published live NATS message topic=%s", topic)
         except Exception as e:
             logging.warning(f"Error publishing to {topic}: {e}")
+
+    def _store_dead_letter_sync(
+        self,
+        namespace: Optional[str],
+        topic: str,
+        client_id: str,
+        message: Message,
+        error: Exception,
+    ) -> None:
+        dead_letter_topic = resolve_dead_letter_topic(topic, namespace)
+        dead_letter_namespace = resolve_dead_letter_namespace(topic, namespace)
+        if topic == dead_letter_topic:
+            logging.error(
+                "Dead-letter handler failed for client %s message %s; skipping recursive dead-letter publish",
+                client_id,
+                message.id,
+            )
+            return
+
+        try:
+            dead_letter_message = build_dead_letter_message(
+                backend_name=self.__class__.__name__,
+                client_id=client_id,
+                original_topic=topic,
+                original_message=message,
+                error=error,
+            )
+            self._dead_letter_store.store_message(
+                dead_letter_namespace,
+                dead_letter_topic,
+                dead_letter_message,
+                self.publish,
+            )
+        except Exception:
+            logging.exception(
+                "Failed to publish dead-letter message for client %s topic %s message %s",
+                client_id,
+                topic,
+                message.id,
+            )
 
     # =========================================================================
     # Reconnect / recovery

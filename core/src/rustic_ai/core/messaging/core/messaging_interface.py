@@ -203,7 +203,7 @@ class MessagingInterface:
         self.subscribers[namespaced_topic].add(client.id)
 
         handler = self._make_client_handler(client)
-        self.backend.subscribe(namespaced_topic, handler, client_id=client.id)
+        self.backend.subscribe(namespaced_topic, handler, client_id=client.id, namespace=self.namespace)
 
     def unsubscribe(self, topic: str, client: Client) -> None:
         """
@@ -421,7 +421,7 @@ class MessagingInterface:
         self.shared_subscribers[namespaced_topic].add(client.id)
 
         handler = self._make_shared_client_handler(client)
-        self.backend.subscribe(namespaced_topic, handler, client_id=client.id)
+        self.backend.subscribe(namespaced_topic, handler, client_id=client.id, namespace=self.shared_namespace)
 
     def unsubscribe_shared(self, topic: str, client: Client) -> None:
         """

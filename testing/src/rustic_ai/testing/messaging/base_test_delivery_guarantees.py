@@ -6,6 +6,7 @@ import time
 
 import pytest
 
+from rustic_ai.core.guild.dsl import GuildTopics
 from rustic_ai.core.messaging.core.message import (
     AgentTag,
     Message,
@@ -30,10 +31,8 @@ class BaseTestBackendDeliveryGuarantees(ABC):
     """
     Abstract base class for testing per-client delivery guarantees.
 
-    Backends that support per-client durable subscriptions (Redis, NATS) should
-    subclass this and implement all 4 tests. The InMemory backend only runs
-    test_exactly_once_delivery; it skips crash_recovery and handler_failure
-    since it has no persistent position tracking.
+    Backends that support per-client durable subscriptions should subclass
+    this and implement the shared delivery guarantee tests.
     """
 
     @pytest.fixture
@@ -69,7 +68,7 @@ class BaseTestBackendDeliveryGuarantees(ABC):
                 if len(received_ids) >= 5:
                     done_event.set()
 
-        backend.subscribe(topic, handler, client_id="eo_client")
+        backend.subscribe(topic, handler, client_id="eo_client", namespace=namespace)
 
         msgs = [_make_message(topic, generator, {"n": i}) for i in range(5)]
         for msg in msgs:
@@ -105,7 +104,7 @@ class BaseTestBackendDeliveryGuarantees(ABC):
                 if len(received_ids) >= 3:
                     done_event.set()
 
-        backend.subscribe(topic, handler, client_id="backlog_client")
+        backend.subscribe(topic, handler, client_id="backlog_client", namespace=namespace)
 
         done_event.wait(timeout=10.0)
 
@@ -134,7 +133,7 @@ class BaseTestBackendDeliveryGuarantees(ABC):
                 if len(phase1_received) >= 3:
                     phase1_event.set()
 
-        backend.subscribe(topic, phase1_handler, client_id="crash_client")
+        backend.subscribe(topic, phase1_handler, client_id="crash_client", namespace=namespace)
 
         msgs_phase1 = [_make_message(topic, generator, {"phase": 1, "n": i}) for i in range(3)]
         for msg in msgs_phase1:
@@ -165,7 +164,7 @@ class BaseTestBackendDeliveryGuarantees(ABC):
                 if len(phase3_received) >= 2:
                     phase3_event.set()
 
-        backend.subscribe(topic, phase3_handler, client_id="crash_client")
+        backend.subscribe(topic, phase3_handler, client_id="crash_client", namespace=namespace)
 
         phase3_event.wait(timeout=10.0)
 
@@ -179,43 +178,82 @@ class BaseTestBackendDeliveryGuarantees(ABC):
 
         backend.unsubscribe(topic, client_id="crash_client")
 
-    def test_handler_failure_no_position_advance(
+    def test_handler_failure_dead_letters_and_advances_position(
         self, backend: MessagingBackend, generator: GemstoneGenerator, topic: str, namespace: str
     ):
         """
-        When a handler raises on a message, the position is NOT advanced.
-        On re-subscribe with the same client_id, the failed message is replayed.
+        When a handler raises on a message, the message is dead-lettered and the
+        position advances so reconnect does not replay already-handled messages.
         """
         call_counts: dict[int, int] = {}
         lock = threading.Lock()
-        received: list[Message] = []
-        done_event = threading.Event()
+        received: list[int] = []
+        dead_letters: list[Message] = []
+        delivery_event = threading.Event()
+        dead_letter_event = threading.Event()
+
+        def dead_letter_handler(msg: Message):
+            with lock:
+                dead_letters.append(msg)
+                dead_letter_event.set()
 
         def failing_handler(msg: Message):
             with lock:
                 n = call_counts.get(msg.id, 0) + 1
                 call_counts[msg.id] = n
-            if len(received) == 0 and n == 1:
-                # Fail on first ever call for the first message
+            if msg.payload["n"] == 0 and n == 1:
                 raise RuntimeError("Simulated handler failure")
             with lock:
                 received.append(msg.id)
-                if len(received) >= 3:
-                    done_event.set()
+                if len(received) >= 2:
+                    delivery_event.set()
 
-        backend.subscribe(topic, failing_handler, client_id="failure_client")
+        backend.subscribe(GuildTopics.DEAD_LETTER_QUEUE, dead_letter_handler, namespace=namespace)
+        backend.subscribe(topic, failing_handler, client_id="failure_client", namespace=namespace)
 
         msgs = [_make_message(topic, generator, {"n": i}) for i in range(3)]
         for msg in msgs:
             backend.store_message(namespace, topic, msg)
             time.sleep(0.01)
 
-        done_event.wait(timeout=30.0)  # longer timeout for redelivery after ack_wait
+        assert dead_letter_event.wait(timeout=10.0), "Expected failed message to be published to dead_letter_queue"
+        assert delivery_event.wait(timeout=10.0), "Expected later messages to keep flowing after dead-lettering"
 
         with lock:
-            assert len(received) >= 3, f"Expected at least 3 successful deliveries, got {len(received)}"
-            # The first message should have been retried (called more than once)
+            assert received == [msgs[1].id, msgs[2].id], (
+                f"Expected only later messages to be delivered successfully, got {received}"
+            )
             first_msg_id = msgs[0].id
-            assert call_counts.get(first_msg_id, 0) >= 2, "First message should have been retried after failure"
+            assert call_counts.get(first_msg_id, 0) == 1, "Failed message should not be retried after dead-lettering"
+            assert len(dead_letters) == 1, f"Expected one dead-letter message, got {len(dead_letters)}"
+            payload = dead_letters[0].payload
+            assert payload["original_topic"] == topic
+            assert payload["client_id"] == "failure_client"
+            assert payload["original_message_id"] == first_msg_id
+            assert payload["original_message"]["id"] == first_msg_id
+            assert payload["error_type"] == "RuntimeError"
+            assert payload["error_message"] == "Simulated handler failure"
+
+        backend.unsubscribe(GuildTopics.DEAD_LETTER_QUEUE)
+        backend.unsubscribe(topic, client_id="failure_client")
+
+        replayed: list[int] = []
+        replay_event = threading.Event()
+        replay_lock = threading.Lock()
+
+        def replay_handler(msg: Message):
+            with replay_lock:
+                replayed.append(msg.id)
+                replay_event.set()
+
+        backend.subscribe(topic, replay_handler, client_id="failure_client", namespace=namespace)
+
+        extra = _make_message(topic, generator, {"n": 99})
+        backend.store_message(namespace, topic, extra)
+        assert replay_event.wait(timeout=10.0), "Expected new message after re-subscribe"
+        time.sleep(0.2)
+
+        with replay_lock:
+            assert replayed == [extra.id], f"Expected only the new message after reconnect, got {replayed}"
 
         backend.unsubscribe(topic, client_id="failure_client")

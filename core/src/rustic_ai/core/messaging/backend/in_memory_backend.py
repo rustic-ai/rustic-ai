@@ -1,11 +1,17 @@
 import bisect
 import logging
 import random
+import threading
 from typing import Callable, Dict, List, Optional, Set
 
 import shortuuid
 
 from rustic_ai.core.messaging.core import Message
+from rustic_ai.core.messaging.core.dead_letter import (
+    build_dead_letter_message,
+    resolve_dead_letter_namespace,
+    resolve_dead_letter_topic,
+)
 from rustic_ai.core.messaging.core.messaging_backend import MessagingBackend
 
 
@@ -21,23 +27,29 @@ class _ClientDeliveryQueue:
     def __init__(self) -> None:
         self._queue: List = []  # List of (handler, message) tuples
         self._processing = False
+        self._lock = threading.Lock()
 
     def enqueue(self, handler: Callable[[Message], None], message: Message) -> None:
-        self._queue.append((handler, message))
-        if not self._processing:
+        should_drain = False
+        with self._lock:
+            self._queue.append((handler, message))
+            if not self._processing:
+                self._processing = True
+                should_drain = True
+        if should_drain:
             self._drain()
 
     def _drain(self) -> None:
-        self._processing = True
-        while self._queue:
-            handler, msg = self._queue.pop(0)
+        while True:
+            with self._lock:
+                if not self._queue:
+                    self._processing = False
+                    return
+                handler, msg = self._queue.pop(0)
             try:
                 handler(msg)
             except Exception:
-                logging.exception("Handler failed for message %s — requeueing", msg.id)
-                # Re-enqueue at end for retry (at-least-once semantics)
-                self._queue.append((handler, msg))
-        self._processing = False
+                logging.exception("Unhandled delivery queue failure for message %s", msg.id)
 
 
 class MemoryStore:
@@ -236,7 +248,13 @@ class InMemoryMessagingBackend(MessagingBackend):
         # Only return the subscribers that are relevant to the current instance of the backend.
         return self.subscribers
 
-    def subscribe(self, topic: str, handler: Callable[[Message], None], client_id: Optional[str] = None) -> None:
+    def subscribe(
+        self,
+        topic: str,
+        handler: Callable[[Message], None],
+        client_id: Optional[str] = None,
+        namespace: Optional[str] = None,
+    ) -> None:
         """
         Subscribe a handler to a topic.
 
@@ -272,12 +290,21 @@ class InMemoryMessagingBackend(MessagingBackend):
 
             captured_handler = handler
 
-            def position_advancing_handler(msg: Message, _h=captured_handler, _cid=client_id) -> None:
-                _h(msg)
-                # Only reached on success — advance position
-                self._client_positions[_cid] = msg.id
+            def terminal_delivery_handler(
+                msg: Message,
+                _h=captured_handler,
+                _cid=client_id,
+                _topic=topic,
+                _namespace=namespace,
+            ) -> None:
+                try:
+                    _h(msg)
+                except Exception as exc:
+                    self._handle_delivery_failure(_cid, _namespace, _topic, msg, exc)
+                else:
+                    self._client_positions[_cid] = msg.id
 
-            def queued_handler(msg: Message, _h=position_advancing_handler, _q=delivery_queue) -> None:
+            def queued_handler(msg: Message, _h=terminal_delivery_handler, _q=delivery_queue) -> None:
                 _q.enqueue(_h, msg)
 
             self.callback_handlers[topic][subscriber_key] = queued_handler
@@ -287,7 +314,7 @@ class InMemoryMessagingBackend(MessagingBackend):
             last_id = self._client_positions.get(client_id, self._baseline_id)
             for msg in self._message_store.get_messages_for_topic(topic):
                 if msg.id > last_id:
-                    delivery_queue.enqueue(position_advancing_handler, msg)
+                    delivery_queue.enqueue(terminal_delivery_handler, msg)
 
     def unsubscribe(self, topic: str, client_id: Optional[str] = None) -> None:
         if client_id is None:
@@ -307,8 +334,14 @@ class InMemoryMessagingBackend(MessagingBackend):
             self._message_store.unsubscribe(topic, subscriber_key)
 
     def cleanup(self) -> None:
+        for topic, subscriber_ids in list(self.subscribers.items()):
+            for subscriber_id in list(subscriber_ids):
+                self._message_store.unsubscribe(topic, subscriber_id)
+        self.subscribers.clear()
+        self.callback_handlers.clear()
         self._message_store.cleanup()
         self._client_delivery_queues.clear()
+        self._client_positions.clear()
 
     def supports_subscription(self) -> bool:
         return True
@@ -328,3 +361,45 @@ class InMemoryMessagingBackend(MessagingBackend):
             return self._message_store.get_messages(namespace, msg_ids)
         else:
             return []
+
+    def _handle_delivery_failure(
+        self,
+        client_id: str,
+        namespace: Optional[str],
+        topic: str,
+        message: Message,
+        error: Exception,
+    ) -> None:
+        logging.exception(
+            "Handler failed for client %s on topic %s message %s; dead-lettering and advancing position",
+            client_id,
+            topic,
+            message.id,
+        )
+        dead_letter_topic = resolve_dead_letter_topic(topic, namespace)
+        dead_letter_namespace = resolve_dead_letter_namespace(topic, namespace)
+        if topic != dead_letter_topic:
+            try:
+                dead_letter_message = build_dead_letter_message(
+                    backend_name=self.__class__.__name__,
+                    client_id=client_id,
+                    original_topic=topic,
+                    original_message=message,
+                    error=error,
+                )
+                self.store_message(dead_letter_namespace, dead_letter_topic, dead_letter_message)
+            except Exception:
+                logging.exception(
+                    "Failed to publish dead-letter message for client %s topic %s message %s",
+                    client_id,
+                    topic,
+                    message.id,
+                )
+        else:
+            logging.error(
+                "Dead-letter handler failed for client %s message %s; skipping recursive dead-letter publish",
+                client_id,
+                message.id,
+            )
+
+        self._client_positions[client_id] = message.id

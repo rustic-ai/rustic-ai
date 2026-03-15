@@ -99,7 +99,13 @@ class RedisMessagingBackend(MessagingBackend):
         # TBD: Implement the logic to load subscribers.
         return {}
 
-    def subscribe(self, topic: str, handler: Callable[[Message], None], client_id: Optional[str] = None) -> None:
+    def subscribe(
+        self,
+        topic: str,
+        handler: Callable[[Message], None],
+        client_id: Optional[str] = None,
+        namespace: Optional[str] = None,
+    ) -> None:
         """
         Subscribe to a topic and handle incoming messages.
 
@@ -110,7 +116,7 @@ class RedisMessagingBackend(MessagingBackend):
             handler: The handler function to handle incoming messages.
             client_id: If provided, enables per-client durable delivery guarantees.
         """
-        self._pubsub_manager.subscribe(topic, handler, client_id=client_id)
+        self._pubsub_manager.subscribe(topic, handler, client_id=client_id, namespace=namespace)
 
     def unsubscribe(self, topic: str, client_id: Optional[str] = None) -> None:
         """

@@ -66,12 +66,18 @@ class NATSMessagingBackend(MessagingBackend):
         """Load subscribers for a namespace (TBD implementation)."""
         return {}
 
-    def subscribe(self, topic: str, handler: Callable[[Message], None], client_id: Optional[str] = None) -> None:
+    def subscribe(
+        self,
+        topic: str,
+        handler: Callable[[Message], None],
+        client_id: Optional[str] = None,
+        namespace: Optional[str] = None,
+    ) -> None:
         """Subscribe to a topic.
 
         When client_id is provided, uses per-client durable push consumer with delivery guarantees.
         """
-        self._pubsub_manager.subscribe(topic, handler, client_id=client_id)
+        self._pubsub_manager.subscribe(topic, handler, client_id=client_id, namespace=namespace)
 
     def unsubscribe(self, topic: str, client_id: Optional[str] = None) -> None:
         """Unsubscribe from a topic."""
