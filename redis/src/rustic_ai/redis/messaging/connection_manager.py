@@ -42,6 +42,7 @@ class RedisBackendConfig(BaseModel):
     pubsub_retry_max_delay: float = Field(default=60.0)  # Maximum retry delay in seconds
     pubsub_retry_multiplier: float = Field(default=2.0)  # Backoff multiplier
     pubsub_health_check_interval: float = Field(default=10.0)  # Check pub/sub health every N seconds
+    pubsub_poll_sleep_time: float = Field(default=0.01)  # Redis pub/sub polling sleep time in seconds
 
     # Immediate retry settings for individual operations
     pubsub_immediate_retry_attempts: int = Field(default=3)  # Quick retries before background reconnection

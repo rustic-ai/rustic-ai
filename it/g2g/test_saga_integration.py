@@ -118,8 +118,25 @@ class TestSagaIntegration:
                 "rustic_ai.redis.state.manager.RedisStateManager",
                 {"host": "localhost", "port": 6379},
             ),
+            # NATS messaging + NATS state (requires RUN_NATS_TESTS=true)
+            pytest.param(
+                "rustic_ai.nats.messaging.backend",
+                "NATSMessagingBackend",
+                {
+                    "nats_client": {
+                        "servers": [os.environ.get("NATS_URL", "nats://localhost:4222")],
+                        "pubsub_health_monitoring_enabled": False,
+                    }
+                },
+                "rustic_ai.nats.state.manager.NATSStateManager",
+                {"servers": [os.environ.get("NATS_URL", "nats://localhost:4222")]},
+                marks=pytest.mark.skipif(
+                    os.environ.get("RUN_NATS_TESTS", "").lower() != "true",
+                    reason="Set RUN_NATS_TESTS=true to run NATS integration tests",
+                ),
+            ),
         ],
-        ids=["inmemory-inmemory", "redis-redis"],
+        ids=["inmemory-inmemory", "redis-redis", "nats-nats"],
     )
     @flaky(max_runs=4, min_passes=1)
     def test_saga_session_state_preservation(

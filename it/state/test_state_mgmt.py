@@ -95,11 +95,40 @@ class TestStateMgmt:
         Metastore.drop_db()
 
     @pytest.mark.parametrize(
-        "state_manager_class,state_manager_config",
+        "messaging_backend_module,messaging_backend_class,messaging_backend_config,state_manager_class,state_manager_config",
         [
-            ("rustic_ai.core.state.manager.in_memory_state_manager.InMemoryStateManager", {}),
-            ("rustic_ai.redis.state.manager.RedisStateManager", {"host": "localhost", "port": 6379}),
+            (
+                "rustic_ai.redis.messaging.backend",
+                "RedisMessagingBackend",
+                {"redis_client": {"host": "localhost", "port": 6379}},
+                "rustic_ai.core.state.manager.in_memory_state_manager.InMemoryStateManager",
+                {},
+            ),
+            (
+                "rustic_ai.redis.messaging.backend",
+                "RedisMessagingBackend",
+                {"redis_client": {"host": "localhost", "port": 6379}},
+                "rustic_ai.redis.state.manager.RedisStateManager",
+                {"host": "localhost", "port": 6379},
+            ),
+            pytest.param(
+                "rustic_ai.nats.messaging.backend",
+                "NATSMessagingBackend",
+                {
+                    "nats_client": {
+                        "servers": [os.environ.get("NATS_URL", "nats://localhost:4222")],
+                        "pubsub_health_monitoring_enabled": False,
+                    }
+                },
+                "rustic_ai.nats.state.manager.NATSStateManager",
+                {"servers": [os.environ.get("NATS_URL", "nats://localhost:4222")]},
+                marks=pytest.mark.skipif(
+                    os.environ.get("RUN_NATS_TESTS", "").lower() != "true",
+                    reason="Set RUN_NATS_TESTS=true to run NATS integration tests",
+                ),
+            ),
         ],
+        ids=["redis-inmemory", "redis-redis", "nats-nats"],
     )
     @flaky(max_runs=6, min_passes=1)
     def test_state_mgmt(
@@ -108,6 +137,9 @@ class TestStateMgmt:
         state_free_agent: AgentSpec,
         database,
         org_id,
+        messaging_backend_module: str,
+        messaging_backend_class: str,
+        messaging_backend_config: dict,
         state_manager_class: str,
         state_manager_config: dict,
     ):
@@ -116,9 +148,9 @@ class TestStateMgmt:
             .add_agent_spec(state_aware_agent)
             .add_agent_spec(state_free_agent)
             .set_messaging(
-                backend_module="rustic_ai.redis.messaging.backend",
-                backend_class="RedisMessagingBackend",
-                backend_config={"redis_client": {"host": "localhost", "port": 6379}},
+                backend_module=messaging_backend_module,
+                backend_class=messaging_backend_class,
+                backend_config=messaging_backend_config,
             )
             .set_property(GSKC.STATE_MANAGER, state_manager_class)
             .set_property(GSKC.STATE_MANAGER_CONFIG, state_manager_config)

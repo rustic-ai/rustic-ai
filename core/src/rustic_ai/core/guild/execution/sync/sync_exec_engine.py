@@ -5,7 +5,7 @@ from rustic_ai.core.guild.dsl import GuildSpec
 from rustic_ai.core.guild.execution.execution_engine import ExecutionEngine
 from rustic_ai.core.guild.execution.sync.agent_tracker import InMemorySyncAgentTracker
 from rustic_ai.core.guild.execution.sync.sync_agent_wrapper import SyncAgentWrapper
-from rustic_ai.core.messaging import Client, MessageTrackingClient, MessagingConfig
+from rustic_ai.core.messaging import Client, MessagingConfig, SimpleClient
 
 
 class SyncExecutionEngine(ExecutionEngine):
@@ -24,7 +24,7 @@ class SyncExecutionEngine(ExecutionEngine):
         agent_spec: AgentSpec,
         messaging_config: MessagingConfig,
         machine_id: int,
-        client_type: Type[Client] = MessageTrackingClient,
+        client_type: Type[Client] = SimpleClient,
         client_properties: Dict[str, Any] = {},
         default_topic: str = "default_topic",
     ) -> Optional[Agent]:

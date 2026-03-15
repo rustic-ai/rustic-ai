@@ -179,7 +179,7 @@ class TestGuildMessages:
 
         assert len(probe_agent_messages) == 4
 
-        default_topic_messages = [message for message in probe_agent_messages if message.topics == "default_topic"]
+        default_topic_messages = [message for message in probe_agent_messages if "default_topic" in message.topics]
 
         assert len(default_topic_messages) == 1
 
@@ -188,22 +188,39 @@ class TestGuildMessages:
         assert default_topic_message.payload["message"] == "Hello, world!"
         assert default_topic_message.sender.id == UserProxyAgent.get_user_agent_id(user1)
 
+        def is_user_notification(message: Message) -> bool:
+            if isinstance(message.topics, str) and message.topics.startswith("user_notifications"):
+                return True
+
+            if isinstance(message.topics, list):
+                for topic in message.topics:
+                    if isinstance(topic, str) and topic.startswith("user_notifications"):
+                        return True
+
+            return False
+
         user_notifications = [
-            message
-            for message in probe_agent_messages
-            if message.topics is not None
-            and isinstance(message.topics, str)
-            and message.topics.startswith("user_notifications")
+            message for message in probe_agent_messages if message.topics is not None and is_user_notification(message)
         ]
 
         assert len(user_notifications) == 3
+
+        def extract_user_id_from_topics(message: Message) -> str:
+            if isinstance(message.topics, str):
+                _, user_id = message.topics.split(":")
+                return user_id
+            elif isinstance(message.topics, list):
+                for topic in message.topics:
+                    if isinstance(topic, str) and topic.startswith("user_notifications"):
+                        _, user_id = topic.split(":")
+                        return user_id
+            return ""
 
         notified_users = []
         for message in user_notifications:
             assert message.payload["message"] == "Hello, world!"
             assert message.topics is not None
-            assert isinstance(message.topics, str)
-            _, user_id = message.topics.split(":")
+            user_id = extract_user_id_from_topics(message)
             assert message.sender.id == UserProxyAgent.get_user_agent_id(user_id)
             if message.forward_header:
                 assert message.forward_header.origin_message_id == send_id.to_int()

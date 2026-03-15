@@ -6,7 +6,7 @@ from rustic_ai.core.guild import GSKC, Agent, AgentSpec, GuildSpec
 from rustic_ai.core.guild.dsl import DependencySpec
 from rustic_ai.core.guild.execution import ExecutionEngine
 from rustic_ai.core.guild.execution.sync.sync_exec_engine import SyncExecutionEngine
-from rustic_ai.core.messaging import MessageTrackingClient, MessagingConfig
+from rustic_ai.core.messaging import MessagingConfig, SimpleClient
 from rustic_ai.core.messaging.core.client import Client
 from rustic_ai.core.messaging.core.message import RoutingSlip
 from rustic_ai.core.utils.class_utils import create_execution_engine
@@ -21,7 +21,7 @@ class Guild:
         organization_id: str,
         execution_engine_clz: str,
         messaging_config: MessagingConfig,
-        client_type: Type[Client] = MessageTrackingClient,
+        client_type: Type[Client] = SimpleClient,
         client_properties: Dict[str, Any] = {},
         dependency_map: Dict[str, DependencySpec] = {},
         routes: RoutingSlip = RoutingSlip(),

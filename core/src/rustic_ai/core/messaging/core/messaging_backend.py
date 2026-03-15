@@ -90,23 +90,40 @@ class MessagingBackend(ABC):
         return id_instance.timestamp
 
     @abstractmethod
-    def subscribe(self, topic: str, handler: Callable[[Message], None]) -> None:
+    def subscribe(
+        self,
+        topic: str,
+        handler: Callable[[Message], None],
+        client_id: Optional[str] = None,
+        namespace: Optional[str] = None,
+    ) -> None:
         """
         Subscribe a handler to a specific topic.
+
+        When client_id is provided, the backend delivers messages with per-client guarantees:
+        - Messages delivered in order (by message ID)
+        - One message at a time per client (sequential)
+        - Handler success = message processed (acked, position advanced)
+        - Handler failure = message is dead-lettered and position advanced
+        - On restart: only messages after the saved position are replayed
 
         Args:
             topic (str): The topic to subscribe to.
             handler (Callable[[Message]): The callback handler for new messages.
+            client_id (Optional[str]): If provided, enables per-client durable delivery guarantees.
+            namespace (Optional[str]): Namespace used for any backend-generated follow-up messages
+                such as dead-letter records. MessagingInterface passes the active namespace here.
         """
         pass  # pragma: no cover
 
     @abstractmethod
-    def unsubscribe(self, topic: str) -> None:
+    def unsubscribe(self, topic: str, client_id: Optional[str] = None) -> None:
         """
         Unsubscribe a handler from a specific topic.
 
         Args:
             topic (str): The topic to unsubscribe from.
+            client_id (Optional[str]): If provided, unsubscribes the specific per-client subscription.
         """
         pass  # pragma: no cover
 
@@ -124,7 +141,7 @@ class MessagingBackend(ABC):
         Returns:
             bool: True if the storage implementation supports subscription, False otherwise.
         """
-        return False  # pragma: no cover
+        return True
 
     @abstractmethod
     def get_messages_by_id(self, namespace: str, msg_ids: List[int]) -> List[Message]:

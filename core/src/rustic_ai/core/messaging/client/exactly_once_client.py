@@ -10,6 +10,11 @@ from rustic_ai.core.utils.basic_class_utils import get_class_from_name
 
 
 class ExactlyOnceClient(Client):
+    """
+    .. deprecated::
+        ExactlyOnceClient is deprecated. Backends now own exactly-once, ordered, crash-resilient delivery.
+        Use SimpleClient instead — configure the backend (Redis/NATS) for durable per-client subscriptions.
+    """
 
     def __init__(
         self,
