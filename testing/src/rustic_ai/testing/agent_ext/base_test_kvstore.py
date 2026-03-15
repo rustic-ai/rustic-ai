@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 import time
+import uuid
 
 from pydantic import BaseModel, JsonValue
 import pytest
@@ -186,12 +187,15 @@ class BaseTestKVStore(ABC):
         raise NotImplementedError("This fixture should be overridden in subclasses.")
 
     def test_kvstore(self, probe_spec, dep_map: dict, org_id):
+        # Use a unique guild ID so Redis-backed tests do not leak state across runs.
+        guild_id = f"test_kvstore_guild_{int(time.time() * 1000)}_{uuid.uuid4().hex[:8]}"
+
         agent_spec: AgentSpec = (
             AgentBuilder(KVStoreAgent).set_description("KV Store Agent").set_name("KVStoreAgent").build_spec()
         )
 
         guild_builder = (
-            GuildBuilder("test_guild", "Test Guild", "Guild to test KV Store Agent")
+            GuildBuilder(guild_id, "Test KVStore Guild", "Guild to test KV Store Agent")
             .add_agent_spec(agent_spec)
             .set_dependency_map(dep_map)
         )

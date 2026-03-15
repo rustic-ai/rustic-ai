@@ -292,6 +292,25 @@ class GuildCommunicationManager:
             result = True
         return result
 
+    @staticmethod
+    def historical_message_sort_key(message: Message) -> tuple[int, int, bool, int, int]:
+        """
+        Prefer chronological ordering, but keep messages from the same interaction in causal order.
+
+        Different agents can generate IDs in the same millisecond with different machine IDs, which can
+        invert user-message/agent-response pairs if we sort purely by message ID.
+        """
+        # Any message that explicitly responds to an earlier message should come after
+        # the user-originated entry for that interaction, even if it shares the same root.
+        is_follow_up = message.in_response_to is not None
+        return (
+            message.timestamp,
+            message.root_thread_id,
+            is_follow_up,
+            len(message.message_history),
+            message.id,
+        )
+
     async def get_historical_user_notifications(self, guild_id: str, user_id: str, engine: Engine) -> List[Message]:
         guild_spec = await self.get_or_fetch_guild_spec(guild_id, engine)
 
@@ -313,7 +332,7 @@ class GuildCommunicationManager:
         ]
         # Combine and sort messages
         all_messages = user_msgs + filtered_broadcast_msgs
-        result = sorted(all_messages, key=lambda msg: msg.id)
+        result = sorted(all_messages, key=self.historical_message_sort_key)
         logging.debug(f"Retrieved {len(result)} messages")
         return result
 
