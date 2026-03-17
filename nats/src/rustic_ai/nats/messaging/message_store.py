@@ -34,6 +34,19 @@ def _kv_bucket_name(namespace: str) -> str:
     return f"msg-cache-{_sanitize(namespace)}"
 
 
+# Topics that need extended retention (60 days) for user-facing history.
+_LONG_RETENTION_SECONDS = 60 * 24 * 3600  # 60 days
+_LONG_RETENTION_TOPICS = ("user_notifications:", "user_message_broadcast")
+
+
+def _ttl_for_topic(topic: str, default_ttl: int) -> float:
+    """Return the TTL for a topic, using extended retention for notification/broadcast topics."""
+    for pattern in _LONG_RETENTION_TOPICS:
+        if pattern in topic:
+            return float(_LONG_RETENTION_SECONDS)
+    return float(default_ttl)
+
+
 class NATSMessageStore:
     """Manages NATS JetStream message storage and KV retrieval operations."""
 
@@ -79,7 +92,7 @@ class NATSMessageStore:
                     nats.js.api.StreamConfig(
                         name=stream_name,
                         subjects=[subject],
-                        max_age=float(self.message_ttl),
+                        max_age=_ttl_for_topic(topic, self.message_ttl),
                     )
                 )
             except Exception as e:
