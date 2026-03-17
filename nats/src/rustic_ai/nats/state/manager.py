@@ -36,6 +36,7 @@ class NATSStateManager(StateManager):
     """
 
     KV_BUCKET = "managed-state"
+    KV_TTL_SECONDS = 60 * 24 * 3600  # 60 days
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -50,7 +51,10 @@ class NATSStateManager(StateManager):
 
         try:
             return await self._js.create_key_value(
-                nats.js.api.KeyValueConfig(bucket=self.KV_BUCKET)
+                nats.js.api.KeyValueConfig(
+                    bucket=self.KV_BUCKET,
+                    ttl=float(self.KV_TTL_SECONDS),
+                )
             )
         except Exception:
             # Bucket may already exist
