@@ -859,6 +859,18 @@ files = [
 ]
 
 [[package]]
+name = "diskcache"
+version = "5.6.3"
+description = "Disk Cache -- Disk and file backed persistent cache."
+optional = false
+python-versions = ">=3"
+groups = ["main", "dev"]
+files = [
+    {file = "diskcache-5.6.3-py3-none-any.whl", hash = "sha256:5e31b2d5fbad117cc363ebaf6b689474db18a1f6438bc82358b024abd4c2ca19"},
+    {file = "diskcache-5.6.3.tar.gz", hash = "sha256:2c3a3fa2743d8535d832ec61c2054a1641f41775aa7c556758a109941e33e4fc"},
+]
+
+[[package]]
 name = "distlib"
 version = "0.4.0"
 description = "Distribution utilities"
@@ -1413,7 +1425,7 @@ version = "3.3.2"
 description = "Lightweight in-process concurrent programming"
 optional = false
 python-versions = ">=3.10"
-groups = ["main"]
+groups = ["main", "dev"]
 markers = "platform_machine == \"aarch64\" or platform_machine == \"ppc64le\" or platform_machine == \"x86_64\" or platform_machine == \"amd64\" or platform_machine == \"AMD64\" or platform_machine == \"win32\" or platform_machine == \"WIN32\""
 files = [
     {file = "greenlet-3.3.2-cp310-cp310-macosx_11_0_universal2.whl", hash = "sha256:9bc885b89709d901859cf95179ec9f6bb67a3d2bb1f0e88456461bd4b7f8fd0d"},
@@ -4098,7 +4110,7 @@ files = [
 
 [[package]]
 name = "rusticai-core"
-version = "1.2.0"
+version = "1.2.1"
 description = "Rustic AI’s modular, agentic AI framework for building human-centered, multi-agent workflows"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -4111,6 +4123,7 @@ aiohttp = "^3.11.14"
 apscheduler = "^3.11.0"
 cel-python = "^0.4.0"
 chevron = "^0.14.0"
+diskcache = "^5.6.0"
 fsspec = "^2024.12.0"
 json-merge-patch = "^0.2"
 jsonata-python = "^0.5.2"
@@ -4135,7 +4148,7 @@ url = "../core"
 
 [[package]]
 name = "rusticai-testing"
-version = "1.2.0"
+version = "1.2.1"
 description = "Test Utilities for Rustic AI Framework"
 optional = false
 python-versions = ">=3.13,<3.14"

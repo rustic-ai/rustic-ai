@@ -703,6 +703,18 @@ files = [
 ]
 
 [[package]]
+name = "diskcache"
+version = "5.6.3"
+description = "Disk Cache -- Disk and file backed persistent cache."
+optional = false
+python-versions = ">=3"
+groups = ["main"]
+files = [
+    {file = "diskcache-5.6.3-py3-none-any.whl", hash = "sha256:5e31b2d5fbad117cc363ebaf6b689474db18a1f6438bc82358b024abd4c2ca19"},
+    {file = "diskcache-5.6.3.tar.gz", hash = "sha256:2c3a3fa2743d8535d832ec61c2054a1641f41775aa7c556758a109941e33e4fc"},
+]
+
+[[package]]
 name = "distlib"
 version = "0.4.0"
 description = "Distribution utilities"
@@ -3170,7 +3182,7 @@ files = [
 
 [[package]]
 name = "rusticai-core"
-version = "1.2.0"
+version = "1.2.1"
 description = "Rustic AI’s modular, agentic AI framework for building human-centered, multi-agent workflows"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -3183,6 +3195,7 @@ aiohttp = "^3.11.14"
 apscheduler = "^3.11.0"
 cel-python = "^0.4.0"
 chevron = "^0.14.0"
+diskcache = "^5.6.0"
 fsspec = "^2024.12.0"
 json-merge-patch = "^0.2"
 jsonata-python = "^0.5.2"

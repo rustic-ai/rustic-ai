@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [project]
 name = "rusticai-nats"
-version = "1.2.0"
+version = "1.2.1"
 description = "NATS messaging backend for Rustic AI"
 authors = [
   { name = "Dragonscale Industries Inc.", email = "dev@dragonscale.ai" },
