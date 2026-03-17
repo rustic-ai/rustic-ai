@@ -1099,6 +1099,18 @@ files = [
 ]
 
 [[package]]
+name = "diskcache"
+version = "5.6.3"
+description = "Disk Cache -- Disk and file backed persistent cache."
+optional = false
+python-versions = ">=3"
+groups = ["main"]
+files = [
+    {file = "diskcache-5.6.3-py3-none-any.whl", hash = "sha256:5e31b2d5fbad117cc363ebaf6b689474db18a1f6438bc82358b024abd4c2ca19"},
+    {file = "diskcache-5.6.3.tar.gz", hash = "sha256:2c3a3fa2743d8535d832ec61c2054a1641f41775aa7c556758a109941e33e4fc"},
+]
+
+[[package]]
 name = "distlib"
 version = "0.4.0"
 description = "Distribution utilities"
@@ -5819,7 +5831,7 @@ files = [
 
 [[package]]
 name = "rusticai-chroma"
-version = "1.2.0"
+version = "1.2.1"
 description = "Rustic AI module for leveraging ChromaDB"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -5840,7 +5852,7 @@ url = "../chroma"
 
 [[package]]
 name = "rusticai-core"
-version = "1.2.0"
+version = "1.2.1"
 description = "Rustic AI’s modular, agentic AI framework for building human-centered, multi-agent workflows"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -5853,6 +5865,7 @@ aiohttp = "^3.11.14"
 apscheduler = "^3.11.0"
 cel-python = "^0.4.0"
 chevron = "^0.14.0"
+diskcache = "^5.6.0"
 fsspec = "^2024.12.0"
 json-merge-patch = "^0.2"
 jsonata-python = "^0.5.2"
@@ -5877,7 +5890,7 @@ url = "../core"
 
 [[package]]
 name = "rusticai-langchain"
-version = "1.2.0"
+version = "1.2.1"
 description = "Rustic AI module with LangChain integrations"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -5900,7 +5913,7 @@ url = "../langchain"
 
 [[package]]
 name = "rusticai-litellm"
-version = "1.2.0"
+version = "1.2.1"
 description = "Rustic AI module leveraging LiteLLM for LLMs"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -5924,7 +5937,7 @@ url = "../litellm"
 
 [[package]]
 name = "rusticai-llm-agent"
-version = "1.2.0"
+version = "1.2.1"
 description = "A complete set of LLM agents"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -5945,7 +5958,7 @@ url = "../llm-agent"
 
 [[package]]
 name = "rusticai-pandas-analyst"
-version = "0.1.0"
+version = "0.1.1"
 description = "Pandas and DuckDB powered implementation of data analyst dependency."
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -5968,7 +5981,7 @@ url = "../pandas-analyst"
 
 [[package]]
 name = "rusticai-playwright"
-version = "1.2.0"
+version = "1.2.1"
 description = "Rustic AI module for scraping using playwright"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -5991,7 +6004,7 @@ url = "../playwright"
 
 [[package]]
 name = "rusticai-serpapi"
-version = "1.2.0"
+version = "1.2.1"
 description = "Rustic AI module supporting Search through SerpApi"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -6012,7 +6025,7 @@ url = "../serpapi"
 
 [[package]]
 name = "rusticai-vertexai"
-version = "1.2.0"
+version = "1.2.1"
 description = "Rustic AI module with Vertex AI integrations"
 optional = false
 python-versions = ">=3.13,<3.14"

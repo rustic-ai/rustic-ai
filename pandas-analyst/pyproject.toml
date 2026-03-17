@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [project]
 name = "rusticai-pandas-analyst"
-version = "0.1.0"
+version = "0.1.1"
 description = "Pandas and DuckDB powered implementation of data analyst dependency."
 authors = [{name = "Dragonscale Industries Inc.", email = "dev@dragonscale.ai"}]
 license = "Apache-2.0"
