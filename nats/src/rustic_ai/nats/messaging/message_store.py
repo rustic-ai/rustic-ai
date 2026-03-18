@@ -220,9 +220,7 @@ class NATSMessageStore:
             messages = [msg for msg in all_messages if msg.timestamp >= timestamp_ms]
             return sorted(messages, key=lambda msg: msg.id)
 
-        return execute_with_retry(
-            f"Get messages for topic {topic} since {msg_id_since}", get_operation, self._config
-        )
+        return execute_with_retry(f"Get messages for topic {topic} since {msg_id_since}", get_operation, self._config)
 
     def get_next_message_for_topic_since(self, topic: str, last_message_id: int) -> Optional[Message]:
         """Retrieve the next message for a topic after a given message ID."""
@@ -298,6 +296,7 @@ class NATSMessageStore:
             ack_policy=nats.js.api.AckPolicy.NONE,
             filter_subject=subject,
             max_deliver=1,
+            inactive_threshold=10.0,
         )
 
         try:
