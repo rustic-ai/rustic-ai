@@ -52,7 +52,9 @@ class BasePlugin(BaseModel, ABC):
 
         return self
 
-    def get_dep(self, agent: Agent, name: str) -> Any:
+    def get_dep(
+        self, agent: Agent, name: str, org_id: str, guild_id: Optional[str] = None, agent_id: Optional[str] = None
+    ) -> Any:
         """
         Get a resolved dependency by name.
 
@@ -60,6 +62,9 @@ class BasePlugin(BaseModel, ABC):
             agent: The agent instance to use for dependency resolution.
             name: The dependency key to resolve. Must be declared in `depends_on`
                   and configured in the agent's dependency map.
+            org_id: The organization ID for dependency resolution.
+            guild_id: The guild ID for dependency resolution.
+            agent_id: The agent ID for dependency resolution.
 
         Returns:
             The resolved dependency instance.
@@ -81,7 +86,7 @@ class BasePlugin(BaseModel, ABC):
             )
         resolver = agent._dependency_resolvers[name]
         return resolver.get_or_resolve(
-            org_id=agent.get_organization(),
-            guild_id=agent.guild_id,
-            agent_id=agent.id,
+            org_id=org_id,
+            guild_id=guild_id,
+            agent_id=agent_id,
         )
