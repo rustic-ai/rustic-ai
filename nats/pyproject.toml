@@ -31,7 +31,7 @@ optional = true
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.4"
-black = { version = "^24.2.0", extras = ["jupyter"] }
+black = { version = "^26.3.1", extras = ["jupyter"] }
 flake8 = "^7.1.2"
 tox = "^4.24.1"
 isort = "^6.0.0"
