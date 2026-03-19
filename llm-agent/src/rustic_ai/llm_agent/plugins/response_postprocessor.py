@@ -18,14 +18,14 @@ class ResponsePostprocessor(BasePlugin):
 
     Postprocessors are called after the LLM response is received, allowing
     additional processing or message generation. They can declare dependencies
-    via `depends_on` and access them using `self.get_dep(agent, "name")`.
+    via `depends_on` and access them using `self.get_dep(agent, "name", org_id, guild_id, agent_id)`.
 
     Example:
         class MetricsPostprocessor(ResponsePostprocessor):
             depends_on: List[str] = ["metrics"]
 
             def postprocess(self, agent, ctx, final_prompt, llm_response, llm):
-                self.get_dep(agent, "metrics").record_latency(llm_response)
+                self.get_dep(agent, "metrics", "org_id", "guild_id", "agent_id").record_latency(llm_response)
                 return None
     """
 
@@ -43,7 +43,7 @@ class ResponsePostprocessor(BasePlugin):
         This method can perform an action using the response.
         Any values returned from this method will be sent as messages.
 
-        Use `self.get_dep(agent, "name")` to access dependencies declared in `depends_on`.
+        Use `self.get_dep(agent, "name", org_id, guild_id, agent_id)` to access dependencies declared in `depends_on`.
 
         Args:
             agent: The agent instance.

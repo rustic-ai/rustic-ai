@@ -18,18 +18,18 @@ class LLMCallWrapper(BasePlugin):
 
     Wrappers have both preprocess (before LLM call) and postprocess (after LLM call)
     methods. They can declare dependencies via `depends_on` and access them
-    using `self.get_dep(agent, "name")`.
+    using `self.get_dep(agent, "name", org_id, guild_id, agent_id)`.
 
     Example:
         class AuditWrapper(LLMCallWrapper):
             depends_on: List[str] = ["audit_log"]
 
             def preprocess(self, agent, ctx, request, llm):
-                self.get_dep(agent, "audit_log").log_request(request)
+                self.get_dep(agent, "audit_log", "org_id", "guild_id", "agent_id").log_request(request)
                 return request
 
             def postprocess(self, agent, ctx, final_prompt, llm_response, llm):
-                self.get_dep(agent, "audit_log").log_response(llm_response)
+                self.get_dep(agent, "audit_log", "org_id", "guild_id", "agent_id").log_response(llm_response)
                 return None
     """
 
@@ -45,7 +45,7 @@ class LLMCallWrapper(BasePlugin):
         Preprocess the prompt before sending it to the LLM.
         This method can modify the prompt as needed.
 
-        Use `self.get_dep(agent, "name")` to access dependencies declared in `depends_on`.
+        Use `self.get_dep(agent, "name", org_id, guild_id, agent_id)` to access dependencies declared in `depends_on`.
 
         Args:
             agent: The agent instance.
@@ -72,7 +72,7 @@ class LLMCallWrapper(BasePlugin):
         This method can perform an action using the response.
         Any values returned from this method will be sent as messages.
 
-        Use `self.get_dep(agent, "name")` to access dependencies declared in `depends_on`.
+        Use `self.get_dep(agent, "name", org_id, guild_id, agent_id)` to access dependencies declared in `depends_on`.
 
         Args:
             agent: The agent instance.

@@ -19,15 +19,15 @@ class BasePlugin(BaseModel, ABC):
 
     Provides dependency injection support through the `get_dep()` method.
     Plugins can declare their dependencies via the `depends_on` field and
-    then retrieve them using `self.get_dep(agent, "dependency_name")`.
+    then retrieve them using `self.get_dep(agent, "dependency_name", org_id, guild_id, agent_id)`.
 
     Example:
         class MyPlugin(LLMCallWrapper):
             depends_on: List[str] = ["logger", "config"]
 
             def preprocess(self, agent, ctx, request, llm):
-                logger = self.get_dep(agent, "logger")
-                config = self.get_dep(agent, "config")
+                logger = self.get_dep(agent, "logger", "org_id", "guild_id", "agent_id")
+                config = self.get_dep(agent, "config", "org_id", "guild_id", "agent_id")
                 logger.log(f"Processing with config: {config.name}")
                 return request
     """
@@ -74,7 +74,7 @@ class BasePlugin(BaseModel, ABC):
 
         Example:
             def preprocess(self, agent, ctx, request, llm):
-                logger = self.get_dep(agent, "logger")
+                logger = self.get_dep(agent, "logger", "org_id", "guild_id", "agent_id")
                 logger.info("Processing request")
                 return request
         """

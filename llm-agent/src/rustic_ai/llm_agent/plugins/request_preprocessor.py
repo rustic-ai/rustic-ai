@@ -12,14 +12,14 @@ class RequestPreprocessor(BasePlugin):
 
     Preprocessors are called before the LLM request is sent, allowing
     modification of the request. They can declare dependencies via the
-    `depends_on` field and access them using `self.get_dep(agent, "name")`.
+    `depends_on` field and access them using `self.get_dep(agent, "name", org_id, guild_id, agent_id)`.
 
     Example:
         class LoggingPreprocessor(RequestPreprocessor):
             depends_on: List[str] = ["logger"]
 
             def preprocess(self, agent, ctx, request, llm):
-                self.get_dep(agent, "logger").info("Processing request")
+                self.get_dep(agent, "logger", "org_id", "guild_id", "agent_id").info("Processing request")
                 return request
     """
 
@@ -35,7 +35,7 @@ class RequestPreprocessor(BasePlugin):
         Preprocess the prompt before sending it to the LLM.
         This method can modify the prompt as needed.
 
-        Use `self.get_dep(agent, "name")` to access dependencies declared in `depends_on`.
+        Use `self.get_dep(agent, "name", org_id, guild_id, agent_id)` to access dependencies declared in `depends_on`.
 
         Args:
             agent: The agent instance.

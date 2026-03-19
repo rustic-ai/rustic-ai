@@ -58,14 +58,14 @@ class KnowledgeBasedMemoriesStore(MemoriesStore):
         Lazily initialize and return the KnowledgeBase instance.
 
         Uses guild-scoped filesystem and kb_backend dependencies retrieved via
-        self.get_dep(agent, name).
+        self.get_dep(agent, name, org_id, guild_id).
         """
         if self._kb is not None:
             return self._kb
 
         # Get filesystem and kb_backend from guild dependencies
         filesystem: FileSystem = self.get_dep(agent, "filesystem", agent.get_organization(), agent.guild_id)
-        kb_backend: KBIndexBackend = self.get_dep(agent, "kb_backend", agent.get_organization())
+        kb_backend: KBIndexBackend = self.get_dep(agent, "kb_backend", agent.get_organization(), agent.guild_id)
 
         # Create KnowledgeBase with default text configuration
         cfg = KnowledgeAgentConfig.default_text(id=f"kb_memory_{agent.guild_id}")
