@@ -76,8 +76,8 @@ KnowledgeAgent requires two guild-level dependencies:
 
 | Dependency | Type | Description |
 |------------|------|-------------|
-| `filesystem:guild` | `FileSystem` | Filesystem for storing library files |
-| `kb_backend:guild` | `KBIndexBackend` | Vector database backend |
+| `filesystem` | `FileSystem` | Filesystem for storing library files |
+| `kb_backend` | `KBIndexBackend` | Vector database backend |
 
 ### Configuring Dependencies
 

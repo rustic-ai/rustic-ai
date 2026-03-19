@@ -164,7 +164,7 @@ class TestMemoryEnabledLLMAgent:
         kb_base = Path(tmp_path) / "kb_memory"
         enhanced_dependency_map = {
             **dependency_map,
-            "filesystem:guild": DependencySpec(
+            "filesystem": DependencySpec(
                 class_name=get_qualified_class_name(FileSystemResolver),
                 properties={
                     "path_base": str(kb_base),
@@ -173,7 +173,7 @@ class TestMemoryEnabledLLMAgent:
                     "asynchronous": True,
                 },
             ),
-            "kb_backend:guild": DependencySpec(
+            "kb_backend": DependencySpec(
                 class_name=get_qualified_class_name(InMemoryKBIndexBackendResolver),
             ),
         }
@@ -190,7 +190,7 @@ class TestMemoryEnabledLLMAgent:
                     llm_request_wrappers=[kb_store],
                 )
             )
-            .set_additional_dependencies(["filesystem:guild", "kb_backend:guild"])
+            .set_additional_dependencies(["filesystem", "kb_backend"])
             .build_spec()
         )
 

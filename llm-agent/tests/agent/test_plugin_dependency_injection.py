@@ -2,7 +2,7 @@
 Tests for plugin dependency injection in LLM Agent.
 
 This module tests the feature that allows LLM Agent plugins (RequestPreprocessor,
-LLMCallWrapper, ResponsePostprocessor) to access injected dependencies via self.get_dep(agent, name).
+LLMCallWrapper, ResponsePostprocessor) to access injected dependencies via self.get_dep(agent, name, org_id, guild_id, agent_id).
 """
 
 from typing import Any, List, Optional
@@ -87,7 +87,7 @@ class SimpleConfigResolver(DependencyResolver[SimpleConfig]):
 
 
 class LoggingPreprocessor(RequestPreprocessor):
-    """A request preprocessor that uses a logger dependency via self.get_dep(agent, name)."""
+    """A request preprocessor that uses a logger dependency via self.get_dep(agent, name, org_id, guild_id, agent_id)."""
 
     depends_on: List[str] = ["test_logger"]
 
@@ -98,13 +98,13 @@ class LoggingPreprocessor(RequestPreprocessor):
         request: ChatCompletionRequest,
         llm: LLM,
     ) -> ChatCompletionRequest:
-        logger = self.get_dep(agent, "test_logger")
+        logger = self.get_dep(agent, "test_logger", "org_id", "guild_id", "agent_id")
         logger.log("preprocess called")
         return request
 
 
 class LoggingWrapper(LLMCallWrapper):
-    """An LLM call wrapper that uses logger and config dependencies via self.get_dep(agent, name)."""
+    """An LLM call wrapper that uses logger and config dependencies via self.get_dep(agent, name, org_id, guild_id, agent_id)."""
 
     depends_on: List[str] = ["test_logger", "test_config"]
 
@@ -115,8 +115,8 @@ class LoggingWrapper(LLMCallWrapper):
         request: ChatCompletionRequest,
         llm: LLM,
     ) -> ChatCompletionRequest:
-        logger = self.get_dep(agent, "test_logger")
-        config = self.get_dep(agent, "test_config")
+        logger = self.get_dep(agent, "test_logger", "org_id", "guild_id", "agent_id")
+        config = self.get_dep(agent, "test_config", "org_id", "guild_id", "agent_id")
         logger.log(f"wrapper preprocess with config: {config.setting_a}")
         return request
 
@@ -128,13 +128,13 @@ class LoggingWrapper(LLMCallWrapper):
         llm_response: ChatCompletionResponse,
         llm: LLM,
     ) -> Optional[List[BaseModel]]:
-        logger = self.get_dep(agent, "test_logger")
+        logger = self.get_dep(agent, "test_logger", "org_id", "guild_id", "agent_id")
         logger.log("wrapper postprocess called")
         return None
 
 
 class LoggingPostprocessor(ResponsePostprocessor):
-    """A response postprocessor that uses a logger dependency via self.get_dep(agent, name)."""
+    """A response postprocessor that uses a logger dependency via self.get_dep(agent, name, org_id, guild_id, agent_id)."""
 
     depends_on: List[str] = ["test_logger"]
 
@@ -146,7 +146,7 @@ class LoggingPostprocessor(ResponsePostprocessor):
         llm_response: ChatCompletionResponse,
         llm: LLM,
     ) -> Optional[List[BaseModel]]:
-        logger = self.get_dep(agent, "test_logger")
+        logger = self.get_dep(agent, "test_logger", "org_id", "guild_id", "agent_id")
         logger.log("postprocess called")
         return None
 
@@ -268,7 +268,7 @@ class TestPluginDependencyInjection:
         return agent, results
 
     def test_plugin_get_dep_resolves_dependency(self):
-        """Test that plugins can resolve dependencies via self.get_dep(agent, name)."""
+        """Test that plugins can resolve dependencies via self.get_dep(agent, name, org_id, guild_id, agent_id)."""
         dependency_map = {
             "test_logger": DependencySpec(
                 class_name=get_qualified_class_name(SimpleLoggerResolver),
@@ -286,7 +286,7 @@ class TestPluginDependencyInjection:
         plugin = LoggingPreprocessor()
 
         # Use get_dep to retrieve the dependency
-        logger = plugin.get_dep(agent, "test_logger")
+        logger = plugin.get_dep(agent, "test_logger", "org_id")
 
         assert isinstance(logger, SimpleLogger)
         assert logger.prefix == "[TEST] "
@@ -312,8 +312,8 @@ class TestPluginDependencyInjection:
 
         plugin = LoggingWrapper()
 
-        logger = plugin.get_dep(agent, "test_logger")
-        config = plugin.get_dep(agent, "test_config")
+        logger = plugin.get_dep(agent, "test_logger", "org_id")
+        config = plugin.get_dep(agent, "test_config", "org_id")
 
         assert isinstance(logger, SimpleLogger)
         assert isinstance(config, SimpleConfig)
@@ -337,8 +337,8 @@ class TestPluginDependencyInjection:
         plugin = LoggingPreprocessor()
 
         # Call get_dep multiple times
-        logger1 = plugin.get_dep(agent, "test_logger")
-        logger2 = plugin.get_dep(agent, "test_logger")
+        logger1 = plugin.get_dep(agent, "test_logger", "org_id")
+        logger2 = plugin.get_dep(agent, "test_logger", "org_id")
 
         # Should return the same cached instance (resolver caches)
         assert logger1 is logger2
@@ -356,7 +356,7 @@ class TestPluginDependencyInjection:
         plugin = LoggingPreprocessor()
 
         with pytest.raises(ValueError) as exc_info:
-            plugin.get_dep(agent, "nonexistent_dep")
+            plugin.get_dep(agent, "nonexistent_dep", "org_id")
 
         assert "not found in agent's dependency resolvers" in str(exc_info.value)
 
