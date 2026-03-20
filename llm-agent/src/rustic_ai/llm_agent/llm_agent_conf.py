@@ -58,7 +58,7 @@ class LLMAgentConfig(BaseAgentProps, LLMPluginMixin):
 
     model_config = ConfigDict(extra="ignore")
 
-    model: Annotated[Union[str, Models], Field(examples=["gpt-5"])]
+    model: Annotated[Optional[Union[str, Models]], Field(examples=["gpt-5"])] = None
     """
     ID of the model to use. See the [model endpoint compatibility](/docs/models/model-endpoint-compatibility) table
     for details on which models work with the Chat API.

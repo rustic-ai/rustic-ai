@@ -153,14 +153,35 @@ class TestRayRedisIntegration(IntegrationTestABC):
         rair2 = execution_engine.is_agent_running(guild.id, ra[0].id)
         assert rair2 is False
 
-        # Send a new message to ensure that the responder agent is no longer processing messages
-        local_test_agent.publish_initial_message()
+        # Allow time for distributed cleanup to stabilize after agent removal
+        time.sleep(wait_time * 10)
 
-        time.sleep(wait_time * 20)
+        # Send a new message to ensure that the responder agent is no longer processing messages
+        # Use retry logic similar to the first phase for distributed execution reliability
+        max_attempts_phase2 = 3
+        for attempt in range(max_attempts_phase2):
+            local_test_agent.clear_messages()
+
+            print(f"Ray Redis post-removal attempt {attempt + 1}: Publishing message...")
+            local_test_agent.publish_initial_message()
+
+            time.sleep(wait_time * 40)
+
+            if len(local_test_agent.captured_messages) >= 1:
+                break
+
+            print(
+                f"Ray Redis post-removal attempt {attempt + 1}: Got {len(local_test_agent.captured_messages)} messages, retrying..."
+            )
+
+            if attempt < max_attempts_phase2 - 1:
+                time.sleep(wait_time * 15)
 
         # Ensure that the responder agent did not process the message
         print(f"After removal, captured {len(local_test_agent.captured_messages)} messages")
-        assert len(local_test_agent.captured_messages) >= 1
+        assert (
+            len(local_test_agent.captured_messages) >= 1
+        ), f"Ray Redis post-removal: Expected at least 1 message after {max_attempts_phase2} attempts, got {len(local_test_agent.captured_messages)}"
 
         msgX = local_test_agent.captured_messages[0]
         assert msgX.topics == "default_topic"

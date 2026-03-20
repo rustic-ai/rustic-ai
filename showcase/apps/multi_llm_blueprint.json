@@ -68,7 +68,6 @@
                     "llm_request_wrappers": [],
                     "response_postprocessors": [],
                     "max_retries": 0,
-                    "model": "vertex_ai/gemini-2.5-flash",
                     "base_url": null,
                     "api_version": null,
                     "custom_llm_provider": null,

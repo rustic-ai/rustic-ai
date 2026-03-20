@@ -5,7 +5,7 @@ build-backend = "poetry.core.masonry.api"
 
 [project]
 name = "rusticai-api"
-version = "1.2.1"
+version = "1.2.2"
 description = "API Server for Rustic AI"
 authors = [{name = "Dragonscale Industries Inc.", email = "dev@dragonscale.ai"}]
 license = "Apache-2.0"
@@ -21,14 +21,14 @@ packages = [{ include = "rustic_ai", from = "src" }]
 [tool.poetry.dependencies]
 rusticai-core = { path = "../core", develop = true }
 rusticai-ray = { path = "../ray", develop = true }
-fastapi = "^0.115.8"
-starlette = "^0.45.3"
-uvicorn = "^0.34.0"
+fastapi = "^0.135.1"
+starlette = "^0.52.1"
+uvicorn = "^0.42.0"
 ptvsd = "^4.3.2"
 python-multipart = "^0.0.20"
-opentelemetry-distro = "^0.52b1"
-websockets = "^15.0.1"
-griffe = "^1.7.2"
+opentelemetry-distro = "^0.61b0"
+websockets = "^16.0"
+griffe = "^1.14.0"
 psycopg = "^3.2.6"
 python-json-logger = "^3.3.0"
 
@@ -40,7 +40,7 @@ optional = true
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.4"
-black = { version = "^24.2.0", extras = ["jupyter"] }
+black = { version = "^26.3.1", extras = ["jupyter"] }
 flake8 = "^7.1.2"
 tox = "^4.24.1"
 isort = "^6.0.0"

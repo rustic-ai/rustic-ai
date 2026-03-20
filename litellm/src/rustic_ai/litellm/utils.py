@@ -3,7 +3,7 @@ from typing import Optional, Union
 from litellm.utils import ModelResponse as LitellmModelResponse
 from pydantic import BaseModel
 
-from rustic_ai.core.guild.agent_ext.depends.llm.models import ChatCompletionResponse
+from rustic_ai.core.guild.agent_ext.depends.llm.models import ChatCompletionResponse, CompletionUsage
 from rustic_ai.core.utils.basic_class_utils import get_class_from_name
 from rustic_ai.core.utils.json_utils import JsonDict
 
@@ -13,6 +13,9 @@ class ResponseUtils:
     def from_litellm(litellm_response: LitellmModelResponse) -> ChatCompletionResponse:
         response_dict = litellm_response.model_dump()
         response = ChatCompletionResponse.model_validate(response_dict)
+
+        if response.usage is None:
+            response.usage = CompletionUsage(prompt_tokens=0, completion_tokens=0, total_tokens=0)
 
         return response
 

@@ -143,7 +143,7 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
             # Install chromium if needed (only check once)
             if not self._chromium_installed:
                 logging.info("Checking if Chromium is installed...")
-                if install(self._playwright.chromium):
+                if install([self._playwright.chromium]):
                     logging.info("Chromium installation check completed")
                     self._chromium_installed = True
                 else:
@@ -238,8 +238,7 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
                     content = md(content, **request.transformer_options)
 
                 # Save to filesystem
-                with filesystem.open(f"scraped_data/{filename}", "w") as f:
-                    f.write(content)
+                filesystem.pipe_file(f"scraped_data/{filename}", content.encode("utf-8"))
 
                 hostname = urlparse(response.url).hostname
 

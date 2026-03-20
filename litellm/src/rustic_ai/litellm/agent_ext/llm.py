@@ -73,6 +73,8 @@ class LiteLLM(LLM):
 
         if model:
             full_prompt["model"] = model
+        else:
+            full_prompt["model"] = self.model
 
         completion = litellm.completion(**full_prompt)
         response: ChatCompletionResponse = ResponseUtils.from_litellm(completion)
@@ -84,6 +86,8 @@ class LiteLLM(LLM):
 
         if model:
             full_prompt["model"] = model
+        else:
+            full_prompt["model"] = self.model
 
         completion = await litellm.acompletion(**full_prompt)
         response: ChatCompletionResponse = ResponseUtils.from_litellm(completion)
@@ -92,7 +96,7 @@ class LiteLLM(LLM):
 
     @property
     def model(self) -> str:
-        return self._model
+        return str(self._model)
 
     def get_config(self) -> dict:
         return self.client_props

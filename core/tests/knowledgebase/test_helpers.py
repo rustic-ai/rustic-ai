@@ -21,7 +21,7 @@ async def write_test_knol(
 ) -> None:
     """Write a test knol to the filesystem."""
     knol_dir = f"{library}/{knol.id}"
-    fs.makedirs(knol_dir, exist_ok=True)
+    await fs._makedirs(knol_dir, exist_ok=True)
     await fs._pipe_file(f"{knol_dir}/{CONTENT_FILENAME}", content_bytes)
     await fs._pipe_file(
         f"{knol_dir}/{KNOL_META_FILENAME}",
