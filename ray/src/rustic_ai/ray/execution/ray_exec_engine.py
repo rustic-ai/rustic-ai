@@ -124,7 +124,7 @@ class RayExecutionEngine(ExecutionEngine):
         if agent_wrapper is not None:
             if self._is_rustic_agent(agent_wrapper):
                 ray.get(agent_wrapper.shutdown.remote())
-                ray.kill(agent_wrapper)
+                ray.kill(agent_wrapper, no_restart=True)
 
             del self.agent_wrappers[guild_id][agent_id]
             del self.agent_actors[guild_id][agent_id]
