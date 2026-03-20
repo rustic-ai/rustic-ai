@@ -5,7 +5,7 @@ build-backend = "poetry.core.masonry.api"
 
 [project]
 name = "rusticai-showcase"
-version = "1.2.1"
+version = "1.2.2"
 description = "Module that showcases Rustic AI capabilities"
 authors = [{name = "Dragonscale Industries Inc.", email = "dev@dragonscale.ai"}]
 license = "Apache-2.0"
@@ -28,7 +28,7 @@ rusticai-serpapi = { path = "../serpapi", develop = true }
 rusticai-vertexai = { path = "../vertexai", develop = true }
 rusticai-llm-agent = { path = "../llm-agent", develop = true }
 rusticai-pandas-analyst = { path = "../pandas-analyst", develop = true }
-google-api-python-client = "^2.187.0"
+google-api-python-client = "^2.193.0"
 arxiv = "^2.1.0"
 spacytextblob = "^5.1.0"
 spacy = "^3.8.11"
@@ -41,7 +41,7 @@ optional = true
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.4"
-black = { version = "^24.2.0", extras = ["jupyter"] }
+black = { version = "^26.3.1", extras = ["jupyter"] }
 flake8 = "^7.1.2"
 tox = "^4.24.1"
 isort = "^6.0.0"

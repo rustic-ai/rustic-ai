@@ -25,7 +25,6 @@
           "kb_backend"
         ],
         "properties": {
-          "model": "gpt-4.1",
           "default_system_prompt": "You are a helpful AI assistant with semantic long-term memory. You can recall relevant information from past conversations, even if they happened a long time ago. When answering questions, use your memory to provide personalized and context-aware responses. If you recall relevant information from previous conversations, mention it naturally in your response.",
           "llm_request_wrappers": [
             {
@@ -59,9 +58,7 @@
       },
       "llm": {
         "class_name": "rustic_ai.litellm.agent_ext.llm.LiteLLMResolver",
-        "properties": {
-          "model": "gpt-4.1"
-        }
+        "properties": {}
       }
     },
     "routes": {

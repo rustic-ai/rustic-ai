@@ -30,7 +30,7 @@ async def test_chunk_descriptor_write_read_list(filesystem: FileSystem):
     knol_id = "knol_abc123"
     chunker = "default"
 
-    filesystem.makedirs(f"{library}/{knol_id}", exist_ok=True)
+    await filesystem._makedirs(f"{library}/{knol_id}", exist_ok=True)
 
     chunks = [
         TextChunk(
@@ -67,7 +67,7 @@ async def test_derived_bytes_write_read_delete(filesystem: FileSystem):
     library = "library"
     knol_id = "knol_bytes"
     chunker = "default"
-    filesystem.makedirs(f"{library}/{knol_id}", exist_ok=True)
+    await filesystem._makedirs(f"{library}/{knol_id}", exist_ok=True)
 
     # Test for multiple modalities with default extensions
     modality_chunks = [
@@ -97,7 +97,7 @@ async def test_preview_write_read_delete(filesystem: FileSystem):
     library = "library"
     knol_id = "knol_previews"
     chunker = "default"
-    filesystem.makedirs(f"{library}/{knol_id}", exist_ok=True)
+    await filesystem._makedirs(f"{library}/{knol_id}", exist_ok=True)
 
     # Use image and video which default to jpg previews
     modality_chunks = [

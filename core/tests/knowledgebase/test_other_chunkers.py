@@ -16,7 +16,7 @@ from rustic_ai.core.knowledgebase.model import Knol
 
 
 async def _write_knol(fs, library: str, knol: Knol, content_bytes: bytes) -> None:
-    fs.makedirs(f"{library}/{knol.id}", exist_ok=True)
+    await fs._makedirs(f"{library}/{knol.id}", exist_ok=True)
     await fs._pipe_file(f"{library}/{knol.id}/content", content_bytes)
     await fs._pipe_file(f"{library}/{knol.id}/.knol", knol.model_dump_json().encode("utf-8"))
 
