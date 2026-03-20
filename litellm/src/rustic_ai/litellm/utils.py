@@ -3,7 +3,10 @@ from typing import Optional, Union
 from litellm.utils import ModelResponse as LitellmModelResponse
 from pydantic import BaseModel
 
-from rustic_ai.core.guild.agent_ext.depends.llm.models import ChatCompletionResponse, CompletionUsage
+from rustic_ai.core.guild.agent_ext.depends.llm.models import (
+    ChatCompletionResponse,
+    CompletionUsage,
+)
 from rustic_ai.core.utils.basic_class_utils import get_class_from_name
 from rustic_ai.core.utils.json_utils import JsonDict
 
