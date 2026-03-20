@@ -4379,4 +4379,4 @@ test = []
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.13,<3.14"
-content-hash = "63f4a7d9d0ca8a1810373e2db11181b09d86ad36d9a4e1145824dad031072124"
+content-hash = "116504da54a2e0d91eadc02ae6a63259de9becac37361dcc3b6515f6df9c6912"

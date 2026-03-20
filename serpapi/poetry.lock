@@ -1097,6 +1097,7 @@ optional = false
 python-versions = "*"
 groups = ["main", "dev"]
 files = [
+    {file = "jsonpath_ng-1.8.0-py3-none-any.whl", hash = "sha256:b8dde192f8af58d646fc031fac9c99fe4d00326afc4148f1f043c601a8cfe138"},
     {file = "jsonpath_ng-1.8.0.tar.gz", hash = "sha256:54252968134b5e549ea5b872f1df1168bd7defe1a52fed5a358c194e1943ddc3"},
 ]
 
@@ -2306,7 +2307,7 @@ use-chardet-on-py3 = ["chardet (>=3.0.2,<6)"]
 
 [[package]]
 name = "rusticai-core"
-version = "1.2.1"
+version = "1.2.2"
 description = "Rustic AI’s modular, agentic AI framework for building human-centered, multi-agent workflows"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -2344,7 +2345,7 @@ url = "../core"
 
 [[package]]
 name = "rusticai-testing"
-version = "1.2.1"
+version = "1.2.2"
 description = "Test Utilities for Rustic AI Framework"
 optional = false
 python-versions = ">=3.13,<3.14"
