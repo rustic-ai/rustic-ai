@@ -19,6 +19,7 @@ urls = { Homepage = "https://www.rustic.ai/", Repository = "https://github.com/r
 packages = [{ include = "rustic_ai", from = "src" }]
 
 [tool.poetry.dependencies]
+rusticai-unidb = {path = "../unidb", develop = true}
 rusticai-core = { path = "../core", develop = true }
 rusticai-chroma = { path = "../chroma", develop = true }
 rusticai-langchain = { path = "../langchain", develop = true }
