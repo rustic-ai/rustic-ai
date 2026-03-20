@@ -284,8 +284,8 @@ class InsertVerticesResponse(BaseModel):
 class EdgeData(BaseModel):
     """Data for a single edge to insert."""
 
-    source_id: Any = Field(description="Source vertex ID")
-    target_id: Any = Field(description="Target vertex ID")
+    source_id: int = Field(description="Source vertex ID (integer). Use query_database to find vertex IDs by name.")
+    target_id: int = Field(description="Target vertex ID (integer). Use query_database to find vertex IDs by name.")
     properties: Dict[str, Any] = Field(default_factory=dict, description="Edge properties")
 
 

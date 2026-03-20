@@ -28,6 +28,7 @@ rusticai-serpapi = { path = "../serpapi", develop = true }
 rusticai-vertexai = { path = "../vertexai", develop = true }
 rusticai-llm-agent = { path = "../llm-agent", develop = true }
 rusticai-pandas-analyst = { path = "../pandas-analyst", develop = true }
+rusticai-unidb = {path = "../unidb", develop = true}
 google-api-python-client = "^2.187.0"
 arxiv = "^2.1.0"
 spacytextblob = "^5.1.0"

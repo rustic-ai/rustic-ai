@@ -5,10 +5,50 @@ This agent provides access to UniDB operations including schema management,
 data operations, vector search, and bulk loading.
 """
 
+import dataclasses
+from typing import Any
+
 from uni_db import Database
 
 from rustic_ai.core.agents.commons.message_formats import ErrorMessage
 from rustic_ai.core.guild.agent import Agent, ProcessContext, processor
+
+
+def _to_dict(obj: Any) -> Any:
+    """Convert various object types to dict for serialization."""
+    if obj is None or isinstance(obj, (str, int, float, bool)):
+        return obj
+    if isinstance(obj, dict):
+        return {k: _to_dict(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_to_dict(item) for item in obj]
+    if hasattr(obj, "model_dump"):
+        return obj.model_dump()
+    if hasattr(obj, "_asdict"):  # namedtuple
+        return {k: _to_dict(v) for k, v in obj._asdict().items()}
+    if dataclasses.is_dataclass(obj) and not isinstance(obj, type):
+        return {k: _to_dict(v) for k, v in dataclasses.asdict(obj).items()}
+    if hasattr(obj, "__dict__") and obj.__dict__:
+        return {k: _to_dict(v) for k, v in obj.__dict__.items() if not k.startswith("_")}
+    # Check for __slots__ on the class hierarchy
+    slots = set()
+    for cls in type(obj).__mro__:
+        if hasattr(cls, "__slots__"):
+            slots.update(s for s in cls.__slots__ if not s.startswith("_"))
+    if slots:
+        return {slot: _to_dict(getattr(obj, slot, None)) for slot in slots}
+    # Fallback: try to extract public attributes via dir()
+    result = {}
+    for attr in dir(obj):
+        if not attr.startswith("_") and not callable(getattr(obj, attr, None)):
+            try:
+                result[attr] = _to_dict(getattr(obj, attr))
+            except Exception:
+                pass
+    if result:
+        return result
+    # Last resort: convert to string
+    return str(obj)
 from rustic_ai.unidb.models import (
     AddPropertyRequest,
     AddPropertyResponse,
@@ -178,6 +218,7 @@ class UniDBAgent(Agent[UniDBAgentConfig]):
         """Get information about a specific label."""
         try:
             info = self._db.get_label_info(ctx.payload.label)
+            info = _to_dict(info)
             ctx.send(GetLabelInfoResponse(label=ctx.payload.label, properties=info))
         except Exception as e:
             self._send_error(ctx, "GetLabelInfoError", str(e))
@@ -187,6 +228,7 @@ class UniDBAgent(Agent[UniDBAgentConfig]):
         """Get the full database schema."""
         try:
             schema = self._db.get_schema()
+            schema = _to_dict(schema)
             ctx.send(GetSchemaResponse(db_schema=schema))
         except Exception as e:
             self._send_error(ctx, "GetSchemaError", str(e))
