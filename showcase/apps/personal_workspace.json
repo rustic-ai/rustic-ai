@@ -114,7 +114,6 @@
                     "ORCHESTRATE"
                 ],
                 "properties": {
-                    "model": "vertex_ai/gemini-3-pro-preview",
                     "base_url": null,
                     "api_version": null,
                     "custom_llm_provider": null,
@@ -154,7 +153,6 @@
                     "SUMMARIZE"
                 ],
                 "properties": {
-                    "model": "vertex_ai/gemini-3-pro-preview",
                     "base_url": null,
                     "api_version": null,
                     "custom_llm_provider": null,
@@ -225,7 +223,6 @@
             "llm": {
                 "class_name": "rustic_ai.litellm.agent_ext.llm.LiteLLMResolver",
                 "properties": {
-                    "model": "vertex_ai/gemini-3-pro-preview",
                     "conf": {
                         "vertex_location": "global"
                     }

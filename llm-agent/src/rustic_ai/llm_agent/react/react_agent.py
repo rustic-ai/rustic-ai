@@ -87,7 +87,7 @@ class ReActAgentConfig(BaseAgentProps, LLMPluginMixin):
 
     model_config = ConfigDict(extra="ignore")
 
-    model: Union[str, Models] = Field(description="ID of the model to use")
+    model: Optional[Union[str, Models]] = Field(description="ID of the model to use", default=None, examples=["gpt-5"])
     """
     ID of the model to use for LLM calls.
     """
@@ -288,7 +288,7 @@ class ReActAgent(Agent[ReActAgentConfig]):
                 ChatCompletionError(
                     status_code=ResponseCodes.INTERNAL_SERVER_ERROR,
                     message=f"Error in ReAct loop: {e}",
-                    model=str(self.config.model),
+                    model=str(self.config.model) if self.config.model else None,
                     request_messages=list(request.messages),
                 )
             )

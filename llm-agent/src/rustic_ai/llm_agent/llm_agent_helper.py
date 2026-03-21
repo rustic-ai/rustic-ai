@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+import json
 import logging
 from typing import TYPE_CHECKING, List, Optional, Union
 
@@ -11,8 +12,10 @@ from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     ChatCompletionError,
     ChatCompletionRequest,
     ChatCompletionResponse,
+    DiscriminatedLLMMessage,
     LLMMessage,
     ResponseCodes,
+    SystemMessage,
 )
 from rustic_ai.llm_agent.llm_plugin_mixin import PluginConfigProtocol
 
@@ -227,6 +230,9 @@ class LLMAgentHelper:
             llm_params=llm_params,
         )
 
+        # Normalize and deduplicate messages before calling the LLM
+        final_request = LLMAgentHelper._normalize_messages(final_request)
+
         # Call LLM
         response = llm.completion(final_request, model)
 
@@ -241,6 +247,46 @@ class LLMAgentHelper:
             model=model,
             max_retries=config.max_retries,
         )
+
+    @staticmethod
+    def _normalize_messages(request: ChatCompletionRequest) -> ChatCompletionRequest:
+        """
+        Normalize messages in the request.
+
+        1. Extracts all system messages, deduplicates them, combines into a single
+           system message, and prepends it to the list. This ensures models that
+           require system messages at the beginning (e.g., Qwen) work correctly.
+        2. Deduplicates non-system messages to save tokens when history enrichment
+           causes overlapping messages.
+        """
+        system_contents: List[str] = []
+        system_seen: set = set()
+        other_messages: List[DiscriminatedLLMMessage] = []
+        msg_seen: set = set()
+
+        for msg in request.messages:
+            if isinstance(msg, SystemMessage):
+                content = msg.content
+                if content not in system_seen:
+                    system_seen.add(content)
+                    system_contents.append(content)
+            else:
+                msg_key = json.dumps(msg.model_dump(exclude_none=True), sort_keys=True)
+                if msg_key not in msg_seen:
+                    msg_seen.add(msg_key)
+                    other_messages.append(msg)
+
+        if not system_contents and len(other_messages) == len(
+            [m for m in request.messages if not isinstance(m, SystemMessage)]
+        ):
+            return request
+
+        normalized_messages: List[DiscriminatedLLMMessage] = list(other_messages)
+        if system_contents:
+            combined_system = SystemMessage(content="\n".join(system_contents))
+            normalized_messages.insert(0, combined_system)
+
+        return request.model_copy(update={"messages": normalized_messages})
 
     @staticmethod
     def _postprocess_with_retry(

@@ -199,13 +199,12 @@ class KnowledgeBasedMemoriesStore(MemoriesStore):
             full_file_path = file_path
             full_meta_path = file_path + ".metadata"
 
-            # Create directory if needed (sync operation on local fs)
-            if not filesystem.exists(dir_path):
-                filesystem.makedirs(dir_path, exist_ok=True)
+            # Create directory if needed (async operation for fsspec compatibility)
+            if not await filesystem._exists(dir_path):
+                await filesystem._makedirs(dir_path, exist_ok=True)
 
             # Write content file
-            with filesystem.open(full_file_path, "wb") as f:
-                f.write(content_bytes)
+            await filesystem._pipe_file(full_file_path, content_bytes)
 
             # Write sidecar metadata file using KB naming convention
             # Format: guild/memories/.memory_1_abc.txt.meta (not .metadata!)
@@ -213,8 +212,7 @@ class KnowledgeBasedMemoriesStore(MemoriesStore):
             full_meta_path = f"{dir_part}/.{file_part}.meta"
 
             meta_json = json.dumps(metadata, indent=2).encode("utf-8")
-            with filesystem.open(full_meta_path, "wb") as f:
-                f.write(meta_json)
+            await filesystem._pipe_file(full_meta_path, meta_json)
 
             # Create MediaLink (metadata is now in sidecar file)
             media = MediaLink(

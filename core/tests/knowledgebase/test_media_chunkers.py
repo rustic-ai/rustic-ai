@@ -19,7 +19,7 @@ from rustic_ai.core.knowledgebase.model import Knol
 
 
 async def _write_content(fs, library: str, knol: Knol, content: bytes) -> None:
-    fs.makedirs(f"{library}/{knol.id}", exist_ok=True)
+    await fs._makedirs(f"{library}/{knol.id}", exist_ok=True)
     await fs._pipe_file(f"{library}/{knol.id}/content", content)
     await fs._pipe_file(f"{library}/{knol.id}/.knol", knol.model_dump_json().encode("utf-8"))
 
@@ -197,7 +197,7 @@ async def test_video_whole_and_bytes(tmp_path):
 
     # Custom library path works
     custom_lib = "lib_custom"
-    fs.makedirs(custom_lib, exist_ok=True)
+    await fs._makedirs(custom_lib, exist_ok=True)
     knol2 = Knol(id="vid4", name="c.mp4", mimetype="video/mp4", size_in_bytes=len(vid_bytes))
     await _write_content(fs, custom_lib, knol2, vid_bytes)
     kn2 = await KnolUtils.read_knol_from_library(fs, custom_lib, knol2.id)

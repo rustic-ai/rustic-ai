@@ -87,9 +87,7 @@
       },
       "llm": {
         "class_name": "rustic_ai.litellm.agent_ext.llm.LiteLLMResolver",
-        "properties": {
-          "model": "gpt-5-nano"
-        }
+        "properties": {}
       }
     },
     "routes": {

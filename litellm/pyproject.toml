@@ -5,7 +5,7 @@ build-backend = "poetry.core.masonry.api"
 
 [project]
 name = "rusticai-litellm"
-version = "1.2.1"
+version = "1.2.2"
 description = "Rustic AI module leveraging LiteLLM for LLMs"
 authors = [{name = "Dragonscale Industries Inc.", email = "dev@dragonscale.ai"}]
 license = "Apache-2.0"
@@ -20,10 +20,10 @@ packages = [{ include = "rustic_ai", from = "src" }]
 
 [tool.poetry.dependencies]
 rusticai-core = { path = "../core", develop = true }
-litellm = "^1.75.0"
+litellm = "^1.82.4"
 dotenv = "^0.9.9"
-openai = "^1.71.0"
-fastapi-sso = "^0.18.0"
+openai = "^2.29.0"
+fastapi-sso = "^0.21.0"
 
 [tool.poetry-monorepo.deps]
 
@@ -33,7 +33,7 @@ optional = true
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.4"
-black = { version = "^24.2.0", extras = ["jupyter"] }
+black = { version = "^26.3.1", extras = ["jupyter"] }
 flake8 = "^7.1.2"
 tox = "^4.24.1"
 isort = "^6.0.0"
