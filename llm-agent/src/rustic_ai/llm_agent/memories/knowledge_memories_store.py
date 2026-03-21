@@ -142,25 +142,22 @@ class KnowledgeBasedMemoriesStore(MemoriesStore):
             name = metadata.get("name")
             tool_call_id = metadata.get("tool_call_id")
 
-            # Deserialize tool_calls if present
-            tool_calls = None
-            if "tool_calls" in metadata:
-                try:
-                    tool_calls = json.loads(metadata["tool_calls"])
-                except (json.JSONDecodeError, TypeError):
-                    tool_calls = metadata["tool_calls"]
+            # Skip tool messages and function messages during recall since
+            # they require matching assistant messages with tool_calls
+            if role in ("tool", "function"):
+                return None
 
             # Create the appropriate message type based on role
+            # NOTE: We intentionally do NOT restore tool_calls on assistant messages
+            # because the corresponding tool responses may not be in the recalled context,
+            # which would cause "tool_calls must be followed by tool messages" errors
             if role == "user":
                 msg = UserMessage(content=content, name=name)
             elif role == "assistant":
-                msg = AssistantMessage(content=content, name=name, tool_calls=tool_calls)
+                # Strip tool_calls - we only keep the content
+                msg = AssistantMessage(content=content, name=name)
             elif role == "system":
                 msg = SystemMessage(content=content, name=name)
-            elif role == "tool":
-                msg = ToolMessage(content=content, tool_call_id=tool_call_id or "")
-            elif role == "function":
-                msg = FunctionMessage(content=content, name=name or "")
             else:
                 # Fallback to user message
                 msg = UserMessage(content=content)

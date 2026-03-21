@@ -1,24 +1,25 @@
 {
-  "name": "Semantic Memory Assistant",
-  "description": "An AI assistant with long-term semantic memory that can recall relevant information from past conversations using vector search, even from months ago.",
+  "name": "Assistant",
+  "description": "A simple assistant you can talk to.\n\nOver time, it may remember useful details to make conversations a bit more helpful. Also supports web scraping to fetch and process web content.",
   "version": "v1",
   "icon": null,
-  "intro_msg": "Hi! I'm your Semantic Memory Assistant. I can remember important details from our past conversations and use that information to help you better. Just ask me anything, and I'll do my best to assist you with the knowledge I've gathered over time.",
+  "intro_msg": "Hi — I'm your Assistant.\n\nAsk me anything. As we talk, I may remember useful details to make things easier over time. I can also browse and scrape web pages for you.",
   "exposure": "private",
   "author_id": "dummyuserid",
   "organization_id": null,
   "category_id": null,
   "spec": {
     "name": "Semantic Memory Guild",
-    "description": "A guild featuring an LLM agent with knowledge-based semantic memory capabilities",
+    "description": "A guild featuring an LLM agent with knowledge-based semantic memory capabilities and web scraping",
     "properties": {},
     "agents": [
       {
         "name": "Memory Assistant",
-        "description": "An intelligent assistant with semantic long-term memory that can recall relevant context from your entire conversation history, not just recent messages",
+        "description": "An intelligent assistant with semantic long-term memory that can recall relevant context from your entire conversation history, not just recent messages. Can also scrape web pages when needed.",
         "class_name": "rustic_ai.llm_agent.llm_agent.LLMAgent",
         "additional_topics": [
-          "memory_agent"
+          "memory_agent",
+          "scraping_results"
         ],
         "additional_dependencies": [
           "filesystem",
@@ -26,19 +27,49 @@
         ],
         "properties": {
           "model": "gpt-4.1",
-          "default_system_prompt": "You are a helpful AI assistant with semantic long-term memory. You can recall relevant information from past conversations, even if they happened a long time ago. When answering questions, use your memory to provide personalized and context-aware responses. If you recall relevant information from previous conversations, mention it naturally in your response.",
+          "default_system_prompt": "You are a helpful AI assistant with semantic long-term memory. You can recall relevant information from past conversations, even if they happened a long time ago. When answering questions, use your memory to provide personalized and context-aware responses. If you recall relevant information from previous conversations, mention it naturally in your response.\n\nYou also have access to a web scraping tool. When a user asks you to fetch, read, or analyze content from a website, use the 'web_scrape' tool to scrape the page. You will receive the scraped content and can then summarize or analyze it as requested by the user.",
           "llm_request_wrappers": [
             {
               "kind": "rustic_ai.llm_agent.memories.knowledge_memories_store.KnowledgeBasedMemoriesStore",
               "memory_type": "knowledge_based",
               "context_window_size": 3,
               "recall_limit": 10
+            },
+            {
+              "kind": "rustic_ai.llm_agent.tools.tools_manager_plugin.ToolsManagerPlugin",
+              "toolset": {
+                "kind": "rustic_ai.llm_agent.tools.tools_manager_plugin.ToolspecsListProvider",
+                "additional_system_prompt": "When the user wants to fetch, read, scrape, or analyze content from a URL or website, use the web_scrape tool. Provide the URL in the links array. Set output_format to 'text/markdown' for better readability.",
+                "tools": [
+                  {
+                    "name": "web_scrape",
+                    "description": "Scrape content from one or more web pages. Use this tool when the user asks to fetch, read, or analyze content from a website URL. Provide the URLs in the 'links' array with each link having a 'url' field. Set 'output_format' to 'text/markdown' for readable content.",
+                    "parameter_class": "rustic_ai.playwright.agent.WebScrapingRequest"
+                  }
+                ]
+              }
             }
           ]
         },
         "listen_to_default_topic": false,
         "predicates": {},
         "dependency_map": {}
+      },
+      {
+        "id": "playwright_agent",
+        "name": "Web Scraper Agent",
+        "description": "An agent that handles web scraping using Playwright",
+        "class_name": "rustic_ai.playwright.agent.PlaywrightScraperAgent",
+        "additional_topics": [
+          "scraping_requests"
+        ],
+        "properties": {
+          "headless": true,
+          "parallel_pages": 5,
+          "browser_lifecycle": "idle_timeout",
+          "browser_idle_timeout_s": 30.0
+        },
+        "listen_to_default_topic": false
       }
     ],
     "dependency_map": {
@@ -88,6 +119,44 @@
           "agent_type": null,
           "method_name": null,
           "origin_filter": null,
+          "message_format": "rustic_ai.playwright.agent.WebScrapingRequest",
+          "destination": {
+            "topics": "scraping_requests",
+            "recipient_list": [],
+            "priority": null
+          },
+          "mark_forwarded": false,
+          "route_times": -1
+        },
+        {
+          "agent": {
+            "id": null,
+            "name": "Web Scraper Agent"
+          },
+          "agent_type": null,
+          "method_name": null,
+          "origin_filter": null,
+          "message_format": "rustic_ai.playwright.agent.WebScrapingCompleted",
+          "destination": {
+            "topics": "scraping_results",
+            "recipient_list": [],
+            "priority": null
+          },
+          "mark_forwarded": false,
+          "route_times": -1,
+          "transformer": {
+            "style": "content_based_router",
+            "handler": "({\"format\": \"rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest\", \"payload\": {\"messages\": [{\"role\": \"user\", \"content\": $append([{\"type\": \"text\", \"text\": \"I scraped \" & $string($count($.payload.links)) & \" page(s) for you. Here is the content:\"}], $map($.payload.links, function($link) { {\"type\": \"file_url\", \"file_url\": {\"url\": $replace($link.url, \"file:///\", \"\")}} }))}]}})"
+          }
+        },
+        {
+          "agent": {
+            "id": null,
+            "name": "Memory Assistant"
+          },
+          "agent_type": null,
+          "method_name": null,
+          "origin_filter": null,
           "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
           "destination": {
             "topics": "user_message_broadcast",
@@ -95,12 +164,58 @@
             "priority": null
           },
           "mark_forwarded": false,
-          "route_times": 1,
-          "transformer": null,
-          "agent_state_update": null,
-          "guild_state_update": null,
-          "process_status": "completed",
-          "reason": null
+          "route_times": -1,
+          "transformer": {
+            "style": "content_based_router",
+            "handler": "($content := $.payload.choices[0].message.content; $content != null and $content != '' ? $ : null)"
+          },
+          "process_status": "completed"
+        },
+        {
+          "agent": {
+            "id": null,
+            "name": "Web Scraper Agent"
+          },
+          "agent_type": null,
+          "method_name": null,
+          "origin_filter": null,
+          "message_format": "rustic_ai.core.agents.commons.message_formats.ErrorMessage",
+          "destination": {
+            "topics": "user_message_broadcast",
+            "recipient_list": [],
+            "priority": null
+          },
+          "mark_forwarded": false,
+          "route_times": -1,
+          "transformer": {
+            "style": "simple",
+            "output_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+            "expression": "({\"choices\": [{\"message\": {\"role\": \"assistant\", \"content\": \"**Error while scraping:** \" & $.error_message}}]})"
+          },
+          "process_status": "completed"
+        },
+        {
+          "agent": {
+            "id": null,
+            "name": "Memory Assistant"
+          },
+          "agent_type": null,
+          "method_name": null,
+          "origin_filter": null,
+          "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionError",
+          "destination": {
+            "topics": "user_message_broadcast",
+            "recipient_list": [],
+            "priority": null
+          },
+          "mark_forwarded": false,
+          "route_times": -1,
+          "transformer": {
+            "style": "simple",
+            "output_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+            "expression": "({\"choices\": [{\"message\": {\"role\": \"assistant\", \"content\": \"**Error:** \" & $.message}}]})"
+          },
+          "process_status": "completed"
         }
       ]
     }
