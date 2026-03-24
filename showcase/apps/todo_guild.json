@@ -300,7 +300,7 @@
                     },
                     "transformer": {
                         "style": "content_based_router",
-                        "handler": "($tasks := $.payload.tasks; $count($tasks) = 0 ? {\"format\": \"updateMarkdownFormat\", \"payload\": {\"title\": \"Todo List\", \"text\": \"No tasks found. Add a task to get started!\", \"updateId\": \"todo_table\", \"updateType\": \"replace\"}} : {\"format\": \"updateMarkdownFormat\", \"payload\": {\"title\": \"Todo List\", \"text\": \"| Status | ID | Task | Start | Deadline | Deps |\\n|--------|-----|------|-------|----------|------|\\n\" & $join($tasks.(($checkbox := $.status = \"done\" ? \"[x]\" : \"[ ]\"; \"| \" & $checkbox & \" | \" & $.id & \" | \" & $.todo & \" | \" & $substring($.start_time, 0, 10) & \" | \" & ($.deadline ? $substring($.deadline, 0, 10) : \"-\") & \" | \" & $string($count($.depends_on)) & \" |\")), \"\\n\"), \"updateId\": \"todo_table\", \"updateType\": \"replace\"}})"
+                        "handler": "($tasks := $.payload.tasks[status != \"done\"]; $count($tasks) = 0 ? {\"format\": \"updateMarkdownFormat\", \"payload\": {\"title\": \"Todo List\", \"text\": \"No tasks found. Add a task to get started!\", \"updateId\": \"todo_table\", \"updateType\": \"replace\"}} : {\"format\": \"updateMarkdownFormat\", \"payload\": {\"title\": \"Todo List\", \"text\": \"| Status | ID | Task | Start | Deadline | Deps |\\n|--------|-----|------|-------|----------|------|\\n\" & $join($tasks.(\"| \" & $.status & \" | \" & $.id & \" | \" & $.todo & \" | \" & $substring($.start_time, 0, 10) & \" | \" & ($.deadline ? $substring($.deadline, 0, 10) : \"-\") & \" | \" & $string($count($.depends_on)) & \" |\"), \"\\n\"), \"updateId\": \"todo_table\", \"updateType\": \"replace\"}})"
                     },
                     "process_status": "completed",
                     "route_times": -1
@@ -315,7 +315,7 @@
                     },
                     "transformer": {
                         "style": "content_based_router",
-                        "handler": "($task := $.payload.task; $checkbox := $task.status = \"done\" ? \"[x]\" : \"[ ]\"; {\"format\": \"MarkdownFormat\", \"payload\": {\"title\": \"Task Details\", \"text\": \"| Status | ID | Task | Start | Deadline | Deps |\\n|--------|-----|------|-------|----------|------|\\n| \" & $checkbox & \" | \" & $task.id & \" | \" & $task.todo & \" | \" & $substring($task.start_time, 0, 10) & \" | \" & ($task.deadline ? $substring($task.deadline, 0, 10) : \"-\") & \" | \" & $string($count($task.depends_on)) & \" |\"}})"
+                        "handler": "($task := $.payload.task; {\"format\": \"MarkdownFormat\", \"payload\": {\"title\": \"Task Details\", \"text\": \"| Status | ID | Task | Start | Deadline | Deps |\\n|--------|-----|------|-------|----------|------|\\n| \" & $task.status & \" | \" & $task.id & \" | \" & $task.todo & \" | \" & $substring($task.start_time, 0, 10) & \" | \" & ($task.deadline ? $substring($task.deadline, 0, 10) : \"-\") & \" | \" & $string($count($task.depends_on)) & \" |\"}})"
                     },
                     "process_status": "completed",
                     "route_times": -1

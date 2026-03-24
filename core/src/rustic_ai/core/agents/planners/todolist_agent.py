@@ -152,10 +152,8 @@ class TodoListAgent(Agent):
         )
 
     def on_state_updated(self, new_state: JsonDict, ctx: ProcessContext[StateUpdateResponse]):
-        print("xxx state updated: ", new_state)
         if ctx.payload.state_owner == StateOwner.AGENT and ctx.payload.agent_id == self.id:
             tasks = self.get_tasks()
-            print("xxx tasks updated: ", tasks)
             ctx.send(ListTasksResponse(tasks=tasks))
 
     @agent.processor(AddTaskRequest)
