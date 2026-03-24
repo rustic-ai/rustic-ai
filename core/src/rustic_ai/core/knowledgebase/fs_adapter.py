@@ -63,7 +63,7 @@ class FileSystemAdapter:
 
     async def makedirs(self, path: str, exist_ok: bool = True) -> None:
         """Create directory recursively."""
-        self.fs.makedirs(path, exist_ok=exist_ok)
+        await self.fs._makedirs(path, exist_ok=exist_ok)
 
     async def rm(self, path: str, recursive: bool = False) -> None:
         """Remove file or directory."""

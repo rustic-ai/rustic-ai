@@ -12,10 +12,6 @@ from rustic_ai.core.agents.testutils.echo_agent import EchoAgent
 from rustic_ai.core.agents.utils.user_proxy_agent import UserProxyAgent
 from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder
 from rustic_ai.core.guild.dsl import AgentSpec, GuildSpec
-from rustic_ai.core.guild.metastore import Metastore
-from rustic_ai.core.messaging.client.message_tracking_store import (
-    SqlMessageTrackingStore,
-)
 from rustic_ai.core.messaging.core.message import (
     AgentTag,
     Message,
@@ -25,7 +21,6 @@ from rustic_ai.core.messaging.core.message import (
     RoutingSlip,
 )
 from rustic_ai.core.messaging.core.messaging_config import MessagingConfig
-from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 from rustic_ai.core.utils.gemstone_id import GemstoneGenerator
 from rustic_ai.core.utils.priority import Priority
 
@@ -61,6 +56,23 @@ class TestServer:
                 ),
                 id="RedisMessagingBackend",
             ),
+            pytest.param(
+                MessagingConfig(
+                    backend_module="rustic_ai.nats.messaging.backend",
+                    backend_class="NATSMessagingBackend",
+                    backend_config={
+                        "nats_client": {
+                            "servers": [os.environ.get("NATS_URL", "nats://localhost:4222")],
+                            "pubsub_health_monitoring_enabled": False,
+                        }
+                    },
+                ),
+                id="NATSMessagingBackend",
+                marks=pytest.mark.skipif(
+                    os.environ.get("RUN_NATS_TESTS", "").lower() != "true",
+                    reason="Set RUN_NATS_TESTS=true to run NATS integration tests",
+                ),
+            ),
         ],
     )
     def guild(self, echo_agent, request) -> GuildSpec:
@@ -74,15 +86,6 @@ class TestServer:
             messaging.backend_module,
             messaging.backend_class,
             messaging.backend_config,
-        )
-
-        builder.set_property("client_type", "rustic_ai.core.messaging.client.exactly_once_client.ExactlyOnceClient")
-        builder.set_property(
-            "client_properties",
-            {
-                "tracking_store_class": get_qualified_class_name(SqlMessageTrackingStore),
-                "tracking_store_props": {"db": os.environ.get("RUSTIC_METASTORE", Metastore.get_db_url())},
-            },
         )
 
         return builder.build_spec()

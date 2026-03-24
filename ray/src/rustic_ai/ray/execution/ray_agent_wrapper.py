@@ -10,7 +10,7 @@ import ray
 from rustic_ai.core.guild.agent import AgentSpec
 from rustic_ai.core.guild.dsl import GuildSpec
 from rustic_ai.core.guild.execution.agent_wrapper import AgentWrapper
-from rustic_ai.core.messaging import Client, MessageTrackingClient, MessagingConfig
+from rustic_ai.core.messaging import Client, MessagingConfig, SimpleClient
 
 
 @ray.remote
@@ -21,7 +21,7 @@ class RayAgentWrapper(AgentWrapper):
         agent_spec: AgentSpec,
         messaging_config: MessagingConfig,
         machine_id: int,
-        client_type: Type[Client] = MessageTrackingClient,
+        client_type: Type[Client] = SimpleClient,
         client_properties: Dict[str, Any] = {},
         organization_id: Optional[str] = None,
     ):

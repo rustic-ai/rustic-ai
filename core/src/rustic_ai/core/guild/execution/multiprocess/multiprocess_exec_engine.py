@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional, Type
 from rustic_ai.core.guild.agent import Agent, AgentSpec
 from rustic_ai.core.guild.dsl import GuildSpec
 from rustic_ai.core.guild.execution.execution_engine import ExecutionEngine
-from rustic_ai.core.messaging import Client, MessageTrackingClient, MessagingConfig
+from rustic_ai.core.messaging import Client, MessagingConfig, SimpleClient
 
 from .agent_tracker import MultiProcessAgentTracker
 from .multiprocess_agent_wrapper import MultiProcessAgentWrapper
@@ -36,13 +36,13 @@ def multiprocess_wrapper_runner(
         messaging_config = pickle.loads(messaging_config_data)
 
         # Reconstruct the client type
-        from rustic_ai.core.messaging import MessageTrackingClient
+        from rustic_ai.core.messaging import SimpleClient
 
-        if client_type_name == "MessageTrackingClient":
-            client_type = MessageTrackingClient
+        if client_type_name == "SimpleClient":
+            client_type = SimpleClient
         else:
             # Default fallback
-            client_type = MessageTrackingClient
+            client_type = SimpleClient
 
         # Create the wrapper in the child process
         wrapper = MultiProcessAgentWrapper(
@@ -112,7 +112,7 @@ class MultiProcessExecutionEngine(ExecutionEngine):
         agent_spec: AgentSpec,
         messaging_config: MessagingConfig,
         machine_id: int,
-        client_type: Type[Client] = MessageTrackingClient,
+        client_type: Type[Client] = SimpleClient,
         client_properties: Dict[str, Any] = {},
         default_topic: str = "default_topic",
     ) -> Optional[Agent]:

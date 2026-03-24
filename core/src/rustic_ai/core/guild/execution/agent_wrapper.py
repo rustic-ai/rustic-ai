@@ -13,9 +13,9 @@ from rustic_ai.core.guild.execution.utils import (
 )
 from rustic_ai.core.messaging import (
     Client,
-    MessageTrackingClient,
     MessagingConfig,
     MessagingInterface,
+    SimpleClient,
 )
 from rustic_ai.core.utils.class_utils import get_agent_class
 
@@ -31,7 +31,7 @@ class AgentWrapper(ABC):
         agent_spec: AgentSpec,
         messaging_config: MessagingConfig,
         machine_id: int,
-        client_type: Type[Client] = MessageTrackingClient,
+        client_type: Type[Client] = SimpleClient,
         client_properties: Dict[str, Any] = {},
         organization_id: Optional[str] = None,
     ):

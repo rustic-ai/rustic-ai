@@ -39,6 +39,11 @@ jobs:
           redis-version: "latest"
       - run: redis-cli ping
 
+      - name: Start NATS Server (with JetStream)
+        run: |
+          docker run -d --name nats -p 4222:4222 nats:latest -js
+          timeout 30 bash -c 'until nc -z localhost 4222; do sleep 0.5; done'
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -67,6 +72,7 @@ jobs:
         env:
           PYTEST_ADDOPTS: "--color=yes"
           SKIP_EXPENSIVE_TESTS: true
+          RUN_NATS_TESTS: "true"
         run: |
           tox -e test
 

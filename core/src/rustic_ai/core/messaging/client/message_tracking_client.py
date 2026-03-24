@@ -9,6 +9,10 @@ from rustic_ai.core.messaging.core.message import Message
 
 class MessageTrackingClient(Client):
     """
+    .. deprecated::
+        MessageTrackingClient is deprecated. Backends now own per-client delivery ordering.
+        Use SimpleClient instead — the backend guarantees ordered, sequential delivery.
+
     A client that tracks messages received from a message bus.
 
     Attributes:

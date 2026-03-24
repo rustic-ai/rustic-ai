@@ -6,7 +6,7 @@ plugins work correctly with ReActAgent. Key behaviors to verify:
 1. Preprocessors run once before the ReAct loop starts
 2. Postprocessors run once after the loop completes (with the final response)
 3. Plugin-generated messages are returned alongside the ChatCompletionResponse
-4. Plugins can access injected dependencies via self.get_dep(agent, name)
+4. Plugins can access injected dependencies via self.get_dep(agent, name, org_id, guild_id, agent_id)
 """
 
 import json
@@ -299,7 +299,7 @@ class LoggingPreprocessorWithDep(RequestPreprocessor):
         request: ChatCompletionRequest,
         llm: LLM,
     ) -> ChatCompletionRequest:
-        logger = self.get_dep(agent, "test_logger")
+        logger = self.get_dep(agent, "test_logger", "org_id")
         logger.log("react_preprocess_called")
         return request
 
@@ -317,7 +317,7 @@ class LoggingPostprocessorWithDep(ResponsePostprocessor):
         llm_response: ChatCompletionResponse,
         llm: LLM,
     ) -> Optional[List[BaseModel]]:
-        logger = self.get_dep(agent, "test_logger")
+        logger = self.get_dep(agent, "test_logger", "org_id")
         logger.log("react_postprocess_called")
         return None
 

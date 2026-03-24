@@ -7,7 +7,7 @@ from ray.actor import ActorHandle
 from rustic_ai.core.guild.agent import Agent, AgentSpec
 from rustic_ai.core.guild.dsl import GuildSpec
 from rustic_ai.core.guild.execution.execution_engine import ExecutionEngine
-from rustic_ai.core.messaging import Client, MessageTrackingClient, MessagingConfig
+from rustic_ai.core.messaging import Client, MessagingConfig, SimpleClient
 
 from .ray_agent_wrapper import RayAgentWrapper
 
@@ -30,7 +30,7 @@ class RayExecutionEngine(ExecutionEngine):
         agent_spec: AgentSpec,
         messaging_config: MessagingConfig,
         machine_id: int,
-        client_type: Type[Client] = MessageTrackingClient,
+        client_type: Type[Client] = SimpleClient,
         client_properties: Dict[str, Any] = {},
         default_topic: str = "default_topic",
     ) -> Optional[Agent]:
@@ -124,7 +124,7 @@ class RayExecutionEngine(ExecutionEngine):
         if agent_wrapper is not None:
             if self._is_rustic_agent(agent_wrapper):
                 ray.get(agent_wrapper.shutdown.remote())
-                ray.kill(agent_wrapper)
+                ray.kill(agent_wrapper, no_restart=True)
 
             del self.agent_wrappers[guild_id][agent_id]
             del self.agent_actors[guild_id][agent_id]

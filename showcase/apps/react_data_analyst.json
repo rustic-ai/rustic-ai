@@ -47,7 +47,6 @@
                 "class_name": "rustic_ai.llm_agent.react.react_agent.ReActAgent",
                 "additional_topics": [],
                 "properties": {
-                    "model": "gpt-4o-mini",
                     "max_iterations": 10,
                     "temperature": 0.7,
                     "system_prompt": "You are a Data Analyst Agent. You help users analyze data using pandas and SQL.\n\nYou have access to tools for loading, querying, and analyzing datasets:\n- load_file: Load a CSV, JSON, or Parquet file as a dataset\n- list_datasets: List all currently loaded datasets\n- get_schema: Get the schema/columns of a dataset\n- preview_dataset: Preview the first few rows of a dataset\n- describe_dataset: Get descriptive statistics for a dataset\n- query_dataset: Run SQL queries on datasets\n- summarize_dataset: Get a summary of a dataset\n- value_counts: Get value counts for a column\n- correlation_matrix: Get correlation matrix for numeric columns\n- transform_dataset: Apply transformations to a dataset\n- join_datasets: Join two datasets together\n- clean_dataset: Clean missing/invalid data\n\nUse the ReAct pattern to answer user questions about data:\n1. Think about what information you need\n2. Use tools to load and explore the data\n3. Analyze the results and provide insights\n\nIMPORTANT: When the user uploads a file, the file path will be provided in a system message. Use that exact path with the load_file tool to load the data.\n\nNOTE: If enrichment context is provided for a dataset, use that information to better understand the data structure, semantics, and recommended usage patterns.",
@@ -99,7 +98,6 @@
                     "enrichment_requests"
                 ],
                 "properties": {
-                    "model": "gpt-4o-mini",
                     "default_system_prompt": "You are a data catalog expert. Analyze the provided dataset information and generate rich metadata as JSON.\n\nReturn a JSON object with these fields:\n- table_purpose: Brief description of what this table is for (1 sentence)\n- table_description: Detailed description of the table's contents and structure\n- grain_description: What each row in the table represents (e.g., \"One row per customer order\")\n- primary_key_candidates: Array of column names that could serve as primary keys\n- columns: Array of column objects, each with:\n  - name: Column name\n  - description: What this column represents\n  - semantic_type: One of (identifier, dimension, measure, timestamp, category, text)\n  - uniqueness: One of (unique, mostly_unique, low_cardinality, unknown)\n  - is_primary_key_candidate: boolean\n- freshness_indicators: Object with date range info if applicable\n- recommended_usage: Array of suggested analyses or queries\n- when_to_use: Guidance on when to use this dataset\n- limitations: Array of known data limitations or caveats\n\nBe concise but informative. Focus on practical insights that would help a data analyst work with this data effectively.\n\nReturn ONLY the JSON object, no additional text.",
                     "temperature": 0.3
                 },
@@ -123,9 +121,7 @@
         "dependency_map": {
             "llm": {
                 "class_name": "rustic_ai.litellm.agent_ext.llm.LiteLLMResolver",
-                "properties": {
-                    "model": "gpt-4o-mini"
-                }
+                "properties": {}
             },
             "filesystem": {
                 "class_name": "rustic_ai.core.guild.agent_ext.depends.filesystem.filesystem.FileSystemResolver",

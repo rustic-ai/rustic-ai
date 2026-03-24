@@ -28,6 +28,18 @@ def text_media():
 
 
 @pytest.fixture
+def sync_filesystem(tmp_path):
+    """Sync filesystem for test fixture setup (MediaUtils uses sync I/O)."""
+    fsr = FileSystemResolver(
+        path_base=str(tmp_path),
+        protocol="file",
+        storage_options={},
+        asynchronous=False,
+    )
+    return fsr.resolve("test_org", "test_guild", "test_agent")
+
+
+@pytest.fixture
 def filesystem(tmp_path):
     fsr = FileSystemResolver(
         path_base=str(tmp_path),
@@ -40,14 +52,14 @@ def filesystem(tmp_path):
 
 
 @pytest.fixture
-def media_link(text_media: Document, filesystem: FileSystem):
+def media_link(text_media: Document, sync_filesystem: FileSystem):
 
     # First, save the media to the filesystem to get a file path
-    filesystem.makedirs("media", exist_ok=True)
-    MediaUtils.save_media_to_file(filesystem, text_media, dir="media", filename=text_media.name)
+    sync_filesystem.makedirs("media", exist_ok=True)
+    MediaUtils.save_media_to_file(sync_filesystem, text_media, dir="media", filename=text_media.name)
     file_path = f"media/{text_media.name}"
 
-    return MediaUtils.medialink_from_file(filesystem, f"file:///{file_path}")
+    return MediaUtils.medialink_from_file(sync_filesystem, f"file:///{file_path}")
 
 
 @pytest.fixture

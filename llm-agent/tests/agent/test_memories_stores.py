@@ -338,11 +338,11 @@ def kb_agent(tmp_path, generator):
 
     # Create dependency specs for filesystem and kb_backend
     dependency_map = {
-        "filesystem:guild": DependencySpec(
+        "filesystem": DependencySpec(
             class_name=get_qualified_class_name(FilesystemResolver),
             properties={"path_base": str(base), "protocol": "file", "asynchronous": True},
         ),
-        "kb_backend:guild": DependencySpec(
+        "kb_backend": DependencySpec(
             class_name=get_qualified_class_name(KBBackendResolver),
         ),
     }
@@ -352,7 +352,7 @@ def kb_agent(tmp_path, generator):
         .set_id("kb_test_agent")
         .set_name("KB Test Agent")
         .set_description("Test agent for KB memory")
-        .set_additional_dependencies(["filesystem:guild", "kb_backend:guild"])
+        .set_additional_dependencies(["filesystem", "kb_backend"])
         .build_spec()
     )
 
@@ -368,8 +368,8 @@ def test_kb_memory_store_initialization(kb_memory_store):
     assert kb_memory_store._kb is None
     assert kb_memory_store._message_counter == 0
     # Verify plugin dependencies are declared
-    assert "filesystem:guild" in kb_memory_store.depends_on
-    assert "kb_backend:guild" in kb_memory_store.depends_on
+    assert "filesystem" in kb_memory_store.depends_on
+    assert "kb_backend" in kb_memory_store.depends_on
 
 
 def test_kb_memory_store_serialize_deserialize(kb_memory_store):

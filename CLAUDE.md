@@ -119,7 +119,6 @@ The repository follows a consistent structure per module:
 
 **LLM integrations:**
 - `litellm/`: Unified LLM interface supporting 100+ providers
-- `marvin/`: Marvin AI integration
 - `llm-agent/`: Pluggable LLM agent with tool calling
 - `huggingface/`: HuggingFace models (diffusion, TTS, etc.)
 - `vertexai/`: Google Vertex AI integration

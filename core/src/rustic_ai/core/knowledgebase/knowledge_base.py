@@ -39,6 +39,7 @@ class KnowledgeBase:
         return self.config.kb_schema
 
     async def ensure_ready(self) -> None:
+        await self._knol_manager._ensure_location()
         await self.index.ensure_ready(schema=self.schema)
 
     def resolve_pipelines(self, bindings: Sequence[Tuple[str, str]]) -> List[ResolvedPipeline]:

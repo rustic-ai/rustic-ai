@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Optional, Type
 
 from rustic_ai.core.guild.agent import Agent, AgentSpec
 from rustic_ai.core.guild.dsl import GuildSpec
-from rustic_ai.core.messaging import Client, MessageTrackingClient, MessagingConfig
+from rustic_ai.core.messaging import Client, MessagingConfig, SimpleClient
 from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 
 
@@ -24,7 +24,7 @@ class ExecutionEngine(ABC):
         agent_spec: AgentSpec,
         messaging_config: MessagingConfig,
         machine_id: int,
-        client_type: Type[Client] = MessageTrackingClient,
+        client_type: Type[Client] = SimpleClient,
         client_properties: Dict[str, Any] = {},
         default_topic: str = "default_topic",
     ) -> Optional[Agent]:

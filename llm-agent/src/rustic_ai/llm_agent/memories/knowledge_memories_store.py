@@ -39,8 +39,8 @@ class KnowledgeBasedMemoriesStore(MemoriesStore):
     - recall_limit: Maximum number of memories to retrieve during recall
 
     Dependencies (must be configured at guild level):
-    - filesystem:guild: Filesystem for storing knowledge base data
-    - kb_backend:guild: KBIndexBackend for vector search
+    - filesystem: Filesystem for storing knowledge base data
+    - kb_backend: KBIndexBackend for vector search
     """
 
     memory_type: Literal["knowledge_based"] = "knowledge_based"
@@ -48,7 +48,7 @@ class KnowledgeBasedMemoriesStore(MemoriesStore):
     recall_limit: int = 10
 
     # Declare plugin dependencies
-    depends_on: List[str] = Field(default=["filesystem:guild", "kb_backend:guild"])
+    depends_on: List[str] = Field(default=["filesystem", "kb_backend"])
 
     _kb: Optional[KnowledgeBase] = PrivateAttr(default=None)
     _message_counter: int = PrivateAttr(default=0)
@@ -58,14 +58,14 @@ class KnowledgeBasedMemoriesStore(MemoriesStore):
         Lazily initialize and return the KnowledgeBase instance.
 
         Uses guild-scoped filesystem and kb_backend dependencies retrieved via
-        self.get_dep(agent, name).
+        self.get_dep(agent, name, org_id, guild_id).
         """
         if self._kb is not None:
             return self._kb
 
         # Get filesystem and kb_backend from guild dependencies
-        filesystem: FileSystem = self.get_dep(agent, "filesystem:guild")
-        kb_backend: KBIndexBackend = self.get_dep(agent, "kb_backend:guild")
+        filesystem: FileSystem = self.get_dep(agent, "filesystem", agent.get_organization(), agent.guild_id)
+        kb_backend: KBIndexBackend = self.get_dep(agent, "kb_backend", agent.get_organization(), agent.guild_id)
 
         # Create KnowledgeBase with default text configuration
         cfg = KnowledgeAgentConfig.default_text(id=f"kb_memory_{agent.guild_id}")
@@ -187,7 +187,7 @@ class KnowledgeBasedMemoriesStore(MemoriesStore):
             kb = await self._get_kb(agent, ctx)
 
             # Get filesystem from guild dependencies
-            filesystem: FileSystem = self.get_dep(agent, "filesystem:guild")
+            filesystem: FileSystem = self.get_dep(agent, "filesystem", agent.get_organization(), agent.guild_id)
 
             # Create a temporary file content
             content_bytes = content_str.encode("utf-8")
@@ -202,13 +202,12 @@ class KnowledgeBasedMemoriesStore(MemoriesStore):
             full_file_path = file_path
             full_meta_path = file_path + ".metadata"
 
-            # Create directory if needed (sync operation on local fs)
-            if not filesystem.exists(dir_path):
-                filesystem.makedirs(dir_path, exist_ok=True)
+            # Create directory if needed (async operation for fsspec compatibility)
+            if not await filesystem._exists(dir_path):
+                await filesystem._makedirs(dir_path, exist_ok=True)
 
             # Write content file
-            with filesystem.open(full_file_path, "wb") as f:
-                f.write(content_bytes)
+            await filesystem._pipe_file(full_file_path, content_bytes)
 
             # Write sidecar metadata file using KB naming convention
             # Format: guild/memories/.memory_1_abc.txt.meta (not .metadata!)
@@ -216,8 +215,7 @@ class KnowledgeBasedMemoriesStore(MemoriesStore):
             full_meta_path = f"{dir_part}/.{file_part}.meta"
 
             meta_json = json.dumps(metadata, indent=2).encode("utf-8")
-            with filesystem.open(full_meta_path, "wb") as f:
-                f.write(meta_json)
+            await filesystem._pipe_file(full_meta_path, meta_json)
 
             # Create MediaLink (metadata is now in sidecar file)
             media = MediaLink(

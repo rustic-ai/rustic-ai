@@ -67,9 +67,13 @@ class KnolManager:
         assert getattr(filesystem, "asynchronous", False), "Filesystem must be created with asynchronous=True"
         self.filesystem = filesystem
         self.location = location
-        # __init__ is sync; creating the base directory synchronously is fine
-        self.filesystem.makedirs(self.location, exist_ok=True)
+        self._location_ensured = False
         self.url = f"file:///{self.location}"
+
+    async def _ensure_location(self):
+        if not self._location_ensured:
+            await self.filesystem._makedirs(self.location, exist_ok=True)
+            self._location_ensured = True
 
     # ---------------- internal utilities ----------------
 
@@ -279,7 +283,7 @@ class KnolManager:
         knol_meta_json = knol.model_dump_json()
 
         # Ensure destination directory exists
-        self.filesystem.makedirs(knol_dir, exist_ok=True)
+        await self.filesystem._makedirs(knol_dir, exist_ok=True)
 
         # Write payload + sidecars atomically
         with self.filesystem.transaction:
@@ -303,6 +307,7 @@ class KnolManager:
     # ---------------- public API (all async) ----------------
 
     async def catalog_medialink(self, media: MediaLink) -> CatalogStatusStored | CatalogStatusFailed:
+        await self._ensure_location()
         try:
             knol = await self._knol_from_media_link(media)
             return CatalogStatusStored(knol=knol)
@@ -311,6 +316,7 @@ class KnolManager:
             return CatalogStatusFailed(error=str(e), action="catalog")
 
     async def retrieve(self, knol_id: str) -> CatalogStatusRetrieved | CatalogStatusFailed:
+        await self._ensure_location()
         try:
             # Async read of knol metadata via KnolUtils
             knol = await KnolUtils.read_knol_from_library(self.filesystem, self.location, knol_id)
@@ -327,6 +333,7 @@ class KnolManager:
         """
         Remove the stored payload and both sidecars, idempotently (no MediaUtils).
         """
+        await self._ensure_location()
         try:
             knol_dir = f"{self.location}/{knol_id}"
 

@@ -9,7 +9,7 @@ from rustic_ai.core.guild.execution.multithreaded.agent_tracker import (
 from rustic_ai.core.guild.execution.multithreaded.multithreaded_agent_wrapper import (
     MultiThreadedAgentWrapper,
 )
-from rustic_ai.core.messaging.client import MessageTrackingClient
+from rustic_ai.core.messaging.client import SimpleClient
 from rustic_ai.core.messaging.core import Client, MessagingConfig
 
 
@@ -33,7 +33,7 @@ class MultiThreadedEngine(ExecutionEngine):
         agent_spec: AgentSpec,
         messaging_config: MessagingConfig,
         machine_id: int,
-        client_type: Type[Client] = MessageTrackingClient,
+        client_type: Type[Client] = SimpleClient,
         client_properties: Dict[str, Any] = {},
         default_topic: str = "default_topic",
     ) -> Optional[Agent]:

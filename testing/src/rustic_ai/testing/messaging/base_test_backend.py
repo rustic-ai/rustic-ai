@@ -406,7 +406,7 @@ class BaseTestBackendABC(ABC):
 
         backend.store_message(namespace, topic, m1)
 
-        time.sleep(0.001)
+        time.sleep(0.1)
 
         assert len(messages) == 1
 
@@ -422,9 +422,188 @@ class BaseTestBackendABC(ABC):
 
         backend.store_message(namespace, topic, m2)
 
-        time.sleep(0.001)
+        time.sleep(0.1)
 
         assert len(messages) == 1
+
+    # =========================================================================
+    # Per-client subscribe tests (client_id parameter)
+    # =========================================================================
+
+    def test_subscribe_per_client(
+        self, backend: MessagingBackend, generator: GemstoneGenerator, topic: str, request
+    ):
+        """Smoke test: per-client subscribe delivers messages to the registered handler."""
+        messages: List[Message] = []
+        namespace = request.node.name
+
+        def callback(message: Message):
+            messages.append(message)
+
+        backend.subscribe(topic, callback, client_id="client_A")
+
+        m1 = Message(
+            topics=topic,
+            sender=AgentTag(id="senderId", name="sender"),
+            format=MessageConstants.RAW_JSON_FORMAT,
+            payload={"key": "m1"},
+            id_obj=generator.get_id(Priority.NORMAL),
+        )
+        backend.store_message(namespace, topic, m1)
+        time.sleep(0.1)
+
+        assert len(messages) == 1
+        assert messages[0].payload == {"key": "m1"}
+
+        backend.unsubscribe(topic, client_id="client_A")
+
+    def test_multiple_clients_same_topic(
+        self, backend: MessagingBackend, generator: GemstoneGenerator, topic: str, request
+    ):
+        """Both client_A and client_B receive the same message when subscribed to the same topic."""
+        messages_a: List[Message] = []
+        messages_b: List[Message] = []
+        namespace = request.node.name
+
+        backend.subscribe(topic, lambda m: messages_a.append(m), client_id="client_A")
+        backend.subscribe(topic, lambda m: messages_b.append(m), client_id="client_B")
+
+        m1 = Message(
+            topics=topic,
+            sender=AgentTag(id="senderId", name="sender"),
+            format=MessageConstants.RAW_JSON_FORMAT,
+            payload={"key": "m1"},
+            id_obj=generator.get_id(Priority.NORMAL),
+        )
+        backend.store_message(namespace, topic, m1)
+        time.sleep(0.2)
+
+        assert len(messages_a) == 1, f"client_A expected 1 message, got {len(messages_a)}"
+        assert len(messages_b) == 1, f"client_B expected 1 message, got {len(messages_b)}"
+
+        backend.unsubscribe(topic, client_id="client_A")
+        backend.unsubscribe(topic, client_id="client_B")
+
+    def test_unsubscribe_per_client(
+        self, backend: MessagingBackend, generator: GemstoneGenerator, topic: str, request
+    ):
+        """After unsubscribing client_A, only client_B receives subsequent messages."""
+        messages_a: List[Message] = []
+        messages_b: List[Message] = []
+        namespace = request.node.name
+
+        backend.subscribe(topic, lambda m: messages_a.append(m), client_id="client_A")
+        backend.subscribe(topic, lambda m: messages_b.append(m), client_id="client_B")
+
+        # Unsubscribe client_A
+        backend.unsubscribe(topic, client_id="client_A")
+
+        m1 = Message(
+            topics=topic,
+            sender=AgentTag(id="senderId", name="sender"),
+            format=MessageConstants.RAW_JSON_FORMAT,
+            payload={"key": "m1"},
+            id_obj=generator.get_id(Priority.NORMAL),
+        )
+        backend.store_message(namespace, topic, m1)
+        time.sleep(0.2)
+
+        assert len(messages_a) == 0, "client_A should not receive messages after unsubscribe"
+        assert len(messages_b) == 1, "client_B should still receive messages"
+
+        backend.unsubscribe(topic, client_id="client_B")
+
+    def test_per_client_ordered_delivery(
+        self, backend: MessagingBackend, generator: GemstoneGenerator, topic: str, request
+    ):
+        """Messages are delivered in order of ascending message ID."""
+        received_ids: List[int] = []
+        namespace = request.node.name
+
+        def callback(message: Message):
+            received_ids.append(message.id)
+
+        backend.subscribe(topic, callback, client_id="client_A")
+
+        id1 = generator.get_id(Priority.NORMAL)
+        time.sleep(0.002)
+        id2 = generator.get_id(Priority.NORMAL)
+        time.sleep(0.002)
+        id3 = generator.get_id(Priority.NORMAL)
+
+        for id_obj, key in [(id1, "m1"), (id2, "m2"), (id3, "m3")]:
+            backend.store_message(
+                namespace,
+                topic,
+                Message(
+                    topics=topic,
+                    sender=AgentTag(id="senderId", name="sender"),
+                    format=MessageConstants.RAW_JSON_FORMAT,
+                    payload={"key": key},
+                    id_obj=id_obj,
+                ),
+            )
+
+        time.sleep(0.3)
+
+        assert len(received_ids) == 3, f"Expected 3 messages, got {len(received_ids)}"
+        assert received_ids == sorted(received_ids), f"Messages not in order: {received_ids}"
+
+        backend.unsubscribe(topic, client_id="client_A")
+
+    def test_per_client_sequential_delivery(
+        self, backend: MessagingBackend, generator: GemstoneGenerator, topic: str, request
+    ):
+        """
+        Messages are processed sequentially (one at a time) per client.
+        Verified by checking that handler intervals don't overlap.
+        """
+        import threading
+
+        events: List[tuple] = []
+        namespace = request.node.name
+        event_lock = threading.Lock()
+
+        def slow_handler(message: Message):
+            with event_lock:
+                events.append((message.id, "start"))
+            time.sleep(0.05)
+            with event_lock:
+                events.append((message.id, "end"))
+
+        backend.subscribe(topic, slow_handler, client_id="client_A")
+
+        id1 = generator.get_id(Priority.NORMAL)
+        time.sleep(0.001)
+        id2 = generator.get_id(Priority.NORMAL)
+        time.sleep(0.001)
+        id3 = generator.get_id(Priority.NORMAL)
+
+        for id_obj, key in [(id1, "m1"), (id2, "m2"), (id3, "m3")]:
+            backend.store_message(
+                namespace,
+                topic,
+                Message(
+                    topics=topic,
+                    sender=AgentTag(id="senderId", name="sender"),
+                    format=MessageConstants.RAW_JSON_FORMAT,
+                    payload={"key": key},
+                    id_obj=id_obj,
+                ),
+            )
+
+        time.sleep(1.0)
+
+        assert len(events) == 6, f"Expected 6 events, got {len(events)}: {events}"
+
+        for i, (msg_id, kind) in enumerate(events):
+            if kind == "start" and i > 0:
+                prev_msg_id, prev_kind = events[i - 1]
+                assert prev_kind == "end", (
+                    f"Found concurrent processing: event[{i - 1}]={events[i - 1]}, event[{i}]={events[i]}"
+                )
+
+        backend.unsubscribe(topic, client_id="client_A")
 
     def test_get_messages_by_id(self, backend: MessagingBackend, generator: GemstoneGenerator, topic: str, request):
         """

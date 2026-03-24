@@ -28,7 +28,7 @@ class FileSystemResolver(DependencyResolver[FileSystem]):
         )
 
         if self.asynchronous and not basefs.__class__.async_impl:
-            basefs = AsyncFileSystemWrapper(basefs)
+            basefs = AsyncFileSystemWrapper(basefs, asynchronous=True)
 
         return FileSystem(
             path=f"{self.path_base}/{org_id}/{guild_id}/{agent_id}",

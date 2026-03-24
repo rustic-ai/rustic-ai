@@ -198,8 +198,8 @@ This store requires guild-level dependencies that must be configured:
 
 | Dependency | Type | Description |
 |------------|------|-------------|
-| `filesystem:guild` | `FileSystem` | Filesystem for storing knowledge base data |
-| `kb_backend:guild` | `KBIndexBackend` | Vector database backend for semantic search |
+| `filesystem` | `FileSystem` | Filesystem for storing knowledge base data |
+| `kb_backend` | `KBIndexBackend` | Vector database backend for semantic search |
 
 ### When to Use
 
@@ -215,7 +215,7 @@ from rustic_ai.llm_agent.memories import KnowledgeBasedMemoriesStore
 memory_store = KnowledgeBasedMemoriesStore(
     context_window_size=5,
     recall_limit=10,
-    depends_on=["filesystem:guild", "kb_backend:guild"]
+    depends_on=["filesystem", "kb_backend"]
 )
 ```
 
@@ -227,8 +227,8 @@ llm_request_wrappers:
     context_window_size: 5
     recall_limit: 10
     depends_on:
-      - filesystem:guild
-      - kb_backend:guild
+      - filesystem
+      - kb_backend
 ```
 
 ### Guild Dependency Configuration
@@ -266,8 +266,8 @@ llm_request_wrappers:
     context_window_size: 3
     recall_limit: 5
     depends_on:
-      - filesystem:guild
-      - kb_backend:guild
+      - filesystem
+      - kb_backend
 ```
 
 ## Creating Custom Memory Stores

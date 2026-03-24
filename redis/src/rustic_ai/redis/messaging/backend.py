@@ -99,24 +99,34 @@ class RedisMessagingBackend(MessagingBackend):
         # TBD: Implement the logic to load subscribers.
         return {}
 
-    def subscribe(self, topic: str, handler: Callable[[Message], None]) -> None:
+    def subscribe(
+        self,
+        topic: str,
+        handler: Callable[[Message], None],
+        client_id: Optional[str] = None,
+        namespace: Optional[str] = None,
+    ) -> None:
         """
         Subscribe to a topic and handle incoming messages.
+
+        When client_id is provided, uses per-client durable delivery with position tracking.
 
         Args:
             topic: The topic to subscribe to.
             handler: The handler function to handle incoming messages.
+            client_id: If provided, enables per-client durable delivery guarantees.
         """
-        self._pubsub_manager.subscribe(topic, handler)
+        self._pubsub_manager.subscribe(topic, handler, client_id=client_id, namespace=namespace)
 
-    def unsubscribe(self, topic: str) -> None:
+    def unsubscribe(self, topic: str, client_id: Optional[str] = None) -> None:
         """
         Unsubscribe from a topic.
 
         Args:
             topic: The topic to unsubscribe from.
+            client_id: If provided, unsubscribes the specific per-client subscription.
         """
-        self._pubsub_manager.unsubscribe(topic)
+        self._pubsub_manager.unsubscribe(topic, client_id=client_id)
 
     def cleanup(self) -> None:
         """

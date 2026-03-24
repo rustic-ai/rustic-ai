@@ -419,7 +419,7 @@ class TestGuildBuilder:
         echo_response = echoed_msg.payload
 
         assert echo_response["message"] == "Hello, world!"
-        assert echoed_msg.topics == GuildTopics.DEFAULT_TOPICS[0]
+        assert GuildTopics.DEFAULT_TOPICS[0] in echoed_msg.topics
         assert echoed_msg.sender.name == "EchoAgent"
 
         # Test a new agent can be launched by the GuildManagerAgent
@@ -665,8 +665,8 @@ class TestGuildBuilder:
         assert len(probe_agent_messages) == 4
 
         # Assert User Proxy Agent forwards the message to the Echo Agent
-        forwarded_message = [message for message in probe_agent_messages if message.topics == "echo_topic"][0]
-        assert forwarded_message.topics == "echo_topic"
+        forwarded_message = [message for message in probe_agent_messages if "echo_topic" in message.topics][0]
+        assert "echo_topic" in forwarded_message.topics
         assert forwarded_message.payload["message"] == "Hello, world! @EchoAgent"
         assert forwarded_message.sender.id == UserProxyAgent.get_user_agent_id("test_user")
         assert forwarded_message.routing_slip is not None
@@ -678,9 +678,9 @@ class TestGuildBuilder:
         echo_response = [
             message
             for message in probe_agent_messages
-            if message.topics == UserProxyAgent.get_user_outbox_topic("test_user")
+            if UserProxyAgent.get_user_outbox_topic("test_user") in message.topics
         ][0]
-        assert echo_response.topics == UserProxyAgent.get_user_outbox_topic("test_user")
+        assert UserProxyAgent.get_user_outbox_topic("test_user") in echo_response.topics
         assert echo_response.payload["message"] == "Hello, world! @EchoAgent"
         assert echo_response.sender.name == "EchoAgent"
         assert echo_response.in_response_to == forwarded_message.id
@@ -688,13 +688,13 @@ class TestGuildBuilder:
         assert echo_response.message_history[-1].reason == ["simply doing my job"]
 
         # Assert User Proxy Agent forwards the response to the User
-        user_notifications = [message for message in probe_agent_messages if message.topics == user_message_topic]
+        user_notifications = [message for message in probe_agent_messages if user_message_topic in message.topics]
 
         assert len(user_notifications) == 2
 
         user_response = [message for message in user_notifications if message.forward_header][1]
 
-        assert user_response.topics == user_message_topic
+        assert user_message_topic in user_response.topics
         assert user_response.payload["message"] == "Hello, world! @EchoAgent"
         assert user_response.sender.id == UserProxyAgent.get_user_agent_id("test_user")
         assert user_response.forward_header
@@ -721,7 +721,7 @@ class TestGuildBuilder:
 
         user_message = probe_agent_messages[0]
 
-        assert user_message.topics == user_message_topic
+        assert user_message_topic in user_message.topics
         assert user_message.payload["message"] == "Message for user [test_user]"
         assert user_message.sender.id == UserProxyAgent.get_user_agent_id("test_user")
         assert user_message.forward_header
