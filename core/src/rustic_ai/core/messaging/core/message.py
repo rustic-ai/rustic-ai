@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from enum import StrEnum
+from fnmatch import fnmatchcase
 import hashlib
 import json
 import logging
@@ -477,6 +478,19 @@ class RoutingRule(BaseModel):
         """
         return self.route_times == 0
 
+    @staticmethod
+    def _matches_agent_type(agent_type_rule: str, agent_type: str) -> bool:
+        """
+        Match agent type using exact comparison by default, with glob wildcard support.
+
+        When ``agent_type_rule`` contains shell wildcard tokens (``*``, ``?``, ``[``),
+        the value is matched using fnmatch semantics. Otherwise, exact matching is used.
+        """
+        if any(token in agent_type_rule for token in "*?["):
+            return fnmatchcase(agent_type, agent_type_rule)
+
+        return agent_type_rule == agent_type
+
     def is_applicable(
         self,
         agent: AgentTag,
@@ -510,7 +524,7 @@ class RoutingRule(BaseModel):
             logging.debug(f"Agent mismatch: {self.agent} != {agent}")
             result = False  # pragma: no cover
 
-        if self.agent_type and self.agent_type != agent_type:
+        if self.agent_type and not self._matches_agent_type(self.agent_type, agent_type):
             logging.debug(f"Agent type mismatch: {self.agent_type} != {agent_type}")
             result = False  # pragma: no cover
 
