@@ -9,9 +9,11 @@ from rustic_ai.core.guild.agent_ext.depends.llm.llm import LLM
 from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     ArrayOfContentParts,
     ChatCompletionRequest,
+    FileContentPart,
     ImageContentPart,
     ImageUrl,
     SystemMessage,
+    TextContentPart,
     UserMessage,
 )
 from rustic_ai.core.messaging.core.message import Message
@@ -87,7 +89,7 @@ class LLMAgent(Agent[LLMAgentConfig]):
         self, request: ChatCompletionRequest, filesystem: FileSystem
     ) -> ChatCompletionRequest:
         """
-        Convert filesystem image paths to base64 data URLs in the request.
+        Convert filesystem image paths to base64 data URLs and file_url content to text in the request.
         """
         request_copy = request.model_copy(deep=True)
         converted_messages = []
@@ -123,6 +125,23 @@ class LLMAgent(Agent[LLMAgentConfig]):
                             continue
                         except Exception as e:
                             self.logger.error(f"Failed to read image {url} from filesystem: {e}")
+                            # Fall through to append original part
+                elif isinstance(part, FileContentPart) and part.file_url and part.file_url.url:
+                    url = str(part.file_url.url)
+                    # Check if this is a filesystem path (not an HTTP URL)
+                    if not url.startswith(("http://", "https://")):
+                        try:
+                            # Read the file content as text
+                            with filesystem.open(url, "r", encoding="utf-8") as f:
+                                file_content = f.read()
+                            # Convert to TextContentPart with file context
+                            filename = url.split("/")[-1] if "/" in url else url
+                            text_content = f"--- Content of {filename} ---\n{file_content}\n--- End of {filename} ---"
+                            converted_part = TextContentPart(text=text_content)
+                            converted_parts.append(converted_part)
+                            continue
+                        except Exception as e:
+                            self.logger.error(f"Failed to read file {url} from filesystem: {e}")
                             # Fall through to append original part
                 converted_parts.append(part)
 
