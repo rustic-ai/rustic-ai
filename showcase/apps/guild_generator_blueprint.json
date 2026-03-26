@@ -1,0 +1,319 @@
+{
+    "name": "Guild Generator",
+    "description": "A meta-guild for building other guilds interactively. Tag @Orchestrator to add agents, routes, and configure your guild. Send normal messages to test the flow.",
+    "version": "v1",
+    "icon": null,
+    "intro_msg": "Welcome to the **Guild Generator**! I help you build guilds interactively.\n\nTag **@Orchestrator** to:\n- Add agents: `@Orchestrator add an LLM agent that summarizes text`\n- Add routes: `@Orchestrator connect summarizer to formatter`\n- View flow: `@Orchestrator show flow`\n- Export: `@Orchestrator publish`\n\nType `@Orchestrator help` for more information.",
+    "exposure": "private",
+    "author_id": "dummyuserid",
+    "organization_id": null,
+    "category_id": null,
+    "tags": [
+        "meta",
+        "builder",
+        "generator"
+    ],
+    "commands": [],
+    "starter_prompts": [
+        "@Orchestrator help",
+        "@Orchestrator add an LLM agent that summarizes text",
+        "@Orchestrator show flow"
+    ],
+    "spec": {
+        "name": "Guild Generator",
+        "description": "A meta-guild for building other guilds interactively.",
+        "properties": {},
+        "guild_state": {
+            "guild_builder": {
+                "name": "New Guild",
+                "description": "A guild created with Guild Generator",
+                "agents": [],
+                "routes": [],
+                "agent_message_info": []
+            }
+        },
+        "agents": [
+            {
+                "id": "orchestrator",
+                "name": "Orchestrator",
+                "description": "Main orchestrator that interprets user commands and routes them to appropriate handlers",
+                "class_name": "rustic_ai.showcase.guild_generator.orchestrator.OrchestratorAgent",
+                "additional_topics": [
+                    "ORCHESTRATOR"
+                ],
+                "properties": {},
+                "listen_to_default_topic": false,
+                "act_only_when_tagged": true
+            },
+            {
+                "id": "agent_registry",
+                "name": "Agent Registry",
+                "description": "Knows available agent types and suggests appropriate ones based on user requirements",
+                "class_name": "rustic_ai.showcase.guild_generator.agent_registry.AgentRegistryAgent",
+                "additional_topics": [
+                    "AGENT_LOOKUP"
+                ],
+                "properties": {},
+                "listen_to_default_topic": false,
+                "act_only_when_tagged": false
+            },
+            {
+                "id": "transformation_builder",
+                "name": "Transformation Builder",
+                "description": "Creates JSONata transformations between message types",
+                "class_name": "rustic_ai.showcase.guild_generator.transformation_builder.TransformationBuilderAgent",
+                "additional_topics": [
+                    "TRANSFORM_BUILD"
+                ],
+                "properties": {},
+                "listen_to_default_topic": false,
+                "act_only_when_tagged": false
+            },
+            {
+                "id": "route_builder",
+                "name": "Route Builder",
+                "description": "Creates routing rules from agent and transformation information",
+                "class_name": "rustic_ai.showcase.guild_generator.route_builder.RouteBuilderAgent",
+                "additional_topics": [
+                    "ROUTE_BUILD"
+                ],
+                "properties": {},
+                "listen_to_default_topic": false,
+                "act_only_when_tagged": false
+            },
+            {
+                "id": "flowchart_agent",
+                "name": "Flowchart Agent",
+                "description": "Generates VegaLite visualizations of the guild flow",
+                "class_name": "rustic_ai.showcase.guild_generator.flowchart_agent.FlowchartAgent",
+                "additional_topics": [
+                    "FLOWCHART"
+                ],
+                "properties": {},
+                "listen_to_default_topic": false,
+                "act_only_when_tagged": false
+            },
+            {
+                "id": "guild_export",
+                "name": "Guild Export",
+                "description": "Assembles and validates the final guild specification",
+                "class_name": "rustic_ai.showcase.guild_generator.guild_export.GuildExportAgent",
+                "additional_topics": [
+                    "EXPORT"
+                ],
+                "properties": {},
+                "listen_to_default_topic": false,
+                "act_only_when_tagged": false
+            },
+            {
+                "id": "state_manager",
+                "name": "State Manager",
+                "description": "Manages guild builder state and provides help",
+                "class_name": "rustic_ai.showcase.guild_generator.state_manager.StateManagerAgent",
+                "additional_topics": [
+                    "STATE_MGMT"
+                ],
+                "properties": {},
+                "listen_to_default_topic": false,
+                "act_only_when_tagged": false
+            }
+        ],
+        "dependency_map": {},
+        "routes": {
+            "steps": [
+                {
+                    "agent": null,
+                    "agent_type": "rustic_ai.core.agents.utils.user_proxy_agent.UserProxyAgent",
+                    "method_name": "unwrap_and_forward_message",
+                    "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest",
+                    "destination": {
+                        "topics": "ORCHESTRATOR",
+                        "recipient_list": [
+                            {
+                                "name": "Orchestrator"
+                            }
+                        ],
+                        "priority": null
+                    },
+                    "route_times": -1,
+                    "transformer": {
+                        "style": "content_based_router",
+                        "expression_type": "jsonata",
+                        "handler": "($contains($.payload.messages[0].content[0].text, '@Orchestrator') ? {\"topics\": \"ORCHESTRATOR\", \"recipient_list\": [{\"name\": \"Orchestrator\"}]} : {\"topics\": \"TEST_FLOW\"})"
+                    }
+                },
+                {
+                    "agent": {
+                        "name": "Orchestrator"
+                    },
+                    "agent_type": null,
+                    "method_name": null,
+                    "message_format": "rustic_ai.showcase.guild_generator.models.OrchestratorAction",
+                    "destination": null,
+                    "route_times": -1,
+                    "transformer": {
+                        "style": "content_based_router",
+                        "expression_type": "jsonata",
+                        "handler": "($.payload.action = 'add_agent' ? {\"topics\": \"AGENT_LOOKUP\"} : $.payload.action = 'add_route' ? {\"topics\": \"ROUTE_BUILD\"} : $.payload.action = 'show_flow' ? {\"topics\": \"FLOWCHART\"} : $.payload.action = 'publish' ? {\"topics\": \"EXPORT\"} : {\"topics\": \"STATE_MGMT\"})"
+                    }
+                },
+                {
+                    "agent": {
+                        "name": "Agent Registry"
+                    },
+                    "agent_type": null,
+                    "method_name": null,
+                    "message_format": "rustic_ai.showcase.guild_generator.models.AgentLookupResponse",
+                    "destination": {
+                        "topics": "STATE_MGMT",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "route_times": -1,
+                    "transformer": null,
+                    "guild_state_update": {
+                        "expression_type": "jsonata",
+                        "update_format": "json-merge-patch",
+                        "state_update": "({\"guild_builder\": {\"agents\": $append($.guild_state.guild_builder.agents ? $.guild_state.guild_builder.agents : [], {\"id\": $.payload.agent_spec.id, \"name\": $.payload.agent_spec.name, \"description\": $.payload.agent_spec.description, \"class_name\": $.payload.agent_spec.class_name, \"additional_topics\": $.payload.agent_spec.additional_topics ? $.payload.agent_spec.additional_topics : [], \"properties\": $.payload.agent_spec.properties ? $.payload.agent_spec.properties : {}, \"listen_to_default_topic\": $.payload.agent_spec.listen_to_default_topic ? $.payload.agent_spec.listen_to_default_topic : true, \"act_only_when_tagged\": $.payload.agent_spec.act_only_when_tagged ? $.payload.agent_spec.act_only_when_tagged : false}), \"agent_message_info\": $append($.guild_state.guild_builder.agent_message_info ? $.guild_state.guild_builder.agent_message_info : [], {\"agent_id\": $.payload.agent_spec.id, \"agent_name\": $.payload.agent_spec.name, \"class_name\": $.payload.agent_spec.class_name, \"input_formats\": $.payload.input_formats ? $.payload.input_formats : [], \"output_formats\": $.payload.output_formats ? $.payload.output_formats : []})}})"
+                    }
+                },
+                {
+                    "agent": {
+                        "name": "Agent Registry"
+                    },
+                    "agent_type": null,
+                    "method_name": null,
+                    "message_format": "rustic_ai.showcase.guild_generator.models.AgentLookupResponse",
+                    "destination": {
+                        "topics": "system_topic",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "route_times": -1,
+                    "transformer": {
+                        "style": "content_based_router",
+                        "expression_type": "jsonata",
+                        "handler": "({\"format\": \"rustic_ai.core.agents.system.models.AgentLaunchRequest\", \"payload\": {\"agent_spec\": {\"id\": $.payload.agent_spec.id, \"name\": $.payload.agent_spec.name, \"description\": $.payload.agent_spec.description, \"class_name\": $.payload.agent_spec.class_name, \"additional_topics\": $.payload.agent_spec.additional_topics ? $.payload.agent_spec.additional_topics : [], \"properties\": $.payload.agent_spec.properties ? $.payload.agent_spec.properties : {}, \"listen_to_default_topic\": $.payload.agent_spec.listen_to_default_topic ? $.payload.agent_spec.listen_to_default_topic : true, \"act_only_when_tagged\": $.payload.agent_spec.act_only_when_tagged ? $.payload.agent_spec.act_only_when_tagged : false}}})"
+                    },
+                    "guild_state_update": {
+                        "expression_type": "jsonata",
+                        "update_format": "json-merge-patch",
+                        "state_update": "({\"dynamic_agent_specs\": $append($.guild_state.dynamic_agent_specs ? $.guild_state.dynamic_agent_specs : [], {\"id\": $.payload.agent_spec.id, \"name\": $.payload.agent_spec.name, \"description\": $.payload.agent_spec.description, \"class_name\": $.payload.agent_spec.class_name, \"additional_topics\": $.payload.agent_spec.additional_topics ? $.payload.agent_spec.additional_topics : [], \"properties\": $.payload.agent_spec.properties ? $.payload.agent_spec.properties : {}, \"listen_to_default_topic\": $.payload.agent_spec.listen_to_default_topic ? $.payload.agent_spec.listen_to_default_topic : true, \"act_only_when_tagged\": $.payload.agent_spec.act_only_when_tagged ? $.payload.agent_spec.act_only_when_tagged : false})})"
+                    },
+                    "process_status": "completed"
+                },
+                {
+                    "agent": {
+                        "name": "Route Builder"
+                    },
+                    "agent_type": null,
+                    "method_name": null,
+                    "message_format": "rustic_ai.showcase.guild_generator.models.RouteResponse",
+                    "destination": {
+                        "topics": "STATE_MGMT",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "route_times": -1,
+                    "transformer": null,
+                    "guild_state_update": {
+                        "expression_type": "jsonata",
+                        "update_format": "json-merge-patch",
+                        "state_update": "({\"guild_builder\": {\"routes\": $append($.guild_state.guild_builder.routes ? $.guild_state.guild_builder.routes : [], $.payload.routing_rule)}})"
+                    }
+                },
+                {
+                    "agent": {
+                        "name": "State Manager"
+                    },
+                    "agent_type": null,
+                    "method_name": null,
+                    "message_format": "rustic_ai.core.ui_protocol.types.TextFormat",
+                    "destination": {
+                        "topics": "user_message_broadcast",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "transformer": {
+                        "style": "content_based_router",
+                        "expression_type": "jsonata",
+                        "handler": "({\"topics\": \"user_message_broadcast\", \"format\": \"MarkdownFormat\", \"payload\": {\"text\": $.payload.text}})"
+                    },
+                    "route_times": -1,
+                    "process_status": "completed"
+                },
+                {
+                    "description": "Route VegaLiteFormat from Flowchart Agent to user_message_broadcast for UI updates",
+                    "agent": {
+                        "name": "Flowchart Agent"
+                    },
+                    "agent_type": null,
+                    "method_name": null,
+                    "message_format": "rustic_ai.core.ui_protocol.types.VegaLiteFormat",
+                    "destination": {
+                        "topics": "user_message_broadcast",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "route_times": -1,
+                    "transformer": {
+                        "style": "content_based_router",
+                        "expression_type": "jsonata",
+                        "handler": "({\"topics\": \"user_message_broadcast\", \"format\": \"rustic_ai.core.ui_protocol.types.CanvasFormat\", \"payload\": {\"component\": \"updateVegaLiteFormat\", \"title\": \"Guild Flow\", \"spec\": $.payload.spec, \"position\": 1, \"category\": \"build\", \"updateId\": \"guild_flow_chart\", \"updateType\": \"replace\"}})"
+                    },
+                    "process_status": "completed"
+                },
+                {
+                    "agent": {
+                        "name": "Guild Export"
+                    },
+                    "agent_type": null,
+                    "method_name": null,
+                    "message_format": "rustic_ai.showcase.guild_generator.models.ExportResponse",
+                    "destination": {
+                        "topics": "user_message_broadcast",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "route_times": -1,
+                    "process_status": "completed"
+                },
+                {
+                    "agent": {
+                        "name": "Guild Export"
+                    },
+                    "agent_type": null,
+                    "method_name": null,
+                    "message_format": "rustic_ai.core.ui_protocol.types.TextFormat",
+                    "destination": {
+                        "topics": "user_message_broadcast",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "route_times": -1,
+                    "transformer": {
+                        "style": "content_based_router",
+                        "expression_type": "jsonata",
+                        "handler": "({\"topics\": \"user_message_broadcast\", \"format\": \"MarkdownFormat\", \"payload\": {\"text\": $.payload.text}})"
+                    },
+                    "process_status": "completed"
+                },
+                {
+                    "agent": {
+                        "name": "State Manager"
+                    },
+                    "agent_type": null,
+                    "method_name": null,
+                    "message_format": "rustic_ai.showcase.guild_generator.models.FlowchartUpdateRequest",
+                    "destination": {
+                        "topics": "FLOWCHART",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "route_times": -1
+                }
+            ]
+        },
+        "gateway": null
+    }
+}
