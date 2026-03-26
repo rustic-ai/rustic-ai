@@ -1,3 +1,4 @@
+import json
 from pydantic import ValidationError
 import pytest
 
@@ -235,3 +236,89 @@ class TestGuildSpec:
                     ),
                 ],
             )
+
+    def test_parse_routes_with_wildcard_agent_type_from_dict(self):
+        spec_data = {
+            "name": "RoutingGuild",
+            "description": "Guild with wildcard route",
+            "properties": {},
+            "agents": [
+                {
+                    "name": "Agent1",
+                    "description": "First agent",
+                    "class_name": get_qualified_class_name(SimpleAgent),
+                    "agent_type": AgentType.BOT.value,
+                    "mode": AgentMode.REMOTE.value,
+                }
+            ],
+            "routes": {
+                "steps": [
+                    {
+                        "agent_type": "*",
+                        "method_name": "handle",
+                        "message_format": "generic_json",
+                        "destination": {"topics": ["default_topic"]},
+                        "route_times": 2,
+                        "reason": "route all agent types",
+                    }
+                ]
+            },
+        }
+
+        guild_spec = GuildSpec.model_validate(spec_data)
+
+        assert len(guild_spec.routes.steps) == 1
+        route = guild_spec.routes.steps[0]
+        assert route.agent_type == "*"
+        assert route.method_name == "handle"
+        assert route.message_format == "generic_json"
+        assert route.destination is not None
+        assert route.destination.topics == ["default_topic"]
+        assert route.route_times == 2
+        assert route.reason == "route all agent types"
+
+    def test_parse_routes_with_wildcard_agent_type_from_json(self):
+        spec_data = {
+            "name": "RoutingGuildJson",
+            "description": "Guild parsed from json",
+            "properties": {},
+            "agents": [
+                {
+                    "name": "Agent1",
+                    "description": "First agent",
+                    "class_name": get_qualified_class_name(SimpleAgent),
+                    "agent_type": AgentType.BOT.value,
+                    "mode": AgentMode.REMOTE.value,
+                }
+            ],
+            "routes": {
+                "steps": [
+                    {
+                        "agent_type": "rustic_ai.core.agents.*",
+                        "method_name": "process",
+                        "message_format": "generic_json",
+                        "destination": {"topics": "topic_a"},
+                    },
+                    {
+                        "agent_type": "*GatewayAgent",
+                        "method_name": "returned",
+                        "message_format": "generic_json",
+                        "destination": {"topics": ["topic_b", "topic_c"]},
+                    },
+                ]
+            },
+        }
+
+        guild_spec = GuildSpec.model_validate_json(json.dumps(spec_data))
+
+        assert len(guild_spec.routes.steps) == 2
+
+        first = guild_spec.routes.steps[0]
+        assert first.agent_type == "rustic_ai.core.agents.*"
+        assert first.destination is not None
+        assert first.destination.topics == "topic_a"
+
+        second = guild_spec.routes.steps[1]
+        assert second.agent_type == "*GatewayAgent"
+        assert second.destination is not None
+        assert second.destination.topics == ["topic_b", "topic_c"]

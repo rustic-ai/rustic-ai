@@ -11,6 +11,8 @@ from rustic_ai.core.messaging.core.message import (
     MessageConstants,
     MessageRoutable,
     PayloadTransformer,
+    RoutingOrigin,
+    RoutingRule,
 )
 from rustic_ai.core.utils import jx
 from rustic_ai.core.utils.gemstone_id import GemstoneGenerator
@@ -648,3 +650,82 @@ class TestMessage:
         assert transformed.payload == {"key_two": "value", "origin_id": origin.id}
         assert transformed.format == "TWO_FORM"
         assert transformed.topics == ["topic_two"]
+
+    def test_routing_rule_agent_type_exact_match(self):
+        rule = RoutingRule(agent_type="pkg.agents.ExampleAgent")
+        origin = RoutingOrigin(
+            origin_sender=AgentTag(id="origin", name="origin"),
+            origin_topic="inbox",
+            origin_message_format=MessageConstants.RAW_JSON_FORMAT,
+        )
+
+        assert rule.is_applicable(
+            agent=AgentTag(id="sender", name="sender"),
+            agent_type="pkg.agents.ExampleAgent",
+            method_name="handle",
+            origin=origin,
+            message_format=MessageConstants.RAW_JSON_FORMAT,
+        )
+
+        assert not rule.is_applicable(
+            agent=AgentTag(id="sender", name="sender"),
+            agent_type="pkg.agents.OtherAgent",
+            method_name="handle",
+            origin=origin,
+            message_format=MessageConstants.RAW_JSON_FORMAT,
+        )
+
+    def test_routing_rule_agent_type_wildcard_match_any(self):
+        rule = RoutingRule(agent_type="*")
+        origin = RoutingOrigin(
+            origin_sender=AgentTag(id="origin", name="origin"),
+            origin_topic="inbox",
+            origin_message_format=MessageConstants.RAW_JSON_FORMAT,
+        )
+
+        assert rule.is_applicable(
+            agent=AgentTag(id="sender", name="sender"),
+            agent_type="pkg.agents.FirstAgent",
+            method_name="handle",
+            origin=origin,
+            message_format=MessageConstants.RAW_JSON_FORMAT,
+        )
+        assert rule.is_applicable(
+            agent=AgentTag(id="sender", name="sender"),
+            agent_type="another.namespace.SecondAgent",
+            method_name="handle",
+            origin=origin,
+            message_format=MessageConstants.RAW_JSON_FORMAT,
+        )
+
+    def test_routing_rule_agent_type_wildcard_with_other_filters(self):
+        rule = RoutingRule(agent_type="pkg.agents.*", method_name="handle")
+        origin = RoutingOrigin(
+            origin_sender=AgentTag(id="origin", name="origin"),
+            origin_topic="inbox",
+            origin_message_format=MessageConstants.RAW_JSON_FORMAT,
+        )
+
+        assert rule.is_applicable(
+            agent=AgentTag(id="sender", name="sender"),
+            agent_type="pkg.agents.ExampleAgent",
+            method_name="handle",
+            origin=origin,
+            message_format=MessageConstants.RAW_JSON_FORMAT,
+        )
+
+        assert not rule.is_applicable(
+            agent=AgentTag(id="sender", name="sender"),
+            agent_type="pkg.agents.ExampleAgent",
+            method_name="other_method",
+            origin=origin,
+            message_format=MessageConstants.RAW_JSON_FORMAT,
+        )
+
+        assert not rule.is_applicable(
+            agent=AgentTag(id="sender", name="sender"),
+            agent_type="pkg.other.ExampleAgent",
+            method_name="handle",
+            origin=origin,
+            message_format=MessageConstants.RAW_JSON_FORMAT,
+        )
