@@ -1,0 +1,356 @@
+{
+    "name": "Todo Guild",
+    "description": "Central task management guild with G2G support for cross-guild task delegation. Acts as a control center where users can manage tasks and other guilds can delegate work.",
+    "version": "v1",
+    "icon": "todo",
+    "intro_msg": "Welcome to the Todo Guild! I can help you manage your tasks. You can add new tasks, view your task list, mark tasks as complete, and track dependencies between tasks.",
+    "exposure": "public",
+    "author_id": "dummyuserid",
+    "organization_id": "acmeorganizationid",
+    "category_id": null,
+    "tags": [
+        "Productivity",
+        "Task Management",
+        "G2G"
+    ],
+    "commands": [],
+    "starter_prompts": [
+        "Show me all my tasks",
+        "Add a task to review the pull request",
+        "What's my next task?",
+        "Mark task as done"
+    ],
+    "spec": {
+        "name": "Todo Guild",
+        "description": "Central task management guild with G2G support",
+        "agents": [
+            {
+                "id": "task_orchestrator",
+                "name": "Task Orchestrator",
+                "description": "Interprets user requests and manages tasks using tools",
+                "class_name": "rustic_ai.llm_agent.llm_agent.LLMAgent",
+                "additional_topics": [
+                    "ORCHESTRATE"
+                ],
+                "properties": {
+                    "default_system_prompt": "You are a Task Orchestrator for a Todo management system. Help users manage their tasks by using the available tools.\n\n### Available Tools:\n\n1. **add_task** - Add a new task to the todo list\n2. **list_tasks** - List all tasks or filter by status (pending, in_progress, blocked, done, overdue, all)\n3. **get_task** - Get details of a specific task by ID\n4. **update_status** - Update task status (mark as done, in progress, blocked, or pending)\n5. **delete_task** - Delete a task from the list\n6. **next_task** - Get the next pending task to work on\n7. **update_task** - Update task details like description or deadline\n\n### Guidelines:\n- Generate unique short IDs for new tasks (e.g., \"task_abc123\")\n- Use current datetime in ISO format for start_time when adding tasks (e.g., \"2024-03-21T10:00:00\")\n- Parse natural language deadlines (\"tomorrow\", \"next week\", etc.) into ISO format\n- When user says \"done\", \"complete\", \"finished\" -> use update_status with status=\"done\"\n- When user asks to \"see\", \"show\", \"list\" tasks -> use list_tasks\n- When user asks \"what's next\" or \"next task\" -> use next_task\n- If user refers to a task by description instead of ID, ask for clarification or use list_tasks first\n\n### Important:\n- Always use the appropriate tool for each user request\n- Provide helpful responses based on tool results\n- Be concise and friendly in your responses",
+                    "send_response": true,
+                    "llm_request_wrappers": [
+                        {
+                            "kind": "rustic_ai.llm_agent.tools.tools_manager_plugin.ToolsManagerPlugin",
+                            "depends_on": [],
+                            "toolset": {
+                                "kind": "rustic_ai.llm_agent.tools.tools_manager_plugin.ToolspecsListProvider",
+                                "additional_system_prompt": null,
+                                "tools": [
+                                    {
+                                        "name": "add_task",
+                                        "description": "Add a new task to the todo list. Requires id (unique task ID like 'task_abc123'), todo (task description), start_time (ISO datetime), and optionally deadline, depends_on (list of task IDs this depends on), correlation_id, and metadata.",
+                                        "parameter_class": "rustic_ai.core.agents.planners.todolist_agent.AddTaskRequest"
+                                    },
+                                    {
+                                        "name": "list_tasks",
+                                        "description": "List all tasks or filter by status. Set status to 'pending', 'in_progress', 'blocked', 'done', 'overdue', 'all', or null for all tasks.",
+                                        "parameter_class": "rustic_ai.core.agents.planners.todolist_agent.ListTasksRequest"
+                                    },
+                                    {
+                                        "name": "get_task",
+                                        "description": "Get details of a specific task by its ID.",
+                                        "parameter_class": "rustic_ai.core.agents.planners.todolist_agent.GetTaskRequest"
+                                    },
+                                    {
+                                        "name": "update_status",
+                                        "description": "Update the status of a task. Use status 'done' to mark complete, 'in_progress' to start working, 'blocked' if waiting on something, or 'pending' to reset.",
+                                        "parameter_class": "rustic_ai.core.agents.planners.todolist_agent.UpdateStatusRequest"
+                                    },
+                                    {
+                                        "name": "delete_task",
+                                        "description": "Delete a task from the todo list by its ID.",
+                                        "parameter_class": "rustic_ai.core.agents.planners.todolist_agent.DeleteTaskRequest"
+                                    },
+                                    {
+                                        "name": "next_task",
+                                        "description": "Get the next pending task to work on. Set sort_by to 'start_time' or 'deadline' to determine priority.",
+                                        "parameter_class": "rustic_ai.core.agents.planners.todolist_agent.NextTaskRequest"
+                                    },
+                                    {
+                                        "name": "update_task",
+                                        "description": "Update task details. Provide the task ID and any fields to update (todo, start_time, deadline, depends_on).",
+                                        "parameter_class": "rustic_ai.core.agents.planners.todolist_agent.UpdateTaskRequest"
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                },
+                "listen_to_default_topic": false
+            },
+            {
+                "id": "todo_agent",
+                "name": "Todo Agent",
+                "description": "Manages todo tasks - add, update, delete, list, and track dependencies between tasks",
+                "class_name": "rustic_ai.core.agents.planners.todolist_agent.TodoListAgent",
+                "additional_topics": [
+                    "TODO"
+                ],
+                "listen_to_default_topic": false,
+                "properties": {}
+            },
+            {
+                "id": "gateway",
+                "name": "Gateway",
+                "description": "Gateway agent for G2G cross-guild communication. Accepts task requests from other guilds.",
+                "class_name": "rustic_ai.core.guild.g2g.gateway_agent.GatewayAgent",
+                "properties": {
+                    "input_formats": [
+                        "rustic_ai.core.agents.planners.todolist_agent.AddTaskRequest",
+                        "rustic_ai.core.agents.planners.todolist_agent.UpdateTaskRequest",
+                        "rustic_ai.core.agents.planners.todolist_agent.DeleteTaskRequest",
+                        "rustic_ai.core.agents.planners.todolist_agent.GetTaskRequest",
+                        "rustic_ai.core.agents.planners.todolist_agent.ListTasksRequest",
+                        "rustic_ai.core.agents.planners.todolist_agent.UpdateStatusRequest",
+                        "rustic_ai.core.agents.planners.todolist_agent.NextTaskRequest"
+                    ],
+                    "output_formats": [
+                        "*"
+                    ],
+                    "returned_formats": [
+                        "*"
+                    ]
+                }
+            }
+        ],
+        "routes": {
+            "steps": [
+                {
+                    "agent_type": "rustic_ai.core.agents.utils.user_proxy_agent.UserProxyAgent",
+                    "method_name": "unwrap_and_forward_message",
+                    "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest",
+                    "destination": {
+                        "topics": "ORCHESTRATE"
+                    },
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "($time := $fromMillis($millis()); $taskId := 'task_' & $substring($string($millis()), 5); $contextMsg := {\"role\": \"system\", \"content\": \"Current time: \" & $time & \". Use this as start_time if user does not specify. Suggested task ID: \" & $taskId}; {\"format\": $.format, \"payload\": {\"messages\": $append([$contextMsg], $.payload.messages)}})"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "Task Orchestrator"
+                    },
+                    "message_format": "rustic_ai.core.agents.planners.todolist_agent.AddTaskRequest",
+                    "destination": {
+                        "topics": "TODO"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "Task Orchestrator"
+                    },
+                    "message_format": "rustic_ai.core.agents.planners.todolist_agent.ListTasksRequest",
+                    "destination": {
+                        "topics": "TODO"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "Task Orchestrator"
+                    },
+                    "message_format": "rustic_ai.core.agents.planners.todolist_agent.GetTaskRequest",
+                    "destination": {
+                        "topics": "TODO"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "Task Orchestrator"
+                    },
+                    "message_format": "rustic_ai.core.agents.planners.todolist_agent.UpdateStatusRequest",
+                    "destination": {
+                        "topics": "TODO"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "Task Orchestrator"
+                    },
+                    "message_format": "rustic_ai.core.agents.planners.todolist_agent.DeleteTaskRequest",
+                    "destination": {
+                        "topics": "TODO"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "Task Orchestrator"
+                    },
+                    "message_format": "rustic_ai.core.agents.planners.todolist_agent.NextTaskRequest",
+                    "destination": {
+                        "topics": "TODO"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "Task Orchestrator"
+                    },
+                    "message_format": "rustic_ai.core.agents.planners.todolist_agent.UpdateTaskRequest",
+                    "destination": {
+                        "topics": "TODO"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "Gateway"
+                    },
+                    "message_format": "rustic_ai.core.agents.planners.todolist_agent.AddTaskRequest",
+                    "destination": {
+                        "topics": "TODO"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "Gateway"
+                    },
+                    "message_format": "rustic_ai.core.agents.planners.todolist_agent.ListTasksRequest",
+                    "destination": {
+                        "topics": "TODO"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "Gateway"
+                    },
+                    "message_format": "rustic_ai.core.agents.planners.todolist_agent.GetTaskRequest",
+                    "destination": {
+                        "topics": "TODO"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "Gateway"
+                    },
+                    "message_format": "rustic_ai.core.agents.planners.todolist_agent.UpdateStatusRequest",
+                    "destination": {
+                        "topics": "TODO"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "Gateway"
+                    },
+                    "message_format": "rustic_ai.core.agents.planners.todolist_agent.DeleteTaskRequest",
+                    "destination": {
+                        "topics": "TODO"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "Gateway"
+                    },
+                    "message_format": "rustic_ai.core.agents.planners.todolist_agent.NextTaskRequest",
+                    "destination": {
+                        "topics": "TODO"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "Gateway"
+                    },
+                    "message_format": "rustic_ai.core.agents.planners.todolist_agent.UpdateTaskRequest",
+                    "destination": {
+                        "topics": "TODO"
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "Task Orchestrator"
+                    },
+                    "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                    "destination": {
+                        "topics": "user_message_broadcast"
+                    },
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "($content := $.payload.choices[0].message.content; $content ? {\"format\": \"MarkdownFormat\", \"payload\": {\"text\": $content}} : null)"
+                    },
+                    "process_status": "completed",
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "Todo Agent"
+                    },
+                    "message_format": "rustic_ai.core.agents.planners.todolist_agent.ListTasksResponse",
+                    "destination": {
+                        "topics": "user_message_broadcast"
+                    },
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "($tasks := $.payload.tasks[status != \"done\"]; $count($tasks) = 0 ? {\"format\": \"updateMarkdownFormat\", \"payload\": {\"title\": \"Todo List\", \"text\": \"No tasks found. Add a task to get started!\", \"updateId\": \"todo_table\", \"updateType\": \"replace\"}} : {\"format\": \"updateMarkdownFormat\", \"payload\": {\"title\": \"Todo List\", \"text\": \"| Status | ID | Task | Start | Deadline | Deps |\\n|--------|-----|------|-------|----------|------|\\n\" & $join($tasks.(\"| \" & $.status & \" | \" & $.id & \" | \" & $.todo & \" | \" & $substring($.start_time, 0, 10) & \" | \" & ($.deadline ? $substring($.deadline, 0, 10) : \"-\") & \" | \" & $string($count($.depends_on)) & \" |\"), \"\\n\"), \"updateId\": \"todo_table\", \"updateType\": \"replace\"}})"
+                    },
+                    "process_status": "completed",
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "Todo Agent"
+                    },
+                    "message_format": "rustic_ai.core.agents.planners.todolist_agent.GetTaskResponse",
+                    "destination": {
+                        "topics": "user_message_broadcast"
+                    },
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "($task := $.payload.task; {\"format\": \"MarkdownFormat\", \"payload\": {\"title\": \"Task Details\", \"text\": \"| Status | ID | Task | Start | Deadline | Deps |\\n|--------|-----|------|-------|----------|------|\\n| \" & $task.status & \" | \" & $task.id & \" | \" & $task.todo & \" | \" & $substring($task.start_time, 0, 10) & \" | \" & ($task.deadline ? $substring($task.deadline, 0, 10) : \"-\") & \" | \" & $string($count($task.depends_on)) & \" |\"}})"
+                    },
+                    "process_status": "completed",
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "Todo Agent"
+                    },
+                    "message_format": "rustic_ai.core.agents.planners.todolist_agent.TaskCompletedEvent",
+                    "destination": {
+                        "topics": "user_message_broadcast"
+                    },
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({\"format\": \"rustic_ai.core.ui_protocol.types.TextFormat\", \"payload\": {\"title\": \"Task Completed\", \"text\": \"Task '\" & $.payload.task.todo & \"' has been marked as done.\"}})"
+                    },
+                    "process_status": "completed",
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "Todo Agent"
+                    },
+                    "message_format": "rustic_ai.core.agents.planners.todolist_agent.TaskUnblockedEvent",
+                    "destination": {
+                        "topics": "user_message_broadcast"
+                    },
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({\"format\": \"rustic_ai.core.ui_protocol.types.TextFormat\", \"payload\": {\"title\": \"Task Unblocked\", \"text\": \"Task '\" & $.payload.task.todo & \"' is now ready to start! All dependencies have been completed.\"}})"
+                    },
+                    "process_status": "completed",
+                    "route_times": -1
+                }
+            ]
+        }
+    }
+}

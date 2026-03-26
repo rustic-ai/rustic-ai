@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from rustic_ai.core.guild import agent
 from rustic_ai.core.guild.agent import Agent, ProcessContext
-from rustic_ai.core.state.models import StateUpdateFormat
+from rustic_ai.core.state.models import StateOwner, StateUpdateFormat, StateUpdateResponse
 from rustic_ai.core.utils.json_utils import JsonDict
 
 
@@ -150,6 +150,11 @@ class TodoListAgent(Agent):
             update_format=StateUpdateFormat.JSON_MERGE_PATCH,
             update={"tasks": [task.model_dump() for task in tasks]},
         )
+
+    def on_state_updated(self, new_state: JsonDict, ctx: ProcessContext[StateUpdateResponse]):
+        if ctx.payload.state_owner == StateOwner.AGENT and ctx.payload.agent_id == self.id:
+            tasks = self.get_tasks()
+            ctx.send(ListTasksResponse(tasks=tasks))
 
     @agent.processor(AddTaskRequest)
     def add_task(self, ctx: ProcessContext[AddTaskRequest]):
@@ -304,9 +309,10 @@ class TodoListAgent(Agent):
             return None
 
         # Return the one with the earliest start_time
-        if ctx.payload.sort_by == "start_time":
+        sort_by = ctx.payload.sort_by or "start_time"
+        if sort_by == "start_time":
             next_task = min(pending_tasks, key=lambda t: datetime.fromisoformat(t.start_time))
-        elif ctx.payload.sort_by == "deadline":
+        elif sort_by == "deadline":
             next_task = min(
                 pending_tasks, key=lambda t: datetime.fromisoformat(t.deadline) if t.deadline else datetime.max
             )
