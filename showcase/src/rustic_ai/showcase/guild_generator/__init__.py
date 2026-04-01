@@ -5,6 +5,9 @@ This module provides a guild that can generate other guilds. Users can:
 1. Tag @Orchestrator to add agents, routes, and configure the guild
 2. Send normal messages to test the guild flow
 3. Export the final guild spec when satisfied
+
+The module provides two orchestrator options:
+- ReActOrchestratorAgent: ReAct pattern orchestrator with tool-based actions
 """
 
 from rustic_ai.showcase.guild_generator.models import (
@@ -22,17 +25,27 @@ from rustic_ai.showcase.guild_generator.models import (
     TransformationSpec,
     TransformRequest,
     TransformResponse,
+    # Tool parameter models
+    AddAgentParams,
+    AddRouteParams,
+    RemoveAgentParams,
+    RemoveRouteParams,
+    ShowFlowParams,
+    TestFlowParams,
+    PublishParams,
+    SetNameParams,
+    SetDescriptionParams,
+    HelpParams,
 )
 
-from rustic_ai.showcase.guild_generator.orchestrator import (
-    OrchestratorAgent,
-    OrchestratorAgentProps,
+from rustic_ai.showcase.guild_generator.toolset import (
+    GuildGeneratorToolset,
+    GuildGeneratorToolWrapper,
 )
 
 from rustic_ai.showcase.guild_generator.agent_registry import (
     AgentRegistryAgent,
     AgentRegistryAgentProps,
-    AGENT_REGISTRY,
 )
 
 from rustic_ai.showcase.guild_generator.transformation_builder import (
@@ -76,9 +89,18 @@ __all__ = [
     "TransformationSpec",
     "TransformRequest",
     "TransformResponse",
+    # Tool parameter models
+    "AddAgentParams",
+    "AddRouteParams",
+    "RemoveAgentParams",
+    "RemoveRouteParams",
+    "ShowFlowParams",
+    "TestFlowParams",
+    "PublishParams",
+    "SetNameParams",
+    "SetDescriptionParams",
+    "HelpParams",
     # Agents
-    "OrchestratorAgent",
-    "OrchestratorAgentProps",
     "AgentRegistryAgent",
     "AgentRegistryAgentProps",
     "AGENT_REGISTRY",
@@ -92,4 +114,7 @@ __all__ = [
     "GuildExportAgentProps",
     "StateManagerAgent",
     "StateManagerAgentProps",
+    # Toolset and wrapper
+    "GuildGeneratorToolset",
+    "GuildGeneratorToolWrapper",
 ]

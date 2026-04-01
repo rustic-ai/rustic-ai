@@ -9,7 +9,7 @@ from jsonata import Jsonata
 from rustic_ai.core.agents.testutils import ProbeAgent
 from rustic_ai.core.guild import GuildTopics
 from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder
-from rustic_ai.showcase.guild_generator.models import VisualizationResponse
+from rustic_ai.core.ui_protocol.types import VegaLiteFormat
 from rustic_ai.showcase.guild_generator.models import (
     ActionType,
     AgentLookupRequest,
@@ -536,6 +536,212 @@ class TestBlueprintValidity:
                 )
 
 
+class TestStateManagerAgent:
+    """Tests for the StateManagerAgent with race condition handling."""
+
+    def test_state_manager_handles_concurrent_agent_additions(self, org_id):
+        """Test that StateManagerAgent correctly handles multiple agents added in quick succession (race condition fix)."""
+        from rustic_ai.showcase.guild_generator.state_manager import StateManagerAgent
+        from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
+
+        # Build a guild with state manager
+        builder = GuildBuilder(
+            guild_name="State Manager Test",
+            guild_description="Test for concurrent state updates",
+        ).set_messaging(
+            "rustic_ai.core.messaging.backend",
+            "InMemoryMessagingBackend",
+            {},
+        )
+
+        # Add state manager agent
+        state_manager_spec = (
+            AgentBuilder(StateManagerAgent)
+            .set_id("state_manager")
+            .set_name("State Manager")
+            .set_description("Manages guild builder state")
+            .add_additional_topic("STATE_MGMT")
+            .build_spec()
+        )
+
+        builder.add_agent_spec(state_manager_spec)
+        guild = builder.launch(org_id)
+
+        # Add probe to capture outgoing messages
+        probe_spec = (
+            AgentBuilder(ProbeAgent)
+            .set_id("probe_agent")
+            .set_name("Probe Agent")
+            .set_description("Captures messages for testing")
+            .add_additional_topic("STATE_MGMT")
+            .add_additional_topic(GuildTopics.DEFAULT_TOPICS[0])
+            .build_spec()
+        )
+
+        probe_agent: ProbeAgent = guild._add_local_agent(probe_spec)
+
+        # Send two AgentLookupResponse messages back-to-back (simulating race condition)
+        agent_lookup_response_1 = AgentLookupResponse(
+            agent_spec={
+                "id": "agent_1",
+                "name": "Agent One",
+                "description": "First agent",
+                "class_name": "test.AgentOne",
+                "additional_topics": [],
+                "properties": {},
+                "listen_to_default_topic": True,
+                "act_only_when_tagged": False,
+            },
+            explanation="First agent added",
+            input_formats=["test.InputFormat1"],
+            output_formats=["test.OutputFormat1"],
+        )
+
+        agent_lookup_response_2 = AgentLookupResponse(
+            agent_spec={
+                "id": "agent_2",
+                "name": "Agent Two",
+                "description": "Second agent",
+                "class_name": "test.AgentTwo",
+                "additional_topics": [],
+                "properties": {},
+                "listen_to_default_topic": True,
+                "act_only_when_tagged": False,
+            },
+            explanation="Second agent added",
+            input_formats=["test.InputFormat2"],
+            output_formats=["test.OutputFormat2"],
+        )
+
+        # Send both messages quickly
+        probe_agent.publish_dict(
+            "STATE_MGMT",
+            agent_lookup_response_1.model_dump(),
+            format=get_qualified_class_name(AgentLookupResponse),
+        )
+
+        probe_agent.publish_dict(
+            "STATE_MGMT",
+            agent_lookup_response_2.model_dump(),
+            format=get_qualified_class_name(AgentLookupResponse),
+        )
+
+        # Wait for processing
+        import time
+        time.sleep(1.0)
+
+        # Verify both agents are in the guild state by checking messages sent
+        # The StateManagerAgent should have sent TextFormat messages for both agents
+        messages = probe_agent.get_messages()
+
+        from rustic_ai.core.ui_protocol.types import TextFormat
+        text_messages = [
+            m for m in messages
+            if m.format == get_qualified_class_name(TextFormat)
+        ]
+
+        # Should have received 2 TextFormat messages (one for each agent added)
+        assert len(text_messages) >= 2, f"Expected at least 2 TextFormat messages, got {len(text_messages)}"
+
+        # Verify the content mentions both agents
+        all_text = " ".join([m.payload.get("text", "") for m in text_messages])
+        assert "Agent One" in all_text, f"Agent One not mentioned in messages: {all_text[:200]}"
+        assert "Agent Two" in all_text, f"Agent Two not mentioned in messages: {all_text[:200]}"
+
+    def test_state_manager_handles_concurrent_route_additions(self, org_id):
+        """Test that StateManagerAgent correctly handles multiple routes added in quick succession."""
+        from rustic_ai.showcase.guild_generator.state_manager import StateManagerAgent
+        from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
+
+        # Build a guild with state manager
+        builder = GuildBuilder(
+            guild_name="Route State Manager Test",
+            guild_description="Test for concurrent route updates",
+        ).set_messaging(
+            "rustic_ai.core.messaging.backend",
+            "InMemoryMessagingBackend",
+            {},
+        )
+
+        # Add state manager agent
+        state_manager_spec = (
+            AgentBuilder(StateManagerAgent)
+            .set_id("state_manager")
+            .set_name("State Manager")
+            .set_description("Manages guild builder state")
+            .add_additional_topic("STATE_MGMT")
+            .build_spec()
+        )
+
+        builder.add_agent_spec(state_manager_spec)
+        guild = builder.launch(org_id)
+
+        # Add probe
+        probe_spec = (
+            AgentBuilder(ProbeAgent)
+            .set_id("probe_agent")
+            .set_name("Probe Agent")
+            .set_description("Captures messages for testing")
+            .add_additional_topic("STATE_MGMT")
+            .build_spec()
+        )
+
+        probe_agent: ProbeAgent = guild._add_local_agent(probe_spec)
+
+        # Send two RouteResponse messages back-to-back
+        route_response_1 = RouteResponse(
+            routing_rule={
+                "agent": {"name": "Agent One"},
+                "message_format": "test.Format1",
+                "destination": {"topics": "OUTPUT1"},
+            },
+            explanation="First route added",
+        )
+
+        route_response_2 = RouteResponse(
+            routing_rule={
+                "agent": {"name": "Agent Two"},
+                "message_format": "test.Format2",
+                "destination": {"topics": "OUTPUT2"},
+            },
+            explanation="Second route added",
+        )
+
+        # Send both messages quickly
+        probe_agent.publish_dict(
+            "STATE_MGMT",
+            route_response_1.model_dump(),
+            format=get_qualified_class_name(RouteResponse),
+        )
+
+        probe_agent.publish_dict(
+            "STATE_MGMT",
+            route_response_2.model_dump(),
+            format=get_qualified_class_name(RouteResponse),
+        )
+
+        # Wait for processing
+        import time
+        time.sleep(1.0)
+
+        # Verify both routes are in the guild state by checking messages sent
+        messages = probe_agent.get_messages()
+
+        from rustic_ai.core.ui_protocol.types import TextFormat
+        text_messages = [
+            m for m in messages
+            if m.format == get_qualified_class_name(TextFormat)
+        ]
+
+        # Should have received 2 TextFormat messages (one for each route added)
+        assert len(text_messages) >= 2, f"Expected at least 2 TextFormat messages, got {len(text_messages)}"
+
+        # Verify the content mentions both routes
+        all_text = " ".join([m.payload.get("text", "") for m in text_messages])
+        assert "Agent One" in all_text or "OUTPUT1" in all_text, f"First route not mentioned: {all_text[:200]}"
+        assert "Agent Two" in all_text or "OUTPUT2" in all_text, f"Second route not mentioned: {all_text[:200]}"
+
+
 class TestGuildGeneratorIntegration:
     """Integration tests for the guild generator."""
 
@@ -607,150 +813,43 @@ class TestGuildGeneratorIntegration:
 
         messages = probe_agent.get_messages()
 
-        # Should have received a VisualizationResponse
+        # Should have received a VegaLiteFormat
         viz_messages = [
             m for m in messages
-            if m.format == get_qualified_class_name(VisualizationResponse)
+            if m.format == get_qualified_class_name(VegaLiteFormat)
         ]
 
-        assert len(viz_messages) >= 1, f"Expected VisualizationResponse message, got: {[m.format for m in messages]}"
+        assert len(viz_messages) >= 1, f"Expected VegaLiteFormat message, got: {[m.format for m in messages]}"
 
         # Verify the flowchart content
         flowchart = viz_messages[0].payload
-        assert "$schema" in flowchart["response"]
-        assert "layer" in flowchart["response"]
+        assert "$schema" in flowchart["spec"]
+        assert "layer" in flowchart["spec"]
 
 
 class TestAgentRegistryDependencySpec:
-    """Tests to validate that agent registry dependencies have correct DependencySpec format."""
+    """Tests to validate that agent registry dependencies have correct DependencySpec format.
 
+    NOTE: These tests are skipped because AGENT_REGISTRY is no longer a static constant.
+    All agents are now loaded from the API at runtime.
+    """
+
+    @pytest.mark.skip(reason="AGENT_REGISTRY is now loaded from API, not a static constant")
     def test_registry_dependencies_have_valid_dependency_spec_format(self):
         """Test that all required_dependencies in AGENT_REGISTRY use proper DependencySpec format."""
-        from rustic_ai.showcase.guild_generator.agent_registry import AGENT_REGISTRY
-        from rustic_ai.core.guild.agent_ext.depends.dependency_resolver import DependencySpec
+        pass
 
-        for agent_info in AGENT_REGISTRY:
-            for dep_key, dep_value in agent_info.required_dependencies.items():
-                # Each dependency value should be a dict (not a string)
-                assert isinstance(dep_value, dict), (
-                    f"Agent {agent_info.name}: dependency '{dep_key}' must be a dict, "
-                    f"got {type(dep_value).__name__}: {dep_value}"
-                )
-
-                # Must have 'class_name' field
-                assert "class_name" in dep_value, (
-                    f"Agent {agent_info.name}: dependency '{dep_key}' missing 'class_name' field"
-                )
-                assert isinstance(dep_value["class_name"], str), (
-                    f"Agent {agent_info.name}: dependency '{dep_key}' class_name must be a string"
-                )
-
-                # Must have 'properties' field (can be empty dict)
-                assert "properties" in dep_value, (
-                    f"Agent {agent_info.name}: dependency '{dep_key}' missing 'properties' field"
-                )
-                assert isinstance(dep_value["properties"], dict), (
-                    f"Agent {agent_info.name}: dependency '{dep_key}' properties must be a dict"
-                )
-
-                # Validate that it can be parsed as a DependencySpec
-                try:
-                    DependencySpec(**dep_value)
-                except Exception as e:
-                    pytest.fail(
-                        f"Agent {agent_info.name}: dependency '{dep_key}' failed DependencySpec validation: {e}"
-                    )
-
+    @pytest.mark.skip(reason="AGENT_REGISTRY is now loaded from API, not a static constant")
     def test_dependency_map_validates_as_dependency_spec_dict(self):
         """Test that dependency_map values from registry can be validated as DependencySpec."""
-        from rustic_ai.showcase.guild_generator.agent_registry import AGENT_REGISTRY
-        from rustic_ai.core.guild.agent_ext.depends.dependency_resolver import DependencySpec
+        pass
 
-        for agent_info in AGENT_REGISTRY:
-            # Skip agents with no dependencies
-            if not agent_info.required_dependencies:
-                continue
-
-            # Validate that each dependency can be converted to DependencySpec
-            for dep_key, dep_value in agent_info.required_dependencies.items():
-                try:
-                    dep_spec = DependencySpec(**dep_value)
-                    # Verify the class_name is preserved correctly
-                    assert dep_spec.class_name == dep_value["class_name"], (
-                        f"Agent {agent_info.name}: dependency '{dep_key}' class_name mismatch"
-                    )
-                except Exception as e:
-                    pytest.fail(
-                        f"Agent {agent_info.name}: dependency '{dep_key}' failed DependencySpec validation: {e}\n"
-                        f"Dependency value: {dep_value}"
-                    )
-
+    @pytest.mark.skip(reason="AGENT_REGISTRY is now loaded from API, not a static constant")
     def test_llm_agent_dependency_spec_is_valid(self):
         """Specific test for LLMAgent which was the original failing case."""
-        from rustic_ai.showcase.guild_generator.agent_registry import AGENT_REGISTRY
-        from rustic_ai.core.agents.system.models import AgentLaunchRequest
-        from rustic_ai.core.guild.dsl import AgentSpec
+        pass
 
-        # Find LLMAgent in registry
-        llm_agent_info = next(
-            (a for a in AGENT_REGISTRY if a.name == "LLMAgent"), None
-        )
-        assert llm_agent_info is not None, "LLMAgent not found in AGENT_REGISTRY"
-
-        # Check the llm dependency specifically
-        assert "llm" in llm_agent_info.required_dependencies, (
-            "LLMAgent should have 'llm' dependency"
-        )
-
-        llm_dep = llm_agent_info.required_dependencies["llm"]
-        assert isinstance(llm_dep, dict), (
-            f"LLMAgent llm dependency should be a dict, got: {type(llm_dep).__name__}"
-        )
-        assert llm_dep.get("class_name") == "rustic_ai.litellm.agent_ext.llm.LiteLLMResolver", (
-            f"LLMAgent llm dependency has wrong class_name: {llm_dep.get('class_name')}"
-        )
-        assert "properties" in llm_dep, "LLMAgent llm dependency missing 'properties'"
-
-        # Create full agent spec and validate with AgentLaunchRequest
-        agent_spec = AgentSpec(
-            id="test_llm_agent",
-            name="Test LLM Agent",
-            description="A test LLM agent",
-            class_name=llm_agent_info.class_name,
-            dependency_map=llm_agent_info.required_dependencies,
-        )
-
-        # This should not raise - this was the original error
-        request = AgentLaunchRequest(agent_spec=agent_spec)
-        assert request.agent_spec.dependency_map["llm"].class_name == (
-            "rustic_ai.litellm.agent_ext.llm.LiteLLMResolver"
-        )
-
+    @pytest.mark.skip(reason="AGENT_REGISTRY is now loaded from API, not a static constant")
     def test_react_agent_dependency_spec_is_valid(self):
         """Test for ReactAgent which also has llm dependency."""
-        from rustic_ai.showcase.guild_generator.agent_registry import AGENT_REGISTRY
-        from rustic_ai.core.guild.agent_ext.depends.dependency_resolver import DependencySpec
-
-        # Find ReactAgent in registry
-        react_agent_info = next(
-            (a for a in AGENT_REGISTRY if a.name == "ReactAgent"), None
-        )
-        assert react_agent_info is not None, "ReactAgent not found in AGENT_REGISTRY"
-
-        # Check the llm dependency specifically
-        assert "llm" in react_agent_info.required_dependencies, (
-            "ReactAgent should have 'llm' dependency"
-        )
-
-        llm_dep = react_agent_info.required_dependencies["llm"]
-        assert isinstance(llm_dep, dict), (
-            f"ReactAgent llm dependency should be a dict, got: {type(llm_dep).__name__}"
-        )
-        assert llm_dep.get("class_name") == "rustic_ai.litellm.agent_ext.llm.LiteLLMResolver", (
-            f"ReactAgent llm dependency has wrong class_name: {llm_dep.get('class_name')}"
-        )
-        assert "properties" in llm_dep, "ReactAgent llm dependency missing 'properties'"
-
-        # Validate it can be parsed as DependencySpec
-        dep_spec = DependencySpec(**llm_dep)
-        assert dep_spec.class_name == "rustic_ai.litellm.agent_ext.llm.LiteLLMResolver"
+        pass

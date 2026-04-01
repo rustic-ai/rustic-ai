@@ -8,7 +8,6 @@ simple payload transformations and content-based router transformations.
 
 import json
 import logging
-import re
 from typing import Dict, List
 
 from pydantic import Field
@@ -17,6 +16,7 @@ from rustic_ai.core.agents.commons.message_formats import ErrorMessage
 from rustic_ai.core.guild.agent import Agent, ProcessContext, processor
 from rustic_ai.core.guild.dsl import BaseAgentProps
 from rustic_ai.core.guild.agent_ext.depends.llm.llm import LLM
+from rustic_ai.core.ui_protocol.types import TextFormat
 from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     ChatCompletionRequest,
     ChatCompletionResponse,
@@ -28,6 +28,7 @@ from rustic_ai.showcase.guild_generator.models import (
     TransformResponse,
     TransformationSpec,
 )
+from rustic_ai.showcase.guild_generator.utils import extract_json_from_response
 
 
 # Common message format schemas
@@ -131,29 +132,6 @@ class TransformationBuilderAgent(Agent[TransformationBuilderAgentProps]):
             descriptions.append(desc)
         return "\n".join(descriptions)
 
-    def _extract_json_from_response(self, response_text: str) -> str:
-        """
-        Extract JSON from response text that may be wrapped in markdown code blocks.
-        """
-        text = response_text.strip()
-
-        # Try to find JSON in markdown code blocks
-        code_block_pattern = r"```(?:json)?\s*\n?([\s\S]*?)\n?```"
-        matches = re.findall(code_block_pattern, text)
-        if matches:
-            # Return the first code block content
-            return matches[0].strip()
-
-        # If no code blocks, try to find JSON object directly
-        # Look for content starting with { and ending with }
-        json_pattern = r"(\{[\s\S]*\})"
-        matches = re.findall(json_pattern, text)
-        if matches:
-            return matches[0].strip()
-
-        # Return original text if no patterns match
-        return text
-
     @processor(TransformRequest, depends_on=["llm"])
     def build_transformation(self, ctx: ProcessContext[TransformRequest], llm: LLM):
         """
@@ -186,7 +164,7 @@ Please generate the appropriate JSONata transformation."""
 
             try:
                 # Extract JSON from potential markdown wrapper
-                json_text = self._extract_json_from_response(response_text)
+                json_text = extract_json_from_response(response_text)
                 result = json.loads(json_text)
                 transform_data = result.get("transformation", {})
 
@@ -205,6 +183,12 @@ Please generate the appropriate JSONata transformation."""
 
             except json.JSONDecodeError as e:
                 logging.error(f"Failed to parse transformation response: {response_text}")
+                ctx.send(
+                    TextFormat(
+                        text=f"**Failed to parse transformation response**\n\nThe LLM did not return valid JSON. Please try again.\n\nError: {str(e)}",
+                        title="Parse Error",
+                    )
+                )
                 ctx.send_error(
                     ErrorMessage(
                         agent_type="TransformationBuilderAgent",
@@ -215,6 +199,12 @@ Please generate the appropriate JSONata transformation."""
 
         except Exception as e:
             logging.error(f"Error building transformation: {e}")
+            ctx.send(
+                TextFormat(
+                    text=f"**Transformation Creation Failed**\n\nAn error occurred while creating the transformation.\n\nError: {str(e)}",
+                    title="Error",
+                )
+            )
             ctx.send_error(
                 ErrorMessage(
                     agent_type="TransformationBuilderAgent",

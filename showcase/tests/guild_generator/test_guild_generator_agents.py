@@ -30,6 +30,7 @@ from rustic_ai.core.utils.priority import Priority
 from rustic_ai.showcase.guild_generator.agent_registry import AgentRegistryAgent
 from rustic_ai.showcase.guild_generator.flowchart_agent import FlowchartAgent
 from rustic_ai.showcase.guild_generator.guild_export import GuildExportAgent
+from rustic_ai.core.ui_protocol.types import VegaLiteFormat
 from rustic_ai.showcase.guild_generator.models import (
     ActionType,
     AgentLookupRequest,
@@ -44,9 +45,7 @@ from rustic_ai.showcase.guild_generator.models import (
     TransformationSpec,
     TransformRequest,
     TransformResponse,
-    VisualizationResponse,
 )
-from rustic_ai.showcase.guild_generator.orchestrator import OrchestratorAgent
 from rustic_ai.showcase.guild_generator.route_builder import RouteBuilderAgent
 from rustic_ai.showcase.guild_generator.state_manager import StateManagerAgent
 from rustic_ai.showcase.guild_generator.transformation_builder import (
@@ -130,114 +129,6 @@ def build_message_from_payload():
         )
 
     return _build_message_from_payload
-
-
-class TestOrchestratorAgent:
-    """Tests for the OrchestratorAgent."""
-
-    def test_orchestrator_parses_add_agent_action(self, generator, build_message_from_payload):
-        """Test that orchestrator correctly parses add_agent commands."""
-        mock_response = json.dumps({
-            "action": "add_agent",
-            "details": {"purpose": "summarizes text", "agent_type_hint": "LLM"},
-            "user_message": "@Orchestrator add an LLM agent that summarizes text",
-        })
-
-        dependency_map = {
-            "llm": DependencySpec(
-                class_name=get_qualified_class_name(MockLLMResolver),
-                properties={"response_content": mock_response},
-            ),
-        }
-
-        agent_spec = (
-            AgentBuilder(OrchestratorAgent)
-            .set_id("orchestrator")
-            .set_name("Orchestrator")
-            .set_description("Test orchestrator")
-            .build_spec()
-        )
-
-        agent, results = wrap_agent_for_testing(agent_spec, dependency_map=dependency_map)
-
-        request = ChatCompletionRequest(
-            messages=[UserMessage(content="@Orchestrator add an LLM agent that summarizes text")]
-        )
-
-        agent._on_message(build_message_from_payload(generator, request))
-
-        assert len(results) == 1
-        assert results[0].format == get_qualified_class_name(OrchestratorAction)
-        payload = OrchestratorAction.model_validate(results[0].payload)
-        assert payload.action == ActionType.ADD_AGENT
-        assert payload.details["purpose"] == "summarizes text"
-
-    def test_orchestrator_parses_show_flow_action(self, generator, build_message_from_payload):
-        """Test that orchestrator correctly parses show_flow commands."""
-        mock_response = json.dumps({
-            "action": "show_flow",
-            "details": {},
-            "user_message": "@Orchestrator show flow",
-        })
-
-        dependency_map = {
-            "llm": DependencySpec(
-                class_name=get_qualified_class_name(MockLLMResolver),
-                properties={"response_content": mock_response},
-            ),
-        }
-
-        agent_spec = (
-            AgentBuilder(OrchestratorAgent)
-            .set_id("orchestrator")
-            .set_name("Orchestrator")
-            .set_description("Test orchestrator")
-            .build_spec()
-        )
-
-        agent, results = wrap_agent_for_testing(agent_spec, dependency_map=dependency_map)
-
-        request = ChatCompletionRequest(
-            messages=[UserMessage(content="@Orchestrator show flow")]
-        )
-
-        agent._on_message(build_message_from_payload(generator, request))
-
-        assert len(results) == 1
-        payload = OrchestratorAction.model_validate(results[0].payload)
-        assert payload.action == ActionType.SHOW_FLOW
-
-    def test_orchestrator_handles_invalid_json(self, generator, build_message_from_payload):
-        """Test that orchestrator handles invalid JSON gracefully."""
-        mock_response = "This is not valid JSON"
-
-        dependency_map = {
-            "llm": DependencySpec(
-                class_name=get_qualified_class_name(MockLLMResolver),
-                properties={"response_content": mock_response},
-            ),
-        }
-
-        agent_spec = (
-            AgentBuilder(OrchestratorAgent)
-            .set_id("orchestrator")
-            .set_name("Orchestrator")
-            .set_description("Test orchestrator")
-            .build_spec()
-        )
-
-        agent, results = wrap_agent_for_testing(agent_spec, dependency_map=dependency_map)
-
-        request = ChatCompletionRequest(
-            messages=[UserMessage(content="@Orchestrator help")]
-        )
-
-        agent._on_message(build_message_from_payload(generator, request))
-
-        # Should send a HELP action as fallback
-        assert len(results) == 1
-        payload = OrchestratorAction.model_validate(results[0].payload)
-        assert payload.action == ActionType.HELP
 
 
 class TestAgentRegistryAgent:
@@ -434,33 +325,10 @@ class TestAgentRegistryDependencyMapFormat:
         with pytest.raises(Exception):  # Pydantic ValidationError
             DependencySpec(**wrong_format_dependency_map["llm"])
 
+    @pytest.mark.skip(reason="AGENT_REGISTRY is now loaded from API, not a static constant")
     def test_registry_provides_correct_dependency_format_to_llm(self):
         """Test that AGENT_REGISTRY shows correct dependency format to guide the LLM."""
-        from rustic_ai.showcase.guild_generator.agent_registry import AGENT_REGISTRY
-
-        # Find agents that have dependencies
-        agents_with_deps = [a for a in AGENT_REGISTRY if a.required_dependencies]
-        assert len(agents_with_deps) > 0, "Expected some agents with dependencies"
-
-        for agent_info in agents_with_deps:
-            for dep_key, dep_value in agent_info.required_dependencies.items():
-                # Each dependency should be a dict with the correct structure
-                assert isinstance(dep_value, dict), (
-                    f"{agent_info.name}: dependency '{dep_key}' must be a dict, "
-                    f"got {type(dep_value).__name__}"
-                )
-                assert "class_name" in dep_value, (
-                    f"{agent_info.name}: dependency '{dep_key}' missing 'class_name'"
-                )
-                assert isinstance(dep_value["class_name"], str), (
-                    f"{agent_info.name}: dependency '{dep_key}' class_name must be str"
-                )
-                assert "properties" in dep_value, (
-                    f"{agent_info.name}: dependency '{dep_key}' missing 'properties'"
-                )
-                assert isinstance(dep_value["properties"], dict), (
-                    f"{agent_info.name}: dependency '{dep_key}' properties must be dict"
-                )
+        pass
 
 
 class TestRouteBuilderAgent:
@@ -779,8 +647,8 @@ class TestFlowchartAgent:
         agent._on_message(build_message_from_payload(generator, request))
 
         assert len(results) == 1
-        assert results[0].format == get_qualified_class_name(VisualizationResponse)
-        payload = VisualizationResponse.model_validate(results[0].payload)
+        assert results[0].format == get_qualified_class_name(VegaLiteFormat)
+        payload = VegaLiteFormat.model_validate(results[0].payload)
         assert payload.response["$schema"] == "https://vega.github.io/schema/vega-lite/v5.json"
         assert "layer" in payload.response
 
@@ -835,11 +703,11 @@ class TestFlowchartAgent:
         agent._on_message(build_message_from_payload(generator, request, session_state=session_state))
 
         assert len(results) == 1
-        payload = VisualizationResponse.model_validate(results[0].payload)
-        assert payload.response["title"]["text"] == "Test Guild"
+        payload = VegaLiteFormat.model_validate(results[0].payload)
+        assert payload.spec["title"]["text"] == "Test Guild"
 
         # Check nodes include the agents
-        nodes_layer = payload.response["layer"][1]
+        nodes_layer = payload.spec["layer"][1]
         nodes = nodes_layer["data"]["values"]
         node_names = [n["name"] for n in nodes]
         assert "Agent One" in node_names

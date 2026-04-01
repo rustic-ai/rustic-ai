@@ -180,3 +180,79 @@ class VisualizationResponse(BaseModel):
 
     response: dict[str, JsonValue]
     explanation: str
+
+
+# =============================================================================
+# Tool Parameter Models for ReAct Orchestrator
+# =============================================================================
+
+
+class AddAgentParams(BaseModel):
+    """Parameters for adding an agent to the guild."""
+
+    purpose: str = Field(description="Description of what the agent should do")
+    agent_type_hint: Optional[str] = Field(
+        default=None,
+        description="Optional hint about the type of agent (e.g., 'LLM', 'splitter', 'aggregator')",
+    )
+
+
+class AddRouteParams(BaseModel):
+    """Parameters for adding a route between agents."""
+
+    source_agent: str = Field(description="Name or ID of the source agent")
+    target_agent: str = Field(description="Name or ID of the target agent")
+    transformation_requirements: Optional[str] = Field(
+        default=None,
+        description="Optional requirements for message transformation between agents",
+    )
+
+
+class RemoveAgentParams(BaseModel):
+    """Parameters for removing an agent from the guild."""
+
+    agent_name: str = Field(description="Name or ID of the agent to remove")
+
+
+class RemoveRouteParams(BaseModel):
+    """Parameters for removing a route from the guild."""
+
+    source_agent: str = Field(description="Name or ID of the source agent")
+    target_agent: str = Field(description="Name or ID of the target agent")
+
+
+class ShowFlowParams(BaseModel):
+    """Parameters for showing the guild flow visualization."""
+
+    pass
+
+
+class TestFlowParams(BaseModel):
+    """Parameters for testing the guild flow."""
+
+    test_message: str = Field(description="The message to send through the guild for testing")
+
+
+class PublishParams(BaseModel):
+    """Parameters for publishing/exporting the guild specification."""
+
+    format: str = Field(default="json", description="Export format (json or yaml)")
+    run_validation: bool = Field(default=True, description="Whether to validate the guild before export")
+
+
+class SetNameParams(BaseModel):
+    """Parameters for setting the guild name."""
+
+    name: str = Field(description="The new name for the guild")
+
+
+class SetDescriptionParams(BaseModel):
+    """Parameters for setting the guild description."""
+
+    description: str = Field(description="The new description for the guild")
+
+
+class HelpParams(BaseModel):
+    """Parameters for showing help information."""
+
+    topic: Optional[str] = Field(default=None, description="Optional specific help topic")

@@ -18,7 +18,6 @@ from rustic_ai.showcase.guild_generator.models import (
     FlowchartUpdateRequest,
     GuildBuilderState,
     OrchestratorAction,
-    VisualizationResponse,
 )
 
 

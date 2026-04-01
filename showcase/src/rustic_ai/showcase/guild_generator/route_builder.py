@@ -15,6 +15,7 @@ from rustic_ai.core.agents.commons.message_formats import ErrorMessage
 from rustic_ai.core.guild.agent import Agent, ProcessContext, processor
 from rustic_ai.core.guild.dsl import BaseAgentProps
 from rustic_ai.core.guild.agent_ext.depends.llm.llm import LLM
+from rustic_ai.core.ui_protocol.types import TextFormat
 from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     ChatCompletionRequest,
     ChatCompletionResponse,
@@ -28,6 +29,7 @@ from rustic_ai.showcase.guild_generator.models import (
     RouteResponse,
     TransformationSpec,
 )
+from rustic_ai.showcase.guild_generator.utils import extract_json_from_response
 
 
 class RouteBuilderAgentProps(BaseAgentProps):
@@ -52,6 +54,27 @@ IMPORTANT: The message_format field MUST be a fully qualified class name of the 
 that the source agent sends. Use the output_formats from the agent info provided below.
 Do NOT make up message format names - only use formats that are listed in the agent's output_formats.
 
+## Common Routing Patterns:
+
+**Pattern 1: UserProxyAgent → Agent** (User input to agent)
+- Source: agent_type = "rustic_ai.core.agents.utils.user_proxy_agent.UserProxyAgent"
+- Message format: "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest"
+- Destination topics: Look up the target agent's additional_topics or use "default_topic"
+- May need transformer to match target agent's input format
+
+**Pattern 2: Agent → user_message_broadcast** (Agent output to user)
+- Source: agent = {{"name": "AgentName"}}
+- Message format: Use agent's output_format (often TextFormat, ChatCompletionResponse, etc.)
+- Destination topics: "user_message_broadcast"
+- Set process_status: "completed" to end the processing chain
+- May need transformer to convert to MarkdownFormat for user display
+
+**Pattern 3: Agent A → Agent B** (Inter-agent communication)
+- Source: agent = {{"name": "SourceAgent"}}
+- Message format: Use source agent's output_format
+- Destination topics: Target agent's topic (from additional_topics or "default_topic")
+- May need transformer if formats don't match
+
 Transformer format for "simple" style:
 {{
     "style": "simple",
@@ -60,11 +83,18 @@ Transformer format for "simple" style:
     "expression": "JSONata expression on $.payload"
 }}
 
-Transformer format for "content_based_router" style:
+Transformer format for "content_based_router" style (for conditional routing):
 {{
     "style": "content_based_router",
     "expression_type": "jsonata",
-    "handler": "JSONata expression with access to full context"
+    "handler": "JSONata expression returning {{\"topics\": \"destination_topic\", \"format\": \"output.format.class\", \"payload\": {{...}}}}"
+}}
+
+Example transformer for routing to user_message_broadcast:
+{{
+    "style": "content_based_router",
+    "expression_type": "jsonata",
+    "handler": "({{\"topics\": \"user_message_broadcast\", \"format\": \"MarkdownFormat\", \"payload\": {{\"text\": $.payload.text ? $.payload.text : $.payload.content}}}})"
 }}
 
 Respond ONLY with a JSON object in this exact format:
@@ -196,32 +226,6 @@ Please generate a complete RoutingRule specification."""
 
         self._build_route(ctx, llm, user_prompt)
 
-    def _extract_json_from_response(self, response_text: str) -> str:
-        """
-        Extract JSON from response text that may be wrapped in markdown code blocks.
-        """
-        text = response_text.strip()
-
-        # Check for markdown code blocks with json or no language specifier
-        import re
-
-        # Try to find JSON in markdown code blocks
-        code_block_pattern = r"```(?:json)?\s*\n?([\s\S]*?)\n?```"
-        matches = re.findall(code_block_pattern, text)
-        if matches:
-            # Return the first code block content
-            return matches[0].strip()
-
-        # If no code blocks, try to find JSON object directly
-        # Look for content starting with { and ending with }
-        json_pattern = r"(\{[\s\S]*\})"
-        matches = re.findall(json_pattern, text)
-        if matches:
-            return matches[0].strip()
-
-        # Return original text if no patterns match
-        return text
-
     def _build_route(self, ctx: ProcessContext, llm: LLM, user_prompt: str):
         """
         Build a routing rule using the LLM.
@@ -239,7 +243,7 @@ Please generate a complete RoutingRule specification."""
 
             try:
                 # Extract JSON from potential markdown wrapper
-                json_text = self._extract_json_from_response(response_text)
+                json_text = extract_json_from_response(response_text)
                 result = json.loads(json_text)
                 route_response = RouteResponse(
                     routing_rule=result.get("routing_rule", {}),
@@ -249,6 +253,12 @@ Please generate a complete RoutingRule specification."""
 
             except json.JSONDecodeError as e:
                 logging.error(f"Failed to parse route response: {response_text}")
+                ctx.send(
+                    TextFormat(
+                        text=f"**Failed to parse route response**\n\nThe LLM did not return valid JSON. Please try again.\n\nError: {str(e)}",
+                        title="Parse Error",
+                    )
+                )
                 ctx.send_error(
                     ErrorMessage(
                         agent_type="RouteBuilderAgent",
@@ -259,6 +269,12 @@ Please generate a complete RoutingRule specification."""
 
         except Exception as e:
             logging.error(f"Error building route: {e}")
+            ctx.send(
+                TextFormat(
+                    text=f"**Route Creation Failed**\n\nAn error occurred while creating the route.\n\nError: {str(e)}",
+                    title="Error",
+                )
+            )
             ctx.send_error(
                 ErrorMessage(
                     agent_type="RouteBuilderAgent",
