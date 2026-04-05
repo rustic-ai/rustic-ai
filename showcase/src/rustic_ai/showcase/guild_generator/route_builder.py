@@ -41,6 +41,14 @@ from rustic_ai.showcase.guild_generator.utils import extract_json_from_response
 class RouteBuilderAgentProps(BaseAgentProps):
     """Properties for the RouteBuilderAgent."""
 
+    excluded_agents: List[str] = Field(
+        default_factory=lambda: [
+            "FlowchartAgent",
+            "GuildExportAgent",
+        ],
+        description="List of agent class names (simple or fully qualified) to exclude from agent listings"
+    )
+
     system_prompt: str = Field(
         default="""You are a routing expert for the Rustic AI framework. Your job is to create
 RoutingRule specifications that define how messages flow between agents.
@@ -58,29 +66,58 @@ A RoutingRule has these fields:
 - process_status: "completed" if this ends the message processing chain
 - guild_state_update: optional update to guild state
 
-IMPORTANT: The message_format field MUST be a fully qualified class name of the actual message type
-that the source agent sends. Use the output_formats from the agent info provided below.
-Do NOT make up message format names - only use formats that are listed in the agent's output_formats.
+## CRITICAL VALIDATION RULES (MUST FOLLOW):
+
+**Agent Names:**
+1. ONLY use agent names that appear in the "Available agents" list provided in the user prompt
+2. DO NOT use agent descriptions, purposes, or capabilities as agent names
+3. DO NOT invent agent names - they MUST exist in the provided list
+4. Agent names should be SHORT (under 100 characters) - if longer, you're using a description instead
+5. Examples of CORRECT agent names: "Text Summarizer Agent", "LLM Simple Mindmap Generator", "UserProxyAgent"
+6. Examples of WRONG agent names: "Generate a mind map from summarized text for better understanding..."
+
+**Topics:**
+1. For target agents, use the agent's ID, name, or "additional_topics" value from the agent list
+2. DO NOT invent topic names based on descriptions or purposes
+3. Valid system topics: "user_message_broadcast", "default_topic", "DEFAULT_TOPICS"
+4. Examples of CORRECT topics: "text_summarizer_agent", "user_message_broadcast"
+5. Examples of WRONG topics: "summarize_input_text_for_concise_understanding"
+
+**Required Fields:**
+1. ALWAYS include an "agent" field with {"name": "..."} OR an "agent_type" field
+2. ALWAYS include a "message_format" field with the full qualified class name
+3. ALWAYS include "destination" with non-empty "topics"
+4. NEVER leave these fields as null or empty
+
+**Message Formats:**
+1. MUST be a fully qualified class name from the agent's output_formats
+2. DO NOT make up message format names
+3. Common formats: "rustic_ai.core.ui_protocol.types.TextFormat",
+   "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest",
+   "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse"
 
 ## Common Routing Patterns:
 
 **Pattern 1: UserProxyAgent → Agent** (User input to agent)
 - Source: agent_type = "rustic_ai.core.agents.utils.user_proxy_agent.UserProxyAgent"
 - Message format: "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest"
-- Destination topics: Look up the target agent's additional_topics or use "default_topic"
+- Destination topics: Target agent's ID or name (e.g., "text_summarizer_agent")
 
 **Pattern 2: Agent → user_message_broadcast** (Agent output to user)
-- Source: agent = {{"name": "AgentName"}}
-- Message format: Use agent's output_format (often TextFormat, ChatCompletionResponse, etc.)
+- Source: agent = {{"name": "ExactAgentNameFromList"}}
+- Message format: Agent's output_format (from the provided list)
 - Destination topics: "user_message_broadcast"
 - Set process_status: "completed" to end the processing chain
 
 **Pattern 3: Agent A → Agent B** (Inter-agent communication)
-- Source: agent = {{"name": "SourceAgent"}}
-- Message format: Use source agent's output_format
-- Destination topics: Target agent's topic (from additional_topics or "default_topic")
+- Source: agent = {{"name": "SourceAgentExactName"}}
+- Message format: Source agent's output_format
+- Destination topics: Target agent's ID or name
 
 DO NOT INCLUDE TRANSFORMER FIELDS. Transformations will be added automatically when needed.
+
+If you cannot find the exact agent name in the provided list, STOP and explain the issue in the explanation field.
+Do not guess or use descriptions as agent names.
 
 Respond ONLY with a JSON object in this exact format:
 {{
@@ -127,6 +164,10 @@ class RouteBuilderAgent(Agent[RouteBuilderAgentProps]):
             input_fmts = agent_info.get("input_formats", [])
             output_fmts = agent_info.get("output_formats", [])
 
+            # Filter out excluded agents
+            if self._is_agent_excluded(class_name, name):
+                continue
+
             info_lines.append(f"\n- Agent: {name} (id: {agent_id})")
             info_lines.append(f"  Class: {class_name}")
             info_lines.append(f"  Input formats (accepts): {', '.join(input_fmts) if input_fmts else 'any'}")
@@ -144,6 +185,26 @@ class RouteBuilderAgent(Agent[RouteBuilderAgentProps]):
         info_lines.append("- default_topic: Send to agents listening on the default topic")
 
         return "\n".join(info_lines)
+
+    def _is_agent_excluded(self, class_name: str, agent_name: str) -> bool:
+        """
+        Check if an agent should be excluded from listings.
+
+        Args:
+            class_name: Full qualified class name of the agent
+            agent_name: Display name of the agent
+
+        Returns:
+            True if the agent should be excluded, False otherwise
+        """
+        for excluded in self.config.excluded_agents:
+            # Check if excluded matches the simple class name (e.g., "FlowchartAgent")
+            if class_name.endswith(f".{excluded}") or class_name == excluded:
+                return True
+            # Check if excluded matches the agent name
+            if agent_name == excluded:
+                return True
+        return False
 
     def _get_agent_formats(self, agent_name: str) -> Tuple[List[str], List[str]]:
         """
@@ -245,6 +306,157 @@ class RouteBuilderAgent(Agent[RouteBuilderAgentProps]):
 
         return (source_format, target_format, True)
 
+    def _resolve_agent_name(self, agent_description: str) -> Optional[str]:
+        """
+        Resolve agent description to actual agent name from guild_state.
+
+        This is critical for preventing routes with agent names like
+        "Generate a mind map from summarized text..." instead of
+        "LLM Simple Mindmap Generator".
+
+        Args:
+            agent_description: Description or name from orchestrator
+
+        Returns:
+            Actual agent name from guild_state, or None if not found
+        """
+        if not agent_description:
+            return None
+
+        guild_state = self.get_guild_state() or {}
+        agent_info_list = guild_state.get("guild_builder", {}).get("agent_message_info", [])
+
+        # Try exact name match first
+        for agent_info in agent_info_list:
+            if agent_info.get("agent_name") == agent_description:
+                return agent_description
+
+        # Try exact ID match
+        for agent_info in agent_info_list:
+            if agent_info.get("agent_id") == agent_description:
+                return agent_info.get("agent_name")
+
+        # Try fuzzy match with substring matching for related words
+        description_lower = agent_description.lower()
+        best_match = None
+        best_score = 0
+
+        for agent_info in agent_info_list:
+            agent_name = agent_info.get("agent_name", "")
+            agent_name_lower = agent_name.lower()
+
+            score = 0
+            matched_words = []
+
+            # Extract significant words from agent name (skip common words)
+            skip_words = {"agent", "the", "a", "an", "for", "of", "to", "in", "llm", "simple", "new"}
+            agent_name_words = [w for w in agent_name_lower.split() if w not in skip_words]
+
+            # Check for substring matches (handles variations like summarize/summarization and mindmap/mind map)
+            for name_word in agent_name_words:
+                # Skip very short words
+                if len(name_word) < 3:
+                    continue
+
+                # Check if the word (or its stem) appears in description
+                # Use first 5 characters as a simple stem (e.g., "summar" matches both "summarize" and "summarization")
+                stem = name_word[:min(5, len(name_word))]
+
+                if name_word in description_lower:
+                    score += 4  # Highest score for exact word match
+                    matched_words.append(name_word)
+                elif stem in description_lower:
+                    score += 2  # Higher score for stem match
+                    matched_words.append(f"{stem}*")
+
+            # Special handling for compound words (e.g., "mindmap" should match "mind map")
+            # Check if agent name contains compound words that might be split in description
+            for name_word in agent_name_words:
+                if len(name_word) >= 6:  # Only check longer words
+                    # Check common compound patterns
+                    for split_pos in range(3, len(name_word) - 2):
+                        part1 = name_word[:split_pos]
+                        part2 = name_word[split_pos:]
+                        # Check if both parts appear consecutively in description
+                        compound_pattern = f"{part1} {part2}"
+                        if compound_pattern in description_lower:
+                            score += 5  # Very high score for compound match
+                            matched_words.append(f"{part1}+{part2}")
+                            break
+
+            # Also check exact word matches for additional score
+            name_word_set = set(agent_name_lower.split())
+            desc_word_set = set(description_lower.split())
+            exact_matches = name_word_set & desc_word_set
+            score += len(exact_matches)
+
+            if score > best_score:
+                best_score = score
+                best_match = agent_name
+
+        # Accept match if score >= 2 (at least one good stem/word match)
+        if best_score >= 2:
+            logging.info(
+                f"Fuzzy matched '{agent_description[:50]}...' to '{best_match}' "
+                f"(score: {best_score})"
+            )
+            return best_match
+
+        # Check if it's UserProxyAgent
+        if "userproxy" in description_lower or "user proxy" in description_lower:
+            return "UserProxyAgent"
+
+        # No match found
+        logging.warning(f"Could not resolve agent name from: '{agent_description[:100]}'")
+        return None
+
+    def _validate_routing_rule(self, routing_rule: Dict[str, Any]) -> Tuple[bool, List[str]]:
+        """
+        Validate routing rule before sending to prevent empty/invalid routes.
+
+        This prevents issues like:
+        - Empty routes with all null fields
+        - Agent names that are too long (likely descriptions)
+        - Missing message formats
+        - Empty destination topics
+
+        Args:
+            routing_rule: The routing rule dict to validate
+
+        Returns:
+            Tuple of (is_valid, list_of_errors)
+        """
+        errors = []
+
+        # Must have agent or agent_type
+        has_agent = bool(routing_rule.get("agent"))
+        has_agent_type = bool(routing_rule.get("agent_type"))
+
+        if not has_agent and not has_agent_type:
+            errors.append("Route must have either 'agent' or 'agent_type'")
+
+        # Must have message_format
+        message_format = routing_rule.get("message_format")
+        if not message_format:
+            errors.append("Route must have message_format")
+
+        # Destination topics should not be empty
+        dest = routing_rule.get("destination", {})
+        topics = dest.get("topics")
+        if not topics or (isinstance(topics, list) and len(topics) == 0):
+            errors.append("Route must have valid destination topics")
+
+        # Agent name should not be too long (likely a description)
+        if has_agent:
+            agent = routing_rule.get("agent", {})
+            agent_name = agent.get("name", "")
+            if len(agent_name) > 100:
+                errors.append(
+                    f"Agent name too long (likely description): '{agent_name[:100]}...'"
+                )
+
+        return len(errors) == 0, errors
+
     @processor(
         OrchestratorAction,
         predicate=lambda self, msg: msg.payload.get("action") == ActionType.ADD_ROUTE,
@@ -254,8 +466,11 @@ class RouteBuilderAgent(Agent[RouteBuilderAgentProps]):
         """
         Handle add_route action from the orchestrator.
 
-        This method determines if transformation is needed and delegates to
-        TransformationBuilder if formats differ.
+        This method:
+        1. Validates that source and target agents exist in guild_state
+        2. Resolves agent descriptions to actual agent names
+        3. Determines if transformation is needed
+        4. Delegates to TransformationBuilder if formats differ
         """
         action = ctx.payload
         details = action.details
@@ -264,22 +479,109 @@ class RouteBuilderAgent(Agent[RouteBuilderAgentProps]):
         target_agent = details.get("target_agent", "")
         transformation_requirements = details.get("transformation_requirements", "")
 
+        # Resolve actual agent names from descriptions
+        resolved_source = self._resolve_agent_name(source_agent)
+        resolved_target = self._resolve_agent_name(target_agent)
+
+        # Special case: UserProxyAgent doesn't need to be in guild_state
+        if "userproxy" in source_agent.lower() or "user proxy" in source_agent.lower():
+            resolved_source = "UserProxyAgent"
+
+        # Special case: Common destination topics that are valid without agent lookup
+        valid_destinations = ["user_message_broadcast", "default_topic", "DEFAULT_TOPICS"]
+        if target_agent in valid_destinations or any(dest in target_agent.lower() for dest in valid_destinations):
+            resolved_target = target_agent
+
+        # Pre-flight check: Validate source agent exists (unless it's UserProxyAgent)
+        if not resolved_source and source_agent.lower() not in ["userproxyagent", "user proxy agent"]:
+            # Get list of available agents for suggestions
+            guild_state = self.get_guild_state() or {}
+            agent_list = guild_state.get("guild_builder", {}).get("agent_message_info", [])
+            agent_names = [a.get("agent_name", "") for a in agent_list if a.get("agent_name")]
+
+            error_text = (
+                f"**Route Creation Failed**\n\n"
+                f"❌ Source agent not found: `{source_agent[:100]}`\n\n"
+                f"**Possible reasons:**\n"
+                f"1. The agent hasn't been created yet\n"
+                f"2. The agent name/description doesn't match closely enough\n\n"
+            )
+
+            if agent_names:
+                error_text += f"**Available agents ({len(agent_names)}):**\n"
+                for name in agent_names[:5]:  # Show first 5
+                    error_text += f"- {name}\n"
+                if len(agent_names) > 5:
+                    error_text += f"- ... and {len(agent_names) - 5} more\n"
+                error_text += "\n**Tip:** Use the EXACT agent name shown above, not a description."
+            else:
+                error_text += "**Tip:** No agents have been created yet. Create agents first with `@Orchestrator add agent`."
+
+            ctx.send(TextFormat(text=error_text, title="Error: Source Agent Not Found"))
+            logging.error(f"Source agent not found: {source_agent}")
+            return
+
+        # Pre-flight check: Validate target agent exists (unless it's a system topic)
+        if not resolved_target and target_agent not in valid_destinations:
+            # Get list of available agents for suggestions
+            guild_state = self.get_guild_state() or {}
+            agent_list = guild_state.get("guild_builder", {}).get("agent_message_info", [])
+            agent_names = [a.get("agent_name", "") for a in agent_list if a.get("agent_name")]
+
+            error_text = (
+                f"**Route Creation Failed**\n\n"
+                f"❌ Target agent not found: `{target_agent[:100]}`\n\n"
+                f"**Possible reasons:**\n"
+                f"1. The agent hasn't been created yet\n"
+                f"2. The agent name/description doesn't match closely enough\n\n"
+            )
+
+            if agent_names:
+                error_text += f"**Available agents ({len(agent_names)}):**\n"
+                for name in agent_names[:5]:  # Show first 5
+                    error_text += f"- {name}\n"
+                if len(agent_names) > 5:
+                    error_text += f"- ... and {len(agent_names) - 5} more\n"
+                error_text += "\n**Tip:** Use the EXACT agent name shown above, not a description.\n"
+                error_text += f"**Valid system topics:** {', '.join(valid_destinations)}"
+            else:
+                error_text += "**Tip:** No agents have been created yet. Create agents first with `@Orchestrator add agent`."
+
+            ctx.send(TextFormat(text=error_text, title="Error: Target Agent Not Found"))
+            logging.error(f"Target agent not found: {target_agent}")
+            return
+
+        # Use resolved names for route creation
+        final_source_name = resolved_source or source_agent
+        final_target_name = resolved_target or target_agent
+
+        logging.info(
+            f"Creating route: '{final_source_name}' → '{final_target_name}' "
+            f"(original: '{source_agent[:30]}...' → '{target_agent[:30]}...')"
+        )
+
         # Get agent message info from guild state
         agent_info = self._get_agent_message_info()
 
         user_prompt = f"""Create a routing rule with these requirements:
 
-Source agent: {source_agent}
-Target agent/topic: {target_agent}
+Source agent: {final_source_name}
+Target agent/topic: {final_target_name}
 Transformation requirements: {transformation_requirements or 'None'}
 Original user request: {action.user_message}
 
 {agent_info}
 
-IMPORTANT:
-- Use the exact message format class names from the agent's output_formats above.
-- Include both source_format and target_format in your response so we can determine if transformation is needed.
-- DO NOT include transformer field - transformations are handled separately.
+CRITICAL RULES:
+1. ONLY use agent names that appear in the "Available agents" list above
+2. DO NOT use descriptions or purposes - use EXACT agent names
+3. Use the exact message format class names from the agent's output_formats
+4. Include both source_format and target_format in your response
+5. DO NOT include transformer field - transformations are handled separately
+6. Agent names must be SHORT (under 100 characters) - if longer, it's likely wrong
+
+For the agent name in routing_rule, use: "{final_source_name}"
+For the destination topic, use: "{final_target_name}" (or the agent's ID/additional_topics)
 
 Please generate a complete RoutingRule specification."""
 
@@ -288,8 +590,8 @@ Please generate a complete RoutingRule specification."""
             ctx=ctx,
             llm=llm,
             user_prompt=user_prompt,
-            source_agent_name=source_agent,
-            target_agent_name=target_agent,
+            source_agent_name=final_source_name,
+            target_agent_name=final_target_name,
             transformation_requirements=transformation_requirements
         )
 
@@ -450,6 +752,23 @@ Please generate a complete RoutingRule specification."""
                 explanation = result.get("explanation", "")
                 source_format = result.get("source_format", "")
                 target_format = result.get("target_format", "")
+
+                # Validate routing rule before proceeding
+                is_valid, validation_errors = self._validate_routing_rule(routing_rule)
+                if not is_valid:
+                    error_message = "**Route Validation Failed**\n\n" + "\n".join(
+                        f"❌ {error}" for error in validation_errors
+                    )
+                    error_message += f"\n\n**Generated routing rule:**\n```json\n{json.dumps(routing_rule, indent=2)}\n```"
+                    error_message += "\n\n**Tip:** This likely means the LLM generated an invalid route. "
+                    error_message += "Make sure agents are created before routes, and that all fields are properly set."
+
+                    ctx.send(TextFormat(
+                        text=error_message,
+                        title="Route Validation Error"
+                    ))
+                    logging.error(f"Route validation failed: {validation_errors}")
+                    return
 
                 # If formats not provided by LLM, try to look them up
                 if not source_format or not target_format:

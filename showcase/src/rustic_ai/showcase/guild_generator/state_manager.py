@@ -17,7 +17,6 @@ from rustic_ai.showcase.guild_generator.models import (
     ActionType,
     AgentLookupResponse,
     AgentMessageInfo,
-    FlowchartUpdateRequest,
     GuildBuilderState,
     OrchestratorAction,
     RouteResponse,
@@ -68,6 +67,108 @@ class StateManagerAgent(Agent[StateManagerAgentProps]):
             update={"guild_builder": self._local_guild_builder}
         )
 
+    def _generate_guild_overview(self) -> str:
+        """
+        Generate a markdown overview of the current guild state.
+
+        Returns a formatted string with tables showing agents and routes.
+        """
+        guild_builder = self._get_local_state()
+        guild_name = guild_builder.get("name", "New Guild")
+        guild_desc = guild_builder.get("description", "A guild created with Guild Generator")
+        agents = guild_builder.get("agents", [])
+        routes = guild_builder.get("routes", [])
+        agent_message_info = guild_builder.get("agent_message_info", [])
+
+        # Build agents table
+        agent_lines = ["## 📦 Agents\n"]
+
+        if not agents:
+            agent_lines.append("*No agents added yet.*\n")
+        else:
+            agent_lines.append("| Agent Name | Type | Accepts | Sends | Description |")
+            agent_lines.append("|------------|------|---------|-------|-------------|")
+
+            for agent in agents:
+                name = agent.get("name", "Unknown")
+                agent_id = agent.get("id", "")
+                class_name = agent.get("class_name", "")
+                agent_type = class_name.split(".")[-1] if class_name else "Unknown"
+                description = agent.get("description", "")
+
+                # Find message info for this agent
+                input_fmts = "any"
+                output_fmts = "any"
+                for info in agent_message_info:
+                    if info.get("agent_id") == agent_id or info.get("agent_name") == name:
+                        input_formats = info.get("input_formats", [])
+                        output_formats = info.get("output_formats", [])
+                        input_fmts = ", ".join([f.split(".")[-1] for f in input_formats]) or "any"
+                        output_fmts = ", ".join([f.split(".")[-1] for f in output_formats]) or "any"
+                        break
+
+                # Truncate description for table
+                desc_short = (description[:50] + "...") if len(description) > 50 else description
+
+                agent_lines.append(f"| {name} | `{agent_type}` | {input_fmts} | {output_fmts} | {desc_short} |")
+
+        agent_lines.append("")  # Empty line after table
+
+        # Build routes table
+        route_lines = ["## 🔀 Routes\n"]
+
+        if not routes:
+            route_lines.append("*No routes configured yet.*\n")
+        else:
+            route_lines.append("| From | To | Message Format | Transformer | Status |")
+            route_lines.append("|------|-----|----------------|-------------|--------|")
+
+            for route in routes:
+                # Extract source
+                source = "Unknown"
+                if route.get("agent"):
+                    source = route["agent"].get("name") or route["agent"].get("id", "Unknown")
+                elif route.get("agent_type"):
+                    source = route["agent_type"].split(".")[-1]
+
+                # Extract destination
+                dest = route.get("destination", {})
+                target = dest.get("topics", "default") if dest else "default"
+                if isinstance(target, list):
+                    target = ", ".join(target)
+
+                # Extract message format
+                msg_format = route.get("message_format", "")
+                msg_format_short = msg_format.split(".")[-1] if msg_format else "Any"
+
+                # Check for transformer
+                has_transformer = "✓" if route.get("transformer") else "-"
+
+                # Extract process status
+                process_status = route.get("process_status", "ongoing")
+
+                route_lines.append(f"| {source} | {target} | `{msg_format_short}` | {has_transformer} | {process_status} |")
+
+        route_lines.append("")  # Empty line after table
+
+        # Build full overview
+        overview = f"# {guild_name}\n\n"
+        overview += f"*{guild_desc}*\n\n"
+        overview += f"**Total Agents:** {len(agents)} | **Total Routes:** {len(routes)}\n\n"
+        overview += "---\n\n"
+        overview += "\n".join(agent_lines)
+        overview += "\n".join(route_lines)
+
+        # Add helpful tip at the bottom
+        if len(agents) == 0:
+            overview += "\n💡 **Tip:** Start by adding an agent with `@Orchestrator add an LLM agent`\n"
+        elif len(routes) == 0:
+            overview += "\n💡 **Tip:** Connect your agents with `@Orchestrator add route from [source] to [target]`\n"
+        else:
+            overview += "\n💡 **Tip:** Export your guild with `@Orchestrator publish`\n"
+
+        return overview
+
     def _generate_routing_suggestions(self, agent_name: str) -> str:
         """
         Generate routing suggestions for a newly added agent.
@@ -111,6 +212,16 @@ class StateManagerAgent(Agent[StateManagerAgentProps]):
                 )
 
         return "\n".join(suggestions) if suggestions else ""
+
+    def _send_guild_overview(self, ctx: ProcessContext):
+        """Send the guild overview to the user."""
+        overview = self._generate_guild_overview()
+        ctx.send(
+            TextFormat(
+                text=overview,
+                title="Guild Overview",
+            )
+        )
 
     @processor(AgentLookupResponse)
     def add_agent_to_state(self, ctx: ProcessContext[AgentLookupResponse]):
@@ -184,8 +295,6 @@ class StateManagerAgent(Agent[StateManagerAgentProps]):
         if routing_suggestions:
             message_text += f"\n**⚠️ Routing Suggestions:**\n{routing_suggestions}\n\n"
 
-        message_text += "Use `@Orchestrator show flow` to see the updated guild diagram."
-
         ctx.send(
             TextFormat(
                 text=message_text,
@@ -193,8 +302,8 @@ class StateManagerAgent(Agent[StateManagerAgentProps]):
             )
         )
 
-        # Request flowchart update
-        ctx.send(FlowchartUpdateRequest(trigger="agent_added"))
+        # Automatically show the updated guild overview
+        self._send_guild_overview(ctx)
 
     @processor(RouteResponse)
     def add_route_to_state(self, ctx: ProcessContext[RouteResponse]):
@@ -243,14 +352,13 @@ class StateManagerAgent(Agent[StateManagerAgentProps]):
                 text=f"**Added route:**\n\n"
                 f"**From:** {source}\n"
                 f"**To:** {target}\n\n"
-                f"**Explanation:** {response.explanation}\n\n"
-                "Use `@Orchestrator show flow` to see the updated guild diagram.",
+                f"**Explanation:** {response.explanation}",
                 title="Route Added",
             )
         )
 
-        # Request flowchart update
-        ctx.send(FlowchartUpdateRequest(trigger="route_added"))
+        # Automatically show the updated guild overview
+        self._send_guild_overview(ctx)
 
     @processor(
         OrchestratorAction,
@@ -392,8 +500,9 @@ Hello, test this message through the pipeline
                     title="Agent Removed",
                 )
             )
-            # Request flowchart update
-            ctx.send(FlowchartUpdateRequest(trigger="agent_removed"))
+
+            # Automatically show the updated guild overview
+            self._send_guild_overview(ctx)
         else:
             ctx.send(
                 TextFormat(
@@ -454,8 +563,9 @@ Hello, test this message through the pipeline
                     title="Route Removed",
                 )
             )
-            # Request flowchart update
-            ctx.send(FlowchartUpdateRequest(trigger="route_removed"))
+
+            # Automatically show the updated guild overview
+            self._send_guild_overview(ctx)
         else:
             ctx.send(
                 TextFormat(
@@ -463,3 +573,13 @@ Hello, test this message through the pipeline
                     title="Error",
                 )
             )
+
+    @processor(
+        OrchestratorAction,
+        predicate=lambda self, msg: msg.payload.get("action") == ActionType.SHOW_FLOW,
+    )
+    def show_flow(self, ctx: ProcessContext[OrchestratorAction]):
+        """
+        Show the current guild overview with agents and routes.
+        """
+        self._send_guild_overview(ctx)

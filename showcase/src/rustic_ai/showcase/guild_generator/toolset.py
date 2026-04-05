@@ -27,7 +27,6 @@ from rustic_ai.showcase.guild_generator.models import (
     AddAgentParams,
     AddRouteParams,
     ExportRequest,
-    FlowchartUpdateRequest,
     HelpParams,
     OrchestratorAction,
     PublishParams,
@@ -246,9 +245,7 @@ class GuildGeneratorToolset(ReActToolset):
                     user_message="Show flow",
                 )
             )
-            # Also send a flowchart update request directly
-            self._queue_message(FlowchartUpdateRequest(trigger="show_flow"))
-            return "Dispatched show_flow action. The guild visualization will be displayed."
+            return "Dispatched show_flow action. The guild overview will be displayed."
 
         elif tool_name == "test_flow":
             params = args if isinstance(args, TestFlowParams) else TestFlowParams.model_validate(args)

@@ -17,7 +17,6 @@ from rustic_ai.showcase.guild_generator.models import (
     AgentRegistryInfo,
     ExportRequest,
     ExportResponse,
-    FlowchartUpdateRequest,
     GuildBuilderState,
     OrchestratorAction,
     RouteRequest,
@@ -58,11 +57,6 @@ from rustic_ai.showcase.guild_generator.route_builder import (
     RouteBuilderAgentProps,
 )
 
-from rustic_ai.showcase.guild_generator.flowchart_agent import (
-    FlowchartAgent,
-    FlowchartAgentProps,
-)
-
 from rustic_ai.showcase.guild_generator.guild_export import (
     GuildExportAgent,
     GuildExportAgentProps,
@@ -81,7 +75,6 @@ __all__ = [
     "AgentRegistryInfo",
     "ExportRequest",
     "ExportResponse",
-    "FlowchartUpdateRequest",
     "GuildBuilderState",
     "OrchestratorAction",
     "RouteRequest",
@@ -108,8 +101,6 @@ __all__ = [
     "TransformationBuilderAgentProps",
     "RouteBuilderAgent",
     "RouteBuilderAgentProps",
-    "FlowchartAgent",
-    "FlowchartAgentProps",
     "GuildExportAgent",
     "GuildExportAgentProps",
     "StateManagerAgent",

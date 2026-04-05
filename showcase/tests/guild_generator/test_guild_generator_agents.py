@@ -28,7 +28,6 @@ from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 from rustic_ai.core.utils.gemstone_id import GemstoneGenerator
 from rustic_ai.core.utils.priority import Priority
 from rustic_ai.showcase.guild_generator.agent_registry import AgentRegistryAgent
-from rustic_ai.showcase.guild_generator.flowchart_agent import FlowchartAgent
 from rustic_ai.showcase.guild_generator.guild_export import GuildExportAgent
 from rustic_ai.core.ui_protocol.types import VegaLiteFormat
 from rustic_ai.showcase.guild_generator.models import (
@@ -37,7 +36,6 @@ from rustic_ai.showcase.guild_generator.models import (
     AgentLookupResponse,
     ExportRequest,
     ExportResponse,
-    FlowchartUpdateRequest,
     GuildBuilderState,
     OrchestratorAction,
     RouteRequest,
@@ -537,16 +535,13 @@ class TestStateManagerAgent:
 
         agent._on_message(build_message_from_payload(generator, response))
 
-        # Should send TextFormat confirmation and FlowchartUpdateRequest
-        assert len(results) == 2
+        # Should send TextFormat confirmation only
+        assert len(results) == 1
 
         text_results = [r for r in results if r.format == get_qualified_class_name(TextFormat)]
         assert len(text_results) == 1
         text_payload = TextFormat.model_validate(text_results[0].payload)
         assert "Test Agent" in text_payload.text
-
-        flowchart_results = [r for r in results if r.format == get_qualified_class_name(FlowchartUpdateRequest)]
-        assert len(flowchart_results) == 1
 
     def test_state_manager_handles_route_response(self, generator, build_message_from_payload):
         """Test that state manager processes route responses."""
@@ -625,93 +620,6 @@ class TestStateManagerAgent:
         assert len(results) == 1
         text_payload = TextFormat.model_validate(results[0].payload)
         assert "My Custom Guild" in text_payload.text
-
-
-class TestFlowchartAgent:
-    """Tests for the FlowchartAgent."""
-
-    def test_flowchart_agent_generates_vegalite(self, generator, build_message_from_payload):
-        """Test that flowchart agent generates VegaLite spec."""
-        agent_spec = (
-            AgentBuilder(FlowchartAgent)
-            .set_id("flowchart")
-            .set_name("Flowchart")
-            .set_description("Test flowchart agent")
-            .build_spec()
-        )
-
-        agent, results = wrap_agent_for_testing(agent_spec)
-
-        request = FlowchartUpdateRequest(trigger="update")
-
-        agent._on_message(build_message_from_payload(generator, request))
-
-        assert len(results) == 1
-        assert results[0].format == get_qualified_class_name(VegaLiteFormat)
-        payload = VegaLiteFormat.model_validate(results[0].payload)
-        assert payload.response["$schema"] == "https://vega.github.io/schema/vega-lite/v5.json"
-        assert "layer" in payload.response
-
-    def test_flowchart_agent_shows_on_orchestrator_action(self, generator, build_message_from_payload):
-        """Test that flowchart agent responds to SHOW_FLOW action."""
-        agent_spec = (
-            AgentBuilder(FlowchartAgent)
-            .set_id("flowchart")
-            .set_name("Flowchart")
-            .set_description("Test flowchart agent")
-            .build_spec()
-        )
-
-        agent, results = wrap_agent_for_testing(agent_spec)
-
-        action = OrchestratorAction(
-            action=ActionType.SHOW_FLOW,
-            details={},
-            user_message="@Orchestrator show flow",
-        )
-
-        agent._on_message(build_message_from_payload(generator, action))
-
-        assert len(results) == 1
-        assert results[0].format == get_qualified_class_name(VisualizationResponse)
-
-    def test_flowchart_includes_agents_from_state(self, generator, build_message_from_payload):
-        """Test that flowchart includes agents from guild state."""
-        agent_spec = (
-            AgentBuilder(FlowchartAgent)
-            .set_id("flowchart")
-            .set_name("Flowchart")
-            .set_description("Test flowchart agent")
-            .build_spec()
-        )
-
-        agent, results = wrap_agent_for_testing(agent_spec)
-
-        request = FlowchartUpdateRequest(trigger="update")
-        session_state = {
-            "guild_builder": {
-                "name": "Test Guild",
-                "description": "Test description",
-                "agents": [
-                    {"id": "agent1", "name": "Agent One", "class_name": "test.LLMAgent"},
-                    {"id": "agent2", "name": "Agent Two", "class_name": "test.SplitterAgent"},
-                ],
-                "routes": [],
-            }
-        }
-
-        agent._on_message(build_message_from_payload(generator, request, session_state=session_state))
-
-        assert len(results) == 1
-        payload = VegaLiteFormat.model_validate(results[0].payload)
-        assert payload.spec["title"]["text"] == "Test Guild"
-
-        # Check nodes include the agents
-        nodes_layer = payload.spec["layer"][1]
-        nodes = nodes_layer["data"]["values"]
-        node_names = [n["name"] for n in nodes]
-        assert "Agent One" in node_names
-        assert "Agent Two" in node_names
 
 
 class TestGuildExportAgent:

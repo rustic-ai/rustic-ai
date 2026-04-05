@@ -16,7 +16,6 @@ from rustic_ai.showcase.guild_generator.models import (
     AgentLookupResponse,
     ExportRequest,
     ExportResponse,
-    FlowchartUpdateRequest,
     GuildBuilderState,
     OrchestratorAction,
     RouteRequest,
@@ -25,7 +24,6 @@ from rustic_ai.showcase.guild_generator.models import (
     TransformRequest,
     TransformResponse,
 )
-from rustic_ai.showcase.guild_generator.flowchart_agent import FlowchartAgent
 
 
 class TestModels:
@@ -261,90 +259,6 @@ class TestJSONataTransformations:
         assert result["agent_spec"]["id"] == "test_agent"
         assert result["agent_spec"]["name"] == "Test Agent"
         assert "other_field" not in result
-
-
-class TestFlowchartAgent:
-    """Tests for the FlowchartAgent."""
-
-    def test_build_flowchart_spec_empty(self):
-        """Test flowchart generation with no agents."""
-        # Create a minimal agent instance for testing
-        agent = FlowchartAgent.__new__(FlowchartAgent)
-        agent._props = type("Props", (), {"default_width": 600, "default_height": 400})()
-
-        # Mock config
-        class MockConfig:
-            default_width = 600
-            default_height = 400
-
-        agent.config = MockConfig()
-
-        spec = agent._build_flowchart_spec(None)
-
-        assert spec["$schema"] == "https://vega.github.io/schema/vega-lite/v5.json"
-        assert spec["width"] == 600
-        assert spec["height"] == 400
-        # 2 layers (nodes, labels) when no edges - edges layer excluded to avoid Vega-Lite errors
-        assert len(spec["layer"]) == 2
-
-    def test_build_flowchart_spec_with_agents(self):
-        """Test flowchart generation with agents."""
-        agent = FlowchartAgent.__new__(FlowchartAgent)
-
-        class MockConfig:
-            default_width = 600
-            default_height = 400
-
-        agent.config = MockConfig()
-
-        state = GuildBuilderState(
-            name="Test Guild",
-            description="Test description",
-            agents=[
-                {
-                    "id": "agent_1",
-                    "name": "Agent One",
-                    "class_name": "test.LLMAgent",
-                }
-            ],
-            routes=[],
-        )
-
-        spec = agent._build_flowchart_spec(state)
-
-        assert spec["title"]["text"] == "Test Guild"
-        assert spec["title"]["subtitle"] == "Test description"
-
-        # Check that agent nodes are included
-        nodes_layer = spec["layer"][1]
-        nodes_data = nodes_layer["data"]["values"]
-
-        # Should have UserProxyAgent + our agent
-        assert len(nodes_data) == 2
-        agent_names = [n["name"] for n in nodes_data]
-        assert "UserProxyAgent" in agent_names
-        assert "Agent One" in agent_names
-
-    def test_build_edge_data(self):
-        """Test edge data generation for routes."""
-        agent = FlowchartAgent.__new__(FlowchartAgent)
-
-        agents = [
-            {"id": "a1", "name": "Agent1", "x": 100, "y": 100},
-            {"id": "a2", "name": "Agent2", "x": 200, "y": 200},
-        ]
-
-        routes = [
-            {"source": "Agent1", "target": "Agent2", "format": "TestFormat"}
-        ]
-
-        edges = agent._build_edge_data(agents, routes)
-
-        assert len(edges) == 1
-        assert edges[0]["x1"] == 100
-        assert edges[0]["y1"] == 100
-        assert edges[0]["x2"] == 200
-        assert edges[0]["y2"] == 200
 
 
 class TestBlueprintValidity:
@@ -741,90 +655,6 @@ class TestStateManagerAgent:
         assert "Agent One" in all_text or "OUTPUT1" in all_text, f"First route not mentioned: {all_text[:200]}"
         assert "Agent Two" in all_text or "OUTPUT2" in all_text, f"Second route not mentioned: {all_text[:200]}"
 
-
-class TestGuildGeneratorIntegration:
-    """Integration tests for the guild generator."""
-
-    def test_guild_generator_starts(self, org_id):
-        """Test that the guild generator can be started."""
-        from rustic_ai.showcase.guild_generator.flowchart_agent import FlowchartAgent
-        from rustic_ai.showcase.guild_generator.state_manager import StateManagerAgent
-
-        # Build a minimal guild with just the flowchart and state manager agents
-        builder = GuildBuilder(
-            guild_name="Guild Generator Test",
-            guild_description="Test guild for guild generator",
-        ).set_messaging(
-            "rustic_ai.core.messaging.backend",
-            "InMemoryMessagingBackend",
-            {},
-        )
-
-        # Add flowchart agent
-        flowchart_spec = (
-            AgentBuilder(FlowchartAgent)
-            .set_id("flowchart_agent")
-            .set_name("Flowchart Agent")
-            .set_description("Generates VegaLite visualizations")
-            .add_additional_topic("FLOWCHART")
-            .build_spec()
-        )
-
-        # Add state manager agent
-        state_manager_spec = (
-            AgentBuilder(StateManagerAgent)
-            .set_id("state_manager")
-            .set_name("State Manager")
-            .set_description("Manages guild builder state")
-            .add_additional_topic("STATE_MGMT")
-            .build_spec()
-        )
-
-        builder.add_agent_spec(flowchart_spec)
-        builder.add_agent_spec(state_manager_spec)
-
-        guild = builder.launch(org_id)
-
-        # Add probe to capture messages
-        probe_spec = (
-            AgentBuilder(ProbeAgent)
-            .set_id("probe_agent")
-            .set_name("Probe Agent")
-            .set_description("Captures messages for testing")
-            .add_additional_topic("FLOWCHART")
-            .add_additional_topic("STATE_MGMT")
-            .add_additional_topic(GuildTopics.DEFAULT_TOPICS[0])
-            .build_spec()
-        )
-
-        probe_agent: ProbeAgent = guild._add_local_agent(probe_spec)
-
-        # Send flowchart update request
-        from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
-
-        probe_agent.publish_dict(
-            "FLOWCHART",
-            {"trigger": "update"},
-            format=get_qualified_class_name(FlowchartUpdateRequest),
-        )
-
-        import time
-        time.sleep(0.5)
-
-        messages = probe_agent.get_messages()
-
-        # Should have received a VegaLiteFormat
-        viz_messages = [
-            m for m in messages
-            if m.format == get_qualified_class_name(VegaLiteFormat)
-        ]
-
-        assert len(viz_messages) >= 1, f"Expected VegaLiteFormat message, got: {[m.format for m in messages]}"
-
-        # Verify the flowchart content
-        flowchart = viz_messages[0].payload
-        assert "$schema" in flowchart["spec"]
-        assert "layer" in flowchart["spec"]
 
 
 class TestAgentRegistryDependencySpec:

@@ -293,6 +293,10 @@ Please generate the appropriate JSONata transformation."""
                     transformation=transformation,
                     explanation=result.get("explanation", ""),
                 )
+                # Preserve session_state so RouteBuilder can correlate the response
+                # with the pending route request
+                session_state = ctx.message.session_state or {}
+                ctx.update_context(session_state)
                 ctx.send(transform_response)
 
             except json.JSONDecodeError as e:

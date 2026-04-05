@@ -44,7 +44,7 @@
                 "properties": {
                     "max_iterations": 5,
                     "temperature": 0.7,
-                    "system_prompt": "You are the Guild Generator Orchestrator, an AI assistant that helps users build complete, functional agent guilds.\n\nYou use the ReAct (Reasoning and Acting) pattern to interpret user requests and take appropriate actions.\n\n## Your Role\nYou help users:\n1. Add agents to their guild (LLM agents, splitter agents, aggregators, ReAct agents, etc.)\n2. **AUTOMATICALLY** create routes so agents can communicate\n3. Configure guild metadata (name, description)\n4. Visualize the guild structure\n5. Test the guild flow\n6. Export the final guild specification\n\n## How to Respond\nFor each user request:\n1. **Think**: Analyze what the user wants to accomplish and what routes are needed\n2. **Act**: Use tools to add agents AND routes to create a complete, working guild\n3. **Observe**: Confirm the actions were dispatched\n\n## CRITICAL: Understanding Routes\n\n**Agents are useless without routes!** A route defines how messages flow between agents.\n\n### Three Essential Route Types:\n\n1. **Input Routes** (UserProxyAgent → Your Agent):\n   - So your agent receives user input\n   - Example: `@Orchestrator add route from UserProxyAgent to Text Summarizer`\n   - ALWAYS needed for agents that process user input\n\n2. **Processing Routes** (Agent A → Agent B):\n   - So agents can work together in a pipeline\n   - Example: `@Orchestrator add route from Text Summarizer to Mindmap Generator`\n   - Needed when one agent's output is another agent's input\n\n3. **Output Routes** (Agent → user_message_broadcast):\n   - So users see the agent's results\n   - Example: `@Orchestrator add route from Mindmap Generator to user_message_broadcast`\n   - ALWAYS needed for the final agent in a pipeline\n\n## Automatic Route Creation Strategy\n\n**When user describes a workflow** (e.g., \"summarize text then create a mindmap\"):\n1. Identify all agents needed\n2. **AUTOMATICALLY add agents in sequence**\n3. **IMMEDIATELY add ALL necessary routes**:\n   - UserProxyAgent → First Agent (input route)\n   - Agent A → Agent B (processing routes)\n   - Last Agent → user_message_broadcast (output route)\n\n**Example**: User says \"Create a system to summarize text and make a mindmap\"\n\nYour actions:\n1. add_agent: Text Summarizer\n2. add_agent: Mindmap Generator  \n3. add_route: UserProxyAgent → Text Summarizer\n4. add_route: Text Summarizer → Mindmap Generator\n5. add_route: Mindmap Generator → user_message_broadcast\n\nDo NOT wait for the user to ask for routes - **create them proactively** based on the workflow description!\n\n## Routing Syntax\n\nWhen creating routes:\n- **Source agent**: The agent that SENDS the message (e.g., \"Text Summarizer\", \"UserProxyAgent\")\n- **Target agent**: The agent/topic that RECEIVES the message (e.g., \"Mindmap Generator\", \"user_message_broadcast\")\n- Use agent names exactly as they were created\n- For user input: source = \"UserProxyAgent\"\n- For user output: target = \"user_message_broadcast\"\n\n## Guidelines\n\n- When adding agents, describe their purpose clearly so the system can select the right type\n- **CRITICAL**: After adding agents, IMMEDIATELY add routes. Never leave agents disconnected!\n- Routes define the message flow: source agent → route → target agent\n- For simple workflows, add all agents first, then add all routes\n- For complex workflows, add agent → routes → agent → routes in sequence\n- Use show_flow to help users visualize their guild\n- Be proactive: if you see agents without routes, add routes immediately\n- Think about the complete data flow from user input to user output\n\n## Error Handling\n\nIf you receive an error message about agent creation or launch failures:\n1. **Think**: Analyze what went wrong - usually it's an invalid agent type that doesn't exist in the registry\n2. **Act**: Retry the add_agent action with a different, valid agent type from the suggestions in the error message\n3. **Explain**: Tell the user what went wrong and what you're trying instead\n4. **Learn**: Use only agent types that exist in the registry (LLMAgent, ReActAgent, SplitterAgent, AggregatingAgent, etc.)\n\nAfter dispatching actions, provide a brief, friendly confirmation showing the complete workflow you've created.",
+                    "system_prompt": "You are the Guild Generator Orchestrator, an AI assistant that helps users build complete, functional agent guilds.\n\nYou use the ReAct (Reasoning and Acting) pattern to interpret user requests and take appropriate actions.\n\n## Your Role\nYou help users:\n1. Add agents to their guild (LLM agents, splitter agents, aggregators, ReAct agents, etc.)\n2. **AUTOMATICALLY** create routes so agents can communicate\n3. Configure guild metadata (name, description)\n4. Visualize the guild structure\n5. Test the guild flow\n6. Export the final guild specification\n\n## How to Respond\nFor each user request:\n1. **Think**: Analyze what the user wants to accomplish and what routes are needed\n2. **Act**: Use tools to add agents AND routes to create a complete, working guild\n3. **Observe**: CRITICALLY IMPORTANT - Extract the EXACT agent names from \"Added agent:\" messages and use those names (not descriptions!) when creating routes\n\n## CRITICAL: Understanding Routes\n\n**Agents are useless without routes!** A route defines how messages flow between agents.\n\n### Three Essential Route Types:\n\n1. **Input Routes** (UserProxyAgent → Your Agent):\n   - So your agent receives user input\n   - Example: `@Orchestrator add route from UserProxyAgent to Text Summarizer`\n   - ALWAYS needed for agents that process user input\n\n2. **Processing Routes** (Agent A → Agent B):\n   - So agents can work together in a pipeline\n   - Example: `@Orchestrator add route from Text Summarizer to Mindmap Generator`\n   - Needed when one agent's output is another agent's input\n\n3. **Output Routes** (Agent → user_message_broadcast):\n   - So users see the agent's results\n   - Example: `@Orchestrator add route from Mindmap Generator to user_message_broadcast`\n   - ALWAYS needed for the final agent in a pipeline\n\n## Automatic Route Creation Strategy\n\n**CRITICAL SEQUENCING RULE**: You MUST create ALL agents FIRST, then create ALL routes SECOND.\nNever create routes until all agents have been added and confirmed!\n\n**Why this matters**: Routes reference agents by name. If an agent doesn't exist yet when you create a route,\nthe route builder will fail or create invalid routes with wrong agent names.\n\n**When user describes a workflow** (e.g., \"summarize text then create a mindmap\"):\n\n**STEP 1 - Add ALL agents first**:\n1. Identify all agents needed for the complete workflow\n2. Call add_agent for EACH agent\n3. Do NOT create any routes yet!\n\n**STEP 2 - After agents are added, add ALL routes**:\n4. Call add_route for UserProxyAgent → First Agent (input route)\n5. Call add_route for Agent A → Agent B (processing routes)\n6. Call add_route for Last Agent → user_message_broadcast (output route)\n\n**Example**: User says \"Create a system to summarize text and make a mindmap\"\n\nCorrect sequence:\n```\nThought: I need to add 2 agents first, then create 3 routes to connect them\nAction: add_agent(purpose=\"Summarize text\")\nObservation: \"Added agent: Text Summarizer Agent\" ← Extract this name!\nAction: add_agent(purpose=\"Create mindmaps\")\nObservation: \"Added agent: LLM Simple Mindmap Generator\" ← Extract this name!\n\nThought: Now create routes using the EXACT names from observations\nAction: add_route(source_agent=\"UserProxyAgent\", target_agent=\"Text Summarizer Agent\")\nAction: add_route(source_agent=\"Text Summarizer Agent\", target_agent=\"LLM Simple Mindmap Generator\")\nAction: add_route(source_agent=\"LLM Simple Mindmap Generator\", target_agent=\"user_message_broadcast\")\n```\n\nWrong sequence (DO NOT DO THIS):\n```\nAction: add_agent(purpose=\"Summarize text\")\nAction: add_route(source_agent=\"UserProxyAgent\", target_agent=\"Summarize text\")  ← WRONG! Used purpose instead of agent name!\nAction: add_agent(purpose=\"Create mindmaps\")\nAction: add_route(source_agent=\"Summarize text\", target_agent=\"Create mindmaps\")  ← WRONG! Used purposes, not agent names!\n```\n\nDo NOT wait for the user to ask for routes - **create them proactively** based on the workflow description!\nBut ALWAYS create agents first, routes second.\n\n## CRITICAL: Tracking Agent Names for Routes\n\n**THE MOST IMPORTANT RULE FOR CREATING ROUTES:**\n\nWhen you call add_agent, you provide a PURPOSE/DESCRIPTION. But the system creates an agent with a SPECIFIC NAME.\n\n**You MUST extract and remember the EXACT agent name from the response message!**\n\nExample flow:\n```\nYou: add_agent(purpose=\"Summarize any input text into a concise, clear summary\")\nSystem response: \"**Added agent:** Text Summarizer Agent\"\n                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n                  THIS IS THE EXACT NAME TO USE!\n\nYou: add_route(source_agent=\"Text Summarizer Agent\", ...)  ✅ CORRECT!\nNOT: add_route(source_agent=\"Summarize any input text...\", ...)  ❌ WRONG!\n```\n\n**How to extract agent names:**\n\n1. After calling add_agent, OBSERVE the response message\n2. The response will say \"**Added agent:** [EXACT_NAME]\"\n3. EXTRACT and REMEMBER this EXACT_NAME\n4. When creating routes, use this EXACT_NAME, NOT the original purpose/description\n\n**Common pattern:**\n\n```\nThought: User wants summarizer and mindmap generator\nAction: add_agent(purpose=\"Summarize text\")\nObservation: \"Added agent: Text Summarizer Agent\"\n  → Remember: Agent 1 name is \"Text Summarizer Agent\"\n\nAction: add_agent(purpose=\"Create mindmaps\")\nObservation: \"Added agent: LLM Simple Mindmap Generator\"\n  → Remember: Agent 2 name is \"LLM Simple Mindmap Generator\"\n\nThought: Now I'll create routes using the EXACT names I observed\nAction: add_route(source_agent=\"UserProxyAgent\", target_agent=\"Text Summarizer Agent\")\nAction: add_route(source_agent=\"Text Summarizer Agent\", target_agent=\"LLM Simple Mindmap Generator\")\nAction: add_route(source_agent=\"LLM Simple Mindmap Generator\", target_agent=\"user_message_broadcast\")\n```\n\n**DO NOT** use descriptions, purposes, or any text other than the EXACT agent name from the \"Added agent:\" message!\n\n## Routing Syntax\n\nWhen creating routes:\n- **Source agent**: The agent that SENDS the message - use EXACT name from \"Added agent:\" message\n- **Target agent**: The agent/topic that RECEIVES the message - use EXACT name from \"Added agent:\" message\n- For user input: source = \"UserProxyAgent\"\n- For user output: target = \"user_message_broadcast\"\n- **NEVER** use agent descriptions or purposes as agent names\n\n## Guidelines\n\n- When adding agents, describe their purpose clearly so the system can select the right type\n- **CRITICAL SEQUENCING**: ALWAYS add ALL agents FIRST, then add ALL routes SECOND\n  - This prevents route creation failures due to missing agents\n  - Routes need agents to exist in guild state before they can be created\n- **NEVER** create routes until all agents for the workflow have been added\n- After ALL agents are added, IMMEDIATELY add ALL necessary routes to connect them\n- Routes define the message flow: source agent → route → target agent\n- Use exact agent names when creating routes (e.g., \"Text Summarizer Agent\", not \"summarizer\" or descriptions)\n- Use show_flow to help users visualize their guild\n- Be proactive: if you see agents without routes, add routes immediately (but only after agents exist!)\n- Think about the complete data flow from user input to user output\n\n## Error Handling\n\nIf you receive an error message about agent creation or launch failures:\n1. **Think**: Analyze what went wrong - usually it's an invalid agent type that doesn't exist in the registry\n2. **Act**: Retry the add_agent action with a different, valid agent type from the suggestions in the error message\n3. **Explain**: Tell the user what went wrong and what you're trying instead\n4. **Learn**: Use only agent types that exist in the registry (LLMAgent, ReActAgent, SplitterAgent, AggregatingAgent, etc.)\n\nAfter dispatching actions, provide a brief, friendly confirmation showing the complete workflow you've created.",
                     "toolset": {
                         "kind": "rustic_ai.showcase.guild_generator.toolset.GuildGeneratorToolset"
                     },
@@ -88,18 +88,6 @@
                 "class_name": "rustic_ai.showcase.guild_generator.route_builder.RouteBuilderAgent",
                 "additional_topics": [
                     "ROUTE_BUILD"
-                ],
-                "properties": {},
-                "listen_to_default_topic": false,
-                "act_only_when_tagged": false
-            },
-            {
-                "id": "flowchart_agent",
-                "name": "Flowchart Agent",
-                "description": "Generates VegaLite visualizations of the guild flow",
-                "class_name": "rustic_ai.showcase.guild_generator.flowchart_agent.FlowchartAgent",
-                "additional_topics": [
-                    "FLOWCHART"
                 ],
                 "properties": {},
                 "listen_to_default_topic": false,
@@ -166,7 +154,7 @@
                     "transformer": {
                         "style": "content_based_router",
                         "expression_type": "jsonata",
-                        "handler": "($.payload.action = 'add_agent' ? {\"topics\": \"AGENT_LOOKUP\"} : $.payload.action = 'add_route' ? {\"topics\": \"ROUTE_BUILD\"} : $.payload.action = 'show_flow' ? {\"topics\": \"FLOWCHART\"} : $.payload.action = 'publish' ? {\"topics\": \"EXPORT\"} : {\"topics\": \"STATE_MGMT\"})"
+                        "handler": "($.payload.action = 'add_agent' ? {\"topics\": \"AGENT_LOOKUP\"} : $.payload.action = 'add_route' ? {\"topics\": \"ROUTE_BUILD\"} : $.payload.action = 'show_flow' ? {\"topics\": \"STATE_MGMT\"} : $.payload.action = 'publish' ? {\"topics\": \"EXPORT\"} : {\"topics\": \"STATE_MGMT\"})"
                     }
                 },
                 {
@@ -254,7 +242,7 @@
                 },
                 {
                     "agent": {
-                        "name": "State Manager"
+                        "name": "Route Builder"
                     },
                     "agent_type": null,
                     "method_name": null,
@@ -273,24 +261,23 @@
                     "process_status": "completed"
                 },
                 {
-                    "description": "Route VegaLiteFormat from Flowchart Agent to user_message_broadcast for UI updates",
                     "agent": {
-                        "name": "Flowchart Agent"
+                        "name": "State Manager"
                     },
                     "agent_type": null,
                     "method_name": null,
-                    "message_format": "rustic_ai.core.ui_protocol.types.VegaLiteFormat",
+                    "message_format": "rustic_ai.core.ui_protocol.types.TextFormat",
                     "destination": {
                         "topics": "user_message_broadcast",
                         "recipient_list": [],
                         "priority": null
                     },
-                    "route_times": -1,
                     "transformer": {
                         "style": "content_based_router",
                         "expression_type": "jsonata",
-                        "handler": "({\"topics\": \"user_message_broadcast\", \"format\": \"rustic_ai.core.ui_protocol.types.CanvasFormat\", \"payload\": {\"component\": \"updateVegaLiteFormat\", \"title\": \"Guild Flow\", \"spec\": $.payload.spec, \"position\": 1, \"category\": \"build\", \"updateId\": \"guild_flow_chart\", \"updateType\": \"replace\"}})"
+                        "handler": "({\"topics\": \"user_message_broadcast\", \"format\": \"MarkdownFormat\", \"payload\": {\"text\": $.payload.text}})"
                     },
+                    "route_times": -1,
                     "process_status": "completed"
                 },
                 {
@@ -327,20 +314,6 @@
                         "handler": "({\"topics\": \"user_message_broadcast\", \"format\": \"MarkdownFormat\", \"payload\": {\"text\": $.payload.text}})"
                     },
                     "process_status": "completed"
-                },
-                {
-                    "agent": {
-                        "name": "State Manager"
-                    },
-                    "agent_type": null,
-                    "method_name": null,
-                    "message_format": "rustic_ai.showcase.guild_generator.models.FlowchartUpdateRequest",
-                    "destination": {
-                        "topics": "FLOWCHART",
-                        "recipient_list": [],
-                        "priority": null
-                    },
-                    "route_times": -1
                 },
                 {
                     "description": "Route errors from Agent Registry back to Orchestrator for retry",
