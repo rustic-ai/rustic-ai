@@ -3,11 +3,15 @@ Route Builder Agent for the Guild Generator.
 
 This agent creates RoutingRule specifications from agent and transformation
 information, and manages the routes stored in guild state.
+
+It delegates transformation creation to the TransformationBuilder agent
+when message formats differ between source and target agents.
 """
 
 import json
 import logging
-from typing import Any, Dict, Optional
+import uuid
+from typing import Any, Dict, List, Optional, Tuple
 
 from pydantic import Field
 
@@ -28,6 +32,8 @@ from rustic_ai.showcase.guild_generator.models import (
     RouteRequest,
     RouteResponse,
     TransformationSpec,
+    TransformRequest,
+    TransformResponse,
 )
 from rustic_ai.showcase.guild_generator.utils import extract_json_from_response
 
@@ -39,6 +45,9 @@ class RouteBuilderAgentProps(BaseAgentProps):
         default="""You are a routing expert for the Rustic AI framework. Your job is to create
 RoutingRule specifications that define how messages flow between agents.
 
+NOTE: This agent focuses ONLY on routing logic. Message transformations are handled by the
+TransformationBuilder agent - do NOT include transformer fields in your response.
+
 A RoutingRule has these fields:
 - agent: {{"id": "agent_id", "name": "agent_name"}} - identifies the source agent (either id or name)
 - agent_type: "full.class.name" - alternative to agent, matches all agents of this type
@@ -46,7 +55,6 @@ A RoutingRule has these fields:
 - message_format: "full.format.class.name" - the message format this rule applies to (MUST be a valid format from the agent's output_formats)
 - destination: {{"topics": "topic_name" or ["topics"], "recipient_list": [], "priority": null}}
 - route_times: -1 for always, or a specific number of times
-- transformer: optional transformation to apply (see below)
 - process_status: "completed" if this ends the message processing chain
 - guild_state_update: optional update to guild state
 
@@ -60,47 +68,26 @@ Do NOT make up message format names - only use formats that are listed in the ag
 - Source: agent_type = "rustic_ai.core.agents.utils.user_proxy_agent.UserProxyAgent"
 - Message format: "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest"
 - Destination topics: Look up the target agent's additional_topics or use "default_topic"
-- May need transformer to match target agent's input format
 
 **Pattern 2: Agent → user_message_broadcast** (Agent output to user)
 - Source: agent = {{"name": "AgentName"}}
 - Message format: Use agent's output_format (often TextFormat, ChatCompletionResponse, etc.)
 - Destination topics: "user_message_broadcast"
 - Set process_status: "completed" to end the processing chain
-- May need transformer to convert to MarkdownFormat for user display
 
 **Pattern 3: Agent A → Agent B** (Inter-agent communication)
 - Source: agent = {{"name": "SourceAgent"}}
 - Message format: Use source agent's output_format
 - Destination topics: Target agent's topic (from additional_topics or "default_topic")
-- May need transformer if formats don't match
 
-Transformer format for "simple" style:
-{{
-    "style": "simple",
-    "output_format": "target.format.class",
-    "expression_type": "jsonata",
-    "expression": "JSONata expression on $.payload"
-}}
-
-Transformer format for "content_based_router" style (for conditional routing):
-{{
-    "style": "content_based_router",
-    "expression_type": "jsonata",
-    "handler": "JSONata expression returning {{\"topics\": \"destination_topic\", \"format\": \"output.format.class\", \"payload\": {{...}}}}"
-}}
-
-Example transformer for routing to user_message_broadcast:
-{{
-    "style": "content_based_router",
-    "expression_type": "jsonata",
-    "handler": "({{\"topics\": \"user_message_broadcast\", \"format\": \"MarkdownFormat\", \"payload\": {{\"text\": $.payload.text ? $.payload.text : $.payload.content}}}})"
-}}
+DO NOT INCLUDE TRANSFORMER FIELDS. Transformations will be added automatically when needed.
 
 Respond ONLY with a JSON object in this exact format:
 {{
-    "routing_rule": {{<complete RoutingRule>}},
-    "explanation": "<explanation of the routing rule>"
+    "routing_rule": {{<complete RoutingRule WITHOUT transformer field>}},
+    "explanation": "<explanation of the routing rule>",
+    "source_format": "<the message format the source agent sends>",
+    "target_format": "<the message format the target agent expects>"
 }}"""
     )
 
@@ -109,9 +96,18 @@ class RouteBuilderAgent(Agent[RouteBuilderAgentProps]):
     """
     Agent that creates RoutingRule specifications.
 
-    This agent takes routing requests and creates complete RoutingRule
-    objects that can be added to a guild's routing slip.
+    This agent delegates transformation creation to TransformationBuilder when
+    message formats differ between source and target agents. It focuses on
+    routing logic and uses async message passing to coordinate with other agents.
     """
+
+    def __init__(self, *args, **kwargs):
+        """Initialize agent with empty pending routes tracking."""
+        # Only initialize our custom state if not already initialized
+        if not hasattr(self, '_pending_routes'):
+            # Track pending route requests waiting for transformations
+            # Key: correlation_id, Value: dict with route context
+            self._pending_routes: Dict[str, Dict[str, Any]] = {}
 
     def _get_agent_message_info(self) -> str:
         """Get formatted agent message info from guild state for the LLM prompt."""
@@ -149,6 +145,106 @@ class RouteBuilderAgent(Agent[RouteBuilderAgentProps]):
 
         return "\n".join(info_lines)
 
+    def _get_agent_formats(self, agent_name: str) -> Tuple[List[str], List[str]]:
+        """
+        Look up agent's input and output formats from guild state.
+
+        Args:
+            agent_name: Name of the agent to look up
+
+        Returns:
+            Tuple of (input_formats, output_formats)
+        """
+        guild_state = self.get_guild_state() or {}
+        agent_info_list = guild_state.get("guild_builder", {}).get("agent_message_info", [])
+
+        # Check guild agents
+        for agent_info in agent_info_list:
+            if agent_info.get("agent_name") == agent_name or agent_info.get("agent_id") == agent_name:
+                return (
+                    agent_info.get("input_formats", []),
+                    agent_info.get("output_formats", [])
+                )
+
+        # Check for UserProxyAgent
+        if "userproxy" in agent_name.lower():
+            chat_completion = "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest"
+            return ([chat_completion], [chat_completion])
+
+        logging.warning(f"No format info found for agent: {agent_name}")
+        return ([], [])
+
+    def _needs_transformation(self, source_format: str, target_format: str) -> bool:
+        """
+        Determine if a transformation is needed between two formats.
+
+        Args:
+            source_format: Message format from source agent
+            target_format: Message format expected by target agent
+
+        Returns:
+            True if transformation is needed, False otherwise
+        """
+        # Same format = no transformation needed
+        if source_format == target_format:
+            return False
+
+        # Generic/any formats don't need transformation
+        if source_format in ["any", "generic_json", "configurable"]:
+            return False
+        if target_format in ["any", "generic_json", "configurable"]:
+            return False
+
+        # Empty formats
+        if not source_format or not target_format:
+            return False
+
+        # Different formats = transformation needed
+        return True
+
+    def _select_best_format_pair(
+        self,
+        source_formats: List[str],
+        target_formats: List[str]
+    ) -> Tuple[Optional[str], Optional[str], bool]:
+        """
+        Select the best source and target format pair from available formats.
+
+        Args:
+            source_formats: List of formats the source agent can send
+            target_formats: List of formats the target agent can accept
+
+        Returns:
+            Tuple of (source_format, target_format, needs_transformation)
+        """
+        if not source_formats or not target_formats:
+            return (None, None, False)
+
+        # First, try to find exact match
+        for src_fmt in source_formats:
+            if src_fmt in target_formats:
+                return (src_fmt, src_fmt, False)
+
+        # No exact match - select first available from each
+        # Prefer non-generic formats
+        source_format = None
+        for fmt in source_formats:
+            if fmt not in ["any", "generic_json", "configurable"]:
+                source_format = fmt
+                break
+        if not source_format:
+            source_format = source_formats[0]
+
+        target_format = None
+        for fmt in target_formats:
+            if fmt not in ["any", "generic_json", "configurable"]:
+                target_format = fmt
+                break
+        if not target_format:
+            target_format = target_formats[0]
+
+        return (source_format, target_format, True)
+
     @processor(
         OrchestratorAction,
         predicate=lambda self, msg: msg.payload.get("action") == ActionType.ADD_ROUTE,
@@ -157,15 +253,16 @@ class RouteBuilderAgent(Agent[RouteBuilderAgentProps]):
     def handle_add_route_action(self, ctx: ProcessContext[OrchestratorAction], llm: LLM):
         """
         Handle add_route action from the orchestrator.
+
+        This method determines if transformation is needed and delegates to
+        TransformationBuilder if formats differ.
         """
         action = ctx.payload
         details = action.details
 
         source_agent = details.get("source_agent", "")
         target_agent = details.get("target_agent", "")
-        source_format = details.get("source_format", "")
-        target_format = details.get("target_format", "")
-        transformation_requirements = details.get("transformation", "")
+        transformation_requirements = details.get("transformation_requirements", "")
 
         # Get agent message info from guild state
         agent_info = self._get_agent_message_info()
@@ -174,40 +271,44 @@ class RouteBuilderAgent(Agent[RouteBuilderAgentProps]):
 
 Source agent: {source_agent}
 Target agent/topic: {target_agent}
-Source message format: {source_format or 'Not specified - look up from agent info below'}
-Target message format: {target_format or 'Not specified - look up from agent info below'}
 Transformation requirements: {transformation_requirements or 'None'}
 Original user request: {action.user_message}
 
 {agent_info}
 
-IMPORTANT: Use the exact message format class names from the agent's output_formats above.
-For example, if routing from an LLMAgent, use "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse".
+IMPORTANT:
+- Use the exact message format class names from the agent's output_formats above.
+- Include both source_format and target_format in your response so we can determine if transformation is needed.
+- DO NOT include transformer field - transformations are handled separately.
 
 Please generate a complete RoutingRule specification."""
 
-        self._build_route(ctx, llm, user_prompt)
+        # Build route with async transformation support
+        self._build_route_async(
+            ctx=ctx,
+            llm=llm,
+            user_prompt=user_prompt,
+            source_agent_name=source_agent,
+            target_agent_name=target_agent,
+            transformation_requirements=transformation_requirements
+        )
 
     @processor(RouteRequest, depends_on=["llm"])
     def handle_route_request(self, ctx: ProcessContext[RouteRequest], llm: LLM):
         """
         Handle direct route requests.
+
+        If transformation is provided in the request, use it directly.
+        Otherwise, check if transformation is needed and delegate to TransformationBuilder.
         """
         request = ctx.payload
 
-        transformer_desc = ""
+        # If transformation already provided, use traditional flow
         if request.transformation:
-            transformer_desc = f"""
-Transformation to apply:
-- Style: {request.transformation.style}
-- Handler/Expression: {request.transformation.handler}
-- Output format: {request.transformation.output_format or 'N/A'}
-"""
+            # Get agent message info from guild state
+            agent_info = self._get_agent_message_info()
 
-        # Get agent message info from guild state
-        agent_info = self._get_agent_message_info()
-
-        user_prompt = f"""Create a routing rule with these requirements:
+            user_prompt = f"""Create a routing rule with these requirements:
 
 Agent name: {request.agent_name}
 Agent ID: {request.agent_id or 'Not specified'}
@@ -216,7 +317,6 @@ Method name: {request.method_name or 'Not specified'}
 Message format: {request.message_format}
 Destination topic: {request.destination_topic or 'Not specified'}
 Route times: {request.route_times}
-{transformer_desc}
 
 {agent_info}
 
@@ -224,11 +324,111 @@ IMPORTANT: Use the exact message format class names from the agent's output_form
 
 Please generate a complete RoutingRule specification."""
 
-        self._build_route(ctx, llm, user_prompt)
+            self._build_route_with_transformation(
+                ctx=ctx,
+                llm=llm,
+                user_prompt=user_prompt,
+                transformation=request.transformation
+            )
+        else:
+            # Use async transformation flow
+            agent_info = self._get_agent_message_info()
 
-    def _build_route(self, ctx: ProcessContext, llm: LLM, user_prompt: str):
+            user_prompt = f"""Create a routing rule with these requirements:
+
+Agent name: {request.agent_name}
+Agent ID: {request.agent_id or 'Not specified'}
+Agent type: {request.agent_type or 'Not specified'}
+Method name: {request.method_name or 'Not specified'}
+Message format: {request.message_format}
+Destination topic: {request.destination_topic or 'Not specified'}
+Route times: {request.route_times}
+
+{agent_info}
+
+IMPORTANT:
+- Use the exact message format class names from the agent's output_formats above.
+- Include both source_format and target_format in your response.
+- DO NOT include transformer field.
+
+Please generate a complete RoutingRule specification."""
+
+            self._build_route_async(
+                ctx=ctx,
+                llm=llm,
+                user_prompt=user_prompt,
+                source_agent_name=request.agent_name,
+                target_agent_name=request.destination_topic or "unknown",
+                transformation_requirements=""
+            )
+
+    @processor(TransformResponse)
+    def handle_transformation_response(self, ctx: ProcessContext[TransformResponse]):
         """
-        Build a routing rule using the LLM.
+        Handle transformation response from TransformationBuilder.
+
+        Retrieves the pending route request, adds the transformation, and completes the route.
+        """
+        transform_response = ctx.payload
+        transformation = transform_response.transformation
+
+        # Get correlation_id from session_state
+        session_state = ctx.message.session_state or {}
+        correlation_id = session_state.get("route_correlation_id")
+
+        if not correlation_id:
+            logging.error("Received TransformResponse without correlation_id in session_state")
+            ctx.send(
+                TextFormat(
+                    text="**Internal Error**: Received transformation but lost track of the route request.",
+                    title="Error",
+                )
+            )
+            return
+
+        # Retrieve pending route context
+        route_context = self._pending_routes.get(correlation_id)
+        if not route_context:
+            logging.error(f"No pending route found for correlation_id: {correlation_id}")
+            ctx.send(
+                TextFormat(
+                    text="**Internal Error**: Could not find pending route request.",
+                    title="Error",
+                )
+            )
+            return
+
+        # Remove from pending
+        del self._pending_routes[correlation_id]
+
+        # Add transformation to routing rule
+        routing_rule = route_context["routing_rule"]
+        routing_rule["transformer"] = transformation.model_dump()
+
+        # Send the completed route
+        route_response = RouteResponse(
+            routing_rule=routing_rule,
+            explanation=route_context["explanation"] + f"\n\nTransformation: {transform_response.explanation}",
+        )
+        ctx.send(route_response)
+
+        logging.info(f"Completed route with transformation for correlation_id: {correlation_id}")
+
+    def _build_route_async(
+        self,
+        ctx: ProcessContext,
+        llm: LLM,
+        user_prompt: str,
+        source_agent_name: str,
+        target_agent_name: str,
+        transformation_requirements: str
+    ):
+        """
+        Build a routing rule using the LLM, with async transformation support.
+
+        This method generates the base routing rule, then checks if transformation
+        is needed. If so, it sends a TransformRequest to TransformationBuilder
+        and stores the route context for later completion.
         """
         llm_request = ChatCompletionRequest(
             messages=[
@@ -245,8 +445,127 @@ Please generate a complete RoutingRule specification."""
                 # Extract JSON from potential markdown wrapper
                 json_text = extract_json_from_response(response_text)
                 result = json.loads(json_text)
+
+                routing_rule = result.get("routing_rule", {})
+                explanation = result.get("explanation", "")
+                source_format = result.get("source_format", "")
+                target_format = result.get("target_format", "")
+
+                # If formats not provided by LLM, try to look them up
+                if not source_format or not target_format:
+                    source_formats, _ = self._get_agent_formats(source_agent_name)
+                    _, target_formats = self._get_agent_formats(target_agent_name)
+
+                    source_format, target_format, _ = self._select_best_format_pair(
+                        source_formats, target_formats
+                    )
+
+                # Check if transformation is needed
+                if source_format and target_format and self._needs_transformation(source_format, target_format):
+                    # Generate correlation ID for tracking
+                    correlation_id = str(uuid.uuid4())
+
+                    # Store route context for later completion
+                    self._pending_routes[correlation_id] = {
+                        "routing_rule": routing_rule,
+                        "explanation": explanation,
+                        "source_agent": source_agent_name,
+                        "target_agent": target_agent_name,
+                    }
+
+                    # Send transformation request to TransformationBuilder
+                    transform_request = TransformRequest(
+                        source_format=source_format,
+                        target_format=target_format,
+                        source_agent_name=source_agent_name,
+                        target_agent_name=target_agent_name,
+                        requirements=transformation_requirements,
+                    )
+
+                    # Add correlation_id to session_state so TransformResponse can find the pending route
+                    ctx.update_context({"route_correlation_id": correlation_id})
+
+                    ctx.send(transform_request)
+
+                    logging.info(
+                        f"Sent TransformRequest for {source_format} → {target_format} "
+                        f"with correlation_id: {correlation_id}"
+                    )
+                else:
+                    # No transformation needed - send route directly
+                    route_response = RouteResponse(
+                        routing_rule=routing_rule,
+                        explanation=explanation,
+                    )
+                    ctx.send(route_response)
+
+                    logging.info(f"Created route without transformation: {source_format} → {target_format}")
+
+            except json.JSONDecodeError as e:
+                logging.error(f"Failed to parse route response: {response_text}")
+                ctx.send(
+                    TextFormat(
+                        text=f"**Failed to parse route response**\n\nThe LLM did not return valid JSON. Please try again.\n\nError: {str(e)}",
+                        title="Parse Error",
+                    )
+                )
+                ctx.send_error(
+                    ErrorMessage(
+                        agent_type="RouteBuilderAgent",
+                        error_type="JSONDecodeError",
+                        error_message=f"Invalid JSON response: {str(e)}",
+                    )
+                )
+
+        except Exception as e:
+            logging.error(f"Error building route: {e}")
+            ctx.send(
+                TextFormat(
+                    text=f"**Route Creation Failed**\n\nAn error occurred while creating the route.\n\nError: {str(e)}",
+                    title="Error",
+                )
+            )
+            ctx.send_error(
+                ErrorMessage(
+                    agent_type="RouteBuilderAgent",
+                    error_type=type(e).__name__,
+                    error_message=str(e),
+                )
+            )
+
+    def _build_route_with_transformation(
+        self,
+        ctx: ProcessContext,
+        llm: LLM,
+        user_prompt: str,
+        transformation: TransformationSpec
+    ):
+        """
+        Build a routing rule with a pre-provided transformation.
+
+        This is used when RouteRequest already includes a transformation.
+        """
+        llm_request = ChatCompletionRequest(
+            messages=[
+                SystemMessage(content=self.config.system_prompt),
+                UserMessage(content=user_prompt),
+            ]
+        )
+
+        try:
+            response: ChatCompletionResponse = llm.completion(llm_request)
+            response_text = response.choices[0].message.content
+
+            try:
+                # Extract JSON from potential markdown wrapper
+                json_text = extract_json_from_response(response_text)
+                result = json.loads(json_text)
+
+                routing_rule = result.get("routing_rule", {})
+                routing_rule["transformer"] = transformation.model_dump()
+
                 route_response = RouteResponse(
-                    routing_rule=result.get("routing_rule", {}),
+                    routing_rule=routing_rule,
                     explanation=result.get("explanation", ""),
                 )
                 ctx.send(route_response)

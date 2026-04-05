@@ -8,8 +8,10 @@ simple payload transformations and content-based router transformations.
 
 import json
 import logging
-from typing import Dict, List
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
+import httpx
 from pydantic import Field
 
 from rustic_ai.core.agents.commons.message_formats import ErrorMessage
@@ -31,40 +33,13 @@ from rustic_ai.showcase.guild_generator.models import (
 from rustic_ai.showcase.guild_generator.utils import extract_json_from_response
 
 
-# Common message format schemas
-MESSAGE_FORMATS: Dict[str, Dict] = {
-    "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest": {
-        "description": "Chat completion request for LLM agents",
-        "schema": {
-            "messages": [{"role": "string (user/assistant/system)", "content": "string or content parts"}],
-            "model": "optional string",
-            "temperature": "optional float",
-        },
-        "example": {"messages": [{"role": "user", "content": "Hello"}]},
-    },
-    "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse": {
-        "description": "Chat completion response from LLM agents",
-        "schema": {
-            "choices": [{"message": {"role": "string", "content": "string"}, "finish_reason": "string"}],
-            "usage": {"prompt_tokens": "int", "completion_tokens": "int", "total_tokens": "int"},
-        },
-        "example": {"choices": [{"message": {"role": "assistant", "content": "Hello!"}, "finish_reason": "stop"}]},
-    },
-    "rustic_ai.core.ui_protocol.types.TextFormat": {
-        "description": "Simple text format for UI display",
-        "schema": {"text": "string", "title": "optional string", "description": "optional string"},
-        "example": {"text": "Hello world", "title": "Greeting"},
-    },
-    "rustic_ai.core.ui_protocol.types.VegaLiteFormat": {
-        "description": "Vega-Lite visualization format",
-        "schema": {"spec": "VegaLite spec object", "title": "optional string", "alt": "optional string"},
-        "example": {"spec": {"$schema": "https://vega.github.io/schema/vega-lite/v5.json", "data": {}, "mark": "bar"}},
-    },
-}
-
-
 class TransformationBuilderAgentProps(BaseAgentProps):
     """Properties for the TransformationBuilderAgent."""
+
+    api_base_url: str = Field(
+        default="http://localhost:3001",
+        description="Base URL of the API server to fetch agent message formats from."
+    )
 
     system_prompt: str = Field(
         default="""You are a JSONata transformation expert for the Rustic AI framework. Your job is to create
@@ -119,15 +94,154 @@ class TransformationBuilderAgent(Agent[TransformationBuilderAgentProps]):
     appropriate JSONata expressions for transforming messages.
     """
 
+    def __init__(self, *args, **kwargs):
+        """Initialize agent and fetch message formats from API."""
+        # Only initialize our custom state if not already initialized by parent
+        if not hasattr(self, '_message_formats'):
+            self._message_formats: Optional[Dict[str, Dict[str, Any]]] = None
+
+        # Only fetch if we have config (means Agent.__init__ was called by framework)
+        if hasattr(self, 'config'):
+            self._fetch_message_formats_from_api()
+
+    def _fetch_message_formats_from_api(self) -> None:
+        """Fetch agents from API and extract message formats."""
+        url = f"{self.config.api_base_url.rstrip('/')}/catalog/agents"
+        try:
+            logging.info(f"Fetching agent catalog from {url}")
+            response = httpx.get(url, timeout=10.0)
+            response.raise_for_status()
+            data = response.json()
+            self._message_formats = self._extract_message_formats(data)
+            logging.info(f"Successfully loaded {len(self._message_formats)} message formats from API")
+        except Exception as e:
+            logging.error(f"Failed to fetch message formats from {url}: {e}")
+            # Fall back to loading from local agent.json file if API is unavailable
+            self._load_message_formats_from_file()
+
+    def _load_message_formats_from_file(self) -> None:
+        """Load message formats from local agent.json file as fallback."""
+        agent_json_path = Path(__file__).parent / "agent.json"
+        try:
+            if agent_json_path.exists():
+                logging.info(f"Loading message formats from {agent_json_path}")
+                with open(agent_json_path, 'r') as f:
+                    data = json.load(f)
+                self._message_formats = self._extract_message_formats(data)
+                logging.info(f"Successfully loaded {len(self._message_formats)} message formats from file")
+            else:
+                logging.warning(f"agent.json not found at {agent_json_path}, using empty message formats")
+                self._message_formats = {}
+        except Exception as e:
+            logging.error(f"Failed to load message formats from file: {e}")
+            self._message_formats = {}
+
+    def _extract_message_formats(self, agent_data: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+        """
+        Extract unique message formats from agent data.
+
+        Args:
+            agent_data: Dictionary mapping agent class names to agent metadata
+
+        Returns:
+            Dictionary mapping message format class names to their descriptions and schemas
+        """
+        message_formats: Dict[str, Dict[str, Any]] = {}
+
+        for class_name, agent_info in agent_data.items():
+            handlers = agent_info.get("message_handlers", {})
+
+            for handler_name, handler_info in handlers.items():
+                # Extract input message format
+                msg_format = handler_info.get("message_format")
+                msg_schema = handler_info.get("message_format_schema")
+
+                if msg_format and msg_schema and msg_format not in message_formats:
+                    # Generate a description from the schema's title or use the format name
+                    description = msg_schema.get("title", msg_format.split(".")[-1])
+
+                    # Create an example from the schema (simplified)
+                    example = self._generate_example_from_schema(msg_schema)
+
+                    message_formats[msg_format] = {
+                        "description": description,
+                        "schema": msg_schema,
+                        "example": example,
+                    }
+
+                # Extract output message formats from send_message_calls
+                for send_call in handler_info.get("send_message_calls", []):
+                    if isinstance(send_call, dict):
+                        out_format = send_call.get("message_format")
+                        out_schema = send_call.get("message_format_schema")
+
+                        if out_format and out_schema and out_format not in message_formats:
+                            description = out_schema.get("title", out_format.split(".")[-1])
+                            example = self._generate_example_from_schema(out_schema)
+
+                            message_formats[out_format] = {
+                                "description": description,
+                                "schema": out_schema,
+                                "example": example,
+                            }
+
+        return message_formats
+
+    def _generate_example_from_schema(self, schema: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Generate a simple example object from a JSON schema.
+
+        Args:
+            schema: JSON schema dictionary
+
+        Returns:
+            Example object based on the schema
+        """
+        example = {}
+        properties = schema.get("properties", {})
+
+        for prop_name, prop_info in properties.items():
+            if isinstance(prop_info, dict):
+                prop_type = prop_info.get("type", "string")
+
+                # Use default value if available
+                if "default" in prop_info:
+                    example[prop_name] = prop_info["default"]
+                # Otherwise use type-appropriate placeholder
+                elif prop_type == "string":
+                    example[prop_name] = f"<{prop_name}>"
+                elif prop_type == "integer" or prop_type == "number":
+                    example[prop_name] = 0
+                elif prop_type == "boolean":
+                    example[prop_name] = False
+                elif prop_type == "array":
+                    example[prop_name] = []
+                elif prop_type == "object":
+                    example[prop_name] = {}
+
+        return example
+
+    def _get_message_formats(self) -> Dict[str, Dict[str, Any]]:
+        """Get cached message formats. Should not be None after initialization."""
+        if self._message_formats is None:
+            raise RuntimeError(
+                "Message formats not initialized. This should not happen after on_start."
+            )
+        return self._message_formats
+
     def _get_format_descriptions(self) -> str:
         """Generate descriptions of known message formats."""
         descriptions = []
-        for format_name, info in MESSAGE_FORMATS.items():
+        for format_name, info in self._get_message_formats().items():
+            # Convert schema to a more readable format for the LLM
+            schema_str = json.dumps(info['schema'], indent=2)
+            example_str = json.dumps(info['example'], indent=2)
+
             desc = f"""
 - {format_name}
   Description: {info['description']}
-  Schema: {json.dumps(info['schema'], indent=2)}
-  Example: {json.dumps(info['example'], indent=2)}
+  Schema: {schema_str}
+  Example: {example_str}
 """
             descriptions.append(desc)
         return "\n".join(descriptions)

@@ -223,6 +223,36 @@
                     "route_times": -1
                 },
                 {
+                    "description": "Route transformation requests from Route Builder to Transformation Builder",
+                    "agent": {
+                        "name": "Route Builder"
+                    },
+                    "agent_type": null,
+                    "method_name": null,
+                    "message_format": "rustic_ai.showcase.guild_generator.models.TransformRequest",
+                    "destination": {
+                        "topics": "TRANSFORM_BUILD",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Route transformation responses back to Route Builder to complete routing rule",
+                    "agent": {
+                        "name": "Transformation Builder"
+                    },
+                    "agent_type": null,
+                    "method_name": null,
+                    "message_format": "rustic_ai.showcase.guild_generator.models.TransformResponse",
+                    "destination": {
+                        "topics": "ROUTE_BUILD",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "route_times": -1
+                },
+                {
                     "agent": {
                         "name": "State Manager"
                     },

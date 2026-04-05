@@ -867,3 +867,451 @@ class TestGuildExportAgent:
             export_payload = ExportResponse.model_validate(export_results[0].payload)
             assert not export_payload.is_valid
             assert len(export_payload.validation_errors) > 0
+
+
+class TestRouteBuilderTransformationIntegration:
+    """Tests for the async transformation flow: RouteBuilder → TransformationBuilder → RouteBuilder."""
+
+    def test_route_builder_sends_transform_request_when_formats_differ(
+        self, generator, build_message_from_payload
+    ):
+        """Test that RouteBuilder sends TransformRequest when source and target formats differ."""
+        # Mock response that includes different source and target formats
+        mock_route_response = json.dumps({
+            "routing_rule": {
+                "agent": {"name": "summarizer"},
+                "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                "destination": {"topics": "formatter_input"},
+            },
+            "explanation": "Routes summarizer output to formatter.",
+            "source_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+            "target_format": "rustic_ai.core.ui_protocol.types.TextFormat",
+        })
+
+        dependency_map = {
+            "llm": DependencySpec(
+                class_name=get_qualified_class_name(MockLLMResolver),
+                properties={"response_content": mock_route_response},
+            ),
+        }
+
+        agent_spec = (
+            AgentBuilder(RouteBuilderAgent)
+            .set_id("route_builder")
+            .set_name("Route Builder")
+            .set_description("Test route builder")
+            .build_spec()
+        )
+
+        # Set up guild state with agent message info
+        guild_state = {
+            "guild_builder": {
+                "agent_message_info": [
+                    {
+                        "agent_name": "summarizer",
+                        "agent_id": "summarizer_1",
+                        "class_name": "rustic_ai.llm_agent.llm_agent.LLMAgent",
+                        "input_formats": ["rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest"],
+                        "output_formats": ["rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse"],
+                    },
+                    {
+                        "agent_name": "formatter",
+                        "agent_id": "formatter_1",
+                        "class_name": "rustic_ai.core.agents.formatters.FormatterAgent",
+                        "input_formats": ["rustic_ai.core.ui_protocol.types.TextFormat"],
+                        "output_formats": ["rustic_ai.core.ui_protocol.types.TextFormat"],
+                    },
+                ]
+            }
+        }
+
+        agent, results = wrap_agent_for_testing(
+            agent_spec, dependency_map=dependency_map, guild_state=guild_state
+        )
+
+        action = OrchestratorAction(
+            action=ActionType.ADD_ROUTE,
+            details={
+                "source_agent": "summarizer",
+                "target_agent": "formatter",
+            },
+            user_message="@Orchestrator connect summarizer to formatter",
+        )
+
+        agent._on_message(build_message_from_payload(generator, action))
+
+        # Should send TransformRequest (not RouteResponse yet)
+        assert len(results) == 1
+        assert results[0].format == get_qualified_class_name(TransformRequest)
+
+        # Verify the transform request
+        transform_request = TransformRequest.model_validate(results[0].payload)
+        assert transform_request.source_format == "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse"
+        assert transform_request.target_format == "rustic_ai.core.ui_protocol.types.TextFormat"
+        assert transform_request.source_agent_name == "summarizer"
+        assert transform_request.target_agent_name == "formatter"
+
+    def test_route_builder_skips_transformation_when_formats_match(
+        self, generator, build_message_from_payload
+    ):
+        """Test that RouteBuilder skips transformation when source and target formats are the same."""
+        mock_route_response = json.dumps({
+            "routing_rule": {
+                "agent": {"name": "agent_a"},
+                "message_format": "rustic_ai.core.ui_protocol.types.TextFormat",
+                "destination": {"topics": "agent_b_input"},
+            },
+            "explanation": "Routes agent_a output to agent_b.",
+            "source_format": "rustic_ai.core.ui_protocol.types.TextFormat",
+            "target_format": "rustic_ai.core.ui_protocol.types.TextFormat",
+        })
+
+        dependency_map = {
+            "llm": DependencySpec(
+                class_name=get_qualified_class_name(MockLLMResolver),
+                properties={"response_content": mock_route_response},
+            ),
+        }
+
+        agent_spec = (
+            AgentBuilder(RouteBuilderAgent)
+            .set_id("route_builder")
+            .set_name("Route Builder")
+            .set_description("Test route builder")
+            .build_spec()
+        )
+
+        agent, results = wrap_agent_for_testing(agent_spec, dependency_map=dependency_map)
+
+        action = OrchestratorAction(
+            action=ActionType.ADD_ROUTE,
+            details={
+                "source_agent": "agent_a",
+                "target_agent": "agent_b",
+            },
+            user_message="@Orchestrator connect agent_a to agent_b",
+        )
+
+        agent._on_message(build_message_from_payload(generator, action))
+
+        # Should send RouteResponse directly (no transformation needed)
+        assert len(results) == 1
+        assert results[0].format == get_qualified_class_name(RouteResponse)
+
+        route_response = RouteResponse.model_validate(results[0].payload)
+        assert "transformer" not in route_response.routing_rule or route_response.routing_rule.get("transformer") is None
+
+    def test_route_builder_completes_route_after_receiving_transformation(
+        self, generator, build_message_from_payload
+    ):
+        """Test that RouteBuilder completes the route after receiving TransformResponse."""
+        # First, create RouteBuilder agent
+        agent_spec = (
+            AgentBuilder(RouteBuilderAgent)
+            .set_id("route_builder")
+            .set_name("Route Builder")
+            .set_description("Test route builder")
+            .build_spec()
+        )
+
+        agent, results = wrap_agent_for_testing(agent_spec)
+
+        # Simulate a pending route by manually adding to _pending_routes
+        correlation_id = "test-correlation-123"
+        agent._pending_routes[correlation_id] = {
+            "routing_rule": {
+                "agent": {"name": "source_agent"},
+                "message_format": "source.Format",
+                "destination": {"topics": "target_topic"},
+            },
+            "explanation": "Original route explanation",
+            "source_agent": "source_agent",
+            "target_agent": "target_agent",
+        }
+
+        # Create TransformResponse
+        transform_response = TransformResponse(
+            transformation=TransformationSpec(
+                style="simple",
+                expression_type="jsonata",
+                handler="$.field",
+                output_format="target.Format",
+            ),
+            explanation="Transformation extracts field",
+        )
+
+        # Send TransformResponse with correlation_id in session_state
+        message = build_message_from_payload(
+            generator,
+            transform_response,
+            session_state={"route_correlation_id": correlation_id},
+        )
+
+        agent._on_message(message)
+
+        # Should send RouteResponse with transformation
+        assert len(results) == 1
+        assert results[0].format == get_qualified_class_name(RouteResponse)
+
+        route_response = RouteResponse.model_validate(results[0].payload)
+        assert "transformer" in route_response.routing_rule
+        transformer = route_response.routing_rule["transformer"]
+        assert transformer["style"] == "simple"
+        assert transformer["handler"] == "$.field"
+        assert "Transformation extracts field" in route_response.explanation
+
+        # Pending route should be removed
+        assert correlation_id not in agent._pending_routes
+
+
+class TestTransformationBuilderMessageFormats:
+    """Tests for TransformationBuilder's message format loading from API."""
+
+    def test_transformation_builder_loads_formats_from_api(self):
+        """Test that TransformationBuilder loads message formats from API on initialization."""
+        import httpx
+        from unittest.mock import Mock, patch
+
+        # Mock API response
+        mock_api_response = {
+            "rustic_ai.llm_agent.llm_agent.LLMAgent": {
+                "agent_name": "LLMAgent",
+                "qualified_class_name": "rustic_ai.llm_agent.llm_agent.LLMAgent",
+                "message_handlers": {
+                    "on_message": {
+                        "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest",
+                        "message_format_schema": {
+                            "title": "ChatCompletionRequest",
+                            "type": "object",
+                            "properties": {
+                                "messages": {"type": "array"},
+                                "model": {"type": "string"},
+                            },
+                        },
+                        "send_message_calls": [
+                            {
+                                "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                                "message_format_schema": {
+                                    "title": "ChatCompletionResponse",
+                                    "type": "object",
+                                    "properties": {
+                                        "choices": {"type": "array"},
+                                    },
+                                },
+                            }
+                        ],
+                    }
+                },
+            }
+        }
+
+        with patch("httpx.get") as mock_get:
+            mock_response = Mock()
+            mock_response.json.return_value = mock_api_response
+            mock_response.raise_for_status = Mock()
+            mock_get.return_value = mock_response
+
+            # Create agent (triggers API fetch)
+            agent_spec = (
+                AgentBuilder(TransformationBuilderAgent)
+                .set_id("transform_builder")
+                .set_name("Transform Builder")
+                .set_description("Test transform builder")
+                .build_spec()
+            )
+
+            agent, _ = wrap_agent_for_testing(agent_spec)
+
+            # Verify API was called
+            mock_get.assert_called_once()
+            call_args = mock_get.call_args
+            assert "catalog/agents" in call_args[0][0]
+
+            # Verify message formats were loaded
+            formats = agent._get_message_formats()
+            assert len(formats) == 2
+            assert "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest" in formats
+            assert "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse" in formats
+
+            # Verify schema details
+            request_format = formats["rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest"]
+            assert request_format["description"] == "ChatCompletionRequest"
+            assert "messages" in request_format["schema"]["properties"]
+
+    def test_transformation_builder_falls_back_to_file_on_api_error(self):
+        """Test that TransformationBuilder falls back to local file if API is unavailable."""
+        import httpx
+        from unittest.mock import patch, mock_open
+        import json
+
+        # Mock API failure
+        with patch("httpx.get") as mock_get:
+            mock_get.side_effect = httpx.ConnectError("Connection failed")
+
+            # Mock file reading (simulate agent.json exists)
+            mock_file_data = json.dumps({
+                "test.Agent": {
+                    "message_handlers": {
+                        "handler": {
+                            "message_format": "test.Format",
+                            "message_format_schema": {
+                                "title": "TestFormat",
+                                "type": "object",
+                                "properties": {"field": {"type": "string"}},
+                            },
+                            "send_message_calls": [],
+                        }
+                    }
+                }
+            })
+
+            with patch("builtins.open", mock_open(read_data=mock_file_data)):
+                with patch("pathlib.Path.exists", return_value=True):
+                    agent_spec = (
+                        AgentBuilder(TransformationBuilderAgent)
+                        .set_id("transform_builder")
+                        .set_name("Transform Builder")
+                        .set_description("Test transform builder")
+                        .build_spec()
+                    )
+
+                    agent, _ = wrap_agent_for_testing(agent_spec)
+
+                    # Verify formats were loaded from file
+                    formats = agent._get_message_formats()
+                    assert "test.Format" in formats
+
+
+class TestEndToEndTransformationFlow:
+    """Integration tests for the complete transformation flow."""
+
+    def test_complete_transformation_flow(self, generator, build_message_from_payload):
+        """Test the complete flow: RouteBuilder → TransformationBuilder → RouteBuilder."""
+        # Mock responses for both agents
+        route_builder_response = json.dumps({
+            "routing_rule": {
+                "agent": {"name": "llm_agent"},
+                "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                "destination": {"topics": "formatter"},
+            },
+            "explanation": "Route from LLM to formatter",
+            "source_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+            "target_format": "rustic_ai.core.ui_protocol.types.TextFormat",
+        })
+
+        transformation_response = json.dumps({
+            "transformation": {
+                "style": "simple",
+                "expression_type": "jsonata",
+                "handler": "$.choices[0].message.content",
+                "output_format": "rustic_ai.core.ui_protocol.types.TextFormat",
+            },
+            "explanation": "Extracts message content from chat completion",
+        })
+
+        # Create RouteBuilder
+        route_builder_spec = (
+            AgentBuilder(RouteBuilderAgent)
+            .set_id("route_builder")
+            .set_name("Route Builder")
+            .build_spec()
+        )
+
+        route_builder_deps = {
+            "llm": DependencySpec(
+                class_name=get_qualified_class_name(MockLLMResolver),
+                properties={"response_content": route_builder_response},
+            ),
+        }
+
+        guild_state = {
+            "guild_builder": {
+                "agent_message_info": [
+                    {
+                        "agent_name": "llm_agent",
+                        "input_formats": ["rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest"],
+                        "output_formats": ["rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse"],
+                    },
+                    {
+                        "agent_name": "formatter",
+                        "input_formats": ["rustic_ai.core.ui_protocol.types.TextFormat"],
+                        "output_formats": ["rustic_ai.core.ui_protocol.types.TextFormat"],
+                    },
+                ]
+            }
+        }
+
+        route_builder, route_results = wrap_agent_for_testing(
+            route_builder_spec, dependency_map=route_builder_deps, guild_state=guild_state
+        )
+
+        # Step 1: Send ADD_ROUTE action to RouteBuilder
+        action = OrchestratorAction(
+            action=ActionType.ADD_ROUTE,
+            details={
+                "source_agent": "llm_agent",
+                "target_agent": "formatter",
+            },
+            user_message="@Orchestrator connect llm_agent to formatter",
+        )
+
+        message1 = build_message_from_payload(generator, action)
+        route_builder._on_message(message1)
+
+        # Should output TransformRequest
+        assert len(route_results) == 1
+        assert route_results[0].format == get_qualified_class_name(TransformRequest)
+        transform_request = TransformRequest.model_validate(route_results[0].payload)
+
+        # Extract correlation_id from session_state
+        correlation_id = route_results[0].session_state.get("route_correlation_id")
+        assert correlation_id is not None
+
+        # Step 2: Send TransformRequest to TransformationBuilder
+        transformation_builder_spec = (
+            AgentBuilder(TransformationBuilderAgent)
+            .set_id("transformation_builder")
+            .set_name("Transformation Builder")
+            .build_spec()
+        )
+
+        transformation_builder_deps = {
+            "llm": DependencySpec(
+                class_name=get_qualified_class_name(MockLLMResolver),
+                properties={"response_content": transformation_response},
+            ),
+        }
+
+        transformation_builder, transform_results = wrap_agent_for_testing(
+            transformation_builder_spec, dependency_map=transformation_builder_deps
+        )
+
+        message2 = build_message_from_payload(generator, transform_request)
+        transformation_builder._on_message(message2)
+
+        # Should output TransformResponse
+        assert len(transform_results) == 1
+        assert transform_results[0].format == get_qualified_class_name(TransformResponse)
+        transform_response = TransformResponse.model_validate(transform_results[0].payload)
+
+        # Step 3: Send TransformResponse back to RouteBuilder
+        route_results.clear()
+
+        message3 = build_message_from_payload(
+            generator,
+            transform_response,
+            session_state={"route_correlation_id": correlation_id},
+        )
+        route_builder._on_message(message3)
+
+        # Should output final RouteResponse with transformation
+        assert len(route_results) == 1
+        assert route_results[0].format == get_qualified_class_name(RouteResponse)
+        final_route = RouteResponse.model_validate(route_results[0].payload)
+
+        # Verify the route has transformation
+        assert "transformer" in final_route.routing_rule
+        transformer = final_route.routing_rule["transformer"]
+        assert transformer["style"] == "simple"
+        assert transformer["handler"] == "$.choices[0].message.content"
+        assert transformer["output_format"] == "rustic_ai.core.ui_protocol.types.TextFormat"
