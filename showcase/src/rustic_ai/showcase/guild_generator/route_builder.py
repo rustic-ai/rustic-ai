@@ -15,6 +15,32 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from pydantic import Field
 
+from rustic_ai.showcase.guild_generator.constants import (
+    AGGREGATING_AGENT_CLASS,
+    AGENT_NAME_SKIP_WORDS,
+    AGENT_NAME_STEM_LENGTH,
+    CHAT_COMPLETION_REQUEST_FORMAT,
+    DEFAULT_EXCLUDED_AGENTS,
+    FUZZY_MATCH_COMPOUND_SCORE,
+    FUZZY_MATCH_EXACT_WORD_SCORE,
+    FUZZY_MATCH_STEM_SCORE,
+    GENERIC_MESSAGE_FORMATS,
+    LLM_AGENT_CLASS,
+    MAX_AGENT_NAME_DISPLAY_LENGTH,
+    MAX_AGENT_NAME_LENGTH,
+    MAX_AGENTS_IN_ERROR_MESSAGE,
+    MAX_ERROR_CONTEXT_LENGTH,
+    MIN_AGENT_NAME_WORD_LENGTH,
+    MIN_COMPOUND_SPLIT_LENGTH,
+    MIN_COMPOUND_WORD_LENGTH,
+    MIN_FUZZY_MATCH_SCORE,
+    REACT_AGENT_CLASS,
+    SPLITTER_AGENT_CLASS,
+    SYSTEM_USER_MESSAGE_BROADCAST,
+    SYSTEM_USER_PROXY_AGENT,
+    VALID_SYSTEM_DESTINATIONS,
+)
+
 from rustic_ai.core.agents.commons.message_formats import ErrorMessage
 from rustic_ai.core.guild.agent import Agent, ProcessContext, processor
 from rustic_ai.core.guild.dsl import BaseAgentProps
@@ -42,10 +68,7 @@ class RouteBuilderAgentProps(BaseAgentProps):
     """Properties for the RouteBuilderAgent."""
 
     excluded_agents: List[str] = Field(
-        default_factory=lambda: [
-            "FlowchartAgent",
-            "GuildExportAgent",
-        ],
+        default_factory=lambda: DEFAULT_EXCLUDED_AGENTS.copy(),
         description="List of agent class names (simple or fully qualified) to exclude from agent listings"
     )
 
@@ -138,13 +161,11 @@ class RouteBuilderAgent(Agent[RouteBuilderAgentProps]):
     routing logic and uses async message passing to coordinate with other agents.
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self):
         """Initialize agent with empty pending routes tracking."""
-        # Only initialize our custom state if not already initialized
-        if not hasattr(self, '_pending_routes'):
-            # Track pending route requests waiting for transformations
-            # Key: correlation_id, Value: dict with route context
-            self._pending_routes: Dict[str, Dict[str, Any]] = {}
+        # Track pending route requests waiting for transformations
+        # Key: correlation_id, Value: dict with route context
+        self._pending_routes: Dict[str, Dict[str, Any]] = {}
 
     def _get_agent_message_info(self) -> str:
         """Get formatted agent message info from guild state for the LLM prompt."""
@@ -174,14 +195,14 @@ class RouteBuilderAgent(Agent[RouteBuilderAgentProps]):
             info_lines.append(f"  Output formats (sends): {', '.join(output_fmts) if output_fmts else 'varies'}")
 
         # Also include the system UserProxyAgent
-        info_lines.append("\n- Agent: UserProxyAgent (id: user_proxy)")
+        info_lines.append(f"\n- Agent: {SYSTEM_USER_PROXY_AGENT} (id: user_proxy)")
         info_lines.append("  Class: rustic_ai.core.agents.utils.user_proxy_agent.UserProxyAgent")
-        info_lines.append("  Input formats (accepts): rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest")
-        info_lines.append("  Output formats (sends): rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest")
+        info_lines.append(f"  Input formats (accepts): {CHAT_COMPLETION_REQUEST_FORMAT}")
+        info_lines.append(f"  Output formats (sends): {CHAT_COMPLETION_REQUEST_FORMAT}")
 
         # Include common destination topics
         info_lines.append("\n\nCommon destination topics:")
-        info_lines.append("- user_message_broadcast: Send messages to the user interface")
+        info_lines.append(f"- {SYSTEM_USER_MESSAGE_BROADCAST}: Send messages to the user interface")
         info_lines.append("- default_topic: Send to agents listening on the default topic")
 
         return "\n".join(info_lines)
@@ -229,8 +250,7 @@ class RouteBuilderAgent(Agent[RouteBuilderAgentProps]):
 
         # Check for UserProxyAgent
         if "userproxy" in agent_name.lower():
-            chat_completion = "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest"
-            return ([chat_completion], [chat_completion])
+            return ([CHAT_COMPLETION_REQUEST_FORMAT], [CHAT_COMPLETION_REQUEST_FORMAT])
 
         logging.warning(f"No format info found for agent: {agent_name}")
         return ([], [])
@@ -251,9 +271,9 @@ class RouteBuilderAgent(Agent[RouteBuilderAgentProps]):
             return False
 
         # Generic/any formats don't need transformation
-        if source_format in ["any", "generic_json", "configurable"]:
+        if source_format in GENERIC_MESSAGE_FORMATS:
             return False
-        if target_format in ["any", "generic_json", "configurable"]:
+        if target_format in GENERIC_MESSAGE_FORMATS:
             return False
 
         # Empty formats
@@ -290,7 +310,7 @@ class RouteBuilderAgent(Agent[RouteBuilderAgentProps]):
         # Prefer non-generic formats
         source_format = None
         for fmt in source_formats:
-            if fmt not in ["any", "generic_json", "configurable"]:
+            if fmt not in GENERIC_MESSAGE_FORMATS:
                 source_format = fmt
                 break
         if not source_format:
@@ -298,13 +318,135 @@ class RouteBuilderAgent(Agent[RouteBuilderAgentProps]):
 
         target_format = None
         for fmt in target_formats:
-            if fmt not in ["any", "generic_json", "configurable"]:
+            if fmt not in GENERIC_MESSAGE_FORMATS:
                 target_format = fmt
                 break
         if not target_format:
             target_format = target_formats[0]
 
         return (source_format, target_format, True)
+
+    def _calculate_exact_word_match_score(
+        self,
+        agent_name_words: List[str],
+        description_lower: str
+    ) -> tuple[int, List[str]]:
+        """
+        Calculate score based on exact word matches.
+
+        Args:
+            agent_name_words: Significant words from agent name
+            description_lower: Lowercase description to match against
+
+        Returns:
+            Tuple of (score, matched_words)
+        """
+        score = 0
+        matched_words = []
+
+        for name_word in agent_name_words:
+            if len(name_word) < MIN_AGENT_NAME_WORD_LENGTH:
+                continue
+
+            # Check for exact word match
+            if name_word in description_lower:
+                score += FUZZY_MATCH_EXACT_WORD_SCORE
+                matched_words.append(name_word)
+            else:
+                # Check for stem match
+                stem = name_word[:min(AGENT_NAME_STEM_LENGTH, len(name_word))]
+                if stem in description_lower:
+                    score += FUZZY_MATCH_STEM_SCORE
+                    matched_words.append(f"{stem}*")
+
+        return score, matched_words
+
+    def _calculate_compound_word_match_score(
+        self,
+        agent_name_words: List[str],
+        description_lower: str
+    ) -> tuple[int, List[str]]:
+        """
+        Calculate score for compound word matches (e.g., "mindmap" vs "mind map").
+
+        Args:
+            agent_name_words: Significant words from agent name
+            description_lower: Lowercase description to match against
+
+        Returns:
+            Tuple of (score, matched_words)
+        """
+        score = 0
+        matched_words = []
+
+        for name_word in agent_name_words:
+            if len(name_word) < MIN_COMPOUND_WORD_LENGTH:
+                continue
+
+            # Try different split positions
+            for split_pos in range(MIN_COMPOUND_SPLIT_LENGTH, len(name_word) - MIN_COMPOUND_SPLIT_LENGTH + 1):
+                part1 = name_word[:split_pos]
+                part2 = name_word[split_pos:]
+
+                # Check if both parts appear consecutively in description
+                compound_pattern = f"{part1} {part2}"
+                if compound_pattern in description_lower:
+                    score += FUZZY_MATCH_COMPOUND_SCORE
+                    matched_words.append(f"{part1}+{part2}")
+                    break  # Only count once per word
+
+        return score, matched_words
+
+    def _calculate_fuzzy_match_score(
+        self,
+        agent_name: str,
+        description: str
+    ) -> int:
+        """
+        Calculate fuzzy match score between agent name and description.
+
+        Args:
+            agent_name: Name of the agent
+            description: Description to match against
+
+        Returns:
+            Match score (higher is better)
+        """
+        agent_name_lower = agent_name.lower()
+        description_lower = description.lower()
+
+        # Extract significant words from agent name
+        agent_name_words = [
+            w for w in agent_name_lower.split()
+            if w not in AGENT_NAME_SKIP_WORDS
+        ]
+
+        # Calculate exact word and stem matches
+        word_score, word_matches = self._calculate_exact_word_match_score(
+            agent_name_words,
+            description_lower
+        )
+
+        # Calculate compound word matches
+        compound_score, compound_matches = self._calculate_compound_word_match_score(
+            agent_name_words,
+            description_lower
+        )
+
+        # Calculate set intersection for additional scoring
+        desc_words = set(description_lower.split())
+        name_words = set(agent_name_lower.split())
+        intersection_score = len(name_words & desc_words)
+
+        total_score = word_score + compound_score + intersection_score
+
+        if total_score > 0:
+            logging.debug(
+                f"Match score for '{agent_name}': {total_score} "
+                f"(words: {word_score}, compounds: {compound_score}, intersection: {intersection_score})"
+            )
+
+        return total_score
 
     def _resolve_agent_name(self, agent_description: str) -> Optional[str]:
         """
@@ -337,77 +479,35 @@ class RouteBuilderAgent(Agent[RouteBuilderAgentProps]):
                 return agent_info.get("agent_name")
 
         # Try fuzzy match with substring matching for related words
-        description_lower = agent_description.lower()
         best_match = None
         best_score = 0
 
         for agent_info in agent_info_list:
             agent_name = agent_info.get("agent_name", "")
-            agent_name_lower = agent_name.lower()
+            if not agent_name:
+                continue
 
-            score = 0
-            matched_words = []
-
-            # Extract significant words from agent name (skip common words)
-            skip_words = {"agent", "the", "a", "an", "for", "of", "to", "in", "llm", "simple", "new"}
-            agent_name_words = [w for w in agent_name_lower.split() if w not in skip_words]
-
-            # Check for substring matches (handles variations like summarize/summarization and mindmap/mind map)
-            for name_word in agent_name_words:
-                # Skip very short words
-                if len(name_word) < 3:
-                    continue
-
-                # Check if the word (or its stem) appears in description
-                # Use first 5 characters as a simple stem (e.g., "summar" matches both "summarize" and "summarization")
-                stem = name_word[:min(5, len(name_word))]
-
-                if name_word in description_lower:
-                    score += 4  # Highest score for exact word match
-                    matched_words.append(name_word)
-                elif stem in description_lower:
-                    score += 2  # Higher score for stem match
-                    matched_words.append(f"{stem}*")
-
-            # Special handling for compound words (e.g., "mindmap" should match "mind map")
-            # Check if agent name contains compound words that might be split in description
-            for name_word in agent_name_words:
-                if len(name_word) >= 6:  # Only check longer words
-                    # Check common compound patterns
-                    for split_pos in range(3, len(name_word) - 2):
-                        part1 = name_word[:split_pos]
-                        part2 = name_word[split_pos:]
-                        # Check if both parts appear consecutively in description
-                        compound_pattern = f"{part1} {part2}"
-                        if compound_pattern in description_lower:
-                            score += 5  # Very high score for compound match
-                            matched_words.append(f"{part1}+{part2}")
-                            break
-
-            # Also check exact word matches for additional score
-            name_word_set = set(agent_name_lower.split())
-            desc_word_set = set(description_lower.split())
-            exact_matches = name_word_set & desc_word_set
-            score += len(exact_matches)
+            score = self._calculate_fuzzy_match_score(agent_name, agent_description)
 
             if score > best_score:
                 best_score = score
                 best_match = agent_name
 
-        # Accept match if score >= 2 (at least one good stem/word match)
-        if best_score >= 2:
+        # Accept match if score >= threshold (at least one good stem/word match)
+        if best_score >= MIN_FUZZY_MATCH_SCORE:
             logging.info(
-                f"Fuzzy matched '{agent_description[:50]}...' to '{best_match}' "
+                f"Fuzzy matched '{agent_description[:MAX_ERROR_CONTEXT_LENGTH]}...' to '{best_match}' "
                 f"(score: {best_score})"
             )
             return best_match
 
         # Check if it's UserProxyAgent
-        if "userproxy" in description_lower or "user proxy" in description_lower:
-            return "UserProxyAgent"
+        agent_description_lower = agent_description.lower()
+        if "userproxy" in agent_description_lower or "user proxy" in agent_description_lower:
+            return SYSTEM_USER_PROXY_AGENT
 
         # No match found
-        logging.warning(f"Could not resolve agent name from: '{agent_description[:100]}'")
+        logging.warning(f"Could not resolve agent name from: '{agent_description[:MAX_ERROR_CONTEXT_LENGTH]}'")
         return None
 
     def _validate_routing_rule(self, routing_rule: Dict[str, Any]) -> Tuple[bool, List[str]]:
@@ -450,12 +550,63 @@ class RouteBuilderAgent(Agent[RouteBuilderAgentProps]):
         if has_agent:
             agent = routing_rule.get("agent", {})
             agent_name = agent.get("name", "")
-            if len(agent_name) > 100:
+            if len(agent_name) > MAX_AGENT_NAME_LENGTH:
                 errors.append(
-                    f"Agent name too long (likely description): '{agent_name[:100]}...'"
+                    f"Agent name too long (likely description): '{agent_name[:MAX_ERROR_CONTEXT_LENGTH]}...'"
                 )
 
         return len(errors) == 0, errors
+
+    def _validate_agent_exists(
+        self,
+        ctx: ProcessContext,
+        agent_name: str,
+        is_source: bool
+    ) -> bool:
+        """
+        Validate that an agent exists and send error if not.
+
+        Args:
+            ctx: Process context for sending errors
+            agent_name: Name to validate
+            is_source: True if source agent, False if target agent
+
+        Returns:
+            True if agent exists (or is valid destination), False otherwise
+        """
+        # Get list of available agents for suggestions
+        guild_state = self.get_guild_state() or {}
+        agent_list = guild_state.get("guild_builder", {}).get("agent_message_info", [])
+        agent_names = [a.get("agent_name", "") for a in agent_list if a.get("agent_name")]
+
+        agent_type = "Source" if is_source else "Target"
+
+        error_text = (
+            f"**Route Creation Failed**\n\n"
+            f"❌ {agent_type} agent not found: `{agent_name[:MAX_ERROR_CONTEXT_LENGTH]}`\n\n"
+            f"**Possible reasons:**\n"
+            f"1. The agent hasn't been created yet\n"
+            f"2. The agent name/description doesn't match closely enough\n\n"
+        )
+
+        if agent_names:
+            error_text += f"**Available agents ({len(agent_names)}):**\n"
+            for name in agent_names[:MAX_AGENTS_IN_ERROR_MESSAGE]:
+                error_text += f"- {name}\n"
+            if len(agent_names) > MAX_AGENTS_IN_ERROR_MESSAGE:
+                error_text += f"- ... and {len(agent_names) - MAX_AGENTS_IN_ERROR_MESSAGE} more\n"
+
+            if is_source:
+                error_text += "\n**Tip:** Use the EXACT agent name shown above, not a description."
+            else:
+                error_text += "\n**Tip:** Use the EXACT agent name shown above, not a description.\n"
+                error_text += f"**Valid system topics:** {', '.join(VALID_SYSTEM_DESTINATIONS)}"
+        else:
+            error_text += "**Tip:** No agents have been created yet. Create agents first with `@Orchestrator add agent`."
+
+        ctx.send(TextFormat(text=error_text, title=f"Error: {agent_type} Agent Not Found"))
+        logging.error(f"{agent_type} agent not found: {agent_name}")
+        return False
 
     @processor(
         OrchestratorAction,
@@ -485,70 +636,20 @@ class RouteBuilderAgent(Agent[RouteBuilderAgentProps]):
 
         # Special case: UserProxyAgent doesn't need to be in guild_state
         if "userproxy" in source_agent.lower() or "user proxy" in source_agent.lower():
-            resolved_source = "UserProxyAgent"
+            resolved_source = SYSTEM_USER_PROXY_AGENT
 
         # Special case: Common destination topics that are valid without agent lookup
-        valid_destinations = ["user_message_broadcast", "default_topic", "DEFAULT_TOPICS"]
-        if target_agent in valid_destinations or any(dest in target_agent.lower() for dest in valid_destinations):
+        if target_agent in VALID_SYSTEM_DESTINATIONS or any(dest in target_agent.lower() for dest in VALID_SYSTEM_DESTINATIONS):
             resolved_target = target_agent
 
         # Pre-flight check: Validate source agent exists (unless it's UserProxyAgent)
         if not resolved_source and source_agent.lower() not in ["userproxyagent", "user proxy agent"]:
-            # Get list of available agents for suggestions
-            guild_state = self.get_guild_state() or {}
-            agent_list = guild_state.get("guild_builder", {}).get("agent_message_info", [])
-            agent_names = [a.get("agent_name", "") for a in agent_list if a.get("agent_name")]
-
-            error_text = (
-                f"**Route Creation Failed**\n\n"
-                f"❌ Source agent not found: `{source_agent[:100]}`\n\n"
-                f"**Possible reasons:**\n"
-                f"1. The agent hasn't been created yet\n"
-                f"2. The agent name/description doesn't match closely enough\n\n"
-            )
-
-            if agent_names:
-                error_text += f"**Available agents ({len(agent_names)}):**\n"
-                for name in agent_names[:5]:  # Show first 5
-                    error_text += f"- {name}\n"
-                if len(agent_names) > 5:
-                    error_text += f"- ... and {len(agent_names) - 5} more\n"
-                error_text += "\n**Tip:** Use the EXACT agent name shown above, not a description."
-            else:
-                error_text += "**Tip:** No agents have been created yet. Create agents first with `@Orchestrator add agent`."
-
-            ctx.send(TextFormat(text=error_text, title="Error: Source Agent Not Found"))
-            logging.error(f"Source agent not found: {source_agent}")
+            self._validate_agent_exists(ctx, source_agent, is_source=True)
             return
 
         # Pre-flight check: Validate target agent exists (unless it's a system topic)
-        if not resolved_target and target_agent not in valid_destinations:
-            # Get list of available agents for suggestions
-            guild_state = self.get_guild_state() or {}
-            agent_list = guild_state.get("guild_builder", {}).get("agent_message_info", [])
-            agent_names = [a.get("agent_name", "") for a in agent_list if a.get("agent_name")]
-
-            error_text = (
-                f"**Route Creation Failed**\n\n"
-                f"❌ Target agent not found: `{target_agent[:100]}`\n\n"
-                f"**Possible reasons:**\n"
-                f"1. The agent hasn't been created yet\n"
-                f"2. The agent name/description doesn't match closely enough\n\n"
-            )
-
-            if agent_names:
-                error_text += f"**Available agents ({len(agent_names)}):**\n"
-                for name in agent_names[:5]:  # Show first 5
-                    error_text += f"- {name}\n"
-                if len(agent_names) > 5:
-                    error_text += f"- ... and {len(agent_names) - 5} more\n"
-                error_text += "\n**Tip:** Use the EXACT agent name shown above, not a description.\n"
-                error_text += f"**Valid system topics:** {', '.join(valid_destinations)}"
-            else:
-                error_text += "**Tip:** No agents have been created yet. Create agents first with `@Orchestrator add agent`."
-
-            ctx.send(TextFormat(text=error_text, title="Error: Target Agent Not Found"))
-            logging.error(f"Target agent not found: {target_agent}")
+        if not resolved_target and target_agent not in VALID_SYSTEM_DESTINATIONS:
+            self._validate_agent_exists(ctx, target_agent, is_source=False)
             return
 
         # Use resolved names for route creation
@@ -557,7 +658,7 @@ class RouteBuilderAgent(Agent[RouteBuilderAgentProps]):
 
         logging.info(
             f"Creating route: '{final_source_name}' → '{final_target_name}' "
-            f"(original: '{source_agent[:30]}...' → '{target_agent[:30]}...')"
+            f"(original: '{source_agent[:MAX_AGENT_NAME_DISPLAY_LENGTH]}...' → '{target_agent[:MAX_AGENT_NAME_DISPLAY_LENGTH]}...')"
         )
 
         # Get agent message info from guild state

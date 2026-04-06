@@ -8,6 +8,8 @@ simple payload transformations and content-based router transformations.
 
 import json
 import logging
+import os
+import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -25,6 +27,12 @@ from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     SystemMessage,
     UserMessage,
 )
+from rustic_ai.showcase.guild_generator.constants import (
+    API_MAX_RETRIES,
+    API_RETRY_BACKOFF_FACTOR,
+    API_RETRY_INITIAL_DELAY,
+    API_TIMEOUT_SECONDS,
+)
 from rustic_ai.showcase.guild_generator.models import (
     TransformRequest,
     TransformResponse,
@@ -37,7 +45,7 @@ class TransformationBuilderAgentProps(BaseAgentProps):
     """Properties for the TransformationBuilderAgent."""
 
     api_base_url: str = Field(
-        default="http://localhost:3001",
+        default_factory=lambda: os.getenv("RUSTIC_AI_FORGE_API_URL", "http://localhost:3001"),
         description="Base URL of the API server to fetch agent message formats from."
     )
 
@@ -94,30 +102,61 @@ class TransformationBuilderAgent(Agent[TransformationBuilderAgentProps]):
     appropriate JSONata expressions for transforming messages.
     """
 
-    def __init__(self, *args, **kwargs):
-        """Initialize agent and fetch message formats from API."""
-        # Only initialize our custom state if not already initialized by parent
-        if not hasattr(self, '_message_formats'):
-            self._message_formats: Optional[Dict[str, Dict[str, Any]]] = None
+    def __init__(self):
+        """Initialize agent with lazy loading for message formats."""
+        self._message_formats: Optional[Dict[str, Dict[str, Any]]] = None
+        self._fetch_attempted: bool = False
 
-        # Only fetch if we have config (means Agent.__init__ was called by framework)
-        if hasattr(self, 'config'):
+    def _ensure_formats_loaded(self) -> None:
+        """Ensure message formats are loaded from API (lazy loading)."""
+        if self._message_formats is None and not self._fetch_attempted:
+            self._fetch_attempted = True
             self._fetch_message_formats_from_api()
 
     def _fetch_message_formats_from_api(self) -> None:
-        """Fetch agents from API and extract message formats."""
+        """
+        Fetch agents from API and extract message formats with retry logic.
+
+        Falls back to local file if API is unavailable after retries.
+        """
         url = f"{self.config.api_base_url.rstrip('/')}/catalog/agents"
-        try:
-            logging.info(f"Fetching agent catalog from {url}")
-            response = httpx.get(url, timeout=10.0)
-            response.raise_for_status()
-            data = response.json()
-            self._message_formats = self._extract_message_formats(data)
-            logging.info(f"Successfully loaded {len(self._message_formats)} message formats from API")
-        except Exception as e:
-            logging.error(f"Failed to fetch message formats from {url}: {e}")
-            # Fall back to loading from local agent.json file if API is unavailable
-            self._load_message_formats_from_file()
+        last_exception = None
+
+        for attempt in range(API_MAX_RETRIES):
+            try:
+                if attempt > 0:
+                    delay = API_RETRY_INITIAL_DELAY * (API_RETRY_BACKOFF_FACTOR ** (attempt - 1))
+                    logging.info(f"Retrying API request (attempt {attempt + 1}/{API_MAX_RETRIES}) after {delay:.1f}s...")
+                    time.sleep(delay)
+
+                logging.info(f"Fetching agent catalog from {url}")
+                response = httpx.get(url, timeout=API_TIMEOUT_SECONDS)
+                response.raise_for_status()
+                data = response.json()
+                self._message_formats = self._extract_message_formats(data)
+                logging.info(f"Successfully loaded {len(self._message_formats)} message formats from API")
+                return
+
+            except httpx.TimeoutException as e:
+                last_exception = e
+                logging.warning(f"API request timed out (attempt {attempt + 1}/{API_MAX_RETRIES}): {e}")
+            except httpx.HTTPStatusError as e:
+                # Don't retry 4xx errors (client errors)
+                if 400 <= e.response.status_code < 500:
+                    logging.error(f"Client error from API (no retry): {e}")
+                    last_exception = e
+                    break
+                # Retry 5xx errors (server errors)
+                last_exception = e
+                logging.warning(f"Server error from API (attempt {attempt + 1}/{API_MAX_RETRIES}): {e}")
+            except Exception as e:
+                last_exception = e
+                logging.warning(f"Failed to fetch message formats from API (attempt {attempt + 1}/{API_MAX_RETRIES}): {e}")
+
+        # All retries failed - fall back to local file
+        logging.warning(f"Failed to fetch message formats from {url} after {API_MAX_RETRIES} attempts: {last_exception}")
+        logging.info("Falling back to local agent.json file")
+        self._load_message_formats_from_file()
 
     def _load_message_formats_from_file(self) -> None:
         """Load message formats from local agent.json file as fallback."""
@@ -222,10 +261,12 @@ class TransformationBuilderAgent(Agent[TransformationBuilderAgentProps]):
         return example
 
     def _get_message_formats(self) -> Dict[str, Dict[str, Any]]:
-        """Get cached message formats. Should not be None after initialization."""
+        """Get cached message formats, loading from API if needed."""
+        self._ensure_formats_loaded()
         if self._message_formats is None:
             raise RuntimeError(
-                "Message formats not initialized. This should not happen after on_start."
+                "Message formats could not be loaded from API or file. "
+                "Check API server availability and configuration."
             )
         return self._message_formats
 

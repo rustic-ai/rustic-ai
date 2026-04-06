@@ -535,13 +535,17 @@ class TestStateManagerAgent:
 
         agent._on_message(build_message_from_payload(generator, response))
 
-        # Should send TextFormat confirmation only
-        assert len(results) == 1
+        # Should send 2 messages: TextFormat confirmation + guild overview
+        assert len(results) == 2
 
         text_results = [r for r in results if r.format == get_qualified_class_name(TextFormat)]
-        assert len(text_results) == 1
+        assert len(text_results) == 2
+        # First message is the "Agent Added" confirmation
         text_payload = TextFormat.model_validate(text_results[0].payload)
         assert "Test Agent" in text_payload.text
+        # Second message is the guild overview
+        overview_payload = TextFormat.model_validate(text_results[1].payload)
+        assert "Guild Overview" in overview_payload.title or "New Guild" in overview_payload.text
 
     def test_state_manager_handles_route_response(self, generator, build_message_from_payload):
         """Test that state manager processes route responses."""
@@ -565,12 +569,17 @@ class TestStateManagerAgent:
 
         agent._on_message(build_message_from_payload(generator, response))
 
+        # Should send 2 messages: route added confirmation + guild overview
         assert len(results) == 2
 
         text_results = [r for r in results if r.format == get_qualified_class_name(TextFormat)]
-        assert len(text_results) == 1
+        assert len(text_results) == 2
+        # First message is "Route Added" confirmation
         text_payload = TextFormat.model_validate(text_results[0].payload)
         assert "source_agent" in text_payload.text
+        # Second message is the guild overview
+        overview_payload = TextFormat.model_validate(text_results[1].payload)
+        assert "Guild Overview" in overview_payload.title or "New Guild" in overview_payload.text
 
     def test_state_manager_shows_help(self, generator, build_message_from_payload):
         """Test that state manager shows help on HELP action."""

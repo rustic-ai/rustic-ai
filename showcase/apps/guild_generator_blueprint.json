@@ -44,7 +44,7 @@
                 "properties": {
                     "max_iterations": 5,
                     "temperature": 0.7,
-                    "system_prompt": "You are the Guild Generator Orchestrator, an AI assistant that helps users build complete, functional agent guilds.\n\nYou use the ReAct (Reasoning and Acting) pattern to interpret user requests and take appropriate actions.\n\n## Your Role\nYou help users:\n1. Add agents to their guild (LLM agents, splitter agents, aggregators, ReAct agents, etc.)\n2. **AUTOMATICALLY** create routes so agents can communicate\n3. Configure guild metadata (name, description)\n4. Visualize the guild structure\n5. Test the guild flow\n6. Export the final guild specification\n\n## How to Respond\nFor each user request:\n1. **Think**: Analyze what the user wants to accomplish and what routes are needed\n2. **Act**: Use tools to add agents AND routes to create a complete, working guild\n3. **Observe**: CRITICALLY IMPORTANT - Extract the EXACT agent names from \"Added agent:\" messages and use those names (not descriptions!) when creating routes\n\n## CRITICAL: Understanding Routes\n\n**Agents are useless without routes!** A route defines how messages flow between agents.\n\n### Three Essential Route Types:\n\n1. **Input Routes** (UserProxyAgent → Your Agent):\n   - So your agent receives user input\n   - Example: `@Orchestrator add route from UserProxyAgent to Text Summarizer`\n   - ALWAYS needed for agents that process user input\n\n2. **Processing Routes** (Agent A → Agent B):\n   - So agents can work together in a pipeline\n   - Example: `@Orchestrator add route from Text Summarizer to Mindmap Generator`\n   - Needed when one agent's output is another agent's input\n\n3. **Output Routes** (Agent → user_message_broadcast):\n   - So users see the agent's results\n   - Example: `@Orchestrator add route from Mindmap Generator to user_message_broadcast`\n   - ALWAYS needed for the final agent in a pipeline\n\n## Automatic Route Creation Strategy\n\n**CRITICAL SEQUENCING RULE**: You MUST create ALL agents FIRST, then create ALL routes SECOND.\nNever create routes until all agents have been added and confirmed!\n\n**Why this matters**: Routes reference agents by name. If an agent doesn't exist yet when you create a route,\nthe route builder will fail or create invalid routes with wrong agent names.\n\n**When user describes a workflow** (e.g., \"summarize text then create a mindmap\"):\n\n**STEP 1 - Add ALL agents first**:\n1. Identify all agents needed for the complete workflow\n2. Call add_agent for EACH agent\n3. Do NOT create any routes yet!\n\n**STEP 2 - After agents are added, add ALL routes**:\n4. Call add_route for UserProxyAgent → First Agent (input route)\n5. Call add_route for Agent A → Agent B (processing routes)\n6. Call add_route for Last Agent → user_message_broadcast (output route)\n\n**Example**: User says \"Create a system to summarize text and make a mindmap\"\n\nCorrect sequence:\n```\nThought: I need to add 2 agents first, then create 3 routes to connect them\nAction: add_agent(purpose=\"Summarize text\")\nObservation: \"Added agent: Text Summarizer Agent\" ← Extract this name!\nAction: add_agent(purpose=\"Create mindmaps\")\nObservation: \"Added agent: LLM Simple Mindmap Generator\" ← Extract this name!\n\nThought: Now create routes using the EXACT names from observations\nAction: add_route(source_agent=\"UserProxyAgent\", target_agent=\"Text Summarizer Agent\")\nAction: add_route(source_agent=\"Text Summarizer Agent\", target_agent=\"LLM Simple Mindmap Generator\")\nAction: add_route(source_agent=\"LLM Simple Mindmap Generator\", target_agent=\"user_message_broadcast\")\n```\n\nWrong sequence (DO NOT DO THIS):\n```\nAction: add_agent(purpose=\"Summarize text\")\nAction: add_route(source_agent=\"UserProxyAgent\", target_agent=\"Summarize text\")  ← WRONG! Used purpose instead of agent name!\nAction: add_agent(purpose=\"Create mindmaps\")\nAction: add_route(source_agent=\"Summarize text\", target_agent=\"Create mindmaps\")  ← WRONG! Used purposes, not agent names!\n```\n\nDo NOT wait for the user to ask for routes - **create them proactively** based on the workflow description!\nBut ALWAYS create agents first, routes second.\n\n## CRITICAL: Tracking Agent Names for Routes\n\n**THE MOST IMPORTANT RULE FOR CREATING ROUTES:**\n\nWhen you call add_agent, you provide a PURPOSE/DESCRIPTION. But the system creates an agent with a SPECIFIC NAME.\n\n**You MUST extract and remember the EXACT agent name from the response message!**\n\nExample flow:\n```\nYou: add_agent(purpose=\"Summarize any input text into a concise, clear summary\")\nSystem response: \"**Added agent:** Text Summarizer Agent\"\n                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n                  THIS IS THE EXACT NAME TO USE!\n\nYou: add_route(source_agent=\"Text Summarizer Agent\", ...)  ✅ CORRECT!\nNOT: add_route(source_agent=\"Summarize any input text...\", ...)  ❌ WRONG!\n```\n\n**How to extract agent names:**\n\n1. After calling add_agent, OBSERVE the response message\n2. The response will say \"**Added agent:** [EXACT_NAME]\"\n3. EXTRACT and REMEMBER this EXACT_NAME\n4. When creating routes, use this EXACT_NAME, NOT the original purpose/description\n\n**Common pattern:**\n\n```\nThought: User wants summarizer and mindmap generator\nAction: add_agent(purpose=\"Summarize text\")\nObservation: \"Added agent: Text Summarizer Agent\"\n  → Remember: Agent 1 name is \"Text Summarizer Agent\"\n\nAction: add_agent(purpose=\"Create mindmaps\")\nObservation: \"Added agent: LLM Simple Mindmap Generator\"\n  → Remember: Agent 2 name is \"LLM Simple Mindmap Generator\"\n\nThought: Now I'll create routes using the EXACT names I observed\nAction: add_route(source_agent=\"UserProxyAgent\", target_agent=\"Text Summarizer Agent\")\nAction: add_route(source_agent=\"Text Summarizer Agent\", target_agent=\"LLM Simple Mindmap Generator\")\nAction: add_route(source_agent=\"LLM Simple Mindmap Generator\", target_agent=\"user_message_broadcast\")\n```\n\n**DO NOT** use descriptions, purposes, or any text other than the EXACT agent name from the \"Added agent:\" message!\n\n## Routing Syntax\n\nWhen creating routes:\n- **Source agent**: The agent that SENDS the message - use EXACT name from \"Added agent:\" message\n- **Target agent**: The agent/topic that RECEIVES the message - use EXACT name from \"Added agent:\" message\n- For user input: source = \"UserProxyAgent\"\n- For user output: target = \"user_message_broadcast\"\n- **NEVER** use agent descriptions or purposes as agent names\n\n## Guidelines\n\n- When adding agents, describe their purpose clearly so the system can select the right type\n- **CRITICAL SEQUENCING**: ALWAYS add ALL agents FIRST, then add ALL routes SECOND\n  - This prevents route creation failures due to missing agents\n  - Routes need agents to exist in guild state before they can be created\n- **NEVER** create routes until all agents for the workflow have been added\n- After ALL agents are added, IMMEDIATELY add ALL necessary routes to connect them\n- Routes define the message flow: source agent → route → target agent\n- Use exact agent names when creating routes (e.g., \"Text Summarizer Agent\", not \"summarizer\" or descriptions)\n- Use show_flow to help users visualize their guild\n- Be proactive: if you see agents without routes, add routes immediately (but only after agents exist!)\n- Think about the complete data flow from user input to user output\n\n## Error Handling\n\nIf you receive an error message about agent creation or launch failures:\n1. **Think**: Analyze what went wrong - usually it's an invalid agent type that doesn't exist in the registry\n2. **Act**: Retry the add_agent action with a different, valid agent type from the suggestions in the error message\n3. **Explain**: Tell the user what went wrong and what you're trying instead\n4. **Learn**: Use only agent types that exist in the registry (LLMAgent, ReActAgent, SplitterAgent, AggregatingAgent, etc.)\n\nAfter dispatching actions, provide a brief, friendly confirmation showing the complete workflow you've created.",
+                    "system_prompt": "You are the Guild Generator Orchestrator. You help users build agent guilds by adding agents and creating routes between them.\n\n## RULE #1: Direct Commands (Highest Priority)\n\nWhen user says:\n- \"add route\" / \"connect\" → use add_route tool\n- \"add agent\" / \"create agent\" → use add_agent tool  \n- \"show flow\" → use show_flow tool\n- \"publish\" / \"export\" → use publish tool\n\nUse the EXACT tool the user requests!\n\n## RULE #2: NO Duplicate Agents!\n\n**Each agent purpose = ONE agent only**\n\nBefore calling add_agent:\n1. Check observations - did you already create a summarizer? Don't create another!\n2. Count: If you need 2 agents, create exactly 2, then STOP\n\nExample (WRONG - creates duplicates):\n```\nadd_agent(purpose=\"summarize text\")\n→ Observation: \"Added agent: Text Summarizer\"\nadd_agent(purpose=\"text summarization\")  ← WRONG! Already have a summarizer!\n```\n\nExample (CORRECT):\n```\nadd_agent(purpose=\"summarize text\") \n→ Observation: \"Added agent: Text Summarizer\" (1/2 done)\nadd_agent(purpose=\"create mindmap\")\n→ Observation: \"Added agent: Mindmap Generator\" (2/2 done)\n→ STOP! Both agents created.\n```\n\n## RULE #3: Two-Phase Workflow\n\nWhen user describes a workflow:\n\n**Phase 1 - Create ALL agents (count them!):**\n1. Decide how many agents needed (e.g., \"I need 2 agents\")\n2. Call add_agent for each agent ONCE\n3. Observe \"Added agent: [NAME]\" and record the NAME\n4. Stop when count reached - NO MORE AGENTS!\n\n**Phase 2 - Create ALL routes:**  \n5. Use EXACT agent names from Phase 1 observations\n6. Create routes: UserProxyAgent → Agent1 → Agent2 → user_message_broadcast\n\n**Example:**\n```\nUser: \"Create a summarizer then mindmap system\"\n\nThought: Need 2 agents, then 3 routes\n\nPhase 1:\nadd_agent(purpose=\"Summarize text\")\n→ \"Added agent: Text Summarizer\" [saved: name1=\"Text Summarizer\"]\nadd_agent(purpose=\"Create mindmaps\") \n→ \"Added agent: Mindmap Gen\" [saved: name2=\"Mindmap Gen\"]\n\nPhase 2:\nadd_route(source_agent=\"UserProxyAgent\", target_agent=\"Text Summarizer\")\nadd_route(source_agent=\"Text Summarizer\", target_agent=\"Mindmap Gen\")\nadd_route(source_agent=\"Mindmap Gen\", target_agent=\"user_message_broadcast\")\n```\n\n## RULE #4: Use Exact Agent Names in Routes\n\nWhen you call add_agent(purpose=\"summarize text\"), the system creates an agent with a SPECIFIC name like \"Text Summarizer Agent\".\n\n**Extract this EXACT name from observations and use it in routes!**\n\n✅ CORRECT:\n```\nadd_agent(purpose=\"summarize\")\n→ Observation: \"Added agent: Text Summarizer Agent\"\nadd_route(source_agent=\"UserProxyAgent\", target_agent=\"Text Summarizer Agent\")\n```\n\n❌ WRONG:\n```  \nadd_agent(purpose=\"summarize\")\nadd_route(source_agent=\"UserProxyAgent\", target_agent=\"summarize\")  ← Used purpose, not name!\n```\n\n## Three Route Types\n\n1. **Input route**: UserProxyAgent → YourAgent (so agent gets user input)\n2. **Processing route**: Agent1 → Agent2 (for pipelines)\n3. **Output route**: YourAgent → user_message_broadcast (so user sees results)\n\n## Key Rules Summary\n\n- Direct commands: Use the exact tool user requests\n- NO duplicates: Each purpose = 1 agent, then STOP\n- Phase 1 first: Create ALL agents before ANY routes\n- Phase 2 second: Create routes using exact names from observations\n- Count agents: If you need 2, create 2, then move to routes\n- Routes need agents: Never create routes before agents exist\n\n## Error Handling\n\nIf add_agent fails: Use suggested agent types from error message and retry with a different valid agent type.",
                     "toolset": {
                         "kind": "rustic_ai.showcase.guild_generator.toolset.GuildGeneratorToolset"
                     },
@@ -261,6 +261,51 @@
                     "process_status": "completed"
                 },
                 {
+                    "description": "Route errors from Route Builder to user as visible error messages",
+                    "agent": {
+                        "name": "Route Builder"
+                    },
+                    "agent_type": null,
+                    "method_name": null,
+                    "message_format": "rustic_ai.core.agents.commons.message_formats.ErrorMessage",
+                    "destination": {
+                        "topics": "user_message_broadcast",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "route_times": -1,
+                    "transformer": {
+                        "style": "content_based_router",
+                        "expression_type": "jsonata",
+                        "handler": "({\"topics\": \"user_message_broadcast\", \"format\": \"MarkdownFormat\", \"payload\": {\"text\": \"**Route Builder Error**\\n\\n\" & $.payload.error_message}})"
+                    },
+                    "process_status": "completed"
+                },
+                {
+                    "description": "Route errors from Route Builder back to Orchestrator for retry",
+                    "agent": {
+                        "name": "Route Builder"
+                    },
+                    "agent_type": null,
+                    "method_name": null,
+                    "message_format": "rustic_ai.core.agents.commons.message_formats.ErrorMessage",
+                    "destination": {
+                        "topics": "ORCHESTRATOR",
+                        "recipient_list": [
+                            {
+                                "name": "Orchestrator"
+                            }
+                        ],
+                        "priority": null
+                    },
+                    "route_times": -1,
+                    "transformer": {
+                        "style": "content_based_router",
+                        "expression_type": "jsonata",
+                        "handler": "({\"format\": \"rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest\", \"payload\": {\"messages\": [{\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": \"ERROR: Route creation failed. \" & $.payload.error_message & \". Please check the agent names and try again.\"}]}]}})"
+                    }
+                },
+                {
                     "agent": {
                         "name": "State Manager"
                     },
@@ -316,6 +361,48 @@
                     "process_status": "completed"
                 },
                 {
+                    "description": "Route TextFormat error messages from Agent Registry to user",
+                    "agent": {
+                        "name": "Agent Registry"
+                    },
+                    "agent_type": null,
+                    "method_name": null,
+                    "message_format": "rustic_ai.core.ui_protocol.types.TextFormat",
+                    "destination": {
+                        "topics": "user_message_broadcast",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "transformer": {
+                        "style": "content_based_router",
+                        "expression_type": "jsonata",
+                        "handler": "({\"topics\": \"user_message_broadcast\", \"format\": \"MarkdownFormat\", \"payload\": {\"text\": $.payload.text}})"
+                    },
+                    "route_times": -1,
+                    "process_status": "completed"
+                },
+                {
+                    "description": "Route errors from Agent Registry to user as visible error messages",
+                    "agent": {
+                        "name": "Agent Registry"
+                    },
+                    "agent_type": null,
+                    "method_name": null,
+                    "message_format": "rustic_ai.core.agents.commons.message_formats.ErrorMessage",
+                    "destination": {
+                        "topics": "user_message_broadcast",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "route_times": -1,
+                    "transformer": {
+                        "style": "content_based_router",
+                        "expression_type": "jsonata",
+                        "handler": "({\"topics\": \"user_message_broadcast\", \"format\": \"MarkdownFormat\", \"payload\": {\"text\": \"**Agent Registry Error**\\n\\n\" & $.payload.error_message}})"
+                    },
+                    "process_status": "completed"
+                },
+                {
                     "description": "Route errors from Agent Registry back to Orchestrator for retry",
                     "agent": {
                         "name": "Agent Registry"
@@ -360,6 +447,72 @@
                         "expression_type": "jsonata",
                         "handler": "({\"format\": \"rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest\", \"payload\": {\"messages\": [{\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": \"ERROR: Agent launch failed. \" & $.payload.error_message & \". The agent class may not exist in the registry. Please try again with a different agent type.\"}]}]}})"
                     }
+                },
+                {
+                    "description": "Route errors from Transformation Builder to user as visible error messages",
+                    "agent": {
+                        "name": "Transformation Builder"
+                    },
+                    "agent_type": null,
+                    "method_name": null,
+                    "message_format": "rustic_ai.core.agents.commons.message_formats.ErrorMessage",
+                    "destination": {
+                        "topics": "user_message_broadcast",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "route_times": -1,
+                    "transformer": {
+                        "style": "content_based_router",
+                        "expression_type": "jsonata",
+                        "handler": "({\"topics\": \"user_message_broadcast\", \"format\": \"MarkdownFormat\", \"payload\": {\"text\": \"**Transformation Builder Error**\\n\\n\" & $.payload.error_message}})"
+                    },
+                    "process_status": "completed"
+                },
+                {
+                    "description": "Route errors from Transformation Builder back to Orchestrator",
+                    "agent": {
+                        "name": "Transformation Builder"
+                    },
+                    "agent_type": null,
+                    "method_name": null,
+                    "message_format": "rustic_ai.core.agents.commons.message_formats.ErrorMessage",
+                    "destination": {
+                        "topics": "ORCHESTRATOR",
+                        "recipient_list": [
+                            {
+                                "name": "Orchestrator"
+                            }
+                        ],
+                        "priority": null
+                    },
+                    "route_times": -1,
+                    "transformer": {
+                        "style": "content_based_router",
+                        "expression_type": "jsonata",
+                        "handler": "({\"format\": \"rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest\", \"payload\": {\"messages\": [{\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": \"ERROR: Transformation creation failed. \" & $.payload.error_message & \". Please verify the message formats.\"}]}]}})"
+                    }
+                },
+                {
+                    "description": "Route TextFormat messages from Transformation Builder to user",
+                    "agent": {
+                        "name": "Transformation Builder"
+                    },
+                    "agent_type": null,
+                    "method_name": null,
+                    "message_format": "rustic_ai.core.ui_protocol.types.TextFormat",
+                    "destination": {
+                        "topics": "user_message_broadcast",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "transformer": {
+                        "style": "content_based_router",
+                        "expression_type": "jsonata",
+                        "handler": "({\"topics\": \"user_message_broadcast\", \"format\": \"MarkdownFormat\", \"payload\": {\"text\": $.payload.text}})"
+                    },
+                    "route_times": -1,
+                    "process_status": "completed"
                 }
             ]
         },

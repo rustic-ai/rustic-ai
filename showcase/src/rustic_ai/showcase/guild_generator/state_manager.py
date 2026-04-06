@@ -13,6 +13,12 @@ from rustic_ai.core.guild.agent import Agent, ProcessContext, processor
 from rustic_ai.core.guild.dsl import BaseAgentProps
 from rustic_ai.core.state.models import StateUpdateFormat
 from rustic_ai.core.ui_protocol.types import TextFormat
+from rustic_ai.showcase.guild_generator.constants import (
+    DEFAULT_GUILD_DESCRIPTION,
+    DEFAULT_GUILD_NAME,
+    MAX_DESCRIPTION_DISPLAY_LENGTH,
+    SYSTEM_USER_PROXY_AGENT,
+)
 from rustic_ai.showcase.guild_generator.models import (
     ActionType,
     AgentLookupResponse,
@@ -36,36 +42,92 @@ class StateManagerAgent(Agent[StateManagerAgentProps]):
     This agent receives agent specs and routing rules from other agents
     and updates the guild_builder state accordingly.
 
-    Uses local state to avoid race conditions when multiple updates come in quickly.
+    Uses local state cache to avoid race conditions when multiple updates come in quickly.
+    The cache is initialized from guild_state on first access and synced back on updates.
     """
 
+    def __init__(self):
+        """Initialize agent with state management."""
+        self._local_guild_builder: Optional[Dict[str, Any]] = None
+        self._state_initialized: bool = False
+
+    def _get_default_guild_builder_state(self) -> Dict[str, Any]:
+        """Get default guild builder state structure."""
+        return {
+            "name": DEFAULT_GUILD_NAME,
+            "description": DEFAULT_GUILD_DESCRIPTION,
+            "agents": [],
+            "routes": [],
+            "agent_message_info": []
+        }
+
     def _get_local_state(self) -> Dict[str, Any]:
-        """Get the local guild builder state."""
-        # Initialize on first access
-        if not hasattr(self, '_local_guild_builder'):
+        """
+        Get the local guild builder state, initializing from guild_state if needed.
+
+        Returns:
+            Dict containing the current guild builder state
+        """
+        if self._local_guild_builder is None:
+            # First access - load from guild_state
             guild_state = self.get_guild_state() or {}
-            self._local_guild_builder = guild_state.get("guild_builder", {
-                "name": "New Guild",
-                "description": "A guild created with Guild Generator",
-                "agents": [],
-                "routes": [],
-                "agent_message_info": []
-            })
-            logging.info(f"StateManagerAgent initialized with {len(self._local_guild_builder.get('agents', []))} agents")
+            guild_builder = guild_state.get("guild_builder", None)
+
+            if guild_builder is None:
+                # No existing state - use default
+                self._local_guild_builder = self._get_default_guild_builder_state()
+                logging.info("StateManagerAgent initialized with default empty guild builder state")
+            else:
+                # Validate and use existing state
+                try:
+                    # Ensure all required fields exist
+                    default_state = self._get_default_guild_builder_state()
+                    for key, default_value in default_state.items():
+                        if key not in guild_builder:
+                            guild_builder[key] = default_value
+
+                    self._local_guild_builder = guild_builder
+                    num_agents = len(guild_builder.get("agents", []))
+                    num_routes = len(guild_builder.get("routes", []))
+                    logging.info(
+                        f"StateManagerAgent initialized from guild_state with "
+                        f"{num_agents} agents and {num_routes} routes"
+                    )
+                except Exception as e:
+                    logging.error(f"Failed to load guild builder state: {e}, using defaults")
+                    self._local_guild_builder = self._get_default_guild_builder_state()
+
+            self._state_initialized = True
+
         return self._local_guild_builder
 
-    def _save_local_state(self, ctx: ProcessContext):
-        """Save local state to guild state."""
-        # Push the entire local state to guild_state - no read, just write
-        logging.info(
-            f"Saving local guild builder state with {len(self._local_guild_builder.get('agents', []))} agents "
-            f"and {len(self._local_guild_builder.get('routes', []))} routes"
-        )
-        self.update_guild_state(
-            ctx=ctx,
-            update_format=StateUpdateFormat.JSON_MERGE_PATCH,
-            update={"guild_builder": self._local_guild_builder}
-        )
+    def _save_local_state(self, ctx: ProcessContext) -> None:
+        """
+        Save local state to guild state.
+
+        Uses JSON merge patch to atomically update guild_state without reading first.
+        This prevents race conditions from concurrent updates.
+        """
+        if self._local_guild_builder is None:
+            logging.warning("Attempted to save null local state - skipping")
+            return
+
+        try:
+            num_agents = len(self._local_guild_builder.get("agents", []))
+            num_routes = len(self._local_guild_builder.get("routes", []))
+
+            logging.info(
+                f"Saving local guild builder state with {num_agents} agents and {num_routes} routes"
+            )
+
+            self.update_guild_state(
+                ctx=ctx,
+                update_format=StateUpdateFormat.JSON_MERGE_PATCH,
+                update={"guild_builder": self._local_guild_builder}
+            )
+        except Exception as e:
+            logging.error(f"Failed to save local state to guild_state: {e}")
+            raise
 
     def _generate_guild_overview(self) -> str:
         """
@@ -108,7 +170,7 @@ class StateManagerAgent(Agent[StateManagerAgentProps]):
                         break
 
                 # Truncate description for table
-                desc_short = (description[:50] + "...") if len(description) > 50 else description
+                desc_short = (description[:MAX_DESCRIPTION_DISPLAY_LENGTH] + "...") if len(description) > MAX_DESCRIPTION_DISPLAY_LENGTH else description
 
                 agent_lines.append(f"| {name} | `{agent_type}` | {input_fmts} | {output_fmts} | {desc_short} |")
 
@@ -203,7 +265,7 @@ class StateManagerAgent(Agent[StateManagerAgentProps]):
         if len(agents) <= 3:
             if not has_input_route:
                 suggestions.append(
-                    f"• Add input route: `@Orchestrator add route from UserProxyAgent to {agent_name}`"
+                    f"• Add input route: `@Orchestrator add route from {SYSTEM_USER_PROXY_AGENT} to {agent_name}`"
                 )
 
             if not has_output_route:
