@@ -20,7 +20,7 @@ packages = [{ include = "rustic_ai", from = "src" }]
 
 [tool.poetry.dependencies]
 rusticai-core = { path = "../core", develop = true }
-langchain-core = "^1.2.20"
+langchain-core = "^1.2.28"
 langchain-openai = "^1.1.11"
 langchain-text-splitters = "^1.1.1"
 
