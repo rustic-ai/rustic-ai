@@ -1,4 +1,5 @@
 import json
+
 from pydantic import ValidationError
 import pytest
 
