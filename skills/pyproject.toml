@@ -19,7 +19,7 @@ packages = [{ include = "rustic_ai", from = "src" }]
 [tool.poetry.dependencies]
 rusticai-core = { path = "../core", develop = true }
 rusticai-llm-agent = { path = "../llm-agent", develop = true }
-gitpython = "^3.1.0"
+gitpython = "^3.1.47"
 pyyaml = "^6.0.0"
 httpx = "^0.28.0"
 
