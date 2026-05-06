@@ -128,11 +128,11 @@ class TestMCPPlaywrightIntegration:
 
         probe_agent.clear_messages()
 
-        # Let's try to navigate to https://the-internet.herokuapp.com/abtest
+        # Let's try to navigate to https://the-internet.herokuapp.com/frames
         navigate_payload = CallToolRequest(
             server_name="playwright",
             tool_name="browser_navigate",
-            arguments={"url": "https://the-internet.herokuapp.com/abtest"},
+            arguments={"url": "https://the-internet.herokuapp.com/frames"},
         ).model_dump()
 
         id_obj = generator.get_id(Priority.NORMAL)
@@ -154,4 +154,4 @@ class TestMCPPlaywrightIntegration:
         messages = probe_agent.get_messages()
         messages = [msg for msg in messages if "mcp_requests" in msg.topics]
         assert messages[-1].payload["results"][0]["type"] == "text"
-        assert "Also known as split testing" in messages[-1].payload["results"][0]["content"]
+        assert "frames" in messages[-1].payload["results"][0]["content"]
