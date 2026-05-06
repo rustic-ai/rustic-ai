@@ -1,5 +1,5 @@
 import asyncio
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import StrEnum
 import hashlib
 import logging
@@ -251,8 +251,8 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
                     "was_generated_by": "playwright_scraper_agent",
                     "description": f"Web page scraped from {url}",
                     "tags": ["web", "scraped", hostname] if hostname else ["web", "scraped"],
-                    "was_retrieved_at": str(datetime.utcnow()),
-                    "created_at": response.headers.get("last-modified", str(datetime.utcnow())),
+                    "was_retrieved_at": str(datetime.now(timezone.utc)),
+                    "created_at": response.headers.get("last-modified", str(datetime.now(timezone.utc))),
                     "source_etag": response.headers.get("etag", ""),
                     "source_uri": response.url,
                 }

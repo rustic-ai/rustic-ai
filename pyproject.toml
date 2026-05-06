@@ -45,7 +45,7 @@ rusticai-nats = {path = "./nats", develop = true}
 optional = true
 
 [tool.poetry.group.dev.dependencies]
-pytest = "^8.3.4"
+pytest = "^9.0.3"
 black = { version = "^26.3.1", extras = ["jupyter"] }
 flake8 = "^7.1.2"
 tox = "^4.24.1"
@@ -57,7 +57,7 @@ tomlkit = "^0.13.2"
 # redis dev dependencies
 fakeredis = "^2.27.0"
 # api-server dev dependencies
-pytest-asyncio = "^0.25.3"
+pytest-asyncio = "^1.3.0"
 httpx = "^0.28.1"
 flaky = "^3.8.1"
 pytest-xdist = "^3.6.1"

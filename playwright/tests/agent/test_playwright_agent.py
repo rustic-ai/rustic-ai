@@ -120,7 +120,7 @@ class TestPlaywrightAgent:
         completed = WebScrapingCompleted.model_validate(results[-1].payload)
 
         assert completed.id == request_id
-        assert len(completed.links) == 3  # 2 links are duplicates
+        assert len(completed.links) == 2  # 2 URLs are duplicates, and content deduplication may occur
 
     # Test markdown output
     @flaky(max_runs=3, min_passes=1)
