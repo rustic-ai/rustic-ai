@@ -8,7 +8,7 @@ EXPECTED_REQUIRES_PYTHON = ">=3.13,<3.14"
 EXPECTED_PYTHON_VERSION = "3.13.12"
 
 
-def test_all_pyprojects_stay_on_python_313():
+def test_all_pyprojects_stay_on_python_3_13():
     mismatches = []
 
     for pyproject_path in sorted(REPO_ROOT.rglob("pyproject.toml")):
@@ -20,7 +20,7 @@ def test_all_pyprojects_stay_on_python_313():
     assert not mismatches, "\n".join(mismatches)
 
 
-def test_ci_and_docker_stay_pinned_to_python_313():
+def test_ci_and_docker_stay_pinned_to_python_3_13():
     dockerfile = (REPO_ROOT / "Dockerfile").read_text(encoding="utf-8")
     assert re.search(r"^FROM python:3\.13\.12-slim\b", dockerfile, re.MULTILINE)
 
