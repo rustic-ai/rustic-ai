@@ -2,6 +2,10 @@
 
 Rustic AI is a super simple AI/ML framework designed to provide an guild approach to AI. It allows developers to create guilds where agents interact and perform long-running tasks, such as software development based on minimal requirements, competition research for product companies, financial research on stocks, and more.
 
+> Rustic AI currently supports Python 3.13. Python 3.14 is not yet supported
+> because several required integrations do not yet have stable
+> Python 3.14-compatible releases.
+
 ## TOC
 - [Rustic AI Features](#features)
 - [Getting Started](#getting-started)
