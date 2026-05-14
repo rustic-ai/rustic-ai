@@ -8523,6 +8523,27 @@ type = "directory"
 url = "testing"
 
 [[package]]
+name = "rusticai-unidb"
+version = "0.0.1"
+description = "Rustic AI module for unidb"
+optional = false
+python-versions = ">=3.13,<3.14"
+groups = ["main"]
+files = []
+develop = true
+
+[package.dependencies]
+rusticai-core = {path = "../core", develop = true}
+uni-db = "^0.1.18"
+
+[package.extras]
+test = []
+
+[package.source]
+type = "directory"
+url = "unidb"
+
+[[package]]
 name = "rusticai-vertexai"
 version = "1.2.2"
 description = "Rustic AI module with Vertex AI integrations"
@@ -10221,6 +10242,25 @@ tzdata = {version = "*", markers = "platform_system == \"Windows\""}
 
 [package.extras]
 devenv = ["check-manifest", "pytest (>=4.3)", "pytest-cov", "pytest-mock (>=3.3)", "zest.releaser"]
+
+[[package]]
+name = "uni-db"
+version = "0.1.18"
+description = "Python bindings for Uni Graph Database"
+optional = false
+python-versions = ">=3.10"
+groups = ["main"]
+files = [
+    {file = "uni_db-0.1.18-cp310-abi3-macosx_10_12_x86_64.whl", hash = "sha256:dbd274407ad4ee6130f16626365ce5b00d9a6958beb7f6f40edf8f716e5be619"},
+    {file = "uni_db-0.1.18-cp310-abi3-macosx_11_0_arm64.whl", hash = "sha256:8ecf52a4df5f6ae73fa4ebc24fa9e79d584943cea1e84c9c07d6efe7f47939f8"},
+    {file = "uni_db-0.1.18-cp310-abi3-manylinux_2_28_aarch64.whl", hash = "sha256:f4233fdb78dcbdd6e8b1232e591f29269c9e183be8dfea55fa5f1d37ca3db86a"},
+    {file = "uni_db-0.1.18-cp310-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:8daa7b81fb6490414b463d6adce4fde1cc4d8faa20936c5f640ec1ade0567a9f"},
+    {file = "uni_db-0.1.18-cp310-abi3-win_amd64.whl", hash = "sha256:05b168ac3343f97cdedc8ccb2d9055c7e9ab30075478cdddcd3a88b0731dd735"},
+    {file = "uni_db-0.1.18.tar.gz", hash = "sha256:b868b07e9003926810148c6b56aebf1c0f53ba214228c9d7f198f34eb3772063"},
+]
+
+[package.extras]
+docs = ["pdoc (>=14.0.0)"]
 
 [[package]]
 name = "uritemplate"

@@ -39,6 +39,7 @@ rusticai-mcp = {path = "./mcp", develop = true}
 rusticai-claude = {path = "./claude", develop = true}
 rusticai-skills = {path = "./skills", develop = true}
 rusticai-pandas-analyst = {path = "./pandas-analyst", develop = true}
+rusticai-unidb = {path = "./unidb", develop = true}
 rusticai-nats = {path = "./nats", develop = true}
 
 [tool.poetry.group.dev]
