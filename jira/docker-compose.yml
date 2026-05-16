@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  jira:
+    image: atlassian/jira-software:9.12
+    container_name: rustic-jira
+    ports:
+      - "8080:8080"
+    environment:
+      - ATL_PROXY_NAME=localhost
+      - ATL_PROXY_PORT=8080
+      - ATL_TOMCAT_SCHEME=http
+      - ATL_TOMCAT_SECURE=false
+      - JVM_MINIMUM_MEMORY=2048m
+      - JVM_MAXIMUM_MEMORY=4096m
+      - JVM_SUPPORT_RECOMMENDED_ARGS=-Datlassian.plugins.enable.wait=300
+    volumes:
+      - jira-data:/var/atlassian/application-data/jira
+    networks:
+      - jira-network
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:14-alpine
+    container_name: rustic-jira-db
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=jira
+      - POSTGRES_PASSWORD=jira
+      - POSTGRES_DB=jiradb
+      - POSTGRES_ENCODING=UNICODE
+      - POSTGRES_COLLATE=C
+      - POSTGRES_COLLATE_TYPE=C
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - jira-network
+    restart: unless-stopped
+
+volumes:
+  jira-data:
+    driver: local
+  postgres-data:
+    driver: local
+
+networks:
+  jira-network:
+    driver: bridge
