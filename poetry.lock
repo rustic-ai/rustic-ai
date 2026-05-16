@@ -8067,7 +8067,7 @@ files = [
 
 [[package]]
 name = "rusticai-api"
-version = "1.2.2"
+version = "1.2.3"
 description = "API Server for Rustic AI"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -8098,7 +8098,7 @@ url = "api"
 
 [[package]]
 name = "rusticai-chroma"
-version = "1.2.2"
+version = "1.2.3"
 description = "Rustic AI module for leveraging ChromaDB"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -8119,7 +8119,7 @@ url = "chroma"
 
 [[package]]
 name = "rusticai-claude"
-version = "1.2.2"
+version = "1.2.3"
 description = "Claude Integration"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -8140,7 +8140,7 @@ url = "claude"
 
 [[package]]
 name = "rusticai-core"
-version = "1.2.3"
+version = "1.2.4"
 description = "Rustic AI’s modular, agentic AI framework for building human-centered, multi-agent workflows"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -8178,7 +8178,7 @@ url = "core"
 
 [[package]]
 name = "rusticai-huggingface"
-version = "1.2.2"
+version = "1.2.3"
 description = "Rustic AI module with huggingface integrations"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -8207,7 +8207,7 @@ url = "huggingface"
 
 [[package]]
 name = "rusticai-lancedb"
-version = "1.2.3"
+version = "1.2.4"
 description = "Support for LanceDB backend KnowledgeBase"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -8228,7 +8228,7 @@ url = "lancedb"
 
 [[package]]
 name = "rusticai-langchain"
-version = "1.2.2"
+version = "1.2.3"
 description = "Rustic AI module with LangChain integrations"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -8251,7 +8251,7 @@ url = "langchain"
 
 [[package]]
 name = "rusticai-litellm"
-version = "1.2.2"
+version = "1.2.3"
 description = "Rustic AI module leveraging LiteLLM for LLMs"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -8275,7 +8275,7 @@ url = "litellm"
 
 [[package]]
 name = "rusticai-llm-agent"
-version = "1.2.4"
+version = "1.2.5"
 description = "A complete set of LLM agents"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -8296,7 +8296,7 @@ url = "llm-agent"
 
 [[package]]
 name = "rusticai-mcp"
-version = "1.2.2"
+version = "1.2.3"
 description = "support for mcps"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -8317,7 +8317,7 @@ url = "mcp"
 
 [[package]]
 name = "rusticai-nats"
-version = "1.2.3"
+version = "1.2.4"
 description = "NATS messaging backend for Rustic AI"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -8338,7 +8338,7 @@ url = "nats"
 
 [[package]]
 name = "rusticai-pandas-analyst"
-version = "0.1.2"
+version = "0.1.3"
 description = "Pandas and DuckDB powered implementation of data analyst dependency."
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -8361,7 +8361,7 @@ url = "pandas-analyst"
 
 [[package]]
 name = "rusticai-playwright"
-version = "1.2.2"
+version = "1.2.3"
 description = "Rustic AI module for scraping using playwright"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -8384,7 +8384,7 @@ url = "playwright"
 
 [[package]]
 name = "rusticai-ray"
-version = "1.2.2"
+version = "1.2.3"
 description = "Rustic AI execution engine running on Ray Cluster"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -8408,7 +8408,7 @@ url = "ray"
 
 [[package]]
 name = "rusticai-redis"
-version = "1.2.2"
+version = "1.2.3"
 description = "Redis package for Rustic AI"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -8429,7 +8429,7 @@ url = "redis"
 
 [[package]]
 name = "rusticai-serpapi"
-version = "1.2.2"
+version = "1.2.3"
 description = "Rustic AI module supporting Search through SerpApi"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -8450,7 +8450,7 @@ url = "serpapi"
 
 [[package]]
 name = "rusticai-showcase"
-version = "1.2.2"
+version = "1.2.3"
 description = "Module that showcases Rustic AI capabilities"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -8482,7 +8482,7 @@ url = "showcase"
 
 [[package]]
 name = "rusticai-skills"
-version = "0.3.2"
+version = "0.3.3"
 description = "Agent Skills support for Rustic AI - load, parse, and execute skills from the Agent Skills ecosystem"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -8506,7 +8506,7 @@ url = "skills"
 
 [[package]]
 name = "rusticai-testing"
-version = "1.2.2"
+version = "1.2.3"
 description = "Test Utilities for Rustic AI Framework"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -8524,7 +8524,7 @@ url = "testing"
 
 [[package]]
 name = "rusticai-vertexai"
-version = "1.2.2"
+version = "1.2.3"
 description = "Rustic AI module with Vertex AI integrations"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -8545,6 +8545,28 @@ test = []
 [package.source]
 type = "directory"
 url = "vertexai"
+
+[[package]]
+name = "rusticai-wikipedia"
+version = "0.0.1"
+description = "data connector for wikipedia"
+optional = false
+python-versions = ">=3.13,<3.14"
+groups = ["main"]
+files = []
+develop = true
+
+[package.dependencies]
+pydantic = "^2.10.6"
+rusticai-core = {path = "../core", develop = true}
+wikipedia = "^1.4.0"
+
+[package.extras]
+test = []
+
+[package.source]
+type = "directory"
+url = "wikipedia"
 
 [[package]]
 name = "safetensors"
@@ -10697,6 +10719,21 @@ files = [
 ]
 
 [[package]]
+name = "wikipedia"
+version = "1.4.0"
+description = "Wikipedia API for Python"
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "wikipedia-1.4.0.tar.gz", hash = "sha256:db0fad1829fdd441b1852306e9856398204dc0786d2996dd2e0c8bb8e26133b2"},
+]
+
+[package.dependencies]
+beautifulsoup4 = "*"
+requests = ">=2.0.0,<3.0.0"
+
+[[package]]
 name = "wrapt"
 version = "1.17.3"
 description = "Module for decorators, wrappers and monkey patching."
@@ -11233,4 +11270,4 @@ google-cloud = ["gcsfs"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.13,<3.14"
-content-hash = "4150a6be108f16e5fed8b6a7fd1cd2073c2ddbaac3fba7b8ab8a3e6ca0856f82"
+content-hash = "a3c8cbf15d9e29ecd5bfedd9f111def80aa0acd03dc53720050d257e61f7fb07"

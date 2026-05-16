@@ -5,6 +5,7 @@ from rustic_ai.core.guild.builders import AgentBuilder
 from rustic_ai.core.messaging.core.message import AgentTag, Message
 from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 from rustic_ai.core.utils.priority import Priority
+from rustic_ai.core.guild.dsl import DependencySpec
 from rustic_ai.wikipedia import (
     WikipediaAgent,
     WikipediaError,
@@ -25,6 +26,13 @@ def wikipedia_agent_spec():
         .set_name("WikipediaAgent")
         .set_id("test_wikipedia_agent")
         .set_description("Wikipedia data connector")
+        .set_dependency_map(
+            {
+                "wikipedia_config": DependencySpec(
+                    class_name="rustic_ai.wikipedia.resolver.WikipediaConfigResolver", properties={}
+                )
+            }
+        )
         .build_spec()
     )
 
