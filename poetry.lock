@@ -8616,6 +8616,28 @@ type = "directory"
 url = "vertexai"
 
 [[package]]
+name = "rusticai-wikipedia"
+version = "0.0.1"
+description = "data connector for wikipedia"
+optional = false
+python-versions = ">=3.13,<3.14"
+groups = ["main"]
+files = []
+develop = true
+
+[package.dependencies]
+pydantic = "^2.10.6"
+rusticai-core = {path = "../core", develop = true}
+wikipedia = "^1.4.0"
+
+[package.extras]
+test = []
+
+[package.source]
+type = "directory"
+url = "wikipedia"
+
+[[package]]
 name = "safetensors"
 version = "0.7.0"
 description = ""
@@ -10781,6 +10803,21 @@ files = [
 ]
 
 [[package]]
+name = "wikipedia"
+version = "1.4.0"
+description = "Wikipedia API for Python"
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "wikipedia-1.4.0.tar.gz", hash = "sha256:db0fad1829fdd441b1852306e9856398204dc0786d2996dd2e0c8bb8e26133b2"},
+]
+
+[package.dependencies]
+beautifulsoup4 = "*"
+requests = ">=2.0.0,<3.0.0"
+
+[[package]]
 name = "wrapt"
 version = "1.17.3"
 description = "Module for decorators, wrappers and monkey patching."
@@ -11317,4 +11354,4 @@ google-cloud = ["gcsfs"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.13,<3.14"
-content-hash = "cbd331cc7632b8840d1d57625ef5d0e95c8c17ac9e9b89f4d2b3a4dbe426daf0"
+content-hash = "7aabd7718bb8f3a940ed5b0efcde9c735dae934d1a13bdf3f5530573e38dbef5"
