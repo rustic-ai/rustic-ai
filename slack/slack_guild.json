@@ -1,0 +1,237 @@
+{
+  "name": "Slack Guild",
+  "description": "Slack integration guild for sending messages and managing channels via natural language or direct API calls",
+  "version": "v1",
+  "icon": null,
+  "intro_msg": "Welcome to the Slack Guild! I can help you send messages, list channels, and manage your Slack workspace. Just tell me what you want to do in natural language.",
+  "exposure": "public",
+  "author_id": "dummyuserid",
+  "organization_id": null,
+  "category_id": null,
+  "spec": {
+    "name": "Slack Guild",
+    "description": "Slack integration guild with LLM-powered natural language interface",
+    "agents": [
+      {
+        "id": "slack_socket_mode",
+        "name": "SlackSocketMode",
+        "description": "Listens for Slack events via Socket Mode WebSocket - receives messages, mentions, and DMs",
+        "class_name": "rustic_ai.slack.agents.socket_mode_agent.SlackSocketModeAgent",
+        "additional_topics": [],
+        "listen_to_default_topic": false,
+        "properties": {}
+      },
+      {
+        "id": "slack_event_handler",
+        "name": "SlackEventHandler",
+        "description": "Processes incoming Slack events and routes them to users",
+        "class_name": "rustic_ai.slack.agents.event_handler_agent.SlackEventHandlerAgent",
+        "additional_topics": [
+          "SLACK_INBOUND"
+        ],
+        "listen_to_default_topic": false,
+        "properties": {}
+      },
+      {
+        "id": "slack_connector",
+        "name": "SlackConnector",
+        "description": "Handles all Slack API operations - send messages, list channels, create channels, etc.",
+        "class_name": "rustic_ai.slack.agents.connector_agent.SlackConnectorAgent",
+        "additional_topics": [
+          "SLACK_API"
+        ],
+        "listen_to_default_topic": false,
+        "properties": {}
+      },
+      {
+        "id": "slack_llm",
+        "name": "SlackLLM",
+        "description": "Natural language interface for Slack operations using LLM with tools",
+        "class_name": "rustic_ai.llm_agent.llm_agent.LLMAgent",
+        "additional_topics": [
+          "SLACK_CHAT"
+        ],
+        "listen_to_default_topic": false,
+        "properties": {
+          "model": "gpt-4o-mini",
+          "default_system_prompt": "You are a Slack assistant that helps manage Slack workspaces.\n\nYou have access to these tools:\n1. **send_message** - Send a message to a Slack channel\n2. **list_channels** - List channels in the workspace\n3. **create_channel** - Create a new channel\n\nImportant:\n- Always use workspace_id='default_workspace' unless user specifies otherwise\n- For channels, accept either ID (C123ABC) or name (#general)\n- Be concise and helpful in responses\n- Confirm actions after completing them",
+          "send_response": true,
+          "llm_request_wrappers": [
+            {
+              "kind": "rustic_ai.llm_agent.tools.tools_manager_plugin.ToolsManagerPlugin",
+              "toolset": {
+                "kind": "rustic_ai.llm_agent.tools.tools_manager_plugin.ToolspecsListProvider",
+                "tools": [
+                  {
+                    "name": "send_message",
+                    "description": "Send a message to a Slack channel. Use this when asked to send, post, or write messages. Requires workspace_id, channel (ID or name like #general), and text.",
+                    "parameter_class": "rustic_ai.slack.models.messages.SlackSendMessageRequest"
+                  },
+                  {
+                    "name": "list_channels",
+                    "description": "List channels in a Slack workspace. Use when asked to show, list, or find channels. Set types to 'public_channel' for public only, 'private_channel' for private only, or 'public_channel,private_channel' for both.",
+                    "parameter_class": "rustic_ai.slack.models.channels.SlackListChannelsRequest"
+                  },
+                  {
+                    "name": "create_channel",
+                    "description": "Create a new channel in Slack. Use when asked to create or make a new channel. Channel name must be lowercase with hyphens (no spaces). Set is_private=true for private channels.",
+                    "parameter_class": "rustic_ai.slack.models.channels.SlackCreateChannelRequest"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "dependency_map": {}
+      }
+    ],
+    "routes": {
+      "steps": [
+        {
+          "agent": null,
+          "agent_type": "rustic_ai.core.agents.utils.user_proxy_agent.UserProxyAgent",
+          "method_name": "unwrap_and_forward_message",
+          "origin_filter": null,
+          "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest",
+          "destination": {
+            "topics": "SLACK_CHAT",
+            "recipient_list": [],
+            "priority": null
+          },
+          "mark_forwarded": false,
+          "route_times": -1
+        },
+        {
+          "agent": {
+            "name": "SlackEventHandler"
+          },
+          "message_format": "rustic_ai.slack.models.events.SlackEventMessage",
+          "destination": {
+            "topics": "user_message_broadcast"
+          },
+          "transformer": {
+            "style": "content_based_router",
+            "handler": "{\"format\": \"rustic_ai.core.ui_protocol.types.TextFormat\", \"payload\": {\"text\": \"**Slack Message from <@\" & $.payload.user & \">:**\\n\" & $.payload.text}}"
+          },
+          "process_status": "completed",
+          "route_times": -1
+        },
+        {
+          "agent": {
+            "name": "SlackEventHandler"
+          },
+          "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest",
+          "destination": {
+            "topics": "SLACK_CHAT"
+          },
+          "route_times": -1
+        },
+        {
+          "agent": {
+            "name": "SlackLLM"
+          },
+          "message_format": "rustic_ai.slack.models.messages.SlackSendMessageRequest",
+          "destination": {
+            "topics": "SLACK_API"
+          },
+          "route_times": -1
+        },
+        {
+          "agent": {
+            "name": "SlackLLM"
+          },
+          "message_format": "rustic_ai.slack.models.channels.SlackListChannelsRequest",
+          "destination": {
+            "topics": "SLACK_API"
+          },
+          "route_times": -1
+        },
+        {
+          "agent": {
+            "name": "SlackLLM"
+          },
+          "message_format": "rustic_ai.slack.models.channels.SlackCreateChannelRequest",
+          "destination": {
+            "topics": "SLACK_API"
+          },
+          "route_times": -1
+        },
+        {
+          "agent": {
+            "name": "SlackLLM"
+          },
+          "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+          "destination": {
+            "topics": "user_message_broadcast"
+          },
+          "transformer": {
+            "style": "content_based_router",
+            "handler": "($content := $.payload.choices[0].message.content; $content ? {\"format\": \"rustic_ai.core.ui_protocol.types.TextFormat\", \"payload\": {\"text\": $content}} : null)"
+          },
+          "process_status": "completed",
+          "route_times": -1
+        },
+        {
+          "agent": {
+            "name": "SlackConnector"
+          },
+          "message_format": "rustic_ai.slack.models.messages.SlackSendMessageResponse",
+          "destination": {
+            "topics": "user_message_broadcast"
+          },
+          "transformer": {
+            "style": "content_based_router",
+            "handler": "{\"format\": \"rustic_ai.core.ui_protocol.types.TextFormat\", \"payload\": {\"text\": \"✅ Message sent to \" & $.payload.channel & \" at \" & $.payload.ts}}"
+          },
+          "process_status": "completed",
+          "route_times": -1
+        },
+        {
+          "agent": {
+            "name": "SlackConnector"
+          },
+          "message_format": "rustic_ai.slack.models.channels.SlackChannelsResponse",
+          "destination": {
+            "topics": "user_message_broadcast"
+          },
+          "transformer": {
+            "style": "content_based_router",
+            "handler": "($channels := $.payload.channels; $count($channels) = 0 ? {\"format\": \"rustic_ai.core.ui_protocol.types.TextFormat\", \"payload\": {\"text\": \"No channels found.\"}} : {\"format\": \"rustic_ai.core.ui_protocol.types.TextFormat\", \"payload\": {\"text\": \"**Channels:**\\n\" & $join($channels.(\"- #\" & $.name & \" (\" & $.id & \")\"), \"\\n\")}})"
+          },
+          "process_status": "completed",
+          "route_times": -1
+        },
+        {
+          "agent": {
+            "name": "SlackConnector"
+          },
+          "message_format": "rustic_ai.core.agents.commons.message_formats.ErrorMessage",
+          "destination": {
+            "topics": "user_message_broadcast"
+          },
+          "transformer": {
+            "style": "content_based_router",
+            "handler": "{\"format\": \"rustic_ai.core.ui_protocol.types.TextFormat\", \"payload\": {\"text\": \"❌ Error: \" & $.payload.error_type & \"\\n\" & $.payload.error_message}}"
+          },
+          "process_status": "completed",
+          "route_times": -1
+        },
+        {
+          "agent": {
+            "name": "SlackLLM"
+          },
+          "message_format": "rustic_ai.core.agents.commons.message_formats.ErrorMessage",
+          "destination": {
+            "topics": "user_message_broadcast"
+          },
+          "transformer": {
+            "style": "content_based_router",
+            "handler": "{\"format\": \"rustic_ai.core.ui_protocol.types.TextFormat\", \"payload\": {\"text\": \"❌ Error: \" & $.payload.error_type & \"\\n\" & $.payload.error_message}}"
+          },
+          "process_status": "completed",
+          "route_times": -1
+        }
+      ]
+    }
+  }
+}

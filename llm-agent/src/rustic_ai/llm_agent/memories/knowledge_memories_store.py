@@ -11,10 +11,8 @@ from rustic_ai.core.agents.commons.media import MediaLink
 from rustic_ai.core.guild.agent import Agent, ProcessContext
 from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     AssistantMessage,
-    FunctionMessage,
     LLMMessage,
     SystemMessage,
-    ToolMessage,
     UserMessage,
 )
 from rustic_ai.core.knowledgebase.agent_config import KnowledgeAgentConfig
@@ -140,7 +138,6 @@ class KnowledgeBasedMemoriesStore(MemoriesStore):
                 return None
 
             name = metadata.get("name")
-            tool_call_id = metadata.get("tool_call_id")
 
             # Skip tool messages and function messages during recall since
             # they require matching assistant messages with tool_calls

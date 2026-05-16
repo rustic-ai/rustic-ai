@@ -7,7 +7,11 @@ from pydantic import BaseModel, Field, field_validator
 
 from rustic_ai.core.guild import agent
 from rustic_ai.core.guild.agent import Agent, ProcessContext
-from rustic_ai.core.state.models import StateOwner, StateUpdateFormat, StateUpdateResponse
+from rustic_ai.core.state.models import (
+    StateOwner,
+    StateUpdateFormat,
+    StateUpdateResponse,
+)
 from rustic_ai.core.utils.json_utils import JsonDict
 
 
