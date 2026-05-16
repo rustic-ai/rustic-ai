@@ -1,11 +1,10 @@
 import pytest
-from rustic_ai.testing.helpers import wrap_agent_for_testing
 
 from rustic_ai.core.guild.builders import AgentBuilder
+from rustic_ai.core.guild.dsl import DependencySpec
 from rustic_ai.core.messaging.core.message import AgentTag, Message
 from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 from rustic_ai.core.utils.priority import Priority
-from rustic_ai.core.guild.dsl import DependencySpec
 from rustic_ai.wikipedia import (
     WikipediaAgent,
     WikipediaError,
@@ -16,6 +15,8 @@ from rustic_ai.wikipedia import (
     WikipediaSummaryRequest,
     WikipediaSummaryResponse,
 )
+
+from rustic_ai.testing.helpers import wrap_agent_for_testing
 
 
 @pytest.fixture

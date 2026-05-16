@@ -1,16 +1,8 @@
 import logging
 import os
-
-from rustic_ai.core.guild.agent import Agent, ProcessContext, processor
 import wikipedia
 
-# Configure Wikipedia API settings
-wikipedia.set_rate_limiting(True)
-wikipedia.set_lang(os.getenv("WIKIPEDIA_LANGUAGE", "en"))
-
-# Set a user agent to avoid being blocked
-user_agent = os.getenv("WIKIPEDIA_USER_AGENT", "RusticAI-Wikipedia/1.0 (https://rustic.ai; opensource@rustic.ai)")
-wikipedia.set_user_agent(user_agent)
+from rustic_ai.core.guild.agent import Agent, ProcessContext, processor
 from rustic_ai.wikipedia.messages import (
     WikipediaError,
     WikipediaPageRequest,
@@ -20,6 +12,14 @@ from rustic_ai.wikipedia.messages import (
     WikipediaSummaryRequest,
     WikipediaSummaryResponse,
 )
+
+# Configure Wikipedia API settings
+wikipedia.set_rate_limiting(True)
+wikipedia.set_lang(os.getenv("WIKIPEDIA_LANGUAGE", "en"))
+
+# Set a user agent to avoid being blocked
+user_agent = os.getenv("WIKIPEDIA_USER_AGENT", "RusticAI-Wikipedia/1.0 (https://rustic.ai; opensource@rustic.ai)")
+wikipedia.set_user_agent(user_agent)
 
 logger = logging.getLogger(__name__)
 
@@ -85,7 +85,7 @@ class WikipediaAgent(Agent):
             logger.warning(f"Page not found: {ctx.payload.title}")
             error = WikipediaError(
                 error_type="PageError",
-                message=f"Page not found: {ctx.payload.title}",
+                message=f"Page not found: {ctx.payload.title}, Error {str(e.error)}",
                 query=ctx.payload.title,
             )
             ctx.send_error(error)
@@ -129,7 +129,7 @@ class WikipediaAgent(Agent):
             logger.warning(f"Page not found: {ctx.payload.title}")
             error = WikipediaError(
                 error_type="PageError",
-                message=f"Page not found: {ctx.payload.title}",
+                message=f"Page not found: {ctx.payload.title}, Error {str(e.error)}",
                 query=ctx.payload.title,
             )
             ctx.send_error(error)
