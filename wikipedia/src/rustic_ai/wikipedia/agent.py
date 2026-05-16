@@ -85,7 +85,7 @@ class WikipediaAgent(Agent):
             logger.warning(f"Page not found: {ctx.payload.title}")
             error = WikipediaError(
                 error_type="PageError",
-                message=f"Page not found: {ctx.payload.title}, Error {str(e.error)}",
+                message=str(e),
                 query=ctx.payload.title,
             )
             ctx.send_error(error)
@@ -129,7 +129,7 @@ class WikipediaAgent(Agent):
             logger.warning(f"Page not found: {ctx.payload.title}")
             error = WikipediaError(
                 error_type="PageError",
-                message=f"Page not found: {ctx.payload.title}, Error {str(e.error)}",
+                message=str(e),
                 query=ctx.payload.title,
             )
             ctx.send_error(error)
