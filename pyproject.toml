@@ -41,6 +41,7 @@ rusticai-skills = {path = "./skills", develop = true}
 rusticai-pandas-analyst = {path = "./pandas-analyst", develop = true}
 rusticai-nats = {path = "./nats", develop = true}
 rusticai-slack = {path = "./slack", develop = true}
+rusticai-uniko-agent = {path = "./uniko-agent", develop = true}
 
 [tool.poetry.group.dev]
 optional = true
