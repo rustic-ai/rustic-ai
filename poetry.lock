@@ -8592,6 +8592,27 @@ type = "directory"
 url = "testing"
 
 [[package]]
+name = "rusticai-uniko-agent"
+version = "0.0.1"
+description = "module boilerplate"
+optional = false
+python-versions = ">=3.13,<3.14"
+groups = ["main"]
+files = []
+develop = true
+
+[package.dependencies]
+rusticai-core = {path = "../core", develop = true}
+uniko = {path = "/home/nihal/Projects/uniko/bindings/uniko-py", develop = true}
+
+[package.extras]
+test = []
+
+[package.source]
+type = "directory"
+url = "uniko-agent"
+
+[[package]]
 name = "rusticai-vertexai"
 version = "1.2.3"
 description = "Rustic AI module with Vertex AI integrations"
@@ -10307,6 +10328,23 @@ tzdata = {version = "*", markers = "platform_system == \"Windows\""}
 devenv = ["check-manifest", "pytest (>=4.3)", "pytest-cov", "pytest-mock (>=3.3)", "zest.releaser"]
 
 [[package]]
+name = "uniko"
+version = "0.1.0"
+description = "Python bindings for uniko cognitive memory"
+optional = false
+python-versions = ">=3.10"
+groups = ["main"]
+files = []
+develop = true
+
+[package.dependencies]
+pydantic = ">=2"
+
+[package.source]
+type = "directory"
+url = "../../uniko/bindings/uniko-py"
+
+[[package]]
 name = "uritemplate"
 version = "4.2.0"
 description = "Implementation of RFC 6570 URI Templates"
@@ -11317,4 +11355,4 @@ google-cloud = ["gcsfs"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.13,<3.14"
-content-hash = "cbd331cc7632b8840d1d57625ef5d0e95c8c17ac9e9b89f4d2b3a4dbe426daf0"
+content-hash = "6146ebc6286a8b5fa5e3a14c955f472b1c8582d9222f5bb509137a15c0047ecf"

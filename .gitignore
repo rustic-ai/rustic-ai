@@ -142,3 +142,5 @@ skills/.claude/
 # Excluded modules
 icp_researcher/
 dossier/
+
+.uni_cache
