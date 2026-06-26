@@ -1,0 +1,450 @@
+{
+    "name": "Uniko Research Guild",
+    "description": "Advanced research guild with persistent memory using Uniko cognitive memory system, combining KB search, web scraping, and intelligent memory management.",
+    "version": "v2",
+    "icon": null,
+    "intro_msg": "Welcome to the Uniko Research Guild! I can help you research topics with persistent memory. What would you like to explore?",
+    "exposure": "public",
+    "author_id": "cvqa5ebf660o",
+    "organization_id": "p447tvwgs54q",
+    "category_id": null,
+    "tags": ["research", "memory", "uniko", "knowledge-base"],
+    "commands": [],
+    "starter_prompts": [
+        "Research recent developments in quantum computing",
+        "Find information about sustainable energy solutions",
+        "What have I previously researched about AI?"
+    ],
+    "spec": {
+        "name": "Uniko Research Guild",
+        "description": "Advanced research guild with persistent memory using Uniko cognitive memory system, combining KB search, web scraping, and intelligent memory management.",
+        "agents": [
+            {
+                "id": "memory_agent",
+                "name": "Memory Agent",
+                "description": "Comprehensive memory agent using Uniko's 5-tier cognitive memory system for persistent knowledge storage and recall",
+                "class_name": "rustic_ai.uniko_agent.agent.MemoryAgent",
+                "additional_topics": [
+                    "memory_observe",
+                    "memory_recall",
+                    "memory_answer",
+                    "memory_ingest"
+                ],
+                "listen_to_default_topic": true,
+                "properties": {
+                    "default_session_id": null,
+                    "recall_max_tokens": 3000,
+                    "recall_phase1_only": false,
+                    "answer_max_tokens": 800,
+                    "auto_flush": true
+                }
+            },
+            {
+                "id": "google_agent",
+                "name": "Google Research Agent",
+                "description": "Performs intelligent Google Search with grounding",
+                "class_name": "rustic_ai.vertexai.agents.google_research_agent.GoogleResearchAgent",
+                "additional_topics": [],
+                "listen_to_default_topic": true,
+                "properties": {
+                    "project_id": null,
+                    "location": null,
+                    "model_id": "gemini-2.5-pro"
+                }
+            },
+            {
+                "id": "serp_agent",
+                "name": "Search Agent",
+                "description": "Handles search engine results page queries via SerpAPI",
+                "class_name": "rustic_ai.serpapi.agent.SERPAgent",
+                "additional_topics": [],
+                "properties": {},
+                "listen_to_default_topic": true
+            },
+            {
+                "id": "playwright_agent",
+                "name": "Web Scraper Agent",
+                "description": "Web scraping agent using Playwright for content extraction",
+                "class_name": "rustic_ai.playwright.agent.PlaywrightScraperAgent",
+                "additional_topics": [],
+                "properties": {
+                    "headless": true,
+                    "parallel_pages": 7
+                },
+                "listen_to_default_topic": true
+            },
+            {
+                "id": "markdown_agent",
+                "name": "Markdown Agent",
+                "description": "Generates and manages Markdown files from research results",
+                "class_name": "rustic_ai.demos.agents.preprocessing.file_reader_writer_agent.FileReaderWriterAgent",
+                "additional_topics": [],
+                "listen_to_default_topic": true,
+                "properties": {}
+            },
+            {
+                "id": "synthesis_agent",
+                "name": "Synthesis Agent",
+                "description": "Synthesizes research findings and generates comprehensive answers",
+                "class_name": "rustic_ai.llm_agent.llm_agent.LLMAgent",
+                "additional_topics": [
+                    "synthesis_agent"
+                ],
+                "listen_to_default_topic": false,
+                "properties": {
+                    "model": "vertex_ai/gemini-3-pro-preview",
+                    "default_system_prompt": "You are a research synthesis expert. Analyze the provided context from multiple sources and generate a comprehensive, well-structured answer to the user's question. Include key insights, relevant facts, and cite sources when applicable. Be thorough but concise."
+                }
+            },
+            {
+                "id": "query_agent",
+                "name": "Query Agent",
+                "description": "Generates optimized search queries using LLM for comprehensive research coverage",
+                "class_name": "rustic_ai.llm_agent.llm_agent.LLMAgent",
+                "additional_topics": [
+                    "query_agent"
+                ],
+                "listen_to_default_topic": false,
+                "properties": {
+                    "model": "vertex_ai/gemini-3-pro-preview",
+                    "default_system_prompt": "Generate 5-7 comprehensive google-optimized subqueries for deep research on the topic.\n\nFor thorough coverage, create subqueries across multiple dimensions:\n- Core concepts and definitions\n- Latest developments and breakthroughs (recent news, 2025-2026)\n- Historical context and evolution\n- Technical implementations and real-world applications\n- Expert opinions, academic research, and papers\n- Industry trends, market analysis, and adoption\n- Future implications, predictions, and emerging patterns\n- Challenges, limitations, and critiques\n- Related technologies, comparisons, and alternatives\n- Case studies and practical examples\n\nConsider when creating subqueries:\n- Neural search formulation: Use natural language questions and descriptive phrases\n- Domain filters: Suggest specific domains when relevant (arxiv.org for papers, techcrunch.com for tech news)\n- Time periods: Specify recent, past_week, past_month, past_year, or any\n- Content types: Specify type when relevant (news, research paper, pdf, blog, tutorial)\n\nEach subquery should focus on a different aspect to ensure comprehensive, multi-dimensional coverage.\n\nOutput format:\n- Separate queries using '####' as delimiter\n- Example: Query 1####Query 2####Query 3\n- Return ONLY the queries, nothing else"
+                }
+            },
+            {
+                "id": "splitter_agent",
+                "name": "Splitter Agent",
+                "description": "Splits generated queries into individual search requests",
+                "class_name": "rustic_ai.core.agents.eip.splitter_agent.SplitterAgent",
+                "additional_topics": [
+                    "splitter_agent"
+                ],
+                "properties": {
+                    "splitter": {
+                        "split_type": "jsonata",
+                        "expression": "($map($split($.choices[0].message.content, '####'), function($v){ ({\"query\": $v, \"engine\": \"google\", \"num\": 8}) }))"
+                    },
+                    "format_selector": {
+                        "strategy": "fixed",
+                        "fixed_format": "rustic_ai.serpapi.agent.SERPQuery"
+                    }
+                },
+                "listen_to_default_topic": false
+            },
+            {
+                "id": "basic_wiring_agent",
+                "name": "Basic Wiring Agent",
+                "description": "Routes and transforms messages between agents",
+                "class_name": "rustic_ai.core.agents.eip.basic_wiring_agent.BasicWiringAgent",
+                "additional_topics": [
+                    "basic_wiring"
+                ],
+                "listen_to_default_topic": false,
+                "properties": {}
+            },
+            {
+                "id": "gateway_agent",
+                "name": "Research Gateway",
+                "description": "Gateway agent for receiving research requests from other guilds",
+                "class_name": "rustic_ai.core.guild.g2g.gateway_agent.GatewayAgent",
+                "additional_topics": [
+                    "outbound"
+                ],
+                "listen_to_default_topic": false,
+                "properties": {
+                    "input_formats": [
+                        "rustic_ai.demos.research_guild.types.ResearchRequest"
+                    ],
+                    "output_formats": [
+                        "rustic_ai.demos.research_guild.types.ResearchResults"
+                    ],
+                    "returned_formats": []
+                }
+            }
+        ],
+        "dependency_map": {
+            "filesystem": {
+                "class_name": "rustic_ai.core.guild.agent_ext.depends.filesystem.filesystem.FileSystemResolver",
+                "properties": {
+                    "path_base": "/tmp/research_guild",
+                    "protocol": "file",
+                    "storage_options": {
+                        "auto_mkdir": true
+                    },
+                    "asynchronous": true
+                }
+            },
+            "llm": {
+                "class_name": "rustic_ai.litellm.agent_ext.llm.LiteLLMResolver",
+                "properties": {
+                    "model": "vertex_ai/gemini-3-pro-preview",
+                    "conf": {
+                        "vertex_location": "global"
+                    }
+                }
+            },
+            "uniko": {
+                "class_name": "rustic_ai.uniko_agent.resolver.UnikoResolver",
+                "properties": {
+                    "storage_path": "./data/memory/{org_id}/{guild_id}",
+                    "llm_spec": {
+                        "alias": "openai",
+                        "model_id": "gpt-4o-mini",
+                        "key_env": "OPENAI_API_KEY"
+                    },
+                    "streaming": false
+                }
+            }
+        },
+        "routes": {
+            "steps": [
+                {
+                    "agent_type": "rustic_ai.core.agents.utils.user_proxy_agent.UserProxyAgent",
+                    "method_name": "unwrap_and_forward_message",
+                    "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest",
+                    "destination": null,
+                    "route_times": -1,
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "($content := $type($.payload.messages[0].content) = \"string\" ? [{\"type\": \"text\", \"text\": $.payload.messages[0].content}] : $.payload.messages[0].content; $hasFiles := $count($content[type in [\"image_url\", \"file_url\"]]) > 0; $textContent := $content[type = \"text\"][0].text; $urls := $match($textContent, /(https?:\\/\\/[^\\s]+|www\\.[^\\s]+)/).match; $hasUrls := $count($urls) > 0; $hasFiles ? {\"format\": \"rustic_ai.uniko_agent.models.IngestDocumentRequest\", \"topics\": \"memory_ingest\", \"payload\": {\"source_spec\": $content[type in [\"image_url\", \"file_url\"]][0].type = \"image_url\" ? {\"url\": $content[type in [\"image_url\", \"file_url\"]][0].image_url.url} : {\"url\": $content[type in [\"image_url\", \"file_url\"]][0].file_url.url}}, \"context\": {\"original_query\": $textContent, \"current_id\": 'current_id' in $keys($.guild_state) ? $.guild_state.current_id + 1 : 0}} : $hasUrls ? {\"format\": \"rustic_ai.playwright.agent.WebScrapingRequest\", \"topics\": \"default_topic\", \"payload\": {\"links\": [$map($urls, function($url){ {\"url\": $url} })], \"depth\": \"0\", \"output_format\": \"text/markdown\"}, \"context\": {\"original_query\": $textContent, \"current_id\": 'current_id' in $keys($.guild_state) ? $.guild_state.current_id + 1 : 0}} : {\"payload\": {\"query\": $textContent}, \"format\": \"rustic_ai.uniko_agent.models.RecallRequest\", \"topics\": \"memory_recall\", \"context\": {\"original_query\": $textContent, \"current_id\": 'current_id' in $keys($.guild_state) ? $.guild_state.current_id + 1 : 0}})"
+                    },
+                    "guild_state_update": {
+                        "update_format": "json-merge-patch",
+                        "state_update": "({\"user_queries\": $append($.guild_state.user_queries, $content := $type($.payload.messages[0].content) = \"string\" ? $.payload.messages[0].content : $.payload.messages[0].content[type = \"text\"][0].text), \"current_id\": 'current_id' in $keys($.guild_state) ? $.guild_state.current_id + 1 : 0})"
+                    }
+                },
+                {
+                    "agent": {
+                        "id": "memory_agent",
+                        "name": "Memory Agent"
+                    },
+                    "message_format": "rustic_ai.uniko_agent.models.RecallResponse",
+                    "destination": null,
+                    "route_times": -1,
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "($is_answered := $.context.current_id in $.guild_state.answered; $has_good_recall := $count($.payload.items[score > 0.3]) > 0; $ToAnswer := function($items){ {\"topics\": \"memory_answer\", \"format\": \"rustic_ai.uniko_agent.models.AnswerRequest\", \"payload\": {\"question\": $.context.original_query, \"max_tokens\": 800}} }; $ToQueryAgent := function(){ {\"topics\": \"query_agent\", \"format\": \"rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest\", \"payload\": {\"messages\": [{\"role\": \"user\", \"content\": \"User Question: \" & $.context.original_query}]}} }; $is_answered ? null : ($has_good_recall ? $ToAnswer($.payload.items) : $ToQueryAgent()))"
+                    },
+                    "guild_state_update": {
+                        "update_format": "json-merge-patch",
+                        "state_update": "($is_answered := $.context.current_id in $.guild_state.answered; $has_good_recall := $count($.untransformed.payload.items[score > 0.3]) > 0; $UpdateGuildState := {\"answered\": $append(guild_state.answered, $.context.current_id)}; $is_answered ? null : ($has_good_recall ? $UpdateGuildState : null))"
+                    }
+                },
+                {
+                    "agent": {
+                        "name": "Memory Agent"
+                    },
+                    "message_format": "rustic_ai.uniko_agent.models.AnswerResponse",
+                    "destination": {
+                        "topics": "user_message_broadcast",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "route_times": -1,
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                        "expression": "({\"choices\": [{\"message\": {\"content\": $.text}, \"finish_reason\": \"stop\"}], \"usage\": {\"prompt_tokens\": $.input_tokens, \"completion_tokens\": $.output_tokens, \"total_tokens\": $.input_tokens + $.output_tokens}})"
+                    },
+                    "process_status": "completed"
+                },
+                {
+                    "agent": {
+                        "name": "Research Gateway"
+                    },
+                    "message_format": "rustic_ai.demos.research_guild.types.ResearchRequest",
+                    "destination": null,
+                    "route_times": -1,
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({\"payload\":{\"query\": $.payload.topic}, \"format\": \"rustic_ai.uniko_agent.models.RecallRequest\", \"topics\":\"memory_recall\", \"context\": {\"original_query\": $.payload.topic, \"current_id\": 'current_id' in $keys($.guild_state) ? $.guild_state.current_id + 1 : 0, \"correlation_id\": $.payload.correlation_id}})"
+                    },
+                    "guild_state_update": {
+                        "update_format": "json-merge-patch",
+                        "state_update": "({\"user_queries\": $append($.guild_state.user_queries, $.payload.topic), \"current_id\": 'current_id' in $keys($.guild_state) ? $.guild_state.current_id + 1 : 0})"
+                    }
+                },
+                {
+                    "agent": {
+                        "name": "Research Gateway"
+                    },
+                    "message_format": "rustic_ai.demos.research_guild.types.ResearchRequest",
+                    "destination": null,
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({\"format\": \"rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse\", \"topics\": \"user_message_broadcast\", \"payload\":{\"choices\": [{\"message\": {\"content\": 'Research initiated for: ' & $.payload.topic & '. Checking memory and initiating comprehensive web research...'}}]}})"
+                    },
+                    "route_times": -1,
+                    "process_status": "completed"
+                },
+                {
+                    "agent": {
+                        "name": "Query Agent"
+                    },
+                    "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                    "destination": {
+                        "topics": "splitter_agent",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "Splitter Agent"
+                    },
+                    "message_format": "rustic_ai.serpapi.agent.SERPQuery",
+                    "destination": {
+                        "topics": "default_topic",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "Google Research Agent"
+                    },
+                    "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                    "destination": {
+                        "topics": "default_topic",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "Markdown Agent"
+                    },
+                    "message_format": "rustic_ai.core.agents.commons.media.MediaLink",
+                    "destination": {
+                        "topics": "memory_ingest",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "route_times": -1,
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.uniko_agent.models.IngestDocumentRequest",
+                        "expression": "{\"source_spec\": {\"url\": $.url}}"
+                    }
+                },
+                {
+                    "agent": {
+                        "name": "Search Agent"
+                    },
+                    "message_format": "rustic_ai.serpapi.agent.SERPResults",
+                    "destination": {
+                        "topics": "default_topic",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "route_times": -1,
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.playwright.agent.WebScrapingRequest",
+                        "expression": "({\"id\": $.id, \"links\": $.results[url ~> /linkedin|facebook|instagram|twitter/ ? false : true], \"depth\": \"0\", \"output_format\": \"text/markdown\"})"
+                    }
+                },
+                {
+                    "agent": {
+                        "name": "Web Scraper Agent"
+                    },
+                    "message_format": "rustic_ai.core.agents.commons.media.MediaLink",
+                    "destination": {
+                        "topics": "memory_ingest",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "route_times": -1,
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.uniko_agent.models.IngestDocumentRequest",
+                        "expression": "{\"source_spec\": {\"url\": $.url}}"
+                    }
+                },
+                {
+                    "agent": {
+                        "name": "Memory Agent"
+                    },
+                    "message_format": "rustic_ai.uniko_agent.models.IngestOutcome",
+                    "destination": {
+                        "topics": "memory_observe",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "route_times": -1,
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({\"format\": \"rustic_ai.uniko_agent.models.ObserveTurnRequest\", \"payload\": {\"sender_id\": \"memory_agent\", \"content\": \"Ingested document: \" & $string($.payload.chunk_count) & \" chunks, \" & $string($count($.payload.extracted_entities)) & \" entities extracted\", \"metadata\": {\"chunk_count\": $.payload.chunk_count, \"page_count\": $.payload.page_count, \"artifact_node_id\": $.payload.artifact_node_id}}})"
+                    }
+                },
+                {
+                    "agent": {
+                        "name": "Memory Agent"
+                    },
+                    "message_format": "rustic_ai.uniko_agent.models.ObserveResult",
+                    "destination": {
+                        "topics": "memory_recall",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "route_times": -1,
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "{\"payload\": {\"query\": $.context.original_query}, \"format\": \"rustic_ai.uniko_agent.models.RecallRequest\"}"
+                    }
+                },
+                {
+                    "agent": {
+                        "name": "Memory Agent"
+                    },
+                    "message_format": "rustic_ai.uniko_agent.models.RecallResponse",
+                    "destination": null,
+                    "route_times": -1,
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "($is_answered := $.context.current_id in $.guild_state.answered; $recalled_content := $join($.payload.items.content, '\\n\\n'); $ToSynthesis := function(){ {\"topics\": \"synthesis_agent\", \"format\": \"rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest\", \"payload\": {\"messages\": [{\"role\": \"user\", \"content\": \"Context from research:\\n\" & $recalled_content & \"\\n\\nOriginal Question: \" & $.context.original_query & \"\\n\\nProvide a comprehensive answer based on the context above.\"}]}} }; $is_answered ? null : ($count($.payload.items) > 0 ? $ToSynthesis() : null))"
+                    },
+                    "guild_state_update": {
+                        "update_format": "json-merge-patch",
+                        "state_update": "($is_answered := $.context.current_id in $.guild_state.answered; $has_recall := $count($.untransformed.payload.items) > 0; $UpdateGuildState := {\"answered\": $append(guild_state.answered, $.context.current_id)}; $is_answered ? null : ($has_recall ? $UpdateGuildState : null))"
+                    }
+                },
+                {
+                    "agent": {
+                        "name": "Synthesis Agent"
+                    },
+                    "route_times": -1,
+                    "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                    "destination": {
+                        "topics": "memory_observe",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({\"format\": \"rustic_ai.uniko_agent.models.ObserveTurnRequest\", \"payload\": {\"sender_id\": \"synthesis_agent\", \"content\": $.choices[0].message.content, \"metadata\": {\"type\": \"synthesis_result\", \"original_query\": $.context.original_query}}})"
+                    }
+                },
+                {
+                    "agent": {
+                        "name": "Memory Agent"
+                    },
+                    "message_format": "rustic_ai.uniko_agent.models.ObserveResult",
+                    "destination": {
+                        "topics": "user_message_broadcast",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "route_times": -1,
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({\"format\": \"rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse\", \"payload\": {\"choices\": [{\"message\": {\"content\": $.context.synthesized_response ? $.context.synthesized_response : \"Research completed and stored in memory. \" & $string($.payload.extracted_entities) & \" entities and \" & $string($.payload.extracted_observations) & \" observations extracted.\"}}]}})"
+                    },
+                    "process_status": "completed"
+                }
+            ]
+        }
+    }
+}
