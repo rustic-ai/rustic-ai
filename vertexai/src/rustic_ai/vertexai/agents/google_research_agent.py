@@ -2,6 +2,7 @@ from datetime import datetime
 
 from google.genai import types
 import shortuuid
+import logging
 
 from rustic_ai.core import Agent
 from rustic_ai.core.agents.commons import ErrorMessage
@@ -16,6 +17,7 @@ from rustic_ai.core.guild.dsl import BaseAgentProps
 from rustic_ai.serpapi.agent import SERPQuery
 from rustic_ai.vertexai.client import VertexAIBase, VertexAIConf
 
+logger = logging.getLogger(__name__)
 
 class GoogleResearchAgentProps(BaseAgentProps, VertexAIConf):
     model_id: str = "gemini-2.5-pro"
@@ -35,11 +37,14 @@ class GoogleResearchAgent(Agent[GoogleResearchAgentProps], VertexAIBase):
     """
 
     def __init__(self):
+        logger.info(f"Initializing GoogleResearchAgent, {self.config.project_id} in {self.config.location} with model {self.config.model_id}")
         VertexAIBase.__init__(self, self.config.project_id, self.config.location)
+        logger.info("GoogleResearchAgent initialized successfully.")
 
     @agent.processor(SERPQuery)
     async def on_message(self, ctx: agent.ProcessContext[SERPQuery]):
         query = ctx.payload.query
+        logger.info(f"Received research query: {query}")
 
         try:
             if not self.genai_client:
@@ -100,6 +105,9 @@ class GoogleResearchAgent(Agent[GoogleResearchAgentProps], VertexAIBase):
                 model=self.config.model_id,
                 created=int(datetime.now().timestamp()),
             )
+
+            logger.info(f"Sending research findings for query: {query} with ID: {query_id} and grounding info: {grounding}")
+
             ctx.send(payload=ccr, reason=grounding)
         except Exception as e:
             ctx.send_error(

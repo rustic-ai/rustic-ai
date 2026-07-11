@@ -287,11 +287,16 @@
                     },
                     "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
                     "destination": {
-                        "topics": "default_topic",
+                        "topics": "memory_observe",
                         "recipient_list": [],
                         "priority": null
                     },
-                    "route_times": -1
+                    "route_times": -1,
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.uniko_agent.models.ObserveTurnRequest",
+                        "expression": "({\"sender_id\": \"google_research_agent\", \"content\": $.choices[0].message.content, \"metadata\": {\"type\": \"google_research_result\", \"original_query\": $.context.original_query}})"
+                    }
                 },
                 {
                     "agent": {
@@ -307,7 +312,7 @@
                     "transformer": {
                         "style": "simple",
                         "output_format": "rustic_ai.playwright.agent.WebScrapingRequest",
-                        "expression": "({\"id\": $.id, \"links\": $.results[url ~> /linkedin|facebook|instagram|twitter/ ? false : true], \"depth\": \"0\", \"output_format\": \"text/markdown\"})"
+                        "expression": "($filtered := [$.results[url ~> /linkedin|facebook|instagram|twitter/ ? false : true]]; {\"id\": $.id, \"links\": $filtered, \"depth\": \"0\", \"output_format\": \"text/markdown\"})"
                     }
                 },
                 {
@@ -324,12 +329,24 @@
                     "transformer": {
                         "style": "simple",
                         "output_format": "rustic_ai.uniko_agent.models.IngestDocumentRequest",
-                        "expression": "{\"source_spec\": {\"url\": $.url}}"
+                        "expression": "{\"media_link\": $}"
                     }
                 },
                 {
                     "agent": {
                         "name": "Memory Agent"
+                    },
+                    "message_format": "rustic_ai.uniko_agent.models.IngestOutcome",
+                    "destination": {
+                        "topics": "basic_wiring",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "Basic Wiring Agent"
                     },
                     "message_format": "rustic_ai.uniko_agent.models.IngestOutcome",
                     "destination": {

@@ -1,16 +1,20 @@
 import asyncio
-from datetime import datetime, timezone
-from enum import StrEnum
 import hashlib
 import logging
 import mimetypes
 import os
-from typing import List, Optional, Set
+import threading
+from concurrent.futures import Future
+from datetime import datetime, timezone
+from enum import StrEnum
+from queue import Queue
+from typing import Any, Callable, List, Optional, Set, TypeVar
 from urllib.parse import urljoin, urlparse, urlsplit
 
 from install_playwright import install
 from markdownify import markdownify as md
 from playwright.async_api import Browser, BrowserContext, Playwright, async_playwright
+from playwright.async_api import Error as PlaywrightError
 from pydantic import BaseModel, Field
 import shortuuid
 
@@ -20,6 +24,10 @@ from rustic_ai.core.guild import Agent, agent
 from rustic_ai.core.guild.agent_ext.depends.filesystem.filesystem import FileSystem
 from rustic_ai.core.guild.dsl import BaseAgentProps
 from rustic_ai.core.utils.json_utils import JsonDict
+
+logger = logging.getLogger(__name__)
+
+T = TypeVar("T")
 
 
 class ScrapingOutputFormat(StrEnum):
@@ -101,6 +109,92 @@ class PlaywrightScraperConfig(BaseAgentProps):
     )
 
 
+class PlaywrightEventLoopThread:
+    """
+    A dedicated thread with its own asyncio event loop for running playwright operations.
+    This ensures all playwright operations run in the same event loop context.
+    """
+
+    def __init__(self):
+        self._loop: Optional[asyncio.AbstractEventLoop] = None
+        self._thread: Optional[threading.Thread] = None
+        self._started = threading.Event()
+        self._lock = threading.Lock()
+
+    def start(self):
+        """Start the event loop thread if not already running."""
+        with self._lock:
+            if self._thread is not None and self._thread.is_alive():
+                return
+
+            self._started.clear()
+            self._thread = threading.Thread(target=self._run_loop, daemon=True)
+            self._thread.start()
+            self._started.wait(timeout=10.0)
+
+    def _run_loop(self):
+        """Run the event loop in this thread."""
+        self._loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(self._loop)
+        self._started.set()
+        self._loop.run_forever()
+
+    def run_coroutine(self, coro) -> Any:
+        """
+        Run a coroutine in the dedicated event loop thread and wait for the result.
+        This method is thread-safe and can be called from any thread.
+        """
+        if self._loop is None or not self._thread or not self._thread.is_alive():
+            self.start()
+
+        future: Future = Future()
+
+        def callback():
+            try:
+                task = asyncio.ensure_future(coro, loop=self._loop)
+
+                def done_callback(t):
+                    try:
+                        if t.exception():
+                            future.set_exception(t.exception())
+                        else:
+                            future.set_result(t.result())
+                    except asyncio.CancelledError:
+                        future.set_exception(asyncio.CancelledError())
+
+                task.add_done_callback(done_callback)
+            except Exception as e:
+                future.set_exception(e)
+
+        self._loop.call_soon_threadsafe(callback)
+        return future.result(timeout=120.0)  # 2 minute timeout
+
+    def stop(self):
+        """Stop the event loop and thread."""
+        with self._lock:
+            if self._loop is not None:
+                self._loop.call_soon_threadsafe(self._loop.stop)
+            if self._thread is not None:
+                self._thread.join(timeout=5.0)
+                self._thread = None
+                self._loop = None
+
+
+# Global event loop thread for playwright operations
+_playwright_loop_thread: Optional[PlaywrightEventLoopThread] = None
+_playwright_loop_lock = threading.Lock()
+
+
+def get_playwright_loop_thread() -> PlaywrightEventLoopThread:
+    """Get or create the global playwright event loop thread."""
+    global _playwright_loop_thread
+    with _playwright_loop_lock:
+        if _playwright_loop_thread is None:
+            _playwright_loop_thread = PlaywrightEventLoopThread()
+            _playwright_loop_thread.start()
+        return _playwright_loop_thread
+
+
 class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
     def __init__(self):
         self._playwright: Optional[Playwright] = None
@@ -110,8 +204,12 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
         self._scraped_urls: Set[str] = set()
         self._initialized = False
         self._chromium_installed = False
-        # Shared-browser lifecycle management
         self._active_ops: int = 0
+        self._loop_thread = get_playwright_loop_thread()
+
+    def _run_in_playwright_loop(self, coro):
+        """Run a coroutine in the playwright event loop thread."""
+        return self._loop_thread.run_coroutine(coro)
 
     async def _ensure_browser(self, force: bool = False):
         """Ensure browser is initialized and running."""
@@ -184,7 +282,6 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
         url: str,
         context: BrowserContext,
         request: WebScrapingRequest,
-        ctx: agent.ProcessContext,
         filesystem: FileSystem,
         semaphore: asyncio.Semaphore,
     ):
@@ -199,21 +296,28 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
 
                 if not response:
                     logging.error(f"No response received for URL: {url}")
-                    return None, []
+                    return None, [], None
 
                 if response.status >= 400:
-                    ctx.send_error(
-                        ErrorMessage(
-                            agent_type=self.get_qualified_class_name(),
-                            error_type=f"HTTP_ERROR_{response.status}",
-                            error_message=f"HTTP error: {response.status} for URL: {url}",
-                        )
+                    error = ErrorMessage(
+                        agent_type=self.get_qualified_class_name(),
+                        error_type=f"HTTP_ERROR_{response.status}",
+                        error_message=f"HTTP error: {response.status} for URL: {url}",
                     )
-                    return None, []
+                    return None, [], error
 
-                # Extract content
-                title = await page.title()
-                content = await page.content()
+                # Extract content. A page can still be mid-navigation (e.g. a client-side
+                # redirect firing right after "domcontentloaded") when we read it, which makes
+                # page.content() raise transiently; wait for the page to settle and retry once.
+                try:
+                    title = await page.title()
+                    content = await page.content()
+                except PlaywrightError as e:
+                    if "navigating and changing the content" not in str(e):
+                        raise
+                    await page.wait_for_load_state("load")
+                    title = await page.title()
+                    content = await page.content()
 
                 # Extract links for recursive scraping
                 links = await self._extract_links(page, url, request) if request.depth > 0 else []
@@ -237,8 +341,14 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
                 if request.output_format == ScrapingOutputFormat.MARKDOWN:
                     content = md(content, **request.transformer_options)
 
-                # Save to filesystem
-                filesystem.pipe_file(f"scraped_data/{filename}", content.encode("utf-8"))
+                # Save to filesystem. When the filesystem dependency is configured with
+                # asynchronous=True (e.g. AsyncFileSystemWrapper-backed), its sync bridge
+                # loop is None by design and calling the sync method raises
+                # "Loop is not running" -- the async method must be awaited directly instead.
+                if getattr(filesystem, "asynchronous", False):
+                    await filesystem._pipe_file(f"scraped_data/{filename}", content.encode("utf-8"))
+                else:
+                    filesystem.pipe_file(f"scraped_data/{filename}", content.encode("utf-8"))
 
                 hostname = urlparse(response.url).hostname
 
@@ -266,27 +376,23 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
                     encoding="utf-8",
                 )
 
-                return output, links
+                return output, links, None
 
         except asyncio.TimeoutError:
-            ctx.send_error(
-                ErrorMessage(
-                    agent_type=self.get_qualified_class_name(),
-                    error_type="TIMEOUT_ERROR",
-                    error_message=f"Timeout while scraping URL: {url}",
-                )
+            error = ErrorMessage(
+                agent_type=self.get_qualified_class_name(),
+                error_type="TIMEOUT_ERROR",
+                error_message=f"Timeout while scraping URL: {url}",
             )
-            return None, []
+            return None, [], error
         except Exception as e:
             logging.error(f"Error scraping {url}: {e}")
-            ctx.send_error(
-                ErrorMessage(
-                    agent_type=self.get_qualified_class_name(),
-                    error_type="SCRAPE_ERROR",
-                    error_message=f"Error scraping URL {url}: {str(e)}",
-                )
+            error = ErrorMessage(
+                agent_type=self.get_qualified_class_name(),
+                error_type="SCRAPE_ERROR",
+                error_message=f"Error scraping URL {url}: {str(e)}",
             )
-            return None, []
+            return None, [], error
         finally:
             if page:
                 try:
@@ -300,10 +406,10 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
         depth: int,
         context: BrowserContext,
         request: WebScrapingRequest,
-        ctx: agent.ProcessContext,
         filesystem: FileSystem,
         semaphore: asyncio.Semaphore,
         scraped_docs: List[MediaLink],
+        errors: List[ErrorMessage],
     ):
         """Scrape a URL and recursively scrape its links up to the specified depth."""
         # Check if already scraped
@@ -317,17 +423,18 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
             return
 
         # Scrape the page
-        result, links = await self._scrape_page(url, context, request, ctx, filesystem, semaphore)
+        result, links, error = await self._scrape_page(url, context, request, filesystem, semaphore)
+        if error:
+            errors.append(error)
         if result:
             scraped_docs.append(result)
-            ctx.send(result)
 
             # Recursively scrape links if depth > 0
             if depth > 0 and links:
                 tasks = []
                 for link in links:
                     task = self._scrape_url_with_depth(
-                        link, depth - 1, context, request, ctx, filesystem, semaphore, scraped_docs
+                        link, depth - 1, context, request, filesystem, semaphore, scraped_docs, errors
                     )
                     tasks.append(task)
 
@@ -337,16 +444,20 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
                     batch = tasks[i : i + batch_size]
                     await asyncio.gather(*batch, return_exceptions=True)
 
-    @agent.processor(
-        WebScrapingRequest, depends_on=[agent.AgentDependency(dependency_key="filesystem", guild_level=True)]
-    )
-    async def scrape(self, ctx: agent.ProcessContext[WebScrapingRequest], filesystem: FileSystem) -> None:
-        """Main entry point for scraping requests."""
+    async def _do_scrape(
+        self,
+        scraping_request: WebScrapingRequest,
+        filesystem: FileSystem,
+    ) -> tuple[List[MediaLink], List[ErrorMessage]]:
+        """
+        Internal async method that performs the actual scraping.
+        This runs in the playwright event loop thread.
+        """
         # Clear previous state
         async with self._scraped_urls_lock:
             self._scraped_urls.clear()
 
-        # Ensure browser is running; mark operation active and cancel idle close
+        # Ensure browser is running
         self._active_ops += 1
         browser = await self._ensure_browser()
 
@@ -358,8 +469,7 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
             )
         except Exception as e:
             # Check for specific error indicating browser connection loss
-            # "WriteUnixTransport closed" or "handler is closed"
-            if "closed" in str(e) or "transport" in str(e):
+            if "closed" in str(e).lower() or "transport" in str(e).lower():
                 logging.warning(f"Browser context creation failed, re-initializing browser: {e}")
                 browser = await self._ensure_browser(force=True)
                 context = await browser.new_context(
@@ -369,10 +479,12 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
             else:
                 raise
 
+        scraped_docs: List[MediaLink] = []
+        errors: List[ErrorMessage] = []
+        semaphore = asyncio.Semaphore(self.config.parallel_pages)
+
         try:
-            scraping_request = ctx.payload
-            scraped_docs: List[MediaLink] = []
-            semaphore = asyncio.Semaphore(self.config.parallel_pages)
+            logger.info(f"Starting scraping for request: {scraping_request.id}")
 
             # Create tasks for all initial URLs
             tasks = []
@@ -382,10 +494,10 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
                     scraping_request.depth,
                     context,
                     scraping_request,
-                    ctx,
                     filesystem,
                     semaphore,
                     scraped_docs,
+                    errors,
                 )
                 tasks.append(task)
 
@@ -396,7 +508,7 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
             for i, result in enumerate(results):
                 if isinstance(result, Exception):
                     url = scraping_request.links[i].url
-                    ctx.send_error(
+                    errors.append(
                         ErrorMessage(
                             agent_type=self.get_qualified_class_name(),
                             error_type="SCRAPE_ENTRY_ERROR",
@@ -404,11 +516,9 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
                         )
                     )
 
-            # Get unique documents
-            unique_scraped_docs = list({doc.name: doc for doc in scraped_docs}.values())
+            logger.info(f"Scraping completed for request: {scraping_request.id}. Total unique documents scraped: {len(scraped_docs)}")
 
-            # Send completion message
-            ctx.send(WebScrapingCompleted(id=scraping_request.id, links=unique_scraped_docs))
+            return scraped_docs, errors
 
         finally:
             # Always close the context
@@ -423,6 +533,29 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
                 if self._active_ops == 0:
                     await self._cleanup()
             # PERSISTENT: do nothing, browser stays alive
+
+    @agent.processor(
+        WebScrapingRequest, depends_on=[agent.AgentDependency(dependency_key="filesystem", guild_level=True)]
+    )
+    def scrape(self, ctx: agent.ProcessContext[WebScrapingRequest], filesystem: FileSystem) -> None:
+        """Main entry point for scraping requests."""
+        scraping_request = ctx.payload
+
+        # Run the actual scraping in the playwright event loop thread
+        scraped_docs, errors = self._run_in_playwright_loop(
+            self._do_scrape(scraping_request, filesystem)
+        )
+
+        # Send results back through the context (must be done in calling context)
+        for doc in scraped_docs:
+            ctx.send(doc)
+
+        for error in errors:
+            ctx.send_error(error)
+
+        # Get unique documents and send completion message
+        unique_scraped_docs = list({doc.name: doc for doc in scraped_docs}.values())
+        ctx.send(WebScrapingCompleted(id=scraping_request.id, links=unique_scraped_docs))
 
     async def _cleanup(self):
         """Cleanup method to free up resources."""

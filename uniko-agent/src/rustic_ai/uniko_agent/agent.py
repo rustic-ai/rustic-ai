@@ -1,25 +1,41 @@
 """Comprehensive memory agent leveraging uniko's cognitive memory system."""
 
-import uniko
 import logging
-from typing import Dict, Any
-from uniko import Turn, Scope, IngestSource, RecallItem, RecallSource
-from rustic_ai.core.guild.agent import Agent
-from rustic_ai.core.guild.agent import ProcessContext
+from typing import Any, Dict
+
+import uniko
+from uniko import IngestSource, RecallItem, RecallSource, Scope, Turn
+
 from rustic_ai.core.guild import agent
+from rustic_ai.core.guild.agent import Agent, ProcessContext
+from rustic_ai.core.guild.agent_ext.depends.filesystem import FileSystem
 
 from .config import MemoryAgentConfig
 from .models import (
-    ObserveTurnRequest, ObserveResult,
-    RecallRequest, RecallResponse, RecallItem,
-    AnswerRequest, AnswerResponse,
-    IngestDocumentRequest, IngestOutcome,
-    BatchSubmitRequest, BatchSubmitResponse,
-    CreateGoalRequest, GoalView, UpdateGoalRequest, GoalStatusResponse,
-    GetGoalsRequest, GoalsListResponse,
-    CreateTaskRequest, TaskView, UpdateTaskRequest, TaskStatusResponse,
-    GoalContextRequest, GoalContext,
-    MemoryAgentError
+    AnswerRequest,
+    AnswerResponse,
+    BatchSubmitRequest,
+    BatchSubmitResponse,
+    CreateGoalRequest,
+    CreateTaskRequest,
+    GetGoalsRequest,
+    GoalContext,
+    GoalContextRequest,
+    GoalsListResponse,
+    GoalStatusResponse,
+    GoalView,
+    IngestDocumentRequest,
+    IngestOutcome,
+    MemoryAgentError,
+    ObserveResult,
+    ObserveTurnRequest,
+    RecallItem,
+    RecallRequest,
+    RecallResponse,
+    TaskStatusResponse,
+    TaskView,
+    UpdateGoalRequest,
+    UpdateTaskRequest,
 )
 
 logger = logging.getLogger(__name__)
@@ -42,11 +58,7 @@ class MemoryAgent(Agent[MemoryAgentConfig]):
     # ========== Observation Processors ==========
 
     @agent.processor(ObserveTurnRequest, depends_on=["uniko:guild"])
-    async def observe_turn(
-        self,
-        ctx: ProcessContext[ObserveTurnRequest],
-        uniko: uniko.Agent
-    ):
+    async def observe_turn(self, ctx: ProcessContext[ObserveTurnRequest], uniko: uniko.Agent):
         """Observe a conversation turn and extract knowledge.
 
         Maps incoming message to uniko Turn, observes it, and returns
@@ -59,11 +71,7 @@ class MemoryAgent(Agent[MemoryAgentConfig]):
         req = ctx.payload
 
         # Determine session ID (fallback to config default or guild_id)
-        session_id = (
-            req.session_id
-            or self.config.default_session_id
-            or ctx.agent.guild_id
-        )
+        session_id = req.session_id or self.config.default_session_id or ctx.agent.guild_id
 
         try:
             # Get or create session
@@ -89,6 +97,10 @@ class MemoryAgent(Agent[MemoryAgentConfig]):
                 for att in req.attachments:
                     source = self._build_ingest_source(att)
                     turn = turn.attach(source)
+            else:
+                # Create in-memory markdown from content when no attachments
+                source = IngestSource.from_text(req.content).with_mime("text/markdown")
+                turn = turn.attach(source)
 
             # Observe the turn (async)
             result = await session.observe(turn)
@@ -98,32 +110,32 @@ class MemoryAgent(Agent[MemoryAgentConfig]):
                 await session.flush()
 
             # Send response
-            ctx.send(ObserveResult(
-                message_node_id=result.message_node_id,
-                chunk_node_ids=result.chunk_node_ids,
-                session_node_id=result.session_node_id,
-                sender_node_id=result.sender_node_id,
-                sender_id=result.sender_id,
-                extracted_entities=result.extracted_entities,
-                extracted_observations=result.extracted_observations,
-                attachment_count=result.attachment_count,
-            ))
+            ctx.send(
+                ObserveResult(
+                    message_node_id=result.message_node_id,
+                    chunk_node_ids=result.chunk_node_ids,
+                    session_node_id=result.session_node_id,
+                    sender_node_id=result.sender_node_id,
+                    sender_id=result.sender_id,
+                    extracted_entities=result.extracted_entities,
+                    extracted_observations=result.extracted_observations,
+                    attachment_count=result.attachment_count,
+                )
+            )
 
         except Exception as e:
-            ctx.send(MemoryAgentError(
-                error="observation_failed",
-                message=f"Failed to observe turn: {str(e)}",
-                details={"session_id": session_id, "sender_id": req.sender_id}
-            ))
+            ctx.send(
+                MemoryAgentError(
+                    error="observation_failed",
+                    message=f"Failed to observe turn: {str(e)}",
+                    details={"session_id": session_id, "sender_id": req.sender_id},
+                )
+            )
 
     # ========== Recall Processors ==========
 
     @agent.processor(RecallRequest, depends_on=["uniko:guild"])
-    async def recall_knowledge(
-        self,
-        ctx: ProcessContext[RecallRequest],
-        uniko: uniko.Agent
-    ):
+    async def recall_knowledge(self, ctx: ProcessContext[RecallRequest], uniko: uniko.Agent):
         """Recall knowledge from memory based on query.
 
         Performs 3-phase cascade recall and returns ranked items with sources.
@@ -145,7 +157,9 @@ class MemoryAgent(Agent[MemoryAgentConfig]):
             else:
                 bundle = await uniko.recall(req.query)
 
-            logger.info(f"Recall returned {len(bundle.items)} items with total tokens: {getattr(bundle, 'total_tokens', 0)}")
+            logger.info(
+                f"Recall returned {len(bundle.items)} items with total tokens: {getattr(bundle, 'total_tokens', 0)}"
+            )
 
             # Serialize bundle
             items = [self._serialize_recall_item(item) for item in bundle.items]
@@ -154,27 +168,25 @@ class MemoryAgent(Agent[MemoryAgentConfig]):
 
             print(f"Recall items: {items}")
 
-            ctx.send(RecallResponse(
-                items=items,
-                total_tokens=bundle.total_tokens if hasattr(bundle, 'total_tokens') else 0,
-                phase1_only=bundle.phase1_only if hasattr(bundle, 'phase1_only') else False,
-                phase2_only=bundle.phase2_only if hasattr(bundle, 'phase2_only') else False,
-                coverage=bundle.coverage if hasattr(bundle, 'coverage') else 0.0,
-            ))
+            ctx.send(
+                RecallResponse(
+                    items=items,
+                    total_tokens=bundle.total_tokens if hasattr(bundle, "total_tokens") else 0,
+                    phase1_only=bundle.phase1_only if hasattr(bundle, "phase1_only") else False,
+                    phase2_only=bundle.phase2_only if hasattr(bundle, "phase2_only") else False,
+                    coverage=bundle.coverage if hasattr(bundle, "coverage") else 0.0,
+                )
+            )
 
         except Exception as e:
-            ctx.send(MemoryAgentError(
-                error="recall_failed",
-                message=f"Failed to recall knowledge: {str(e)}",
-                details={"query": req.query}
-            ))
+            ctx.send(
+                MemoryAgentError(
+                    error="recall_failed", message=f"Failed to recall knowledge: {str(e)}", details={"query": req.query}
+                )
+            )
 
     @agent.processor(AnswerRequest, depends_on=["uniko:guild"])
-    async def answer_question(
-        self,
-        ctx: ProcessContext[AnswerRequest],
-        uniko: uniko.Agent
-    ):
+    async def answer_question(self, ctx: ProcessContext[AnswerRequest], uniko: uniko.Agent):
         """Answer a question using recalled context + LLM.
 
         Requires LLM configured in UnikoResolver.
@@ -194,10 +206,7 @@ class MemoryAgent(Agent[MemoryAgentConfig]):
                 answer = await uniko.answer(req.question)
 
             # Serialize context bundle
-            context_items = [
-                self._serialize_recall_item(item)
-                for item in answer.context.items
-            ]
+            context_items = [self._serialize_recall_item(item) for item in answer.context.items]
 
             context = RecallResponse(
                 items=context_items,
@@ -208,36 +217,43 @@ class MemoryAgent(Agent[MemoryAgentConfig]):
             )
 
             # Serialize citations
-            citations = [
-                self._serialize_source(source)
-                for source in answer.citations()
-            ]
+            citations = [self._serialize_source(source) for source in answer.citations()]
 
-            ctx.send(AnswerResponse(
-                text=answer.text,
-                model=answer.model,
-                input_tokens=answer.input_tokens,
-                output_tokens=answer.output_tokens,
-                recorded_episode=answer.recorded_episode,
-                context=context,
-                citations=citations,
-            ))
+            ctx.send(
+                AnswerResponse(
+                    text=answer.text,
+                    model=answer.model,
+                    input_tokens=answer.input_tokens,
+                    output_tokens=answer.output_tokens,
+                    recorded_episode=answer.recorded_episode,
+                    context=context,
+                    citations=citations,
+                )
+            )
 
         except Exception as e:
             # Check for LLM configuration error
             error_msg = str(e)
-            if "LLM not configured" in error_msg or "config error" in error_msg.lower() and "requires an LLM" in error_msg:
-                ctx.send(MemoryAgentError(
-                    error="llm_not_configured",
-                    message="LLM not configured in UnikoResolver. Set llm_spec to enable answer generation.",
-                    details={"question": req.question}
-                ))
+            if (
+                "LLM not configured" in error_msg
+                or "config error" in error_msg.lower()
+                and "requires an LLM" in error_msg
+            ):
+                ctx.send(
+                    MemoryAgentError(
+                        error="llm_not_configured",
+                        message="LLM not configured in UnikoResolver. Set llm_spec to enable answer generation.",
+                        details={"question": req.question},
+                    )
+                )
             else:
-                ctx.send(MemoryAgentError(
-                    error="answer_failed",
-                    message=f"Failed to generate answer: {error_msg}",
-                    details={"question": req.question}
-                ))
+                ctx.send(
+                    MemoryAgentError(
+                        error="answer_failed",
+                        message=f"Failed to generate answer: {error_msg}",
+                        details={"question": req.question},
+                    )
+                )
 
     # ========== Helper Methods ==========
 
@@ -335,61 +351,83 @@ class MemoryAgent(Agent[MemoryAgentConfig]):
 
     # ========== Document Ingestion Processors (Phase 2) ==========
 
-    @agent.processor(IngestDocumentRequest, depends_on=["uniko:guild"])
+    @agent.processor(IngestDocumentRequest, depends_on=["uniko:guild", "filesystem:guild_fs:True"])
     async def ingest_document(
-        self,
-        ctx: ProcessContext[IngestDocumentRequest],
-        uniko: uniko.Agent
+        self, ctx: ProcessContext[IngestDocumentRequest], uniko: uniko.Agent, guild_fs: FileSystem
     ):
         """Ingest a document into memory.
 
         Processes PDFs, HTML, markdown, and other document types.
+        Supports files from guild filesystem via MediaLink (on_filesystem=True).
 
         Args:
             ctx: Process context with IngestDocumentRequest payload
             uniko: Guild-scoped uniko agent (injected dependency)
+            guild_fs: Guild filesystem for reading files stored in guild storage
         """
         req = ctx.payload
 
-        logger.info(f"Ingesting document with source spec: {req.source_spec} and session_id: {req.session_id}")
-
-        session_id = (
-            req.session_id
-            or self.config.default_session_id
-            or ctx.agent.guild_id
+        logger.info(
+            f"Ingesting document with source spec: {req.source_spec}, media_link: {req.media_link}, session_id: {req.session_id}"
         )
+
+        session_id = req.session_id or self.config.default_session_id or ctx.agent.guild_id
 
         try:
             session = uniko.session(session_id)
-            source = self._build_ingest_source(req.source_spec)
 
-            logger.info(f"Built IngestSource: {source} for ingestion.")
+            # Build source from media_link (guild filesystem) or source_spec
+            if req.media_link and req.media_link.on_filesystem:
+                # Read content from guild filesystem
+                file_path = req.media_link.url
+                logger.info(f"Reading file from guild filesystem: {file_path}")
+
+                # When guild_fs is configured with asynchronous=True, its sync bridge loop
+                # is None by design, so the sync open()/read() raises "Loop is not running".
+                # Read via the async API directly instead in that case.
+                if getattr(guild_fs, "asynchronous", False):
+                    content = await guild_fs._cat_file(file_path)
+                else:
+                    with guild_fs.open(file_path, "rb") as f:
+                        content = f.read()
+                
+                logger.info(f"content read from guild filesystem file: {file_path}, size: {len(content)} bytes")
+
+                # Determine mime type
+                mime_type = req.media_link.mimetype or "text/plain"
+
+                # Create IngestSource from bytes
+                source = IngestSource.from_bytes(content).with_mime(mime_type)
+                logger.info(f"Built IngestSource from guild filesystem file: {file_path} with mime: {mime_type}")
+            elif req.source_spec:
+                source = self._build_ingest_source(req.source_spec)
+                logger.info(f"Built IngestSource from source_spec: {source}")
+            else:
+                raise ValueError("Either media_link or source_spec must be provided")
 
             # Ingest the document
             outcome = await session.ingest(source)
 
-            logger.info(f"Ingested document with artifact_node_id: {outcome.artifact_node_id}, chunk_count: {len(outcome.chunk_node_ids) if outcome.chunk_node_ids else 0}, page_count: {outcome.page_count if outcome.page_count is not None else 0}, extraction_failed: {outcome.extraction_failed}")
+            logger.info(
+                f"Ingested document with artifact_node_id: {outcome.artifact_node_id}, chunk_count: {len(outcome.chunk_node_ids) if outcome.chunk_node_ids else 0}, page_count: {outcome.page_count if outcome.page_count is not None else 0}, extraction_failed: {outcome.extraction_failed}"
+            )
 
-            ctx.send(IngestOutcome(
-                artifact_node_id=outcome.artifact_node_id,
-                chunk_count=len(outcome.chunk_node_ids) if outcome.chunk_node_ids else 0,
-                page_count=outcome.page_count if outcome.page_count is not None else 0,
-                extracted_entities=[],  # Not available in current uniko API
-                success=not outcome.extraction_failed,
-            ))
+            ctx.send(
+                IngestOutcome(
+                    artifact_node_id=outcome.artifact_node_id,
+                    chunk_count=len(outcome.chunk_node_ids) if outcome.chunk_node_ids else 0,
+                    page_count=outcome.page_count if outcome.page_count is not None else 0,
+                    extracted_entities=[],  # Not available in current uniko API
+                    success=not outcome.extraction_failed,
+                )
+            )
 
         except Exception as e:
-            ctx.send(IngestOutcome(
-                success=False,
-                error_message=f"Failed to ingest document: {str(e)}"
-            ))
+            logger.exception(f"Failed to ingest document: {e}")
+            ctx.send(IngestOutcome(success=False, error_message=f"Failed to ingest document: {str(e)}"))
 
     @agent.processor(BatchSubmitRequest, depends_on=["uniko:guild"])
-    async def batch_submit(
-        self,
-        ctx: ProcessContext[BatchSubmitRequest],
-        uniko: uniko.Agent
-    ):
+    async def batch_submit(self, ctx: ProcessContext[BatchSubmitRequest], uniko: uniko.Agent):
         """Submit multiple turns in batch using streaming mode.
 
         More efficient than individual observe calls for bulk ingestion.
@@ -400,11 +438,7 @@ class MemoryAgent(Agent[MemoryAgentConfig]):
         """
         req = ctx.payload
 
-        session_id = (
-            req.session_id
-            or self.config.default_session_id
-            or ctx.agent.guild_id
-        )
+        session_id = req.session_id or self.config.default_session_id or ctx.agent.guild_id
 
         try:
             session = uniko.session(session_id)
@@ -412,10 +446,7 @@ class MemoryAgent(Agent[MemoryAgentConfig]):
 
             # Submit each turn
             for turn_spec in req.turns:
-                turn = Turn(
-                    turn_spec.get("sender_id"),
-                    turn_spec.get("content")
-                )
+                turn = Turn(turn_spec.get("sender_id"), turn_spec.get("content"))
 
                 if "message_id" in turn_spec:
                     turn = turn.id(turn_spec["message_id"])
@@ -434,27 +465,27 @@ class MemoryAgent(Agent[MemoryAgentConfig]):
                 await session.flush()
                 flushed = True
 
-            ctx.send(BatchSubmitResponse(
-                submitted_count=submitted_count,
-                flushed=flushed,
-                session_id=session_id,
-            ))
+            ctx.send(
+                BatchSubmitResponse(
+                    submitted_count=submitted_count,
+                    flushed=flushed,
+                    session_id=session_id,
+                )
+            )
 
         except Exception as e:
-            ctx.send(MemoryAgentError(
-                error="batch_submit_failed",
-                message=f"Failed to submit batch: {str(e)}",
-                details={"session_id": session_id}
-            ))
+            ctx.send(
+                MemoryAgentError(
+                    error="batch_submit_failed",
+                    message=f"Failed to submit batch: {str(e)}",
+                    details={"session_id": session_id},
+                )
+            )
 
     # ========== Goal Management Processors (Phase 2) ==========
 
     @agent.processor(CreateGoalRequest, depends_on=["uniko:guild"])
-    async def create_goal(
-        self,
-        ctx: ProcessContext[CreateGoalRequest],
-        uniko: uniko.Agent
-    ):
+    async def create_goal(self, ctx: ProcessContext[CreateGoalRequest], uniko: uniko.Agent):
         """Create a new goal and track it in memory.
 
         Goals provide high-level objectives for research workflows.
@@ -488,27 +519,25 @@ class MemoryAgent(Agent[MemoryAgentConfig]):
                 ctx.send(self._serialize_goal_view(goal))
             else:
                 # Fallback response
-                ctx.send(GoalView(
-                    goal_id=goal_id,
-                    node_id=node_id,
-                    title=req.title,
-                    description=req.description,
-                    status=req.status,
-                ))
+                ctx.send(
+                    GoalView(
+                        goal_id=goal_id,
+                        node_id=node_id,
+                        title=req.title,
+                        description=req.description,
+                        status=req.status,
+                    )
+                )
 
         except Exception as e:
-            ctx.send(MemoryAgentError(
-                error="create_goal_failed",
-                message=f"Failed to create goal: {str(e)}",
-                details={"title": req.title}
-            ))
+            ctx.send(
+                MemoryAgentError(
+                    error="create_goal_failed", message=f"Failed to create goal: {str(e)}", details={"title": req.title}
+                )
+            )
 
     @agent.processor(UpdateGoalRequest, depends_on=["uniko:guild"])
-    async def update_goal(
-        self,
-        ctx: ProcessContext[UpdateGoalRequest],
-        uniko: uniko.Agent
-    ):
+    async def update_goal(self, ctx: ProcessContext[UpdateGoalRequest], uniko: uniko.Agent):
         """Update a goal's status.
 
         Actions: start, complete, abandon, pause, resume
@@ -531,13 +560,13 @@ class MemoryAgent(Agent[MemoryAgentConfig]):
                 await goals.abandon(req.goal_id)
             elif req.action == "pause":
                 # Check if pause method exists
-                if hasattr(goals, 'pause'):
+                if hasattr(goals, "pause"):
                     await goals.pause(req.goal_id)
                 else:
                     raise ValueError("pause action not supported by current uniko version")
             elif req.action == "resume":
                 # Check if resume method exists
-                if hasattr(goals, 'resume'):
+                if hasattr(goals, "resume"):
                     await goals.resume(req.goal_id)
                 else:
                     raise ValueError("resume action not supported by current uniko version")
@@ -548,25 +577,25 @@ class MemoryAgent(Agent[MemoryAgentConfig]):
             goal = await goals.get(req.goal_id)
             status = goal.status if goal else req.action
 
-            ctx.send(GoalStatusResponse(
-                goal_id=req.goal_id,
-                status=status,
-                updated=True,
-            ))
+            ctx.send(
+                GoalStatusResponse(
+                    goal_id=req.goal_id,
+                    status=status,
+                    updated=True,
+                )
+            )
 
         except Exception as e:
-            ctx.send(MemoryAgentError(
-                error="update_goal_failed",
-                message=f"Failed to update goal: {str(e)}",
-                details={"goal_id": req.goal_id, "action": req.action}
-            ))
+            ctx.send(
+                MemoryAgentError(
+                    error="update_goal_failed",
+                    message=f"Failed to update goal: {str(e)}",
+                    details={"goal_id": req.goal_id, "action": req.action},
+                )
+            )
 
     @agent.processor(GetGoalsRequest, depends_on=["uniko:guild"])
-    async def get_goals(
-        self,
-        ctx: ProcessContext[GetGoalsRequest],
-        uniko: uniko.Agent
-    ):
+    async def get_goals(self, ctx: ProcessContext[GetGoalsRequest], uniko: uniko.Agent):
         """Get goals by phase.
 
         Phases: all, active, completed, abandoned
@@ -596,32 +625,30 @@ class MemoryAgent(Agent[MemoryAgentConfig]):
 
             # Apply limit
             if req.limit:
-                goal_list = goal_list[:req.limit]
+                goal_list = goal_list[: req.limit]
 
             # Serialize goals
             goals = [self._serialize_goal_view(g) for g in goal_list]
 
-            ctx.send(GoalsListResponse(
-                goals=goals,
-                total_count=len(goals),
-                phase=req.phase,
-            ))
+            ctx.send(
+                GoalsListResponse(
+                    goals=goals,
+                    total_count=len(goals),
+                    phase=req.phase,
+                )
+            )
 
         except Exception as e:
-            ctx.send(MemoryAgentError(
-                error="get_goals_failed",
-                message=f"Failed to get goals: {str(e)}",
-                details={"phase": req.phase}
-            ))
+            ctx.send(
+                MemoryAgentError(
+                    error="get_goals_failed", message=f"Failed to get goals: {str(e)}", details={"phase": req.phase}
+                )
+            )
 
     # ========== Task Management Processors (Phase 2) ==========
 
     @agent.processor(CreateTaskRequest, depends_on=["uniko:guild"])
-    async def create_task(
-        self,
-        ctx: ProcessContext[CreateTaskRequest],
-        uniko: uniko.Agent
-    ):
+    async def create_task(self, ctx: ProcessContext[CreateTaskRequest], uniko: uniko.Agent):
         """Create a task for a goal.
 
         Tasks are concrete steps toward achieving a goal.
@@ -647,29 +674,29 @@ class MemoryAgent(Agent[MemoryAgentConfig]):
 
             # Return task view (uniko doesn't have get_task, so we construct from request)
             task_id = req.task_id or f"task-{node_id}"
-            ctx.send(TaskView(
-                task_id=task_id,
-                node_id=node_id,
-                goal_id=req.goal_id,
-                title=req.title,
-                description=req.description,
-                status="pending",
-                priority=req.priority or 3,
-            ))
+            ctx.send(
+                TaskView(
+                    task_id=task_id,
+                    node_id=node_id,
+                    goal_id=req.goal_id,
+                    title=req.title,
+                    description=req.description,
+                    status="pending",
+                    priority=req.priority or 3,
+                )
+            )
 
         except Exception as e:
-            ctx.send(MemoryAgentError(
-                error="create_task_failed",
-                message=f"Failed to create task: {str(e)}",
-                details={"goal_id": req.goal_id, "title": req.title}
-            ))
+            ctx.send(
+                MemoryAgentError(
+                    error="create_task_failed",
+                    message=f"Failed to create task: {str(e)}",
+                    details={"goal_id": req.goal_id, "title": req.title},
+                )
+            )
 
     @agent.processor(UpdateTaskRequest, depends_on=["uniko:guild"])
-    async def update_task(
-        self,
-        ctx: ProcessContext[UpdateTaskRequest],
-        uniko: uniko.Agent
-    ):
+    async def update_task(self, ctx: ProcessContext[UpdateTaskRequest], uniko: uniko.Agent):
         """Update a task's status.
 
         Actions: start, complete, abandon, block, unblock
@@ -709,25 +736,25 @@ class MemoryAgent(Agent[MemoryAgentConfig]):
             }
             status = status_map.get(req.action, req.action)
 
-            ctx.send(TaskStatusResponse(
-                task_id=req.task_id,
-                status=status,
-                updated=True,
-            ))
+            ctx.send(
+                TaskStatusResponse(
+                    task_id=req.task_id,
+                    status=status,
+                    updated=True,
+                )
+            )
 
         except Exception as e:
-            ctx.send(MemoryAgentError(
-                error="update_task_failed",
-                message=f"Failed to update task: {str(e)}",
-                details={"task_id": req.task_id, "action": req.action}
-            ))
+            ctx.send(
+                MemoryAgentError(
+                    error="update_task_failed",
+                    message=f"Failed to update task: {str(e)}",
+                    details={"task_id": req.task_id, "action": req.action},
+                )
+            )
 
     @agent.processor(GoalContextRequest, depends_on=["uniko:guild"])
-    async def get_goal_context(
-        self,
-        ctx: ProcessContext[GoalContextRequest],
-        uniko: uniko.Agent
-    ):
+    async def get_goal_context(self, ctx: ProcessContext[GoalContextRequest], uniko: uniko.Agent):
         """Get goal working memory context.
 
         Includes goal, tasks, episodes, and progress metrics.
@@ -753,19 +780,23 @@ class MemoryAgent(Agent[MemoryAgentConfig]):
             tasks = [self._serialize_task_view(t) for t in context.tasks]
             episodes = [self._serialize_episode(e) for e in context.episodes]
 
-            ctx.send(GoalContext(
-                goal=goal_view,
-                tasks=tasks,
-                episodes=episodes,
-                progress=context.progress or {},
-            ))
+            ctx.send(
+                GoalContext(
+                    goal=goal_view,
+                    tasks=tasks,
+                    episodes=episodes,
+                    progress=context.progress or {},
+                )
+            )
 
         except Exception as e:
-            ctx.send(MemoryAgentError(
-                error="get_goal_context_failed",
-                message=f"Failed to get goal context: {str(e)}",
-                details={"goal_id": req.goal_id}
-            ))
+            ctx.send(
+                MemoryAgentError(
+                    error="get_goal_context_failed",
+                    message=f"Failed to get goal context: {str(e)}",
+                    details={"goal_id": req.goal_id},
+                )
+            )
 
     # ========== Additional Helper Methods ==========
 

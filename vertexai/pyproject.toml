@@ -20,6 +20,7 @@ packages = [{ include = "rustic_ai", from = "src" }]
 
 [tool.poetry.dependencies]
 rusticai-core = { path = "../core", develop = true }
+rusticai-serpapi = {path = "/home/nihal/Projects/ai-platform/rustic-ai/serpapi/dist/rusticai_serpapi-1.2.3-py3-none-any.whl"}
 google-cloud-aiplatform = "^1.91.0"
 google-genai = "^1.68.0"
 google-cloud-language = "^2.17.2"

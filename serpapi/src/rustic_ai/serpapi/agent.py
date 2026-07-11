@@ -6,10 +6,14 @@ from urllib.parse import urlparse
 from pydantic import BaseModel, Field
 import serpapi
 import shortuuid
+import logging
 
 from rustic_ai.core.agents.commons.media import MediaLink
 from rustic_ai.core.guild import Agent, agent
 from rustic_ai.core.messaging.core import JsonDict
+
+
+logger = logging.getLogger(__name__)
 
 
 class SearchEngines(Enum):
@@ -64,9 +68,12 @@ class SearchError(BaseModel):
 
 class SERPAgent(Agent):
     def __init__(self):
+        logger.info("Initializing SERPAgent")
         self.serp_api_key = os.getenv("SERP_API_KEY", "")
+        logger.info(f"SERP_API_KEY: {'set' if self.serp_api_key else 'not set'}")
         assert self.serp_api_key, "SERP_API_KEY environment variable not set"
         self.client = serpapi.Client(api_key=self.serp_api_key)  # type: ignore
+        logger.info("SERPAgent initialized successfully.")
 
     @agent.processor(SERPQuery)
     def search(self, ctx: agent.ProcessContext[SERPQuery]) -> None:
@@ -77,6 +84,7 @@ class SERPAgent(Agent):
             message (Message): The received message.
         """
         search_query = ctx.payload
+        logger.info(f"Received search query: {search_query.query} for engine: {search_query.engine}")
 
         # Use the message.payload as search parameters
         search_params = SearchEngines[search_query.engine].get_query(search_query.query)
@@ -88,6 +96,8 @@ class SERPAgent(Agent):
             num=search_query.num,
             start=search_query.start,
         )
+
+        logger.info(f"Search results received: {len(results)}")
 
         metadata = results["search_metadata"]
 
@@ -130,14 +140,16 @@ class SERPAgent(Agent):
             if "search_information" in results and "total_results" in results["search_information"]:
                 total_results = results["search_information"]["total_results"]
 
+            logger.info(f"Publishing {len(result_links)} search results for query: {search_query.query} with total results: {total_results}")
+
             ctx.send(
                 SERPResults(
                     count=len(result_links),
                     results=result_links,
                     total_results=total_results,
                     id=search_query.id,
-                    query=result["search_parameters"]["q"],
-                    engine=result["search_parameters"]["engine"],
+                    query=search_query.query,
+                    engine=search_query.engine,
                 ),
                 new_thread=True,
             )

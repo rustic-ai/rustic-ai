@@ -1,11 +1,14 @@
 """Payload models for MemoryAgent requests and responses."""
 
-from typing import Optional, List, Dict, Any
 from datetime import datetime
+from typing import Any, Dict, List, Optional
+
 from pydantic import BaseModel, Field
 
+from rustic_ai.core.agents.commons.media import MediaLink
 
 # ========== Observation Payloads ==========
+
 
 class ObserveTurnRequest(BaseModel):
     """Request to observe a conversation turn.
@@ -22,39 +25,16 @@ class ObserveTurnRequest(BaseModel):
         attachments: List of attachments (IngestSource specs)
     """
 
-    session_id: Optional[str] = Field(
-        default=None,
-        description="Session ID (defaults to agent's default_session_id)"
-    )
-    sender_id: str = Field(
-        description="ID of the message sender"
-    )
-    content: str = Field(
-        description="Message content text"
-    )
-    message_id: Optional[str] = Field(
-        default=None,
-        description="Optional unique message ID"
-    )
-    content_type: Optional[str] = Field(
-        default="text",
-        description="Content type (text, markdown, html, etc.)"
-    )
-    timestamp: Optional[datetime] = Field(
-        default=None,
-        description="Message timestamp (defaults to current time)"
-    )
-    addressed_to: Optional[List[str]] = Field(
-        default=None,
-        description="List of recipient IDs"
-    )
-    metadata: Optional[Dict[str, Any]] = Field(
-        default=None,
-        description="Additional key-value metadata"
-    )
+    session_id: Optional[str] = Field(default=None, description="Session ID (defaults to agent's default_session_id)")
+    sender_id: str = Field(description="ID of the message sender")
+    content: str = Field(description="Message content text")
+    message_id: Optional[str] = Field(default=None, description="Optional unique message ID")
+    content_type: Optional[str] = Field(default="text", description="Content type (text, markdown, html, etc.)")
+    timestamp: Optional[datetime] = Field(default=None, description="Message timestamp (defaults to current time)")
+    addressed_to: Optional[List[str]] = Field(default=None, description="List of recipient IDs")
+    metadata: Optional[Dict[str, Any]] = Field(default=None, description="Additional key-value metadata")
     attachments: Optional[List[Dict[str, Any]]] = Field(
-        default=None,
-        description="List of attachment specs (path, url, mime_type)"
+        default=None, description="List of attachment specs (path, url, mime_type)"
     )
 
 
@@ -84,6 +64,7 @@ class ObserveResult(BaseModel):
 
 # ========== Recall Payloads ==========
 
+
 class RecallRequest(BaseModel):
     """Request to recall knowledge from memory.
 
@@ -95,24 +76,12 @@ class RecallRequest(BaseModel):
         scope: Optional scope specification (sessions, participants, time range)
     """
 
-    query: str = Field(
-        description="Query string for semantic search"
-    )
-    max_tokens: Optional[int] = Field(
-        default=None,
-        description="Maximum tokens in context bundle (overrides config)"
-    )
-    phase1_only: bool = Field(
-        default=False,
-        description="Only return phase 1 results (facts/procedures)"
-    )
-    phase2_only: bool = Field(
-        default=False,
-        description="Only return phase 2 results (episodes/observations)"
-    )
+    query: str = Field(description="Query string for semantic search")
+    max_tokens: Optional[int] = Field(default=None, description="Maximum tokens in context bundle (overrides config)")
+    phase1_only: bool = Field(default=False, description="Only return phase 1 results (facts/procedures)")
+    phase2_only: bool = Field(default=False, description="Only return phase 2 results (episodes/observations)")
     scope: Optional[Dict[str, Any]] = Field(
-        default=None,
-        description="Scope specification (sessions, participants, since, until)"
+        default=None, description="Scope specification (sessions, participants, since, until)"
     )
 
 
@@ -154,6 +123,7 @@ class RecallResponse(BaseModel):
 
 # ========== Answer Payloads ==========
 
+
 class AnswerRequest(BaseModel):
     """Request to answer a question using memory + LLM.
 
@@ -163,17 +133,11 @@ class AnswerRequest(BaseModel):
         scope: Optional scope specification for recall
     """
 
-    question: str = Field(
-        description="Question to answer"
-    )
+    question: str = Field(description="Question to answer")
     max_tokens: Optional[int] = Field(
-        default=None,
-        description="Maximum tokens for answer generation (overrides config)"
+        default=None, description="Maximum tokens for answer generation (overrides config)"
     )
-    scope: Optional[Dict[str, Any]] = Field(
-        default=None,
-        description="Scope specification for recall"
-    )
+    scope: Optional[Dict[str, Any]] = Field(default=None, description="Scope specification for recall")
 
 
 class AnswerResponse(BaseModel):
@@ -200,26 +164,25 @@ class AnswerResponse(BaseModel):
 
 # ========== Document Ingestion Payloads ==========
 
+
 class IngestDocumentRequest(BaseModel):
     """Request to ingest a document into memory.
 
     Attributes:
         session_id: Session ID (defaults to agent's default_session_id)
         source_spec: IngestSource specification (path, url, or bytes)
+        media_link: Optional MediaLink for files stored in guild filesystem
         metadata: Optional metadata for the document
     """
 
-    session_id: Optional[str] = Field(
-        default=None,
-        description="Session ID (defaults to agent's default_session_id)"
+    session_id: Optional[str] = Field(default=None, description="Session ID (defaults to agent's default_session_id)")
+    source_spec: Optional[Dict[str, Any]] = Field(
+        default=None, description="IngestSource spec (path, url, or bytes with mime_type)"
     )
-    source_spec: Dict[str, Any] = Field(
-        description="IngestSource spec (path, url, or bytes with mime_type)"
+    media_link: Optional[MediaLink] = Field(
+        default=None, description="MediaLink for files stored in guild filesystem (on_filesystem=True)"
     )
-    metadata: Optional[Dict[str, Any]] = Field(
-        default=None,
-        description="Optional metadata for the document"
-    )
+    metadata: Optional[Dict[str, Any]] = Field(default=None, description="Optional metadata for the document")
 
 
 class IngestOutcome(BaseModel):
@@ -251,17 +214,9 @@ class BatchSubmitRequest(BaseModel):
         flush_after: Whether to flush after all turns
     """
 
-    session_id: Optional[str] = Field(
-        default=None,
-        description="Session ID (defaults to agent's default_session_id)"
-    )
-    turns: List[Dict[str, Any]] = Field(
-        description="List of turn specs (sender_id, content, metadata, etc.)"
-    )
-    flush_after: bool = Field(
-        default=True,
-        description="Whether to flush after all turns"
-    )
+    session_id: Optional[str] = Field(default=None, description="Session ID (defaults to agent's default_session_id)")
+    turns: List[Dict[str, Any]] = Field(description="List of turn specs (sender_id, content, metadata, etc.)")
+    flush_after: bool = Field(default=True, description="Whether to flush after all turns")
 
 
 class BatchSubmitResponse(BaseModel):
@@ -280,6 +235,7 @@ class BatchSubmitResponse(BaseModel):
 
 # ========== Goal Management Payloads ==========
 
+
 class CreateGoalRequest(BaseModel):
     """Request to create a new goal.
 
@@ -294,37 +250,14 @@ class CreateGoalRequest(BaseModel):
         parent_goal_id: Optional parent goal ID for sub-goals
     """
 
-    title: str = Field(
-        description="Goal title"
-    )
-    goal_id: Optional[str] = Field(
-        default=None,
-        description="Optional unique goal ID"
-    )
-    description: Optional[str] = Field(
-        default=None,
-        description="Goal description"
-    )
-    status: str = Field(
-        default="active",
-        description="Initial status (active, completed, abandoned)"
-    )
-    metrics: Optional[Dict[str, Any]] = Field(
-        default=None,
-        description="Success metrics"
-    )
-    guardrails: Optional[List[str]] = Field(
-        default=None,
-        description="Constraints/rules"
-    )
-    deadline: Optional[datetime] = Field(
-        default=None,
-        description="Optional deadline"
-    )
-    parent_goal_id: Optional[str] = Field(
-        default=None,
-        description="Parent goal ID for sub-goals"
-    )
+    title: str = Field(description="Goal title")
+    goal_id: Optional[str] = Field(default=None, description="Optional unique goal ID")
+    description: Optional[str] = Field(default=None, description="Goal description")
+    status: str = Field(default="active", description="Initial status (active, completed, abandoned)")
+    metrics: Optional[Dict[str, Any]] = Field(default=None, description="Success metrics")
+    guardrails: Optional[List[str]] = Field(default=None, description="Constraints/rules")
+    deadline: Optional[datetime] = Field(default=None, description="Optional deadline")
+    parent_goal_id: Optional[str] = Field(default=None, description="Parent goal ID for sub-goals")
 
 
 class GoalView(BaseModel):
@@ -365,20 +298,10 @@ class UpdateGoalRequest(BaseModel):
         metadata: Optional additional metadata
     """
 
-    goal_id: str = Field(
-        description="Goal ID to update"
-    )
-    action: str = Field(
-        description="Action: start, complete, abandon, pause, resume"
-    )
-    outcome: Optional[str] = Field(
-        default=None,
-        description="Outcome description"
-    )
-    metadata: Optional[Dict[str, Any]] = Field(
-        default=None,
-        description="Additional metadata"
-    )
+    goal_id: str = Field(description="Goal ID to update")
+    action: str = Field(description="Action: start, complete, abandon, pause, resume")
+    outcome: Optional[str] = Field(default=None, description="Outcome description")
+    metadata: Optional[Dict[str, Any]] = Field(default=None, description="Additional metadata")
 
 
 class GoalStatusResponse(BaseModel):
@@ -404,18 +327,9 @@ class GetGoalsRequest(BaseModel):
         limit: Maximum number of goals to return
     """
 
-    phase: str = Field(
-        default="all",
-        description="Phase filter: all, active, completed, abandoned"
-    )
-    parent_goal_id: Optional[str] = Field(
-        default=None,
-        description="Filter by parent goal ID"
-    )
-    limit: Optional[int] = Field(
-        default=None,
-        description="Maximum number of goals"
-    )
+    phase: str = Field(default="all", description="Phase filter: all, active, completed, abandoned")
+    parent_goal_id: Optional[str] = Field(default=None, description="Filter by parent goal ID")
+    limit: Optional[int] = Field(default=None, description="Maximum number of goals")
 
 
 class GoalsListResponse(BaseModel):
@@ -434,6 +348,7 @@ class GoalsListResponse(BaseModel):
 
 # ========== Task Management Payloads ==========
 
+
 class CreateTaskRequest(BaseModel):
     """Request to create a task for a goal.
 
@@ -446,30 +361,12 @@ class CreateTaskRequest(BaseModel):
         depends_on: Optional list of task IDs this depends on
     """
 
-    goal_id: str = Field(
-        description="Parent goal ID"
-    )
-    title: str = Field(
-        description="Task title"
-    )
-    task_id: Optional[str] = Field(
-        default=None,
-        description="Optional unique task ID"
-    )
-    description: Optional[str] = Field(
-        default=None,
-        description="Task description"
-    )
-    priority: int = Field(
-        default=3,
-        ge=1,
-        le=5,
-        description="Task priority (1-5)"
-    )
-    depends_on: Optional[List[str]] = Field(
-        default=None,
-        description="Task IDs this depends on"
-    )
+    goal_id: str = Field(description="Parent goal ID")
+    title: str = Field(description="Task title")
+    task_id: Optional[str] = Field(default=None, description="Optional unique task ID")
+    description: Optional[str] = Field(default=None, description="Task description")
+    priority: int = Field(default=3, ge=1, le=5, description="Task priority (1-5)")
+    depends_on: Optional[List[str]] = Field(default=None, description="Task IDs this depends on")
 
 
 class TaskView(BaseModel):
@@ -505,16 +402,9 @@ class UpdateTaskRequest(BaseModel):
         outcome: Optional outcome description
     """
 
-    task_id: str = Field(
-        description="Task ID to update"
-    )
-    action: str = Field(
-        description="Action: start, complete, abandon, block, unblock"
-    )
-    outcome: Optional[str] = Field(
-        default=None,
-        description="Outcome description"
-    )
+    task_id: str = Field(description="Task ID to update")
+    action: str = Field(description="Action: start, complete, abandon, block, unblock")
+    outcome: Optional[str] = Field(default=None, description="Outcome description")
 
 
 class TaskStatusResponse(BaseModel):
@@ -540,17 +430,9 @@ class GoalContextRequest(BaseModel):
         include_episodes: Include related episodes
     """
 
-    goal_id: str = Field(
-        description="Goal ID"
-    )
-    include_tasks: bool = Field(
-        default=True,
-        description="Include related tasks"
-    )
-    include_episodes: bool = Field(
-        default=True,
-        description="Include related episodes"
-    )
+    goal_id: str = Field(description="Goal ID")
+    include_tasks: bool = Field(default=True, description="Include related tasks")
+    include_episodes: bool = Field(default=True, description="Include related episodes")
 
 
 class GoalContext(BaseModel):
@@ -570,6 +452,7 @@ class GoalContext(BaseModel):
 
 
 # ========== Error Payload ==========
+
 
 class MemoryAgentError(BaseModel):
     """Error response from MemoryAgent.

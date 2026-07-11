@@ -6,7 +6,7 @@
     "intro_msg": "Welcome to the Data Analyst Assistant! I can help you analyze CSV data files. Just tell me which file to load and what you'd like to know about the data. I can calculate statistics, run SQL queries, describe datasets, and more. When you load a dataset, I'll automatically analyze its structure to provide better insights.",
     "exposure": "public",
     "author_id": "dummyuserid",
-    "organization_id": null,
+    "organization_id": "acmeorganizationid",
     "category_id": null,
     "tags": [
         "Data Analysis",
@@ -118,23 +118,7 @@
                 }
             }
         ],
-        "dependency_map": {
-            "llm": {
-                "class_name": "rustic_ai.litellm.agent_ext.llm.LiteLLMResolver",
-                "properties": {}
-            },
-            "filesystem": {
-                "class_name": "rustic_ai.core.guild.agent_ext.depends.filesystem.filesystem.FileSystemResolver",
-                "properties": {
-                    "path_base": "/tmp",
-                    "protocol": "file",
-                    "storage_options": {
-                        "auto_mkdir": true
-                    },
-                    "asynchronous": true
-                }
-            }
-        },
+        "dependency_map": {},
         "routes": {
             "steps": [
                 {
