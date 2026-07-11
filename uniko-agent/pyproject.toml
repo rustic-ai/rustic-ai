@@ -18,7 +18,7 @@ packages = [{ include = "rustic_ai", from = "src" }]
 
 [tool.poetry.dependencies]
 rusticai-core = { path = "../core", develop = true }
-uniko = { path = "/home/nihal/Projects/uniko/bindings/uniko-py", develop = true }
+uniko = {url = "https://github.com/rustic-ai/uniko/releases/download/v0.1.1/uniko-0.1.1-cp310-abi3-manylinux_2_28_x86_64.whl"}
 
 [tool.poetry-monorepo.deps]
 

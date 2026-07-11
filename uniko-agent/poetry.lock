@@ -2582,20 +2582,21 @@ testing = ["check_manifest", "pyroma", "pytest (>=4.3)", "pytest-cov", "pytest-m
 
 [[package]]
 name = "uniko"
-version = "0.1.0"
+version = "0.1.1"
 description = "Python bindings for uniko cognitive memory"
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
-files = []
-develop = true
+files = [
+    {file = "uniko-0.1.1-cp310-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:5f96be6b2af2ba742f889a612e3ed2d1881695cdb70290d6422aba4c3e7fa851"},
+]
 
 [package.dependencies]
 pydantic = ">=2"
 
 [package.source]
-type = "directory"
-url = "../../../uniko/bindings/uniko-py"
+type = "url"
+url = "https://github.com/rustic-ai/uniko/releases/download/v0.1.1/uniko-0.1.1-cp310-abi3-manylinux_2_28_x86_64.whl"
 
 [[package]]
 name = "virtualenv"
@@ -2752,4 +2753,4 @@ test = []
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.13,<3.14"
-content-hash = "beb08f4ff7d00359a6625505924818391254bdb5e9e38047cb344f4a58b52693"
+content-hash = "acd868314f72dde6c6a7fdbfd21da627ec91228b66a3e4855d2e8c598a2ac18a"

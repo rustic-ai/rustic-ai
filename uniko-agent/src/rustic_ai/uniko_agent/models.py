@@ -344,7 +344,7 @@ class GoalView(BaseModel):
     """
 
     goal_id: str
-    node_id: int
+    node_id: Optional[int] = None  # Not available in uniko GoalView
     title: str
     description: Optional[str] = None
     status: str
@@ -487,7 +487,7 @@ class TaskView(BaseModel):
     """
 
     task_id: str
-    node_id: int
+    node_id: Optional[int] = None  # Not available in uniko TaskView
     goal_id: str
     title: str
     description: Optional[str] = None

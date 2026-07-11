@@ -6,7 +6,7 @@ import uniko
 from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder
 from rustic_ai.core.guild.dsl import DependencySpec, GuildSpec
 from rustic_ai.testing.helpers import wrap_agent_for_testing
-from rustic_ai.uniko_agent import MemoryAgent, MemoryAgentConfig, UnikoResolver
+from rustic_ai.uniko_agent import MemoryAgent, MemoryAgentConfig, UnikoResolver, ObserveTurnRequest
 
 
 @pytest_asyncio.fixture
@@ -52,7 +52,7 @@ def uniko_dependency_spec():
         properties={
             "storage_path": None,  # In-memory
             "llm_spec": None,  # No LLM for basic tests
-            "streaming": False,
+            "streaming": True,  # Enable streaming for auto_flush to work
         }
     )
 
@@ -117,27 +117,64 @@ def memory_test_harness(memory_agent_spec, uniko_dependency_spec):
 
         def send_message(self, payload):
             """Send a message to the agent."""
-            from rustic_ai.core.messaging.core.message import Message
-            from rustic_ai.core.utils.gemstone_id import GemstoneGenerator
-            from rustic_ai.core.utils.qualified_name import get_qualified_class_name
+            from rustic_ai.core.messaging.core.message import Message, AgentTag
+            from rustic_ai.core.utils.gemstone_id import GemstoneGenerator, Priority
+            from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 
-            id_gen = GemstoneGenerator(machine_id=1, datacenter_id=1)
+            id_gen = GemstoneGenerator(1)
+            id_obj = id_gen.get_id(Priority.NORMAL)
             msg = Message(
-                id=id_gen.generate(),
-                source_agent_id="test",
-                target_agent_id=self.agent.id,
+                id_obj=id_obj,
+                sender=AgentTag(name="test", agent_id="test"),
+                topics=["default"],
                 format=get_qualified_class_name(payload.__class__),
                 payload=payload.model_dump(mode="json"),
+                recipient_list=[],
             )
-            self.agent._process_message(msg)
+            msg.topic_published_to = "default"
+            self.agent._on_message(msg)
 
-        def get_sent_messages(self):
-            """Get messages sent by the agent."""
+        def get_sent_messages(self, deserialize=True):
+            """Get messages sent by the agent.
+
+            Args:
+                deserialize: If True, deserialize message payloads to Pydantic models
+
+            Returns:
+                List of messages with optionally deserialized payloads
+            """
+            from rustic_ai.core.utils.basic_class_utils import get_class_from_name
+
             result = list(self.messages)
             self.messages.clear()
+
+            if deserialize:
+                for msg in result:
+                    if msg.format and isinstance(msg.payload, dict):
+                        try:
+                            payload_class = get_class_from_name(msg.format)
+                            msg.payload = payload_class(**msg.payload)
+                        except Exception:
+                            # If deserialization fails, keep the dict
+                            pass
+
             return result
 
-    return TestHarness(agent, messages)
+    harness = TestHarness(agent, messages)
+
+    # Initialize participant by observing an initial turn
+    # This is required for goal/task management in uniko
+    harness.send_message(
+        ObserveTurnRequest(
+            sender_id="memory_agent_test_guild",
+            content="System initialized",
+            metadata={"type": "system_init"}
+        )
+    )
+    # Clear the initialization message
+    harness.get_sent_messages()
+
+    return harness
 
 
 @pytest.fixture

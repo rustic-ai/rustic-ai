@@ -107,37 +107,43 @@ class UnikoResolver(DependencyResolver[uniko.Agent]):
         Returns:
             uniko LLM spec object
         """
-        alias = spec.get("alias", "openai")
+        provider_alias = spec.get("alias", "openai")
         model_id = spec.get("model_id", "gpt-4o-mini")
 
-        # Build LLM spec based on alias
-        if alias == "openai":
-            import os
-            api_key = os.getenv(spec.get("key_env", "OPENAI_API_KEY"))
+        # Build LLM spec based on provider alias
+        if provider_alias == "openai":
+            key_env = spec.get("key_env", "OPENAI_API_KEY")
             base_url = spec.get("base_url")
 
-            llm = uniko.LLM.openai(model_id, api_key=api_key)
-            if base_url:
-                llm = llm.base_url(base_url)
+            # Uniko requires alias in 'task/provider' format
+            alias = f"answer/{provider_alias}"
+            llm = uniko.LlmSpec.openai_with_key_env(alias, model_id, key_env, base_url=base_url)
             return llm
 
-        elif alias == "mistral":
-            import os
-            api_key = os.getenv(spec.get("key_env", "MISTRAL_API_KEY"))
-            llm = uniko.LLM.mistral(model_id, api_key=api_key)
+        elif provider_alias == "mistral":
+            # Uniko requires alias in 'task/provider' format
+            alias = f"answer/{provider_alias}"
+            llm = uniko.LlmSpec.mistralrs(alias, model_id)
             return llm
 
         else:
-            raise ValueError(f"Unsupported LLM alias: {alias}")
+            raise ValueError(f"Unsupported LLM alias: {provider_alias}")
 
     def shutdown(self):
-        """Shutdown all uniko instances managed by this resolver."""
+        """Shutdown all uniko instances managed by this resolver.
+
+        Note: Uniko requires all Agent and Session handles to be dropped before shutdown.
+        In test scenarios, this may result in warnings that can be safely ignored.
+        """
         for cache_key, uni in self._uniko_instances.items():
             try:
                 uni.shutdown_sync()
             except Exception as e:
-                # Log error but continue shutting down other instances
-                print(f"Error shutting down uniko instance {cache_key}: {e}")
+                error_msg = str(e)
+                # Suppress expected cleanup warnings about handles not being dropped
+                if "Agent and Session handles" not in error_msg:
+                    # Log unexpected errors
+                    print(f"Error shutting down uniko instance {cache_key}: {e}")
 
         self._uniko_instances.clear()
 

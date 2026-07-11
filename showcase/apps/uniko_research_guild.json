@@ -5,10 +5,15 @@
     "icon": null,
     "intro_msg": "Welcome to the Uniko Research Guild! I can help you research topics with persistent memory. What would you like to explore?",
     "exposure": "public",
-    "author_id": "cvqa5ebf660o",
-    "organization_id": "p447tvwgs54q",
+    "author_id": "dummyuserid",
+    "organization_id": "acmeorganizationid",
     "category_id": null,
-    "tags": ["research", "memory", "uniko", "knowledge-base"],
+    "tags": [
+        "research",
+        "memory",
+        "uniko",
+        "knowledge-base"
+    ],
     "commands": [],
     "starter_prompts": [
         "Research recent developments in quantum computing",
@@ -44,7 +49,9 @@
                 "name": "Google Research Agent",
                 "description": "Performs intelligent Google Search with grounding",
                 "class_name": "rustic_ai.vertexai.agents.google_research_agent.GoogleResearchAgent",
-                "additional_topics": [],
+                "additional_topics": [
+                    "google_agent"
+                ],
                 "listen_to_default_topic": true,
                 "properties": {
                     "project_id": null,
@@ -57,7 +64,9 @@
                 "name": "Search Agent",
                 "description": "Handles search engine results page queries via SerpAPI",
                 "class_name": "rustic_ai.serpapi.agent.SERPAgent",
-                "additional_topics": [],
+                "additional_topics": [
+                    "serp_agent"
+                ],
                 "properties": {},
                 "listen_to_default_topic": true
             },
@@ -66,21 +75,14 @@
                 "name": "Web Scraper Agent",
                 "description": "Web scraping agent using Playwright for content extraction",
                 "class_name": "rustic_ai.playwright.agent.PlaywrightScraperAgent",
-                "additional_topics": [],
+                "additional_topics": [
+                    "playwright_agent"
+                ],
                 "properties": {
                     "headless": true,
-                    "parallel_pages": 7
+                    "parallel_pages": 5
                 },
                 "listen_to_default_topic": true
-            },
-            {
-                "id": "markdown_agent",
-                "name": "Markdown Agent",
-                "description": "Generates and manages Markdown files from research results",
-                "class_name": "rustic_ai.demos.agents.preprocessing.file_reader_writer_agent.FileReaderWriterAgent",
-                "additional_topics": [],
-                "listen_to_default_topic": true,
-                "properties": {}
             },
             {
                 "id": "synthesis_agent",
@@ -92,7 +94,7 @@
                 ],
                 "listen_to_default_topic": false,
                 "properties": {
-                    "model": "vertex_ai/gemini-3-pro-preview",
+                    "model": "gpt-4.1",
                     "default_system_prompt": "You are a research synthesis expert. Analyze the provided context from multiple sources and generate a comprehensive, well-structured answer to the user's question. Include key insights, relevant facts, and cite sources when applicable. Be thorough but concise."
                 }
             },
@@ -106,7 +108,7 @@
                 ],
                 "listen_to_default_topic": false,
                 "properties": {
-                    "model": "vertex_ai/gemini-3-pro-preview",
+                    "model": "gpt-4.1",
                     "default_system_prompt": "Generate 5-7 comprehensive google-optimized subqueries for deep research on the topic.\n\nFor thorough coverage, create subqueries across multiple dimensions:\n- Core concepts and definitions\n- Latest developments and breakthroughs (recent news, 2025-2026)\n- Historical context and evolution\n- Technical implementations and real-world applications\n- Expert opinions, academic research, and papers\n- Industry trends, market analysis, and adoption\n- Future implications, predictions, and emerging patterns\n- Challenges, limitations, and critiques\n- Related technologies, comparisons, and alternatives\n- Case studies and practical examples\n\nConsider when creating subqueries:\n- Neural search formulation: Use natural language questions and descriptive phrases\n- Domain filters: Suggest specific domains when relevant (arxiv.org for papers, techcrunch.com for tech news)\n- Time periods: Specify recent, past_week, past_month, past_year, or any\n- Content types: Specify type when relevant (news, research paper, pdf, blog, tutorial)\n\nEach subquery should focus on a different aspect to ensure comprehensive, multi-dimensional coverage.\n\nOutput format:\n- Separate queries using '####' as delimiter\n- Example: Query 1####Query 2####Query 3\n- Return ONLY the queries, nothing else"
                 }
             },
@@ -161,40 +163,7 @@
                 }
             }
         ],
-        "dependency_map": {
-            "filesystem": {
-                "class_name": "rustic_ai.core.guild.agent_ext.depends.filesystem.filesystem.FileSystemResolver",
-                "properties": {
-                    "path_base": "/tmp/research_guild",
-                    "protocol": "file",
-                    "storage_options": {
-                        "auto_mkdir": true
-                    },
-                    "asynchronous": true
-                }
-            },
-            "llm": {
-                "class_name": "rustic_ai.litellm.agent_ext.llm.LiteLLMResolver",
-                "properties": {
-                    "model": "vertex_ai/gemini-3-pro-preview",
-                    "conf": {
-                        "vertex_location": "global"
-                    }
-                }
-            },
-            "uniko": {
-                "class_name": "rustic_ai.uniko_agent.resolver.UnikoResolver",
-                "properties": {
-                    "storage_path": "./data/memory/{org_id}/{guild_id}",
-                    "llm_spec": {
-                        "alias": "openai",
-                        "model_id": "gpt-4o-mini",
-                        "key_env": "OPENAI_API_KEY"
-                    },
-                    "streaming": false
-                }
-            }
-        },
+        "dependency_map": {},
         "routes": {
             "steps": [
                 {
@@ -209,7 +178,7 @@
                     },
                     "guild_state_update": {
                         "update_format": "json-merge-patch",
-                        "state_update": "({\"user_queries\": $append($.guild_state.user_queries, $content := $type($.payload.messages[0].content) = \"string\" ? $.payload.messages[0].content : $.payload.messages[0].content[type = \"text\"][0].text), \"current_id\": 'current_id' in $keys($.guild_state) ? $.guild_state.current_id + 1 : 0})"
+                        "state_update": "({\"user_queries\": $append($.guild_state.user_queries, $.payload.text), \"current_id\": 'current_id' in $keys($.guild_state) ? $.guild_state.current_id + 1 : 0})"
                     }
                 },
                 {
@@ -294,7 +263,19 @@
                     },
                     "message_format": "rustic_ai.serpapi.agent.SERPQuery",
                     "destination": {
-                        "topics": "default_topic",
+                        "topics": "google_agent",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "Splitter Agent"
+                    },
+                    "message_format": "rustic_ai.serpapi.agent.SERPQuery",
+                    "destination": {
+                        "topics": "serp_agent",
                         "recipient_list": [],
                         "priority": null
                     },
@@ -314,28 +295,11 @@
                 },
                 {
                     "agent": {
-                        "name": "Markdown Agent"
-                    },
-                    "message_format": "rustic_ai.core.agents.commons.media.MediaLink",
-                    "destination": {
-                        "topics": "memory_ingest",
-                        "recipient_list": [],
-                        "priority": null
-                    },
-                    "route_times": -1,
-                    "transformer": {
-                        "style": "simple",
-                        "output_format": "rustic_ai.uniko_agent.models.IngestDocumentRequest",
-                        "expression": "{\"source_spec\": {\"url\": $.url}}"
-                    }
-                },
-                {
-                    "agent": {
                         "name": "Search Agent"
                     },
                     "message_format": "rustic_ai.serpapi.agent.SERPResults",
                     "destination": {
-                        "topics": "default_topic",
+                        "topics": "playwright_agent",
                         "recipient_list": [],
                         "priority": null
                     },
@@ -382,6 +346,18 @@
                 {
                     "agent": {
                         "name": "Memory Agent"
+                    },
+                    "message_format": "rustic_ai.uniko_agent.models.ObserveResult",
+                    "destination": {
+                        "topics": "basic_wiring",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "Basic Wiring Agent"
                     },
                     "message_format": "rustic_ai.uniko_agent.models.ObserveResult",
                     "destination": {

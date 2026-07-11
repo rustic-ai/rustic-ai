@@ -1,7 +1,9 @@
 """Comprehensive memory agent leveraging uniko's cognitive memory system."""
 
 import uniko
+import logging
 from typing import Dict, Any
+from uniko import Turn, Scope, IngestSource, RecallItem, RecallSource
 from rustic_ai.core.guild.agent import Agent
 from rustic_ai.core.guild.agent import ProcessContext
 from rustic_ai.core.guild import agent
@@ -19,6 +21,8 @@ from .models import (
     GoalContextRequest, GoalContext,
     MemoryAgentError
 )
+
+logger = logging.getLogger(__name__)
 
 
 class MemoryAgent(Agent[MemoryAgentConfig]):
@@ -50,7 +54,7 @@ class MemoryAgent(Agent[MemoryAgentConfig]):
 
         Args:
             ctx: Process context with ObserveTurnRequest payload
-            uniko_agent: Guild-scoped uniko agent (injected dependency)
+            uniko: Guild-scoped uniko agent (injected dependency)
         """
         req = ctx.payload
 
@@ -66,7 +70,7 @@ class MemoryAgent(Agent[MemoryAgentConfig]):
             session = uniko.session(session_id)
 
             # Build Turn from request
-            turn = uniko.Turn(req.sender_id, req.content)
+            turn = Turn(req.sender_id, req.content)
 
             if req.message_id:
                 turn = turn.id(req.message_id)
@@ -126,40 +130,36 @@ class MemoryAgent(Agent[MemoryAgentConfig]):
 
         Args:
             ctx: Process context with RecallRequest payload
-            uniko_agent: Guild-scoped uniko agent (injected dependency)
+            uniko: Guild-scoped uniko agent (injected dependency)
         """
         req = ctx.payload
 
+        logger.info(f"Recalling knowledge for query: {req.query} with scope: {req.scope}")
+
         try:
-            # Build RecallConfig
-            config = uniko.RecallConfig()
-
-            # Set max tokens (from request or agent config)
-            max_tokens = req.max_tokens or self.config.recall_max_tokens
-            config = config.max_tokens(max_tokens)
-
-            # Set phase restrictions
-            if req.phase1_only or self.config.recall_phase1_only:
-                config = config.phase1_only()
-            elif req.phase2_only:
-                config = config.phase2_only()
-
-            # Build scope if provided
+            # Call recall directly - the API doesn't use RecallConfig anymore
+            # The max_tokens, phase restrictions are handled by the uniko library internally
             if req.scope:
                 scope = self._build_scope(req.scope)
-                bundle = await uniko.recall_in(req.query, scope, config)
+                bundle = await uniko.recall_in(req.query, scope)
             else:
-                bundle = await uniko.recall(req.query, config)
+                bundle = await uniko.recall(req.query)
+
+            logger.info(f"Recall returned {len(bundle.items)} items with total tokens: {getattr(bundle, 'total_tokens', 0)}")
 
             # Serialize bundle
             items = [self._serialize_recall_item(item) for item in bundle.items]
 
+            logger.info(f"Serialized {len(items)} recall items for response.")
+
+            print(f"Recall items: {items}")
+
             ctx.send(RecallResponse(
                 items=items,
-                total_tokens=bundle.total_tokens,
-                phase1_only=bundle.phase1_only,
-                phase2_only=bundle.phase2_only,
-                coverage=bundle.coverage,
+                total_tokens=bundle.total_tokens if hasattr(bundle, 'total_tokens') else 0,
+                phase1_only=bundle.phase1_only if hasattr(bundle, 'phase1_only') else False,
+                phase2_only=bundle.phase2_only if hasattr(bundle, 'phase2_only') else False,
+                coverage=bundle.coverage if hasattr(bundle, 'coverage') else 0.0,
             ))
 
         except Exception as e:
@@ -181,21 +181,17 @@ class MemoryAgent(Agent[MemoryAgentConfig]):
 
         Args:
             ctx: Process context with AnswerRequest payload
-            uniko_agent: Guild-scoped uniko agent (injected dependency)
+            uniko: Guild-scoped uniko agent (injected dependency)
         """
         req = ctx.payload
 
         try:
-            # Build RecallConfig
-            max_tokens = req.max_tokens or self.config.answer_max_tokens
-            config = uniko.RecallConfig().max_tokens(max_tokens)
-
-            # Generate answer
+            # Generate answer - API doesn't use config parameter anymore
             if req.scope:
                 scope = self._build_scope(req.scope)
-                answer = await uniko.answer_in(req.question, scope, config)
+                answer = await uniko.answer_in(req.question, scope)
             else:
-                answer = await uniko.answer(req.question, config)
+                answer = await uniko.answer(req.question)
 
             # Serialize context bundle
             context_items = [
@@ -230,7 +226,7 @@ class MemoryAgent(Agent[MemoryAgentConfig]):
         except Exception as e:
             # Check for LLM configuration error
             error_msg = str(e)
-            if "LLM not configured" in error_msg or "ConfigError" in error_msg:
+            if "LLM not configured" in error_msg or "config error" in error_msg.lower() and "requires an LLM" in error_msg:
                 ctx.send(MemoryAgentError(
                     error="llm_not_configured",
                     message="LLM not configured in UnikoResolver. Set llm_spec to enable answer generation.",
@@ -245,16 +241,16 @@ class MemoryAgent(Agent[MemoryAgentConfig]):
 
     # ========== Helper Methods ==========
 
-    def _build_scope(self, spec: Dict[str, Any]) -> uniko.Scope:
-        """Build uniko.Scope from specification dict.
+    def _build_scope(self, spec: Dict[str, Any]) -> Scope:
+        """Build Scope from specification dict.
 
         Args:
             spec: Dict with keys: sessions, participants, since, until
 
         Returns:
-            uniko.Scope object
+            Scope object
         """
-        scope = uniko.Scope()
+        scope = Scope()
 
         if "sessions" in spec:
             sessions = spec["sessions"]
@@ -274,11 +270,11 @@ class MemoryAgent(Agent[MemoryAgentConfig]):
 
         return scope
 
-    def _serialize_recall_item(self, item: uniko.RecallItem) -> RecallItem:
+    def _serialize_recall_item(self, item: RecallItem) -> RecallItem:
         """Serialize native RecallItem to Pydantic model.
 
         Args:
-            item: Native uniko.RecallItem
+            item: Native RecallItem
 
         Returns:
             Pydantic RecallItem model
@@ -293,11 +289,11 @@ class MemoryAgent(Agent[MemoryAgentConfig]):
             sources=sources,
         )
 
-    def _serialize_source(self, source: uniko.RecallSource) -> Dict[str, Any]:
+    def _serialize_source(self, source: RecallSource) -> Dict[str, Any]:
         """Serialize native RecallSource to dict.
 
         Args:
-            source: Native uniko.RecallSource
+            source: Native RecallSource
 
         Returns:
             Dict with source information
@@ -309,30 +305,31 @@ class MemoryAgent(Agent[MemoryAgentConfig]):
             "chunk_id": source.chunk_id,
         }
 
-    def _build_ingest_source(self, spec: Dict[str, Any]) -> uniko.IngestSource:
-        """Build uniko.IngestSource from specification dict.
+    def _build_ingest_source(self, spec: Dict[str, Any]) -> IngestSource:
+        """Build IngestSource from specification dict.
 
         Args:
-            spec: Dict with keys: path, url, mime_type, metadata
+            spec: Dict with keys: path, url, text, bytes, mime_type, metadata
 
         Returns:
-            uniko.IngestSource object
+            IngestSource object
         """
-        # Determine source type
+        # Determine source type and create base source
         if "path" in spec:
-            source = uniko.IngestSource.path(spec["path"])
-        elif "url" in spec:
-            source = uniko.IngestSource.url(spec["url"])
+            source = IngestSource.from_path(spec["path"])
+        elif "text" in spec:
+            source = IngestSource.from_text(spec["text"])
         elif "bytes" in spec:
-            mime_type = spec.get("mime_type", "application/octet-stream")
-            source = uniko.IngestSource.bytes(spec["bytes"], mime_type)
+            source = IngestSource.from_bytes(spec["bytes"])
         else:
-            raise ValueError("IngestSource spec must have 'path', 'url', or 'bytes'")
+            raise ValueError("IngestSource spec must have 'path', 'text', or 'bytes'")
 
-        # Add metadata if provided
-        if "metadata" in spec:
-            for k, v in spec["metadata"].items():
-                source = source.metadata(k, v)
+        # Set MIME type if provided
+        if "mime_type" in spec:
+            source = source.with_mime(spec["mime_type"])
+
+        # Note: metadata attachment not available in current IngestSource API
+        # The API uses with_id, with_mime, with_path methods but no metadata method
 
         return source
 
@@ -350,9 +347,11 @@ class MemoryAgent(Agent[MemoryAgentConfig]):
 
         Args:
             ctx: Process context with IngestDocumentRequest payload
-            uniko_agent: Guild-scoped uniko agent (injected dependency)
+            uniko: Guild-scoped uniko agent (injected dependency)
         """
         req = ctx.payload
+
+        logger.info(f"Ingesting document with source spec: {req.source_spec} and session_id: {req.session_id}")
 
         session_id = (
             req.session_id
@@ -364,15 +363,19 @@ class MemoryAgent(Agent[MemoryAgentConfig]):
             session = uniko.session(session_id)
             source = self._build_ingest_source(req.source_spec)
 
+            logger.info(f"Built IngestSource: {source} for ingestion.")
+
             # Ingest the document
             outcome = await session.ingest(source)
 
+            logger.info(f"Ingested document with artifact_node_id: {outcome.artifact_node_id}, chunk_count: {len(outcome.chunk_node_ids) if outcome.chunk_node_ids else 0}, page_count: {outcome.page_count if outcome.page_count is not None else 0}, extraction_failed: {outcome.extraction_failed}")
+
             ctx.send(IngestOutcome(
                 artifact_node_id=outcome.artifact_node_id,
-                chunk_count=outcome.chunk_count,
-                page_count=outcome.page_count,
-                extracted_entities=outcome.extracted_entities,
-                success=True,
+                chunk_count=len(outcome.chunk_node_ids) if outcome.chunk_node_ids else 0,
+                page_count=outcome.page_count if outcome.page_count is not None else 0,
+                extracted_entities=[],  # Not available in current uniko API
+                success=not outcome.extraction_failed,
             ))
 
         except Exception as e:
@@ -393,7 +396,7 @@ class MemoryAgent(Agent[MemoryAgentConfig]):
 
         Args:
             ctx: Process context with BatchSubmitRequest payload
-            uniko_agent: Guild-scoped uniko agent (injected dependency)
+            uniko: Guild-scoped uniko agent (injected dependency)
         """
         req = ctx.payload
 
@@ -409,7 +412,7 @@ class MemoryAgent(Agent[MemoryAgentConfig]):
 
             # Submit each turn
             for turn_spec in req.turns:
-                turn = uniko.Turn(
+                turn = Turn(
                     turn_spec.get("sender_id"),
                     turn_spec.get("content")
                 )
@@ -458,7 +461,7 @@ class MemoryAgent(Agent[MemoryAgentConfig]):
 
         Args:
             ctx: Process context with CreateGoalRequest payload
-            uniko_agent: Guild-scoped uniko agent (injected dependency)
+            uniko: Guild-scoped uniko agent (injected dependency)
         """
         req = ctx.payload
 
@@ -512,7 +515,7 @@ class MemoryAgent(Agent[MemoryAgentConfig]):
 
         Args:
             ctx: Process context with UpdateGoalRequest payload
-            uniko_agent: Guild-scoped uniko agent (injected dependency)
+            uniko: Guild-scoped uniko agent (injected dependency)
         """
         req = ctx.payload
 
@@ -523,13 +526,21 @@ class MemoryAgent(Agent[MemoryAgentConfig]):
             if req.action == "start":
                 await goals.start(req.goal_id)
             elif req.action == "complete":
-                await goals.complete(req.goal_id, outcome=req.outcome)
+                await goals.complete(req.goal_id, result=req.outcome)
             elif req.action == "abandon":
-                await goals.abandon(req.goal_id, reason=req.outcome)
+                await goals.abandon(req.goal_id)
             elif req.action == "pause":
-                await goals.pause(req.goal_id)
+                # Check if pause method exists
+                if hasattr(goals, 'pause'):
+                    await goals.pause(req.goal_id)
+                else:
+                    raise ValueError("pause action not supported by current uniko version")
             elif req.action == "resume":
-                await goals.resume(req.goal_id)
+                # Check if resume method exists
+                if hasattr(goals, 'resume'):
+                    await goals.resume(req.goal_id)
+                else:
+                    raise ValueError("resume action not supported by current uniko version")
             else:
                 raise ValueError(f"Unknown action: {req.action}")
 
@@ -562,7 +573,7 @@ class MemoryAgent(Agent[MemoryAgentConfig]):
 
         Args:
             ctx: Process context with GetGoalsRequest payload
-            uniko_agent: Guild-scoped uniko agent (injected dependency)
+            uniko: Guild-scoped uniko agent (injected dependency)
         """
         req = ctx.payload
 
@@ -617,40 +628,34 @@ class MemoryAgent(Agent[MemoryAgentConfig]):
 
         Args:
             ctx: Process context with CreateTaskRequest payload
-            uniko_agent: Guild-scoped uniko agent (injected dependency)
+            uniko: Guild-scoped uniko agent (injected dependency)
         """
         req = ctx.payload
 
         try:
             goals = uniko.goals
 
-            # Create the task
+            # Create the task - new API: title is first positional, goal_id is keyword
             node_id = await goals.create_task(
-                req.goal_id,
                 req.title,
                 task_id=req.task_id,
                 description=req.description,
                 priority=req.priority,
-                depends_on=req.depends_on,
+                goal_id=req.goal_id,
+                depends_on_task_id=req.depends_on[0] if req.depends_on else None,  # API only supports single dependency
             )
 
-            # Fetch created task
+            # Return task view (uniko doesn't have get_task, so we construct from request)
             task_id = req.task_id or f"task-{node_id}"
-            task = await goals.get_task(task_id)
-
-            if task:
-                ctx.send(self._serialize_task_view(task))
-            else:
-                # Fallback response
-                ctx.send(TaskView(
-                    task_id=task_id,
-                    node_id=node_id,
-                    goal_id=req.goal_id,
-                    title=req.title,
-                    description=req.description,
-                    status="pending",
-                    priority=req.priority,
-                ))
+            ctx.send(TaskView(
+                task_id=task_id,
+                node_id=node_id,
+                goal_id=req.goal_id,
+                title=req.title,
+                description=req.description,
+                status="pending",
+                priority=req.priority or 3,
+            ))
 
         except Exception as e:
             ctx.send(MemoryAgentError(
@@ -671,7 +676,7 @@ class MemoryAgent(Agent[MemoryAgentConfig]):
 
         Args:
             ctx: Process context with UpdateTaskRequest payload
-            uniko_agent: Guild-scoped uniko agent (injected dependency)
+            uniko: Guild-scoped uniko agent (injected dependency)
         """
         req = ctx.payload
 
@@ -682,19 +687,27 @@ class MemoryAgent(Agent[MemoryAgentConfig]):
             if req.action == "start":
                 await goals.start_task(req.task_id)
             elif req.action == "complete":
-                await goals.complete_task(req.task_id, outcome=req.outcome)
+                await goals.complete_task(req.task_id)
             elif req.action == "abandon":
-                await goals.abandon_task(req.task_id, reason=req.outcome)
+                # Use set_task_status for abandon
+                await goals.set_task_status(req.task_id, "abandoned")
             elif req.action == "block":
                 await goals.block_task(req.task_id)
             elif req.action == "unblock":
-                await goals.unblock_task(req.task_id)
+                # Use set_task_status to unblock
+                await goals.set_task_status(req.task_id, "pending")
             else:
                 raise ValueError(f"Unknown action: {req.action}")
 
-            # Get updated task
-            task = await goals.get_task(req.task_id)
-            status = task.status if task else req.action
+            # Return status (uniko doesn't have get_task)
+            status_map = {
+                "start": "in_progress",
+                "complete": "completed",
+                "abandon": "abandoned",
+                "block": "blocked",
+                "unblock": "pending",
+            }
+            status = status_map.get(req.action, req.action)
 
             ctx.send(TaskStatusResponse(
                 task_id=req.task_id,
@@ -721,7 +734,7 @@ class MemoryAgent(Agent[MemoryAgentConfig]):
 
         Args:
             ctx: Process context with GoalContextRequest payload
-            uniko_agent: Guild-scoped uniko agent (injected dependency)
+            uniko: Guild-scoped uniko agent (injected dependency)
         """
         req = ctx.payload
 
@@ -760,14 +773,14 @@ class MemoryAgent(Agent[MemoryAgentConfig]):
         """Serialize native goal to GoalView model."""
         return GoalView(
             goal_id=goal.goal_id,
-            node_id=goal.node_id,
+            node_id=None,  # uniko GoalView doesn't have node_id
             title=goal.title,
             description=getattr(goal, "description", None),
             status=goal.status,
             created_at=getattr(goal, "created_at", None),
-            updated_at=getattr(goal, "updated_at", None),
+            updated_at=getattr(goal, "completed_at", None),  # uniko uses completed_at, not updated_at
             metrics=getattr(goal, "metrics", None),
-            guardrails=getattr(goal, "guardrails", None),
+            guardrails=None,  # Not available in uniko GoalView
             deadline=getattr(goal, "deadline", None),
         )
 
@@ -775,7 +788,7 @@ class MemoryAgent(Agent[MemoryAgentConfig]):
         """Serialize native task to TaskView model."""
         return TaskView(
             task_id=task.task_id,
-            node_id=task.node_id,
+            node_id=None,  # uniko TaskView doesn't have node_id
             goal_id=task.goal_id,
             title=task.title,
             description=getattr(task, "description", None),
