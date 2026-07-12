@@ -70,6 +70,8 @@ class MemoryAgent(Agent[MemoryAgentConfig]):
         """
         req = ctx.payload
 
+        logger.info(f"Observing turn from sender: {req.sender_id}, content: {req.content}, session_id: {req.session_id}")
+
         # Determine session ID (fallback to config default or guild_id)
         session_id = req.session_id or self.config.default_session_id or ctx.agent.guild_id
 
@@ -102,12 +104,16 @@ class MemoryAgent(Agent[MemoryAgentConfig]):
                 source = IngestSource.from_text(req.content).with_mime("text/markdown")
                 turn = turn.attach(source)
 
+            logger.info(f"Built Turn for observation: {turn}, session_id: {session_id}")
+
             # Observe the turn (async)
             result = await session.observe(turn)
 
+            logger.info(f"Turn observed successfully. Message node ID: {result.message_node_id}")
+
             # Auto-flush if configured
             if self.config.auto_flush:
-                await session.flush()
+                await session.flush() # @TODO: Bug breaking if auto_flush is true
 
             # Send response
             ctx.send(

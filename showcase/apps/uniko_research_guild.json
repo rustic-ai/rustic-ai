@@ -41,7 +41,7 @@
                     "recall_max_tokens": 3000,
                     "recall_phase1_only": false,
                     "answer_max_tokens": 800,
-                    "auto_flush": true
+                    "auto_flush": false
                 }
             },
             {
@@ -109,7 +109,7 @@
                 "listen_to_default_topic": false,
                 "properties": {
                     "model": "gpt-4.1",
-                    "default_system_prompt": "Generate 5-7 comprehensive google-optimized subqueries for deep research on the topic.\n\nFor thorough coverage, create subqueries across multiple dimensions:\n- Core concepts and definitions\n- Latest developments and breakthroughs (recent news, 2025-2026)\n- Historical context and evolution\n- Technical implementations and real-world applications\n- Expert opinions, academic research, and papers\n- Industry trends, market analysis, and adoption\n- Future implications, predictions, and emerging patterns\n- Challenges, limitations, and critiques\n- Related technologies, comparisons, and alternatives\n- Case studies and practical examples\n\nConsider when creating subqueries:\n- Neural search formulation: Use natural language questions and descriptive phrases\n- Domain filters: Suggest specific domains when relevant (arxiv.org for papers, techcrunch.com for tech news)\n- Time periods: Specify recent, past_week, past_month, past_year, or any\n- Content types: Specify type when relevant (news, research paper, pdf, blog, tutorial)\n\nEach subquery should focus on a different aspect to ensure comprehensive, multi-dimensional coverage.\n\nOutput format:\n- Separate queries using '####' as delimiter\n- Example: Query 1####Query 2####Query 3\n- Return ONLY the queries, nothing else"
+                    "default_system_prompt": "Generate 2 comprehensive google-optimized subqueries for deep research on the topic.\n\nFor thorough coverage, create subqueries across multiple dimensions:\n- Core concepts and definitions\n- Latest developments and breakthroughs (recent news, 2025-2026)\n- Historical context and evolution\n- Technical implementations and real-world applications\n- Expert opinions, academic research, and papers\n- Industry trends, market analysis, and adoption\n- Future implications, predictions, and emerging patterns\n- Challenges, limitations, and critiques\n- Related technologies, comparisons, and alternatives\n- Case studies and practical examples\n\nConsider when creating subqueries:\n- Neural search formulation: Use natural language questions and descriptive phrases\n- Domain filters: Suggest specific domains when relevant (arxiv.org for papers, techcrunch.com for tech news)\n- Time periods: Specify recent, past_week, past_month, past_year, or any\n- Content types: Specify type when relevant (news, research paper, pdf, blog, tutorial)\n\nEach subquery should focus on a different aspect to ensure comprehensive, multi-dimensional coverage.\n\nOutput format:\n- Separate queries using '####' as delimiter\n- Example: Query 1####Query 2####Query 3\n- Return ONLY the queries, nothing else"
                 }
             },
             {
@@ -123,7 +123,7 @@
                 "properties": {
                     "splitter": {
                         "split_type": "jsonata",
-                        "expression": "($map($split($.choices[0].message.content, '####'), function($v){ ({\"query\": $v, \"engine\": \"google\", \"num\": 8}) }))"
+                        "expression": "($map($split($.choices[0].message.content, '####'), function($v){ ({\"query\": $v, \"engine\": \"google\", \"num\": 1}) }))"
                     },
                     "format_selector": {
                         "strategy": "fixed",
@@ -406,19 +406,34 @@
                 },
                 {
                     "agent": {
+                        "name": "Memory Agent"
+                    },
+                    "message_format": "rustic_ai.uniko_agent.models.RecallResponse",
+                    "destination": {
+                        "topics": "user_message_broadcast",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "route_times": -1,
+                    "transformer": {
+                        "style": "simple",
+                        "output_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
+                        "expression": "({\"choices\": [{\"message\": {\"content\": $count($.items) > 0 ? \"Recalled \" & $string($count($.items)) & \" memory item(s) (coverage: \" & $string($.coverage) & \"):\\n\\n\" & $join($.items.content, \"\\n\\n\") : \"No relevant memories recalled.\"}, \"finish_reason\": \"stop\"}]})"
+                    },
+                    "process_status": "completed"
+                },
+                {
+                    "agent": {
                         "name": "Synthesis Agent"
                     },
                     "route_times": -1,
                     "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
                     "destination": {
-                        "topics": "memory_observe",
+                        "topics": "user_message_broadcast",
                         "recipient_list": [],
                         "priority": null
                     },
-                    "transformer": {
-                        "style": "content_based_router",
-                        "handler": "({\"format\": \"rustic_ai.uniko_agent.models.ObserveTurnRequest\", \"payload\": {\"sender_id\": \"synthesis_agent\", \"content\": $.choices[0].message.content, \"metadata\": {\"type\": \"synthesis_result\", \"original_query\": $.context.original_query}}})"
-                    }
+                    "process_status": "completed"
                 },
                 {
                     "agent": {
