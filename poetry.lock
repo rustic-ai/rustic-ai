@@ -11364,4 +11364,4 @@ google-cloud = ["gcsfs"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.13,<3.14"
-content-hash = "6146ebc6286a8b5fa5e3a14c955f472b1c8582d9222f5bb509137a15c0047ecf"
+content-hash = "f1cfe6e56e5c9b7866bc3af930ece4bcd45af1287dad189b100ad21f58681196"
