@@ -55,24 +55,14 @@ class TestUnikoResearchGuildConfiguration:
         print(f"Total routing steps: {len(guild_spec.routes.steps)}")
 
     def test_dependencies_configured(self, guild_spec: GuildSpec):
-        """Test that all required dependencies are configured."""
-        assert "filesystem" in guild_spec.dependency_map
-        assert "llm" in guild_spec.dependency_map
-        assert "uniko" in guild_spec.dependency_map
+        """Test that dependencies are left for platform-level configuration.
 
-        # Check filesystem config
-        fs_dep = guild_spec.dependency_map["filesystem"]
-        assert fs_dep.class_name == "rustic_ai.core.guild.agent_ext.depends.filesystem.filesystem.FileSystemResolver"
-        assert fs_dep.properties["path_base"] == "/tmp/research_guild"
-
-        # Check LLM config
-        llm_dep = guild_spec.dependency_map["llm"]
-        assert llm_dep.class_name == "rustic_ai.litellm.agent_ext.llm.LiteLLMResolver"
-        assert llm_dep.properties["model"] == "vertex_ai/gemini-3-pro-preview"
-
-        # Check Uniko config
-        uniko_dep = guild_spec.dependency_map["uniko"]
-        assert uniko_dep.class_name == "rustic_ai.uniko_agent.resolver.UnikoResolver"
+        This guild is deployed via Rustic UI (like sibling blueprints
+        llm_council.json, multi_llm_blueprint.json, react_data_analyst.json),
+        which configure filesystem/llm/uniko dependencies through the platform
+        rather than the static blueprint, so dependency_map is intentionally empty.
+        """
+        assert guild_spec.dependency_map == {}
 
     def test_agent_id_consistency_in_routing(self, guild_spec: GuildSpec):
         """Test that routing uses agent references consistently."""
@@ -111,14 +101,14 @@ class TestUnikoResearchGuildConfiguration:
         synthesis_agent = next(agent for agent in guild_spec.agents if agent.id == "synthesis_agent")
         assert synthesis_agent.listen_to_default_topic is False
         assert "synthesis_agent" in synthesis_agent.additional_topics
-        assert synthesis_agent.properties.model == "vertex_ai/gemini-3-pro-preview"
+        assert synthesis_agent.properties.model == "gpt-4.1"
 
     def test_query_agent_configuration(self, guild_spec: GuildSpec):
         """Test Query Agent configuration."""
         query_agent = next(agent for agent in guild_spec.agents if agent.id == "query_agent")
         assert query_agent.listen_to_default_topic is False
         assert "query_agent" in query_agent.additional_topics
-        assert query_agent.properties.model == "vertex_ai/gemini-3-pro-preview"
+        assert query_agent.properties.model == "gpt-4.1"
 
     def test_splitter_agent_configuration(self, guild_spec: GuildSpec):
         """Test Splitter Agent has proper JSONata configuration."""
@@ -296,14 +286,16 @@ class TestRoutingLogicDeep:
         )
         assert query_to_splitter.destination.topics == "splitter_agent"
 
-        # Splitter → SERP
-        splitter_to_serp = next(
+        # Splitter → Google + SERP (fanned out to two dedicated topics)
+        splitter_routes = [
             step
             for step in guild_spec.routes.steps
             if step.agent and step.agent.name == "Splitter Agent"
-        )
-        assert splitter_to_serp.message_format == "rustic_ai.serpapi.agent.SERPQuery"
-        assert splitter_to_serp.destination.topics == "default_topic"
+        ]
+        assert len(splitter_routes) == 2
+        for step in splitter_routes:
+            assert step.message_format == "rustic_ai.serpapi.agent.SERPQuery"
+        assert {step.destination.topics for step in splitter_routes} == {"google_agent", "serp_agent"}
 
         # SERP → Playwright
         serp_to_playwright = next(
@@ -323,15 +315,27 @@ class TestRoutingLogicDeep:
 
     def test_memory_ingestion_flow(self, guild_spec: GuildSpec):
         """Test memory ingestion and observation flow."""
-        # IngestOutcome → ObserveTurnRequest
-        ingest_to_observe = next(
+        # IngestOutcome → Basic Wiring Agent (intermediate hop from Memory Agent)
+        ingest_to_wiring = next(
             step
             for step in guild_spec.routes.steps
             if step.message_format == "rustic_ai.uniko_agent.models.IngestOutcome"
+            and step.agent
+            and step.agent.name == "Memory Agent"
         )
-        assert ingest_to_observe.destination.topics == "memory_observe"
+        assert ingest_to_wiring.destination.topics == "basic_wiring"
+
+        # Basic Wiring Agent → ObserveTurnRequest on memory_observe
+        wiring_to_observe = next(
+            step
+            for step in guild_spec.routes.steps
+            if step.message_format == "rustic_ai.uniko_agent.models.IngestOutcome"
+            and step.agent
+            and step.agent.name == "Basic Wiring Agent"
+        )
+        assert wiring_to_observe.destination.topics == "memory_observe"
         # Content-based router uses handler, not output_format
-        assert "ObserveTurnRequest" in ingest_to_observe.transformer.handler
+        assert "ObserveTurnRequest" in wiring_to_observe.transformer.handler
 
         # ObserveResult → RecallRequest (to query ingested content)
         observe_to_recall = next(
@@ -362,13 +366,14 @@ class TestRoutingLogicDeep:
         )
         assert recall_to_synthesis is not None
 
-        # Synthesis → Observe
+        # Synthesis → user broadcast (completion point)
         synthesis_to_observe = next(
             step
             for step in guild_spec.routes.steps
             if step.agent and step.agent.name == "Synthesis Agent"
         )
-        assert synthesis_to_observe.destination.topics == "memory_observe"
+        assert synthesis_to_observe.destination.topics == "user_message_broadcast"
+        assert synthesis_to_observe.process_status == "completed"
 
     def test_completion_points(self, guild_spec: GuildSpec):
         """Test that completion points properly end the routing chain."""
