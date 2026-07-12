@@ -18,7 +18,7 @@ packages = [{ include = "rustic_ai", from = "src" }]
 
 [tool.poetry.dependencies]
 rusticai-core = { path = "../core", develop = true }
-rusticai-llm-agent = { path = "/home/nihal/Projects/ai-platform/rustic-ai/llm-agent/dist/rusticai_llm_agent-1.2.5-py3-none-any.whl" }
+rusticai-llm-agent = { path = "../llm-agent", develop = true }
 duckdb = "^1.4.4"
 pandas = "^3.0.1"
 

@@ -191,11 +191,11 @@
                     "route_times": -1,
                     "transformer": {
                         "style": "content_based_router",
-                        "handler": "($is_answered := $.context.current_id in $.guild_state.answered; $has_good_recall := $count($.payload.items[score > 0.3]) > 0; $ToAnswer := function($items){ {\"topics\": \"memory_answer\", \"format\": \"rustic_ai.uniko_agent.models.AnswerRequest\", \"payload\": {\"question\": $.context.original_query, \"max_tokens\": 800}} }; $ToQueryAgent := function(){ {\"topics\": \"query_agent\", \"format\": \"rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest\", \"payload\": {\"messages\": [{\"role\": \"user\", \"content\": \"User Question: \" & $.context.original_query}]}} }; $is_answered ? null : ($has_good_recall ? $ToAnswer($.payload.items) : $ToQueryAgent()))"
+                        "handler": "($is_answered := $.context.current_id in $.guild_state.answered; $is_post_research := $.context.research_phase = \"post_research\"; $has_good_recall := $count($.payload.items[score > 0.05]) > 0; $ToAnswer := function($items){ {\"topics\": \"memory_answer\", \"format\": \"rustic_ai.uniko_agent.models.AnswerRequest\", \"payload\": {\"question\": $.context.original_query, \"max_tokens\": 800}} }; $ToQueryAgent := function(){ {\"topics\": \"query_agent\", \"format\": \"rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest\", \"payload\": {\"messages\": [{\"role\": \"user\", \"content\": \"User Question: \" & $.context.original_query}]}} }; ($is_answered or $is_post_research) ? null : ($has_good_recall ? $ToAnswer($.payload.items) : $ToQueryAgent()))"
                     },
                     "guild_state_update": {
                         "update_format": "json-merge-patch",
-                        "state_update": "($is_answered := $.context.current_id in $.guild_state.answered; $has_good_recall := $count($.untransformed.payload.items[score > 0.3]) > 0; $UpdateGuildState := {\"answered\": $append(guild_state.answered, $.context.current_id)}; $is_answered ? null : ($has_good_recall ? $UpdateGuildState : null))"
+                        "state_update": "($is_answered := $.context.current_id in $.guild_state.answered; $is_post_research := $.context.research_phase = \"post_research\"; $has_good_recall := $count($.untransformed.payload.items[score > 0.05]) > 0; $UpdateGuildState := {\"answered\": $append(guild_state.answered, $.context.current_id)}; ($is_answered or $is_post_research) ? null : ($has_good_recall ? $UpdateGuildState : null))"
                     }
                 },
                 {
@@ -385,7 +385,7 @@
                     "route_times": -1,
                     "transformer": {
                         "style": "content_based_router",
-                        "handler": "{\"payload\": {\"query\": $.context.original_query}, \"format\": \"rustic_ai.uniko_agent.models.RecallRequest\"}"
+                        "handler": "{\"payload\": {\"query\": $.context.original_query}, \"format\": \"rustic_ai.uniko_agent.models.RecallRequest\", \"context\": {\"original_query\": $.context.original_query, \"current_id\": $.context.current_id, \"research_phase\": \"post_research\"}}"
                     }
                 },
                 {
@@ -397,11 +397,11 @@
                     "route_times": -1,
                     "transformer": {
                         "style": "content_based_router",
-                        "handler": "($is_answered := $.context.current_id in $.guild_state.answered; $recalled_content := $join($.payload.items.content, '\\n\\n'); $ToSynthesis := function(){ {\"topics\": \"synthesis_agent\", \"format\": \"rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest\", \"payload\": {\"messages\": [{\"role\": \"user\", \"content\": \"Context from research:\\n\" & $recalled_content & \"\\n\\nOriginal Question: \" & $.context.original_query & \"\\n\\nProvide a comprehensive answer based on the context above.\"}]}} }; $is_answered ? null : ($count($.payload.items) > 0 ? $ToSynthesis() : null))"
+                        "handler": "($is_answered := $.context.current_id in $.guild_state.answered; $is_post_research := $.context.research_phase = \"post_research\"; $recalled_content := $join($.payload.items.content, '\\n\\n'); $ToSynthesis := function(){ {\"topics\": \"synthesis_agent\", \"format\": \"rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest\", \"payload\": {\"messages\": [{\"role\": \"user\", \"content\": \"Context from research:\\n\" & $recalled_content & \"\\n\\nOriginal Question: \" & $.context.original_query & \"\\n\\nProvide a comprehensive answer based on the context above.\"}]}} }; ($is_answered or $not($is_post_research)) ? null : ($count($.payload.items) > 0 ? $ToSynthesis() : null))"
                     },
                     "guild_state_update": {
                         "update_format": "json-merge-patch",
-                        "state_update": "($is_answered := $.context.current_id in $.guild_state.answered; $has_recall := $count($.untransformed.payload.items) > 0; $UpdateGuildState := {\"answered\": $append(guild_state.answered, $.context.current_id)}; $is_answered ? null : ($has_recall ? $UpdateGuildState : null))"
+                        "state_update": "($is_answered := $.context.current_id in $.guild_state.answered; $is_post_research := $.context.research_phase = \"post_research\"; $has_recall := $count($.untransformed.payload.items) > 0; $UpdateGuildState := {\"answered\": $append(guild_state.answered, $.context.current_id)}; ($is_answered or $not($is_post_research)) ? null : ($has_recall ? $UpdateGuildState : null))"
                     }
                 },
                 {
@@ -416,9 +416,12 @@
                     },
                     "route_times": -1,
                     "transformer": {
-                        "style": "simple",
-                        "output_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
-                        "expression": "({\"choices\": [{\"message\": {\"content\": $count($.items) > 0 ? \"Recalled \" & $string($count($.items)) & \" memory item(s) (coverage: \" & $string($.coverage) & \"):\\n\\n\" & $join($.items.content, \"\\n\\n\") : \"No relevant memories recalled.\"}, \"finish_reason\": \"stop\"}]})"
+                        "style": "content_based_router",
+                        "handler": "($is_answered := $.context.current_id in $.guild_state.answered; $is_post_research := $.context.research_phase = \"post_research\"; $has_items := $count($.payload.items) > 0; ($is_post_research and $not($is_answered) and $not($has_items)) ? {\"format\": \"rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse\", \"payload\": {\"choices\": [{\"message\": {\"content\": \"No relevant memories recalled after research.\"}, \"finish_reason\": \"stop\"}]}} : null)"
+                    },
+                    "guild_state_update": {
+                        "update_format": "json-merge-patch",
+                        "state_update": "($is_answered := $.context.current_id in $.guild_state.answered; $is_post_research := $.context.research_phase = \"post_research\"; $has_items := $count($.untransformed.payload.items) > 0; ($is_post_research and $not($is_answered) and $not($has_items)) ? {\"answered\": $append(guild_state.answered, $.context.current_id)} : null)"
                     },
                     "process_status": "completed"
                 },

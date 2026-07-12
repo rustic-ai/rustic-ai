@@ -195,7 +195,7 @@ class SplitterAgent(Agent[SplitterConf]):
                     ErrorMessage(
                         agent_type=self.get_qualified_class_name(),
                         error_type="LengthMismatch",
-                        error_message=f"Number of for`mats: {len(payload_with_format)} is not same as number of items {len(items)}",
+                        error_message=f"Number of formats: {len(payload_with_format)} is not same as number of items {len(items)}",
                     )
                 )
                 return
