@@ -45,7 +45,9 @@
                 "name": "Data Analyst Agent",
                 "description": "A ReAct-based agent that can load, query, and analyze datasets using pandas and SQL",
                 "class_name": "rustic_ai.llm_agent.react.react_agent.ReActAgent",
-                "additional_topics": [],
+                "additional_topics": [
+                    "react_data_analyst"
+                ],
                 "properties": {
                     "max_iterations": 10,
                     "temperature": 0.7,
@@ -66,7 +68,7 @@
                     ],
                     "toolset": {
                         "kind": "rustic_ai.pandas_analyst.react_toolset.DataAnalystReActToolset",
-                        "filesystem_base_path": "/tmp",
+                        "filesystem_base_path": "/",
                         "filesystem_protocol": "file",
                         "filesystem_options": {
                             "auto_mkdir": true
@@ -121,6 +123,19 @@
         "dependency_map": {},
         "routes": {
             "steps": [
+                {
+                    "agent_type": "rustic_ai.core.agents.utils.user_proxy_agent.UserProxyAgent",
+                    "method_name": "unwrap_and_forward_message",
+                    "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest",
+                    "destination": {
+                        "topics": "react_data_analyst",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "route_times": -1,
+                    "transformer": null,
+                    "guild_state_update": null
+                },
                 {
                     "agent": {
                         "id": null,

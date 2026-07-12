@@ -1,4 +1,5 @@
 import mimetypes
+import os
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from fsspec import filesystem as create_filesystem
@@ -94,7 +95,17 @@ class DataAnalystReActToolset(ReActToolset):
 
         This is called by ReActAgent at the start of processing to provide
         guild context. When use_guild_filesystem is True, the filesystem path
-        is constructed as: {filesystem_base_path}/{org_id}/{guild_id}/GUILD_GLOBAL
+        is constructed as: {base_path}/{org_id}/{guild_id}/GUILD_GLOBAL
+
+        The base_path is taken from the FORGE_FILESYSTEM_GLOBAL_ROOT environment
+        variable when present. Forge sets this env var (and propagates it to
+        spawned agent processes) to the same root it rewrites the "filesystem"
+        DI dependency's path_base to (see forge-go's ApplyFilesystemGlobalRoot),
+        which is what the guild file-upload/download API endpoints actually use.
+        This toolset builds its own filesystem outside of that DI mechanism, so
+        without reading this env var it would fall back to filesystem_base_path
+        (e.g. "/tmp"), which generally does not match where uploaded files are
+        actually stored and causes load_file to raise FileNotFoundError.
 
         Args:
             org_id: The organization ID.
@@ -104,7 +115,8 @@ class DataAnalystReActToolset(ReActToolset):
         if self.use_guild_filesystem:
             # Construct guild filesystem path matching FileSystemResolver convention
             # Guild-scoped filesystems use GUILD_GLOBAL instead of agent_id
-            self._guild_filesystem_path = f"{self.filesystem_base_path}/{org_id}/{guild_id}/GUILD_GLOBAL"
+            base_path = os.environ.get("FORGE_FILESYSTEM_GLOBAL_ROOT") or self.filesystem_base_path
+            self._guild_filesystem_path = f"{base_path}/{org_id}/{guild_id}/GUILD_GLOBAL"
             # Reset filesystem so it gets recreated with new path
             self._filesystem = None
 

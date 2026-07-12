@@ -6047,6 +6047,7 @@ dotenv = "^0.9.9"
 fastapi-sso = "^0.21.0"
 litellm = "^1.83.7"
 openai = "^2.29.0"
+orjson = "^3.11.6"
 rusticai-core = {path = "../core", develop = true}
 
 [package.extras]
@@ -6145,6 +6146,27 @@ type = "directory"
 url = "../serpapi"
 
 [[package]]
+name = "rusticai-uniko-agent"
+version = "0.0.1"
+description = "module boilerplate"
+optional = false
+python-versions = ">=3.13,<3.14"
+groups = ["main"]
+files = []
+develop = true
+
+[package.dependencies]
+rusticai-core = {path = "../core", develop = true}
+uniko = {url = "https://github.com/rustic-ai/uniko/releases/download/v0.1.1/uniko-0.1.1-cp310-abi3-manylinux_2_28_x86_64.whl"}
+
+[package.extras]
+test = []
+
+[package.source]
+type = "directory"
+url = "../uniko-agent"
+
+[[package]]
 name = "rusticai-vertexai"
 version = "1.2.5"
 description = "Rustic AI module with Vertex AI integrations"
@@ -6159,6 +6181,7 @@ google-cloud-aiplatform = "^1.91.0"
 google-cloud-language = "^2.17.2"
 google-genai = "^1.68.0"
 rusticai-core = {path = "../core", develop = true}
+rusticai-serpapi = {path = "../serpapi", develop = true}
 tabulate = "^0.10.0"
 
 [package.extras]
@@ -7106,6 +7129,24 @@ tzdata = {version = "*", markers = "platform_system == \"Windows\""}
 [package.extras]
 devenv = ["zest.releaser"]
 testing = ["check_manifest", "pyroma", "pytest (>=4.3)", "pytest-cov", "pytest-mock (>=3.3)", "ruff"]
+
+[[package]]
+name = "uniko"
+version = "0.1.1"
+description = "Python bindings for uniko cognitive memory"
+optional = false
+python-versions = ">=3.10"
+groups = ["main"]
+files = [
+    {file = "uniko-0.1.1-cp310-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:5f96be6b2af2ba742f889a612e3ed2d1881695cdb70290d6422aba4c3e7fa851"},
+]
+
+[package.dependencies]
+pydantic = ">=2"
+
+[package.source]
+type = "url"
+url = "https://github.com/rustic-ai/uniko/releases/download/v0.1.1/uniko-0.1.1-cp310-abi3-manylinux_2_28_x86_64.whl"
 
 [[package]]
 name = "uritemplate"
@@ -8164,4 +8205,4 @@ test = []
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.13,<3.14"
-content-hash = "d751ec461ced6cf624922c4f6e31070ee48f32c8124093100c18c70508a3096b"
+content-hash = "3cb53194b2cc8215e23c1a91e5a5fe43eef6e81ad6b65c9638e58d9c40bb8b96"

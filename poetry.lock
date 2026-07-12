@@ -8313,6 +8313,7 @@ dotenv = "^0.9.9"
 fastapi-sso = "^0.21.0"
 litellm = "^1.83.7"
 openai = "^2.29.0"
+orjson = "^3.11.6"
 rusticai-core = {path = "../core", develop = true}
 
 [package.extras]
@@ -8518,6 +8519,7 @@ rusticai-llm-agent = {path = "../llm-agent", develop = true}
 rusticai-pandas-analyst = {path = "../pandas-analyst", develop = true}
 rusticai-playwright = {path = "../playwright", develop = true}
 rusticai-serpapi = {path = "../serpapi", develop = true}
+rusticai-uniko-agent = {path = "../uniko-agent", develop = true}
 rusticai-vertexai = {path = "../vertexai", develop = true}
 spacy = "^3.8.11"
 spacytextblob = "^5.1.0"

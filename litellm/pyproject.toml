@@ -24,6 +24,7 @@ litellm = "^1.83.7"
 dotenv = "^0.9.9"
 openai = "^2.29.0"
 fastapi-sso = "^0.21.0"
+orjson = "^3.11.6"
 
 [tool.poetry-monorepo.deps]
 
