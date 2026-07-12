@@ -1,23 +1,39 @@
-# MCPAgent
+# MCP Agents
 
-The `MCPAgent` provides integration with Model Context Protocol (MCP) servers, enabling Rustic AI guilds to leverage external tools and services through a standardized interface.
+The `mcp` package provides two agents for integrating with Model Context Protocol (MCP) servers:
+
+- **`MCPAgent`** — discovers tools dynamically from the server. Use for prototyping and exploration.
+- **`BoundMCPAgent`** — restricted to a pre-declared, typed allowlist of tools. **Recommended for production.**
+
+Both agents bridge Rustic AI's messaging system to MCP's tool protocol, enabling seamless integration with external services.
+
+## Choosing Between MCPAgent and BoundMCPAgent
+
+| Concern | `MCPAgent` | `BoundMCPAgent` |
+|---|---|---|
+| Tool surface | Whatever the server currently advertises | Fixed, explicit allowlist |
+| Tool discovery | Lazy `list_tools` call on first request | None — declarations are authoritative |
+| Argument validation | None — forwarded as-is | Validated against a pydantic schema (`strict=True`, `extra="forbid"`) before any network call |
+| Drift safety | A server-side tool change is invisible until it fails at runtime | A server-side breaking change is caught at validation, not after the call |
+| Best for | Iterating on a new server, ad-hoc tool calls | Production workloads with a known, audited set of tools |
+
+Prefer `BoundMCPAgent` once you know which tools you actually need — the allowlist gives you a clear contract, fails fast on bad arguments, and prevents callers from invoking tools you didn't sign up for.
 
 ## Purpose
 
-This agent connects to an MCP server and exposes its tools as callable functions within a guild. It acts as a bridge between Rustic AI's messaging system and MCP's tool protocol, enabling seamless integration with external services.
+These agents connect to an MCP server and expose its tools as callable functions within a guild. They act as a bridge between Rustic AI's messaging system and MCP's tool protocol, enabling seamless integration with external services.
 
 ## Configuration
 
 The `MCPAgent` is configured using `MCPAgentConfig`, which specifies connection details for an MCP server.
 
-### STDIO Configuration (Most Common)
+### STDIO Configuration
 
 For MCP servers that run as child processes:
 
 ```python
 {
     "server": {
-        "name": "notion",
         "type": "stdio",
         "command": "npx",
         "args": ["-y", "@notionhq/notion-mcp-server"],
@@ -28,22 +44,22 @@ For MCP servers that run as child processes:
 }
 ```
 
-### SSE Configuration
+### HTTP Configuration
 
-For remote MCP servers that use Server-Sent Events:
+For remote MCP servers that speak the Streamable HTTP transport:
 
 ```python
 {
     "server": {
-        "name": "remote_server",
-        "type": "sse",
-        "url": "https://example.com/mcp",
-        "headers": {
-            "Authorization": "Bearer your_token"
-        }
+        "type": "http",
+        "url": "https://example.com/mcp"
     }
 }
 ```
+
+If the remote server requires bearer auth, set the `MCP_TOKEN` environment
+variable on the process running the agent. The client will send it as
+`Authorization: Bearer <MCP_TOKEN>` on every request.
 
 ## Message Types
 
@@ -55,7 +71,6 @@ A request to call a tool on the MCP server.
 
 ```python
 class CallToolRequest(BaseModel):
-    server_name: str  # Must match the server name in configuration
     tool_name: str    # Name of the tool to call
     arguments: Dict = {}  # Arguments to pass to the tool
 ```
@@ -63,7 +78,6 @@ class CallToolRequest(BaseModel):
 **Example:**
 ```python
 CallToolRequest(
-    server_name="notion",
     tool_name="API-post-page",
     arguments={
         "parent": {"page_id": "abc-123"},
@@ -134,7 +148,6 @@ notion_agent_spec = {
     "class_name": "rustic_ai.mcp.agent.MCPAgent",
     "properties": {
         "server": {
-            "name": "notion",
             "type": "stdio",
             "command": "npx",
             "args": ["-y", "@notionhq/notion-mcp-server"],
@@ -156,7 +169,6 @@ from rustic_ai.mcp.models import CallToolRequest
 
 # Create a tool call request
 request = CallToolRequest(
-    server_name="notion",
     tool_name="API-post-search",
     arguments={"query": "my workspace"}
 )
@@ -176,7 +188,6 @@ notion_agent = {
     "class_name": "rustic_ai.mcp.agent.MCPAgent",
     "properties": {
         "server": {
-            "name": "notion",
             "type": "stdio",
             "command": "npx",
             "args": ["-y", "@notionhq/notion-mcp-server"],
@@ -191,7 +202,6 @@ playwright_agent = {
     "class_name": "rustic_ai.mcp.agent.MCPAgent",
     "properties": {
         "server": {
-            "name": "playwright",
             "type": "stdio",
             "command": "npx",
             "args": ["-y", "@playwright/mcp@latest"],
@@ -203,6 +213,105 @@ playwright_agent = {
 guild_builder.add_agent_spec(notion_agent)
 guild_builder.add_agent_spec(playwright_agent)
 ```
+
+## BoundMCPAgent
+
+`BoundMCPAgent` is configured with an explicit list of tool declarations. Each declaration pairs a tool name with a pydantic `BaseModel` class that defines the tool's argument schema. The agent:
+
+1. Rejects any `tool_name` not in the declared allowlist (`ToolNotAllowed`).
+2. Validates `arguments` against the declared pydantic schema with `strict=True, extra="forbid"` before any network call (`InvalidToolArguments`).
+3. Forwards the validated, model-dumped arguments to the MCP server.
+
+Server-side `list_tools` is never called — the local declarations are the contract.
+
+### Configuration
+
+`BoundMCPAgentConfig` extends the MCP server config with a non-empty list of `MCPToolDeclaration` entries:
+
+```python
+{
+    "server": {
+        "type": "http",
+        "url": "https://api.godaddy.com/v1/domains/mcp"
+    },
+    "tools": [
+        {
+            "name": "domains_suggest",
+            "parameter_class": "rustic_ai.mcp.connectors.godaddy.DomainsSuggestInput"
+        },
+        {
+            "name": "domains_check_availability",
+            "parameter_class": "rustic_ai.mcp.connectors.godaddy.DomainsCheckAvailabilityInput"
+        }
+    ]
+}
+```
+
+Each `MCPToolDeclaration` has:
+- `name`: tool name as exposed by the MCP server
+- `parameter_class`: either a pydantic ``BaseModel`` subclass or its fully-qualified class name defining the argument schema. Resolution is validated at config-load time, so misspellings or non-`BaseModel` classes fail immediately.
+- `description`: optional human/LLM-facing description
+
+### Pre-generated Connector Schemas
+
+`rustic_ai.mcp.connectors` ships pydantic input models generated from known MCP providers (e.g. `godaddy`, `google-maps`, `google-calendar`, `atlassian-rovo`, `datacommons`, `peek`, `alltrails`). Each connector module's docstring includes a ready-to-paste `BoundMCPAgentConfig` for that provider.
+
+To regenerate or add a new connector, see `mcp/scripts/generate_mcp_models.py`, which reads a YAML list of providers, fetches each server's tool schemas, and emits pydantic models via `datamodel-code-generator`.
+
+### Sample Usage
+
+```python
+from rustic_ai.core.guild.builders import AgentBuilder
+from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
+from rustic_ai.mcp.bound_agent import BoundMCPAgent
+from rustic_ai.mcp.connectors.godaddy import (
+    DomainsCheckAvailabilityInput,
+    DomainsSuggestInput,
+)
+from rustic_ai.mcp.models import (
+    BoundMCPAgentConfig,
+    MCPClientType,
+    MCPServerConfig,
+    MCPToolDeclaration,
+)
+
+config = BoundMCPAgentConfig(
+    server=MCPServerConfig(
+        type=MCPClientType.HTTP,
+        url="https://api.godaddy.com/v1/domains/mcp",
+    ),
+    tools=[
+        MCPToolDeclaration(
+            name="domains_suggest",
+            parameter_class=DomainsSuggestInput,
+        ),
+        MCPToolDeclaration(
+            name="domains_check_availability",
+            parameter_class=get_qualified_class_name(DomainsCheckAvailabilityInput),
+        ),
+    ],
+)
+
+godaddy_agent_spec = (
+    AgentBuilder(BoundMCPAgent)
+    .set_id("godaddy_mcp_agent")
+    .set_name("GoDaddy MCP Agent")
+    .set_description("Domain suggestions and availability via GoDaddy MCP")
+    .set_properties(config)
+    .build_spec()
+)
+
+guild_builder.add_agent_spec(godaddy_agent_spec)
+```
+
+Callers send the same `CallToolRequest` message type as for `MCPAgent`; the contract on the wire is unchanged.
+
+### Additional Error Types
+
+In addition to the errors documented under [Error Handling](#error-handling), `BoundMCPAgent` emits:
+
+- `ToolNotAllowed`: the request's `tool_name` is not in the declared allowlist. The error message enumerates the allowed tools so the caller can recover.
+- `InvalidToolArguments`: the supplied `arguments` failed pydantic validation against the tool's `parameter_class` schema (missing required field, wrong type, or unknown field).
 
 ## Orchestrating MCP Tools
 
@@ -218,7 +327,7 @@ orchestrator_spec = {
         "default_system_prompt": """
 You analyze user requests and determine which MCP service to call.
 Return JSON with:
-- server_name: "notion" or "playwright"
+- target: "notion" or "playwright" (used to route to the right MCP agent's topic)
 - tool_name: the specific tool to call
 - arguments: tool parameters
 """
@@ -298,19 +407,31 @@ You can build custom MCP servers using the MCP SDK and connect them via the MCPA
 
 ### Debugging
 
-Enable detailed logging to troubleshoot MCP connections:
+The `MCPClient` logs through the owning agent's logger, so MCP connection
+output appears under the per-agent logger name
+(`Agent[<agent-name>:<agent-id>]`) rather than `rustic_ai.mcp`. To enable
+detailed logging for a specific agent:
 
 ```python
 import logging
-logging.getLogger("rustic_ai.mcp").setLevel(logging.DEBUG)
+logging.getLogger("Agent[Notion Agent:notion_mcp_agent]").setLevel(logging.DEBUG)
+```
+
+To enable debug logging for every agent in the process, raise the root
+logger level instead:
+
+```python
+import logging
+logging.basicConfig(level=logging.DEBUG)
 ```
 
 ## Notes and Limitations
 
-- Each `MCPAgent` connects to exactly one MCP server
+- Each agent instance connects to exactly one MCP server
 - STDIO servers run as child processes and are terminated when the agent shuts down
-- SSE servers must be running independently before the agent starts
-- Tool schemas are defined by the MCP server, not the agent
+- HTTP (Streamable HTTP) servers must be running independently before the agent starts
+- For `MCPAgent`, tool schemas are defined by the MCP server, not the agent
+- For `BoundMCPAgent`, the declared pydantic schema is the local contract — if the server changes its schema, regenerate the connector models (see `mcp/scripts/generate_mcp_models.py`) and update the agent's config
 - Large responses may impact performance; consider streaming for large data
 
 ## Further Reading

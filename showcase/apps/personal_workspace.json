@@ -41,7 +41,6 @@
                 ],
                 "properties": {
                     "server": {
-                        "name": "notion",
                         "type": "stdio",
                         "command": "npx",
                         "args": [
@@ -79,7 +78,6 @@
                 ],
                 "properties": {
                     "server": {
-                        "name": "playwright",
                         "type": "stdio",
                         "command": "npx",
                         "args": [
@@ -288,7 +286,7 @@
                     "route_times": -1,
                     "transformer": {
                         "style": "content_based_router",
-                        "handler": "($content := $.payload.choices[0].message.content; $jsonMatch := $match($content, /\\{[\\s\\S]*\\}/); $jsonStr := $jsonMatch ? $jsonMatch.match : $content; $cleaned := $trim($replace($replace($jsonStr, /```json/, ''), /```/, '')); $plan := $eval($cleaned); $action := $plan.actions[0]; $taskHistory := $.context.task_history; $ToNotion := function($act){ {\"topics\": \"NOTION\", \"format\": \"rustic_ai.mcp.models.CallToolRequest\", \"payload\": {\"server_name\": \"notion\", \"tool_name\": $act.tool_name, \"arguments\": $act.arguments}, \"context\": {\"plan\": $plan.user_friendly_plan, \"task_history\": $taskHistory}} }; $ToPlaywright := function($act){ {\"topics\": \"PLAYWRIGHT\", \"format\": \"rustic_ai.mcp.models.CallToolRequest\", \"payload\": {\"server_name\": \"playwright\", \"tool_name\": $act.tool_name, \"arguments\": $act.arguments}, \"context\": {\"plan\": $plan.user_friendly_plan, \"task_history\": $taskHistory}} }; $ToSummary := function(){ {\"topics\": \"SUMMARIZE\", \"format\": \"rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest\", \"payload\": {\"messages\": [{\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": $plan.user_friendly_plan & '\\n\\nTask History:\\n' & $string($taskHistory)}]}]}} }; $ToDone := function(){ {\"topics\": \"user_message_broadcast\", \"format\": \"rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse\", \"payload\": {\"choices\": [{\"message\": {\"content\": $plan.user_friendly_plan}}]}, \"process_status\": \"completed\"} }; $plan.intent = 'done' ? $ToDone() : $plan.intent = 'summarize' ? $ToSummary() : $plan.intent = 'notion' ? $ToNotion($action) : $plan.intent = 'playwright' ? $ToPlaywright($action) : $ToDone())"
+                        "handler": "($content := $.payload.choices[0].message.content; $jsonMatch := $match($content, /\\{[\\s\\S]*\\}/); $jsonStr := $jsonMatch ? $jsonMatch.match : $content; $cleaned := $trim($replace($replace($jsonStr, /```json/, ''), /```/, '')); $plan := $eval($cleaned); $action := $plan.actions[0]; $taskHistory := $.context.task_history; $ToNotion := function($act){ {\"topics\": \"NOTION\", \"format\": \"rustic_ai.mcp.models.CallToolRequest\", \"payload\": {\"tool_name\": $act.tool_name, \"arguments\": $act.arguments}, \"context\": {\"plan\": $plan.user_friendly_plan, \"task_history\": $taskHistory}} }; $ToPlaywright := function($act){ {\"topics\": \"PLAYWRIGHT\", \"format\": \"rustic_ai.mcp.models.CallToolRequest\", \"payload\": {\"tool_name\": $act.tool_name, \"arguments\": $act.arguments}, \"context\": {\"plan\": $plan.user_friendly_plan, \"task_history\": $taskHistory}} }; $ToSummary := function(){ {\"topics\": \"SUMMARIZE\", \"format\": \"rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest\", \"payload\": {\"messages\": [{\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": $plan.user_friendly_plan & '\\n\\nTask History:\\n' & $string($taskHistory)}]}]}} }; $ToDone := function(){ {\"topics\": \"user_message_broadcast\", \"format\": \"rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse\", \"payload\": {\"choices\": [{\"message\": {\"content\": $plan.user_friendly_plan}}]}, \"process_status\": \"completed\"} }; $plan.intent = 'done' ? $ToDone() : $plan.intent = 'summarize' ? $ToSummary() : $plan.intent = 'notion' ? $ToNotion($action) : $plan.intent = 'playwright' ? $ToPlaywright($action) : $ToDone())"
                     },
                     "agent_state_update": null,
                     "guild_state_update": {

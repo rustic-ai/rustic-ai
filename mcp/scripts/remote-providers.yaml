@@ -1,0 +1,79 @@
+providers:
+  - name: alltrails
+    url: https://www.alltrails.com/mcp
+
+  - name: peek
+    url: https://mcp.peek.com
+
+  - name: godaddy
+    url: https://api.godaddy.com/v1/domains/mcp
+
+  #  google - https://docs.cloud.google.com/mcp/supported-products
+  - name: google-calendar
+    url: https://calendarmcp.googleapis.com/mcp/v1
+
+  - name: google-chat
+    url: https://chatmcp.googleapis.com/mcp/v1
+
+  - name: google-drive
+    url: https://drivemcp.googleapis.com/mcp/v1
+
+  - name: gmail
+    url: https://gmailmcp.googleapis.com/mcp/v1
+
+  - name: google-people
+    url: https://people.googleapis.com/mcp/v1
+
+  - name: google-maps
+    url: https://mapstools.googleapis.com/mcp
+
+  - name: atlassian-rovo
+    url: https://mcp.atlassian.com/v1/mcp/authv2
+    token_env_var: ROVO_API_TOKEN
+
+  - name: datacommons
+    url: https://api.datacommons.org/mcp
+    token_env_var: DC_API_KEY
+    token_header: X-API-Key
+
+  - name: linear
+    url: https://mcp.linear.app/mcp
+    token_env_var: LINEAR_AUTH_TOKEN
+
+  - name: huggingface
+    url: https://huggingface.co/mcp
+    token_env_var: HF_AUTH_TOKEN
+
+  - name: blockscout
+    url: https://mcp.blockscout.com/mcp
+    token_env_var: BLOCKSCOUT_API_KEY
+    token_header: Blockscout-MCP-Pro-Api-Key
+
+  - name: monday
+    url: https://mcp.monday.com/mcp
+    token_env_var: MONDAY_API_KEY
+
+  - name: exa
+    url: https://mcp.exa.ai/mcp?tools=web_search_exa,web_fetch_exa,web_search_advanced_exa
+    token_env_var: EXA_API_KEY
+    token_header: x-api-key
+
+  - name: fiscal
+    url: https://api.fiscal.ai/mcp
+    token_env_var: FISCAL_API_KEY
+
+  - name: lunarcrush
+    url: https://lunarcrush.ai/mcp
+    token_env_var: LUNARCRUSH_API_KEY
+
+  - name: airtable
+    url: https://mcp.airtable.com/mcp
+    token_env_var: AIRTABLE_AUTH_TOKEN
+
+  - name: bitly
+    url: https://api-ssl.bitly.com/v4/mcp
+    token_env_var: BITLY_AUTH_TOKEN
+
+  - name: github
+    url: https://api.githubcopilot.com/mcp/x/all
+    token_env_var: GITHUB_AUTH_TOKEN

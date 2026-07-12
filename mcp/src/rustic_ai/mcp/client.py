@@ -1,12 +1,13 @@
 import asyncio
 import logging
+import os
 from typing import Optional
 
 import httpx
 
-from mcp import ClientSession, StdioServerParameters
-from mcp.client.sse import sse_client
+from mcp import ClientSession, StdioServerParameters, Tool
 from mcp.client.stdio import stdio_client
+from mcp.client.streamable_http import streamable_http_client
 
 from .models import (
     CallToolRequest,
@@ -15,8 +16,6 @@ from .models import (
     MCPServerConfig,
     ToolResult,
 )
-
-logger = logging.getLogger(__name__)
 
 
 def _extract_error_message(exc: Exception) -> str:
@@ -34,8 +33,9 @@ class MCPClient:
     Manages the session in a background task to satisfy anyio/asyncio constraints.
     """
 
-    def __init__(self, config: MCPServerConfig):
+    def __init__(self, config: MCPServerConfig, logger: logging.Logger):
         self.config = config
+        self.logger = logger
         self._session: Optional[ClientSession] = None
         self._task: Optional[asyncio.Task] = None
         # Lazy-initialized asyncio primitives (created in the correct event loop when first accessed)
@@ -60,7 +60,7 @@ class MCPClient:
             self._shutdown_event = asyncio.Event()
             self._ready_event = asyncio.Event()
             self._event_loop = current_loop
-            logger.debug(f"Created asyncio Events for MCP client {self.config.name} in event loop {id(current_loop)}")
+            self.logger.debug(f"Created asyncio Events for MCP client in event loop {id(current_loop)}")
 
     @property
     def shutdown_event(self) -> asyncio.Event:
@@ -85,24 +85,28 @@ class MCPClient:
                     env=self.config.env,
                 )
                 transport_context = stdio_client(server_params)
-            elif self.config.type == MCPClientType.SSE:
-                if not self.config.url:
-                    raise ValueError(f"URL is required for SSE connection: {self.config.name}")
-                transport_context = sse_client(url=self.config.url, headers=self.config.headers)
+            elif self.config.type == MCPClientType.HTTP and self.config.url:
+                headers = {**self.config.headers}
+                token = os.environ.get("MCP_TOKEN")
+                auth_header = self.config.auth_header
+                if token:
+                    if auth_header == "Authorization":
+                        headers["Authorization"] = f"Bearer {token}"
+                    elif auth_header:
+                        headers[auth_header] = token
+                http_client = httpx.AsyncClient(headers=headers) if headers else None
+                transport_context = streamable_http_client(url=str(self.config.url), http_client=http_client)
             else:
-                logger.warning(f"Unsupported MCP client type: {self.config.type}")
+                self.logger.warning(f"Unsupported MCP client type: {self.config.type}")
                 return
 
             client_type = self.config.type
 
-            async with transport_context as (read, write):
+            async with transport_context as (read, write, *_):
                 async with ClientSession(read, write) as session:
                     await session.initialize()
-
-                    # Verify connection by listing tools
-                    result = await session.list_tools()
-                    tool_names = [tool.name for tool in result.tools]
-                    logger.info(f"Connected to {self.config.name} ({client_type.value}). Available tools: {tool_names}")
+                    await session.send_ping()
+                    self.logger.info(f"Connected to MCP server via {client_type.value}.")
 
                     self._session = session
                     self.ready_event.set()
@@ -113,9 +117,9 @@ class MCPClient:
         except Exception as e:
             if not self.shutdown_event.is_set():
                 detailed_error = _extract_error_message(e)
-                error_msg = f"MCP session error for {self.config.name}: {detailed_error}"
+                error_msg = f"MCP session error: {detailed_error}"
                 self._last_error = error_msg
-                logger.error(error_msg, exc_info=True)
+                self.logger.error(error_msg, exc_info=True)
         finally:
             self._session = None
             if self._ready_event:  # Only clear if event was created
@@ -138,7 +142,7 @@ class MCPClient:
             await asyncio.wait_for(self.ready_event.wait(), timeout=10.0)
         except asyncio.TimeoutError:
             error_detail = f" Last error: {self._last_error}" if self._last_error else ""
-            logger.error(f"Timeout waiting for MCP connection to {self.config.name}.{error_detail}")
+            self.logger.error(f"Timeout waiting for MCP connection.{error_detail}")
             # Cleanup if timeout
             self.shutdown_event.set()
             if self._task:
@@ -149,6 +153,17 @@ class MCPClient:
             return None
 
         return self._session
+
+    async def list_tools(self) -> list[Tool]:
+        session = await self.connect()
+        if not session:
+            error_msg = "mcp session not found!"
+            if self._last_error:
+                error_msg += f" Reason: {self._last_error}"
+            raise RuntimeError(error_msg)
+
+        result = await session.list_tools()
+        return result.tools
 
     async def call_tool(self, request: CallToolRequest) -> CallToolResponse:
         session = await self.connect()
@@ -174,10 +189,5 @@ class MCPClient:
             return CallToolResponse(results=tool_results)
 
         except Exception as e:
-            logger.error(
-                f"Error calling tool {request.tool_name} on {self.config.name}: {e}",
-                exc_info=True,
-            )
-            return CallToolResponse(
-                results=[], is_error=True, error=f"Error calling tool {request.tool_name} on {self.config.name}: {e}"
-            )
+            self.logger.error(f"Error calling tool {request.tool_name}: {e}", exc_info=True)
+            return CallToolResponse(results=[], is_error=True, error=f"Error calling tool {request.tool_name}: {e}")

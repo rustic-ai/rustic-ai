@@ -5,7 +5,7 @@ build-backend = "poetry.core.masonry.api"
 
 [project]
 name = "rusticai-huggingface"
-version = "1.2.3"
+version = "1.2.5"
 description = "Rustic AI module with huggingface integrations"
 authors = [{name = "Dragonscale Industries Inc.", email = "dev@dragonscale.ai"}]
 license = "Apache-2.0"
@@ -25,7 +25,7 @@ torch = [
     { version = "^2.4.0", source = "pytorch-cpu", platform = "linux" },
 ]
 transformers = { version = "^5.3.0" }
-datasets = { version = "^4.8.3" }
+datasets = { version = "^5.0.0" }
 soundfile = { version = "^0.13.1" }
 sentencepiece = { version = "^0.2.0" }
 diffusers = { version = "^0.37.0" }

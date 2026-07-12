@@ -16,7 +16,7 @@ from ..llm.models import (
 )
 
 
-class ToolSpec(BaseModel):
+class BaseToolDeclaration(BaseModel):
     """
     Specification for a tool that can be called by the model.
     """
@@ -37,6 +37,21 @@ class ToolSpec(BaseModel):
     This class should inherit from pydantic.BaseModel.
     """
 
+    def parse_args(self, args: dict) -> Optional[BaseModel]:
+        """
+        Parses the arguments for the tool and validates them against the parameter class.
+        This method attempts to create an instance of the parameter class using the provided arguments.
+
+        :param args: A dictionary of arguments to be validated.
+        :return: An instance of the parameter class if validation is successful, None otherwise.
+        """
+        return self.parameter_class.model_validate(args)
+
+
+class ToolSpec(BaseToolDeclaration):
+    """
+    Specification for a tool that can be called by the model.
+    """
     @cached_property
     def chat_tool(self) -> ChatCompletionTool:
         """
@@ -55,16 +70,6 @@ class ToolSpec(BaseModel):
                 parameters=self.parameter_class.model_json_schema(),
             ),
         )
-
-    def parse_args(self, args: dict) -> Optional[BaseModel]:
-        """
-        Parses the arguments for the tool and validates them against the parameter class.
-        This method attempts to create an instance of the parameter class using the provided arguments.
-
-        :param args: A dictionary of arguments to be validated.
-        :return: An instance of the parameter class if validation is successful, None otherwise.
-        """
-        return self.parameter_class.model_validate(args)
 
 
 class ToolsManager:

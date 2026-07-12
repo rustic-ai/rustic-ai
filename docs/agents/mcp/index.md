@@ -40,7 +40,6 @@ Rustic AI's MCP integration allows agents to call tools exposed by any MCP-compa
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `name` | `str` | (required) | Name of the MCP server |
 | `type` | `MCPClientType` | `STDIO` | Connection type: `STDIO` or `SSE` |
 | `command` | `str` | `None` | Command to execute (STDIO only) |
 | `args` | `List[str]` | `[]` | Command arguments (STDIO only) |
@@ -113,7 +112,6 @@ STDIO connections spawn a local process and communicate via standard input/outpu
 
 ```python
 MCPServerConfig(
-    name="playwright",
     type=MCPClientType.STDIO,
     command="npx",
     args=["-y", "@playwright/mcp@latest"],
@@ -142,7 +140,6 @@ Request to call a tool on an MCP server.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `server_name` | `str` | Name of the target MCP server |
 | `tool_name` | `str` | Name of the tool to call |
 | `arguments` | `Dict` | Arguments to pass to the tool |
 
@@ -150,7 +147,6 @@ Request to call a tool on an MCP server.
 from rustic_ai.mcp.models import CallToolRequest
 
 request = CallToolRequest(
-    server_name="playwright",
     tool_name="browser_navigate",
     arguments={"url": "https://example.com"}
 )
@@ -199,7 +195,6 @@ Metastore.create_db()
 # Configure Playwright MCP server
 playwright_config = MCPAgentConfig(
     server=MCPServerConfig(
-        name="playwright",
         type=MCPClientType.STDIO,
         command="npx",
         args=["-y", "@playwright/mcp@latest"]
@@ -239,7 +234,6 @@ asyncio.get_event_loop().run_until_complete(asyncio.sleep(3))
 
 # Send a navigation request
 navigate_request = CallToolRequest(
-    server_name="playwright",
     tool_name="browser_navigate",
     arguments={"url": "https://example.com"}
 )
@@ -323,8 +317,8 @@ flowchart LR
 
 MCPAgent handles errors gracefully:
 
-- **Unknown Server**: If `server_name` doesn't match, returns `UnsupportedMcpServer` error
-- **Connection Failure**: If MCP client can't connect, returns `MCPClientNotFound` error
+- **Unknown Tool**: If `tool_name` is not offered by the server, returns `ToolNotAllowed` error with the list of available tools
+- **Tool Discovery Failure**: If the agent cannot list tools from the server, returns `ToolDiscoveryFailed` error (retried on next request)
 - **Tool Errors**: If tool execution fails, returns `ErrorProcessingMCPRequest` with details
 
 All errors are sent via `ctx.send_error()` as `ErrorMessage` payloads.
