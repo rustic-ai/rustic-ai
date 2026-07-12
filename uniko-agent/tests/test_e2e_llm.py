@@ -1,7 +1,9 @@
 """End-to-end test with actual LLM API calls."""
 
-import pytest
 import os
+
+import pytest
+
 from rustic_ai.uniko_agent.resolver import UnikoResolver
 
 
@@ -34,7 +36,7 @@ class TestE2EWithRealAPI:
         )
 
         assert agent is not None
-        print(f"\n✓ Successfully created Uniko agent with LLM spec")
+        print("\n✓ Successfully created Uniko agent with LLM spec")
 
         # Get session
         session = agent.session("test-session-e2e")
@@ -51,10 +53,10 @@ class TestE2EWithRealAPI:
 
         if len(recall_result.items) > 0:
             # Verify recall content mentions Python
-            content_combined = " ".join(item.content.lower() for item in recall_result.items)
+            _ = " ".join(item.content.lower() for item in recall_result.items)
             print(f"✓ Recall found content (first item): {recall_result.items[0].content[:100]}...")
         else:
-            print(f"⚠ No items recalled (coverage too low), but this is okay for new memory")
+            print("⚠ No items recalled (coverage too low), but this is okay for new memory")
 
         # Test answer with LLM - THIS IS THE CRITICAL TEST
         try:
@@ -65,8 +67,8 @@ class TestE2EWithRealAPI:
             # Verify the answer is meaningful (contains Python reference)
             assert "python" in answer_result.text.lower(), "Answer should mention Python based on observed memory"
 
-            print(f"✓ LLM successfully generated a meaningful answer!")
-            print(f"✓ REAL API CALL SUCCEEDED - LLM integration works end-to-end!")
+            print("✓ LLM successfully generated a meaningful answer!")
+            print("✓ REAL API CALL SUCCEEDED - LLM integration works end-to-end!")
             print(f"✓ Answer text: '{answer_result.text}'")
 
         except Exception as e:
@@ -74,7 +76,7 @@ class TestE2EWithRealAPI:
 
         # Cleanup
         resolver.shutdown()
-        print(f"✓ Test completed successfully - full E2E flow works!")
+        print("✓ Test completed successfully - full E2E flow works!")
 
     def test_resolver_with_base_url_override(self):
         """Test that base_url can be overridden for custom OpenAI-compatible endpoints."""
@@ -99,7 +101,7 @@ class TestE2EWithRealAPI:
         )
 
         assert agent is not None
-        print(f"\n✓ Successfully created Uniko agent with custom base_url")
+        print("\n✓ Successfully created Uniko agent with custom base_url")
 
         # Cleanup
         resolver.shutdown()

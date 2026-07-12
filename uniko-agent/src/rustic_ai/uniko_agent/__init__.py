@@ -6,40 +6,33 @@ cognitive memory system for episodic, semantic, and procedural memory.
 
 from .agent import MemoryAgent
 from .config import MemoryAgentConfig
-from .resolver import UnikoResolver
-from .models import (
-    # Observation
-    ObserveTurnRequest,
-    ObserveResult,
-    # Recall
-    RecallRequest,
-    RecallResponse,
-    RecallItem,
-    # Answer
+from .models import (  # Observation; Recall; Answer; Document ingestion; Goal management; Task management; Error
     AnswerRequest,
     AnswerResponse,
-    # Document ingestion
-    IngestDocumentRequest,
-    IngestOutcome,
     BatchSubmitRequest,
     BatchSubmitResponse,
-    # Goal management
     CreateGoalRequest,
-    GoalView,
-    UpdateGoalRequest,
-    GoalStatusResponse,
-    GetGoalsRequest,
-    GoalsListResponse,
-    # Task management
     CreateTaskRequest,
-    TaskView,
-    UpdateTaskRequest,
-    TaskStatusResponse,
-    GoalContextRequest,
+    GetGoalsRequest,
     GoalContext,
-    # Error
+    GoalContextRequest,
+    GoalsListResponse,
+    GoalStatusResponse,
+    GoalView,
+    IngestDocumentRequest,
+    IngestOutcome,
     MemoryAgentError,
+    ObserveResult,
+    ObserveTurnRequest,
+    RecallItem,
+    RecallRequest,
+    RecallResponse,
+    TaskStatusResponse,
+    TaskView,
+    UpdateGoalRequest,
+    UpdateTaskRequest,
 )
+from .resolver import UnikoResolver
 
 __all__ = [
     # Main agent and config

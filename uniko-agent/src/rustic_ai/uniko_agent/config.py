@@ -1,7 +1,9 @@
 """Configuration for MemoryAgent."""
 
 from typing import Optional
+
 from pydantic import Field
+
 from rustic_ai.core.guild.dsl import BaseAgentProps
 
 

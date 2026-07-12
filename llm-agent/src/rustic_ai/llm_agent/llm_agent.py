@@ -1,7 +1,7 @@
 import base64
+import logging
 import mimetypes
 from typing import Optional
-import logging
 
 from fsspec.implementations.dirfs import DirFileSystem as FileSystem
 
@@ -25,6 +25,7 @@ from rustic_ai.llm_agent.llm_agent_utils import LLMAgentUtils
 
 logger = logging.getLogger(__name__)
 
+
 class LLMAgent(Agent[LLMAgentConfig]):
     """
     A simple LLM Agent that simply invokes an LLM.
@@ -44,7 +45,7 @@ class LLMAgent(Agent[LLMAgentConfig]):
         """
         prompt = ctx.payload
 
-        logger.info(f"Invoking LLM with prompt: {prompt.messages}")
+        logger.debug(f"Invoking LLM with prompt: {prompt.messages}")
 
         if self._system_prompt:
             # If the system prompt was updated, add it to the messages.
@@ -63,7 +64,7 @@ class LLMAgent(Agent[LLMAgentConfig]):
             prompt,
         )
 
-        logger.info(f"LLM response: {resp}")
+        logger.debug(f"LLM response: {resp}")
 
     @processor(
         ChatCompletionRequest,

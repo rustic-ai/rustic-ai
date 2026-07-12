@@ -61,7 +61,10 @@ class SlackAPIClient:
                     None, lambda: self.client.api_call(method, json=kwargs)
                 )
                 # SlackResponse has a .data attribute that contains the actual dict
-                return response.data
+                data = response.data
+                if not isinstance(data, dict):
+                    raise TypeError(f"Unexpected Slack API response type: {type(data)!r}")
+                return data
             except SlackApiError as e:
                 if e.response["error"] == "ratelimited":
                     retry_after = int(e.response.headers.get("Retry-After", 60))

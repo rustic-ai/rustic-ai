@@ -1,25 +1,26 @@
 """Integration tests for MemoryAgent with research guild workflows."""
 
 import pytest
+
 from rustic_ai.uniko_agent import (
-    ObserveTurnRequest,
-    ObserveResult,
-    RecallRequest,
-    RecallResponse,
-    IngestDocumentRequest,
-    IngestOutcome,
-    CreateGoalRequest,
-    GoalView,
-    CreateTaskRequest,
-    TaskView,
-    UpdateGoalRequest,
-    GoalStatusResponse,
-    UpdateTaskRequest,
-    TaskStatusResponse,
-    GetGoalsRequest,
-    GoalsListResponse,
     BatchSubmitRequest,
     BatchSubmitResponse,
+    CreateGoalRequest,
+    CreateTaskRequest,
+    GetGoalsRequest,
+    GoalsListResponse,
+    GoalStatusResponse,
+    GoalView,
+    IngestDocumentRequest,
+    IngestOutcome,
+    ObserveResult,
+    ObserveTurnRequest,
+    RecallRequest,
+    RecallResponse,
+    TaskStatusResponse,
+    TaskView,
+    UpdateGoalRequest,
+    UpdateTaskRequest,
 )
 
 

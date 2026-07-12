@@ -1,20 +1,20 @@
 import asyncio
+from concurrent.futures import Future
+from datetime import datetime, timezone
+from enum import StrEnum
 import hashlib
 import logging
 import mimetypes
 import os
 import threading
-from concurrent.futures import Future
-from datetime import datetime, timezone
-from enum import StrEnum
-from queue import Queue
-from typing import Any, Callable, List, Optional, Set, TypeVar
+from typing import Any, List, Optional, Set, TypeVar
 from urllib.parse import urljoin, urlparse, urlsplit
 
 from install_playwright import install
 from markdownify import markdownify as md
-from playwright.async_api import Browser, BrowserContext, Playwright, async_playwright
+from playwright.async_api import Browser, BrowserContext
 from playwright.async_api import Error as PlaywrightError
+from playwright.async_api import Playwright, async_playwright
 from pydantic import BaseModel, Field
 import shortuuid
 
@@ -146,6 +146,9 @@ class PlaywrightEventLoopThread:
         """
         if self._loop is None or not self._thread or not self._thread.is_alive():
             self.start()
+
+        if self._loop is None:
+            raise RuntimeError("Playwright event loop failed to start")
 
         future: Future = Future()
 
@@ -484,7 +487,7 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
         semaphore = asyncio.Semaphore(self.config.parallel_pages)
 
         try:
-            logger.info(f"Starting scraping for request: {scraping_request.id}")
+            logger.debug(f"Starting scraping for request: {scraping_request.id}")
 
             # Create tasks for all initial URLs
             tasks = []
@@ -516,7 +519,7 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
                         )
                     )
 
-            logger.info(f"Scraping completed for request: {scraping_request.id}. Total unique documents scraped: {len(scraped_docs)}")
+            logger.debug(f"Scraping completed for request: {scraping_request.id}. Total unique documents scraped: {len(scraped_docs)}")
 
             return scraped_docs, errors
 

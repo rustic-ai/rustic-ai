@@ -1,8 +1,12 @@
 """Dependency resolver for uniko memory instances."""
 
-from typing import Dict, Optional, Any
+from typing import Any, Dict, Optional
+
 import uniko
-from rustic_ai.core.guild.agent_ext.depends.dependency_resolver import DependencyResolver
+
+from rustic_ai.core.guild.agent_ext.depends.dependency_resolver import (
+    DependencyResolver,
+)
 
 
 class UnikoResolver(DependencyResolver[uniko.Agent]):

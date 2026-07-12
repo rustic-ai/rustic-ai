@@ -1,11 +1,11 @@
 from abc import ABC, abstractmethod
+import logging
 from typing import List, Literal, Optional, Union
 
 from jsonata import Jsonata
 from pydantic import BaseModel
 
 from rustic_ai.core.agents.commons.message_formats import ErrorMessage
-import logging
 from rustic_ai.core.guild import agent
 from rustic_ai.core.guild.agent import Agent, ProcessContext
 from rustic_ai.core.guild.dsl import BaseAgentProps
@@ -184,11 +184,11 @@ class SplitterAgent(Agent[SplitterConf]):
     @agent.processor(JsonDict)
     def split_and_send(self, ctx: ProcessContext[JsonDict]) -> None:
         try:
-            logger.info(f"Received payload for splitting: {ctx.payload}")
+            logger.debug(f"Received payload for splitting: {ctx.payload}")
             items = self.splitter.split(ctx.payload)
             payload_with_format = self.format_selector.get_formats(items)
 
-            logger.info(f"Split into {len(items)} items and generated {len(payload_with_format)} formatted payloads.")
+            logger.debug(f"Split into {len(items)} items and generated {len(payload_with_format)} formatted payloads.")
 
             if len(payload_with_format) != len(items):
                 ctx.send_error(
@@ -201,7 +201,7 @@ class SplitterAgent(Agent[SplitterConf]):
                 return
 
             for res in payload_with_format:
-                logger.info(f"Sending formatted payload: {res.payload} with format: {res.format}")
+                logger.debug(f"Sending formatted payload: {res.payload} with format: {res.format}")
                 ctx.send_dict(payload=res.payload, format=res.format)
         except Exception as e:
             logger.error(f"Error during splitting and sending: {str(e)}", exc_info=True)

@@ -3,8 +3,10 @@ Comprehensive tests for Uniko Research Guild to verify routing and agent interac
 """
 
 import json
-import pytest
 from pathlib import Path
+from typing import Any
+
+import pytest
 
 from rustic_ai.core.guild.dsl import GuildSpec
 
@@ -389,7 +391,7 @@ class TestRoutingLogicDeep:
     def test_no_infinite_loops_in_routing(self, guild_spec: GuildSpec):
         """Test that routing doesn't create infinite loops."""
         # Build a routing graph
-        routing_graph = {}
+        routing_graph: dict[str, list[dict[str, Any]]] = {}
         for step in enumerate(guild_spec.routes.steps):
             source = f"{step[1].agent.name if step[1].agent else 'UserProxy'}:{step[1].message_format}"
 

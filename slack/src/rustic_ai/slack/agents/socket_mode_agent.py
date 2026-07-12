@@ -68,6 +68,10 @@ class SlackSocketModeAgent(Agent):
 
     def _start_socket_mode(self):
         """Initialize and start Socket Mode client in background thread"""
+        if not self._app_token or not self._bot_token:
+            logging.error("Cannot start Socket Mode: missing SLACK_APP_TOKEN or SLACK_BOT_TOKEN")
+            return
+
         try:
             # Create Socket Mode client
             self._socket_client = SocketModeClient(
@@ -104,6 +108,9 @@ class SlackSocketModeAgent(Agent):
             self._bot_user_id = auth_response["user_id"]
 
             # Connect to Socket Mode (blocking call)
+            if self._socket_client is None:
+                logging.error("Socket Mode client not initialized")
+                return
             self._socket_client.connect()
             self._is_connected = True
             logging.info("Socket Mode connected and listening for events!")

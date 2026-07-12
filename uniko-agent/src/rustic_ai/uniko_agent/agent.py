@@ -4,7 +4,7 @@ import logging
 from typing import Any, Dict
 
 import uniko
-from uniko import IngestSource, RecallItem, RecallSource, Scope, Turn
+from uniko import IngestSource, RecallSource, Scope, Turn
 
 from rustic_ai.core.guild import agent
 from rustic_ai.core.guild.agent import Agent, ProcessContext
@@ -70,7 +70,7 @@ class MemoryAgent(Agent[MemoryAgentConfig]):
         """
         req = ctx.payload
 
-        logger.info(f"Observing turn from sender: {req.sender_id}, content: {req.content}, session_id: {req.session_id}")
+        logger.debug(f"Observing turn from sender: {req.sender_id}, content: {req.content}, session_id: {req.session_id}")
 
         # Determine session ID (fallback to config default or guild_id)
         session_id = req.session_id or self.config.default_session_id or ctx.agent.guild_id
@@ -104,16 +104,14 @@ class MemoryAgent(Agent[MemoryAgentConfig]):
                 source = IngestSource.from_text(req.content).with_mime("text/markdown")
                 turn = turn.attach(source)
 
-            logger.info(f"Built Turn for observation: {turn}, session_id: {session_id}")
-
             # Observe the turn (async)
             result = await session.observe(turn)
 
-            logger.info(f"Turn observed successfully. Message node ID: {result.message_node_id}")
+            logger.debug(f"Turn observed successfully. Message node ID: {result.message_node_id}")
 
             # Auto-flush if configured
             if self.config.auto_flush:
-                await session.flush() # @TODO: Bug breaking if auto_flush is true
+                await session.flush()  # @TODO: Bug breaking if auto_flush is true
 
             # Send response
             ctx.send(
@@ -152,7 +150,7 @@ class MemoryAgent(Agent[MemoryAgentConfig]):
         """
         req = ctx.payload
 
-        logger.info(f"Recalling knowledge for query: {req.query} with scope: {req.scope}")
+        logger.debug(f"Recalling knowledge for query: {req.query} with scope: {req.scope}")
 
         try:
             # Call recall directly - the API doesn't use RecallConfig anymore
@@ -163,16 +161,10 @@ class MemoryAgent(Agent[MemoryAgentConfig]):
             else:
                 bundle = await uniko.recall(req.query)
 
-            logger.info(
-                f"Recall returned {len(bundle.items)} items with total tokens: {getattr(bundle, 'total_tokens', 0)}"
-            )
-
             # Serialize bundle
             items = [self._serialize_recall_item(item) for item in bundle.items]
 
-            logger.info(f"Serialized {len(items)} recall items for response.")
-
-            print(f"Recall items: {items}")
+            logger.debug(f"Serialized {len(items)} recall items for response.")
 
             ctx.send(
                 RecallResponse(
@@ -292,7 +284,7 @@ class MemoryAgent(Agent[MemoryAgentConfig]):
 
         return scope
 
-    def _serialize_recall_item(self, item: RecallItem) -> RecallItem:
+    def _serialize_recall_item(self, item: "uniko.RecallItem") -> RecallItem:
         """Serialize native RecallItem to Pydantic model.
 
         Args:
@@ -373,7 +365,7 @@ class MemoryAgent(Agent[MemoryAgentConfig]):
         """
         req = ctx.payload
 
-        logger.info(
+        logger.debug(
             f"Ingesting document with source spec: {req.source_spec}, media_link: {req.media_link}, session_id: {req.session_id}"
         )
 
@@ -386,7 +378,6 @@ class MemoryAgent(Agent[MemoryAgentConfig]):
             if req.media_link and req.media_link.on_filesystem:
                 # Read content from guild filesystem
                 file_path = req.media_link.url
-                logger.info(f"Reading file from guild filesystem: {file_path}")
 
                 # When guild_fs is configured with asynchronous=True, its sync bridge loop
                 # is None by design, so the sync open()/read() raises "Loop is not running".
@@ -396,26 +387,24 @@ class MemoryAgent(Agent[MemoryAgentConfig]):
                 else:
                     with guild_fs.open(file_path, "rb") as f:
                         content = f.read()
-                
-                logger.info(f"content read from guild filesystem file: {file_path}, size: {len(content)} bytes")
 
                 # Determine mime type
                 mime_type = req.media_link.mimetype or "text/plain"
 
                 # Create IngestSource from bytes
                 source = IngestSource.from_bytes(content).with_mime(mime_type)
-                logger.info(f"Built IngestSource from guild filesystem file: {file_path} with mime: {mime_type}")
             elif req.source_spec:
                 source = self._build_ingest_source(req.source_spec)
-                logger.info(f"Built IngestSource from source_spec: {source}")
             else:
                 raise ValueError("Either media_link or source_spec must be provided")
 
             # Ingest the document
             outcome = await session.ingest(source)
 
-            logger.info(
-                f"Ingested document with artifact_node_id: {outcome.artifact_node_id}, chunk_count: {len(outcome.chunk_node_ids) if outcome.chunk_node_ids else 0}, page_count: {outcome.page_count if outcome.page_count is not None else 0}, extraction_failed: {outcome.extraction_failed}"
+            logger.debug(
+                f"Ingested document with artifact_node_id: {outcome.artifact_node_id},"
+                + f"chunk_count: {len(outcome.chunk_node_ids) if outcome.chunk_node_ids else 0},"
+                + f"extraction_failed: {outcome.extraction_failed}"
             )
 
             ctx.send(
@@ -621,7 +610,7 @@ class MemoryAgent(Agent[MemoryAgentConfig]):
             elif req.phase == "completed":
                 goal_list = await goals_handle.completed()
             elif req.phase == "abandoned":
-                goal_list = await goals_handle.abandoned()
+                goal_list = await goals_handle.in_phase("abandoned")
             else:  # "all"
                 goal_list = await goals_handle.all()
 
@@ -774,24 +763,27 @@ class MemoryAgent(Agent[MemoryAgentConfig]):
         try:
             goals = uniko.goals
 
-            # Get goal context
-            context = await goals.context(
-                req.goal_id,
-                include_tasks=req.include_tasks,
-                include_episodes=req.include_episodes,
-            )
+            # Get goal context (native API keys context on goal_id only)
+            context = await goals.context(req.goal_id)
+
+            if context is None:
+                raise ValueError(f"Goal context not found: {req.goal_id}")
 
             # Serialize context
             goal_view = self._serialize_goal_view(context.goal)
-            tasks = [self._serialize_task_view(t) for t in context.tasks]
-            episodes = [self._serialize_episode(e) for e in context.episodes]
+            tasks = [self._serialize_task_view(t) for t in context.tasks] if req.include_tasks else []
+            episodes = (
+                [{"message_id": message_id} for message_id in context.recent_messages]
+                if req.include_episodes
+                else []
+            )
 
             ctx.send(
                 GoalContext(
                     goal=goal_view,
                     tasks=tasks,
                     episodes=episodes,
-                    progress=context.progress or {},
+                    progress={"facts": context.facts, "entities": context.entities, "sessions": context.sessions},
                 )
             )
 
@@ -833,13 +825,3 @@ class MemoryAgent(Agent[MemoryAgentConfig]):
             priority=getattr(task, "priority", 3),
             created_at=getattr(task, "created_at", None),
         )
-
-    def _serialize_episode(self, episode) -> Dict[str, Any]:
-        """Serialize native episode to dict."""
-        return {
-            "episode_id": getattr(episode, "episode_id", None),
-            "node_id": getattr(episode, "node_id", None),
-            "action_type": getattr(episode, "action_type", None),
-            "outcome": getattr(episode, "outcome", None),
-            "timestamp": getattr(episode, "timestamp", None),
-        }

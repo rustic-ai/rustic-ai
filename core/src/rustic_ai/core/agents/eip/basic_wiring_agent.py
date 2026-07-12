@@ -1,10 +1,12 @@
 import logging
+
 from rustic_ai.core.guild import Agent, agent
 from rustic_ai.core.guild.agent import ProcessContext
 from rustic_ai.core.messaging import MessageConstants
 from rustic_ai.core.messaging.core import JsonDict
 
 logger = logging.getLogger(__name__)
+
 
 class BasicWiringAgent(Agent):
     """An Agent that wires the received message out to the destination."""
@@ -23,7 +25,7 @@ class BasicWiringAgent(Agent):
         Args:
             ctx (ProcessContext[JsonDict]): The context of the message being processed.
         """
-        logger.info(f"Wiring message: {ctx.payload}")
+        logger.debug(f"Wiring message: {ctx.payload}")
         ctx.send_dict(
             ctx.payload,
             format=ctx.message.format,

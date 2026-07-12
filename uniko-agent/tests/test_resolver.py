@@ -1,8 +1,10 @@
 """Unit tests for UnikoResolver LLM spec building."""
 
-import pytest
 import os
 from unittest.mock import patch
+
+import pytest
+
 from rustic_ai.uniko_agent.resolver import UnikoResolver
 
 

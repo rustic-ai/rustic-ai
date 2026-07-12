@@ -2,17 +2,13 @@
 
 import pytest
 import pytest_asyncio
-from rustic_ai.testing.helpers import wrap_agent_for_testing
 import uniko
 
 from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder
-from rustic_ai.core.guild.dsl import DependencySpec, GuildSpec
-from rustic_ai.uniko_agent import (
-    MemoryAgent,
-    MemoryAgentConfig,
-    ObserveTurnRequest,
-    UnikoResolver,
-)
+from rustic_ai.core.guild.dsl import DependencySpec
+from rustic_ai.uniko_agent import MemoryAgent, MemoryAgentConfig, ObserveTurnRequest
+
+from rustic_ai.testing.helpers import wrap_agent_for_testing
 
 
 @pytest.fixture
