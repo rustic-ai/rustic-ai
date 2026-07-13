@@ -3,7 +3,6 @@ from concurrent.futures import Future
 from datetime import datetime, timezone
 from enum import StrEnum
 import hashlib
-import logging
 import mimetypes
 import os
 import threading
@@ -24,8 +23,6 @@ from rustic_ai.core.guild import Agent, agent
 from rustic_ai.core.guild.agent_ext.depends.filesystem.filesystem import FileSystem
 from rustic_ai.core.guild.dsl import BaseAgentProps
 from rustic_ai.core.utils.json_utils import JsonDict
-
-logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
 
@@ -243,9 +240,9 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
 
             # Install chromium if needed (only check once)
             if not self._chromium_installed:
-                logging.info("Checking if Chromium is installed...")
+                self.logger.info("Checking if Chromium is installed...")
                 if install([self._playwright.chromium]):
-                    logging.info("Chromium installation check completed")
+                    self.logger.info("Chromium installation check completed")
                     self._chromium_installed = True
                 else:
                     raise RuntimeError("Failed to install Chromium browser")
@@ -254,9 +251,9 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
             self._browser = await self._playwright.chromium.launch(headless=self.config.headless)
             self._initialized = True
 
-            logging.info("Browser initialized successfully")
+            self.logger.info("Browser initialized successfully")
         except Exception as e:
-            logging.error(f"Failed to initialize browser: {e}")
+            self.logger.error(f"Failed to initialize browser: {e}")
             raise
 
     async def _extract_links(self, page, base_url: str, request: WebScrapingRequest) -> List[str]:
@@ -277,7 +274,7 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
                     valid_links.append(full_url)
             return valid_links
         except Exception as e:
-            logging.error(f"Error extracting links from {base_url}: {e}")
+            self.logger.error(f"Error extracting links from {base_url}: {e}")
             return []
 
     async def _scrape_page(
@@ -298,7 +295,7 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
                 response = await page.goto(url, wait_until="domcontentloaded")
 
                 if not response:
-                    logging.error(f"No response received for URL: {url}")
+                    self.logger.error(f"No response received for URL: {url}")
                     return None, [], None
 
                 if response.status >= 400:
@@ -389,7 +386,7 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
             )
             return None, [], error
         except Exception as e:
-            logging.error(f"Error scraping {url}: {e}")
+            self.logger.error(f"Error scraping {url}: {e}")
             error = ErrorMessage(
                 agent_type=self.get_qualified_class_name(),
                 error_type="SCRAPE_ERROR",
@@ -473,7 +470,7 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
         except Exception as e:
             # Check for specific error indicating browser connection loss
             if "closed" in str(e).lower() or "transport" in str(e).lower():
-                logging.warning(f"Browser context creation failed, re-initializing browser: {e}")
+                self.logger.warning(f"Browser context creation failed, re-initializing browser: {e}")
                 browser = await self._ensure_browser(force=True)
                 context = await browser.new_context(
                     viewport={"width": 1920, "height": 1080},
@@ -487,7 +484,7 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
         semaphore = asyncio.Semaphore(self.config.parallel_pages)
 
         try:
-            logger.debug(f"Starting scraping for request: {scraping_request.id}")
+            self.logger.debug(f"Starting scraping for request: {scraping_request.id}")
 
             # Create tasks for all initial URLs
             tasks = []
@@ -519,7 +516,7 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
                         )
                     )
 
-            logger.debug(f"Scraping completed for request: {scraping_request.id}. Total unique documents scraped: {len(scraped_docs)}")
+            self.logger.debug(f"Scraping completed for request: {scraping_request.id}. Total unique documents scraped: {len(scraped_docs)}")
 
             return scraped_docs, errors
 

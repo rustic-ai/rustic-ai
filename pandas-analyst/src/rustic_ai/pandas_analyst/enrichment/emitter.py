@@ -7,7 +7,6 @@ LLMAgent via guild routing rules.
 """
 
 import json
-import logging
 from typing import Optional, Union
 
 from pydantic import BaseModel, Field
@@ -20,8 +19,6 @@ from rustic_ai.llm_agent.plugins.tool_call_wrapper import (
 )
 
 from .models import DatasetLoadedEvent
-
-logger = logging.getLogger(__name__)
 
 
 class DatasetLoadedEmitter(ToolCallWrapper):
@@ -75,11 +72,11 @@ class DatasetLoadedEmitter(ToolCallWrapper):
             if event is None:
                 return ToolCallResult(output=tool_output)
 
-            logger.debug(f"Emitting DatasetLoadedEvent for dataset: {event.dataset_name}")
+            self.logger.debug(f"Emitting DatasetLoadedEvent for dataset: {event.dataset_name}")
             return ToolCallResult(output=tool_output, messages=[event])
 
         except Exception as e:
-            logger.warning(f"Failed to emit DatasetLoadedEvent: {e}")
+            self.logger.warning(f"Failed to emit DatasetLoadedEvent: {e}")
             return ToolCallResult(output=tool_output)
 
     def _build_event(
@@ -96,18 +93,18 @@ class DatasetLoadedEmitter(ToolCallWrapper):
         # Access analyzer via agent's toolset
         toolset = getattr(agent.config, "toolset", None)
         if toolset is None:
-            logger.debug("No toolset found on agent config")
+            self.logger.debug("No toolset found on agent config")
             return None
 
         analyzer = getattr(toolset, "_analyzer", None)
         if analyzer is None:
-            logger.debug("No analyzer found on toolset")
+            self.logger.debug("No analyzer found on toolset")
             return None
 
         # Get dataset name
         dataset_name = self._extract_dataset_name(tool_input, tool_output)
         if not dataset_name:
-            logger.debug("Could not determine dataset name")
+            self.logger.debug("Could not determine dataset name")
             return None
 
         try:
@@ -132,7 +129,7 @@ class DatasetLoadedEmitter(ToolCallWrapper):
             )
 
         except Exception as e:
-            logger.warning(f"Failed to get dataset info: {e}")
+            self.logger.warning(f"Failed to get dataset info: {e}")
             return None
 
     def _extract_dataset_name(self, tool_input: BaseModel, tool_output: str) -> Optional[str]:

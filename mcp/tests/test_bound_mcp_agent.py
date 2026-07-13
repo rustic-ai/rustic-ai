@@ -2,7 +2,6 @@ from unittest.mock import AsyncMock
 
 from pydantic import ValidationError
 import pytest
-from rustic_ai.testing.helpers import wrap_agent_for_testing
 
 from mcp.types import ListToolsResult
 from rustic_ai.core.guild.builders import AgentBuilder
@@ -27,6 +26,8 @@ from rustic_ai.mcp.models import (
     MCPToolDeclaration,
     ToolResult,
 )
+
+from rustic_ai.testing.helpers import wrap_agent_for_testing
 
 
 def _server() -> MCPServerConfig:

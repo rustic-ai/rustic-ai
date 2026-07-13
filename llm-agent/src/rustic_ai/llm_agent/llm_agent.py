@@ -1,5 +1,4 @@
 import base64
-import logging
 import mimetypes
 from typing import Optional
 
@@ -23,8 +22,6 @@ from rustic_ai.llm_agent.llm_agent_conf import LLMAgentConfig
 from rustic_ai.llm_agent.llm_agent_helper import LLMAgentHelper
 from rustic_ai.llm_agent.llm_agent_utils import LLMAgentUtils
 
-logger = logging.getLogger(__name__)
-
 
 class LLMAgent(Agent[LLMAgentConfig]):
     """
@@ -45,7 +42,7 @@ class LLMAgent(Agent[LLMAgentConfig]):
         """
         prompt = ctx.payload
 
-        logger.debug(f"Invoking LLM with prompt: {prompt.messages}")
+        self.logger.debug(f"Invoking LLM with prompt: {prompt.messages}")
 
         if self._system_prompt:
             # If the system prompt was updated, add it to the messages.
@@ -64,7 +61,7 @@ class LLMAgent(Agent[LLMAgentConfig]):
             prompt,
         )
 
-        logger.debug(f"LLM response: {resp}")
+        self.logger.debug(f"LLM response: {resp}")
 
     @processor(
         ChatCompletionRequest,

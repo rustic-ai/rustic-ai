@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-import logging
 from typing import List, Literal, Optional, Union
 
 from jsonata import Jsonata
@@ -173,9 +172,6 @@ class SplitterConf(BaseAgentProps):
     ]
 
 
-logger = logging.getLogger(__name__)
-
-
 class SplitterAgent(Agent[SplitterConf]):
     def __init__(self):
         self.splitter = self.config.splitter
@@ -184,11 +180,11 @@ class SplitterAgent(Agent[SplitterConf]):
     @agent.processor(JsonDict)
     def split_and_send(self, ctx: ProcessContext[JsonDict]) -> None:
         try:
-            logger.debug(f"Received payload for splitting: {ctx.payload}")
+            self.logger.debug(f"Received payload for splitting: {ctx.payload}")
             items = self.splitter.split(ctx.payload)
             payload_with_format = self.format_selector.get_formats(items)
 
-            logger.debug(f"Split into {len(items)} items and generated {len(payload_with_format)} formatted payloads.")
+            self.logger.debug(f"Split into {len(items)} items and generated {len(payload_with_format)} formatted payloads.")
 
             if len(payload_with_format) != len(items):
                 ctx.send_error(
@@ -201,10 +197,10 @@ class SplitterAgent(Agent[SplitterConf]):
                 return
 
             for res in payload_with_format:
-                logger.debug(f"Sending formatted payload: {res.payload} with format: {res.format}")
+                self.logger.debug(f"Sending formatted payload: {res.payload} with format: {res.format}")
                 ctx.send_dict(payload=res.payload, format=res.format)
         except Exception as e:
-            logger.error(f"Error during splitting and sending: {str(e)}", exc_info=True)
+            self.logger.error(f"Error during splitting and sending: {str(e)}", exc_info=True)
             ctx.send_error(
                 ErrorMessage(
                     agent_type=self.get_qualified_class_name(),

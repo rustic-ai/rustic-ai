@@ -1,5 +1,4 @@
 from datetime import datetime
-import logging
 
 from google.genai import types
 import shortuuid
@@ -16,8 +15,6 @@ from rustic_ai.core.guild.agent_ext.depends.llm.models import (
 from rustic_ai.core.guild.dsl import BaseAgentProps
 from rustic_ai.serpapi.agent import SERPQuery
 from rustic_ai.vertexai.client import VertexAIBase, VertexAIConf
-
-logger = logging.getLogger(__name__)
 
 
 class GoogleResearchAgentProps(BaseAgentProps, VertexAIConf):
@@ -43,7 +40,7 @@ class GoogleResearchAgent(Agent[GoogleResearchAgentProps], VertexAIBase):
     @agent.processor(SERPQuery)
     async def on_message(self, ctx: agent.ProcessContext[SERPQuery]):
         query = ctx.payload.query
-        logger.debug(f"Received research query: {query}")
+        self.logger.debug(f"Received research query: {query}")
 
         try:
             if not self.genai_client:
@@ -105,7 +102,7 @@ class GoogleResearchAgent(Agent[GoogleResearchAgentProps], VertexAIBase):
                 created=int(datetime.now().timestamp()),
             )
 
-            logger.debug(f"Sending research findings for query: {query} with ID: {query_id} and grounding info: {grounding}")
+            self.logger.debug(f"Sending research findings for query: {query} with ID: {query_id} and grounding info: {grounding}")
 
             ctx.send(payload=ccr, reason=grounding)
         except Exception as e:

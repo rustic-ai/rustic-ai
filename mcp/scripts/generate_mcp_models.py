@@ -15,23 +15,27 @@ From mcp folder,
 """
 
 import argparse
+import asyncio
 import json
 import logging
 import os
-import sys
 from pathlib import Path
+import sys
 from typing import Any, Dict, List, Optional
 
+from datamodel_code_generator import (
+    DataModelType,
+    Formatter,
+    GenerateConfig,
+    InputFileType,
+    generate,
+)
 from dotenv import load_dotenv
 import httpx
-import yaml
-from datamodel_code_generator import InputFileType, generate, GenerateConfig, DataModelType, Formatter
-from mcp import Tool
 from pydantic import BaseModel, Field
+import yaml
 
-import asyncio
-
-from mcp import ClientSession
+from mcp import ClientSession, Tool
 from mcp.client.streamable_http import streamable_http_client
 
 # Configure logging
@@ -98,10 +102,11 @@ async def get_provider_tools(provider: MCPProvider) -> List[Tool]:
     if provider.token_env_var:
         token = os.environ.get(provider.token_env_var, None)
         if token:
-            if provider.token_header == "Authorization":
+            header_name = provider.token_header or "Authorization"
+            if header_name == "Authorization":
                 headers["Authorization"] = f"Bearer {token}"
             else:
-                headers[provider.token_header] = token
+                headers[header_name] = token
         else:
             raise ValueError(f"Token environment variable '{provider.token_env_var}' not found")
     http_client = httpx.AsyncClient(headers=headers) if headers else None
@@ -109,17 +114,20 @@ async def get_provider_tools(provider: MCPProvider) -> List[Tool]:
         async with streamable_http_client(provider.url, http_client=http_client) as (read_stream, write_stream, _):
             # Create a session using the client streams
             async with ClientSession(read_stream, write_stream) as session:
-
-                    # Initialize the connection
-                    await session.initialize()
-                    # List available tools
-                    result = await session.list_tools()
-                    logger.info(f"Fetched {len(result.tools)} tool(s) from {provider.name}")
-                    return result.tools
-    except Exception as e:
-        for error in e.exceptions:
+                # Initialize the connection
+                await session.initialize()
+                # List available tools
+                result = await session.list_tools()
+                logger.info(f"Fetched {len(result.tools)} tool(s) from {provider.name}")
+                return result.tools
+    except ExceptionGroup as eg:
+        for error in eg.exceptions:
             logger.error(f"Error fetching tools from {provider.name}: {error}")
-            raise
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching tools from {provider.name}: {e}")
+        raise
+
 
 def _tool_to_dict(tool: Tool) -> Dict[str, Any]:
     """
@@ -234,7 +242,7 @@ def _build_bound_mcp_config_comment(
     ]
     agent_config = {"server": server, "tools": tool_decls}
     if provider.token_env_var and provider.token_header and provider.token_header != "Authorization":
-            agent_config["auth_header"] = provider.token_header
+        agent_config["auth_header"] = provider.token_header
     config_json = json.dumps(agent_config, indent=2)
     commented = "\n".join(f" {line}" if line else "" for line in config_json.splitlines())
     return (
