@@ -72,11 +72,11 @@ class DatasetLoadedEmitter(ToolCallWrapper):
             if event is None:
                 return ToolCallResult(output=tool_output)
 
-            self.logger.debug(f"Emitting DatasetLoadedEvent for dataset: {event.dataset_name}")
+            agent.logger.debug(f"Emitting DatasetLoadedEvent for dataset: {event.dataset_name}")
             return ToolCallResult(output=tool_output, messages=[event])
 
         except Exception as e:
-            self.logger.warning(f"Failed to emit DatasetLoadedEvent: {e}")
+            agent.logger.warning(f"Failed to emit DatasetLoadedEvent: {e}")
             return ToolCallResult(output=tool_output)
 
     def _build_event(
@@ -93,18 +93,18 @@ class DatasetLoadedEmitter(ToolCallWrapper):
         # Access analyzer via agent's toolset
         toolset = getattr(agent.config, "toolset", None)
         if toolset is None:
-            self.logger.debug("No toolset found on agent config")
+            agent.logger.debug("No toolset found on agent config")
             return None
 
         analyzer = getattr(toolset, "_analyzer", None)
         if analyzer is None:
-            self.logger.debug("No analyzer found on toolset")
+            agent.logger.debug("No analyzer found on toolset")
             return None
 
         # Get dataset name
         dataset_name = self._extract_dataset_name(tool_input, tool_output)
         if not dataset_name:
-            self.logger.debug("Could not determine dataset name")
+            agent.logger.debug("Could not determine dataset name")
             return None
 
         try:
@@ -129,7 +129,7 @@ class DatasetLoadedEmitter(ToolCallWrapper):
             )
 
         except Exception as e:
-            self.logger.warning(f"Failed to get dataset info: {e}")
+            agent.logger.warning(f"Failed to get dataset info: {e}")
             return None
 
     def _extract_dataset_name(self, tool_input: BaseModel, tool_output: str) -> Optional[str]:
