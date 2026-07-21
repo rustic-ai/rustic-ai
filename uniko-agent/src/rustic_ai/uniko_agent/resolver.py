@@ -17,8 +17,9 @@ class UnikoResolver(DependencyResolver[uniko.Agent]):
     in a guild while maintaining isolation between different guilds.
 
     Attributes:
-        storage_path: Path template for persistent storage (supports {org_id}/{guild_id} formatting).
-                     If None, uses in-memory storage.
+        storage_path: Base path for persistent storage. If None, uses in-memory storage.
+        org_level: If True, append org_id to storage_path.
+        guild_level: If True, append guild_id to storage_path.
         llm_spec: LLM configuration for answer generation. Format:
                  {"alias": "openai", "model_id": "gpt-4o-mini", "key_env": "OPENAI_API_KEY"}
         streaming: Enable streaming mode for async observations
@@ -30,6 +31,8 @@ class UnikoResolver(DependencyResolver[uniko.Agent]):
     def __init__(
         self,
         storage_path: Optional[str] = None,
+        org_level: bool = False,
+        guild_level: bool = False,
         llm_spec: Optional[Dict[str, Any]] = None,
         streaming: bool = False,
         scope_to_agent: bool = False,
@@ -37,14 +40,17 @@ class UnikoResolver(DependencyResolver[uniko.Agent]):
         """Initialize the UnikoResolver.
 
         Args:
-            storage_path: Optional path template with {org_id}/{guild_id} placeholders.
-                         None = in-memory storage.
+            storage_path: Optional base path for persistent storage. None = in-memory storage.
+            org_level: If True, append org_id to storage_path.
+            guild_level: If True, append guild_id to storage_path.
             llm_spec: Optional LLM configuration dict for answer generation.
             streaming: Enable streaming mode for background processing.
             scope_to_agent: If True, scope memory to individual agents (not recommended).
         """
         super().__init__()
         self.storage_path = storage_path
+        self.org_level = org_level
+        self.guild_level = guild_level
         self.llm_spec = llm_spec
         self.streaming = streaming
         self.scope_to_agent = scope_to_agent
@@ -70,10 +76,11 @@ class UnikoResolver(DependencyResolver[uniko.Agent]):
 
             # Configure storage
             if self.storage_path:
-                path = self.storage_path.format(
-                    org_id=org_id,
-                    guild_id=guild_id
-                )
+                path = self.storage_path
+                if self.org_level:
+                    path = f"{path}/{org_id}"
+                if self.guild_level:
+                    path = f"{path}/{guild_id}"
                 builder = builder.path(path)
             else:
                 builder = builder.in_memory()

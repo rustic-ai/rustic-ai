@@ -74,7 +74,9 @@ guild.send_message(
 uniko_dep = DependencySpec(
     class_name="rustic_ai.uniko_agent.UnikoResolver",
     properties={
-        "storage_path": "./data/memory/{org_id}/{guild_id}",  # Persistent
+        "storage_path": "./data/memory",  # Persistent
+        "org_level": True,   # Append org_id to storage_path
+        "guild_level": True, # Append guild_id to storage_path
         "llm_spec": {
             "alias": "openai",
             "model_id": "gpt-4o-mini",
@@ -193,7 +195,9 @@ config = MemoryAgentConfig(
 
 ```python
 {
-    "storage_path": str | None,      # None = in-memory, str = path template
+    "storage_path": str | None,      # None = in-memory, str = base path
+    "org_level": bool,               # Append org_id to storage_path
+    "guild_level": bool,             # Append guild_id to storage_path
     "llm_spec": dict | None,         # LLM config for answer generation
     "streaming": bool,               # Enable streaming mode
     "scope_to_agent": bool,          # Scope memory to individual agents (not recommended)
