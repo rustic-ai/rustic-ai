@@ -33,7 +33,7 @@ def socket_mode_agent():
 @pytest.fixture
 def mock_slack_client():
     """Mock SocketModeClient"""
-    with patch('rustic_ai.slack.agents.socket_mode_agent.SocketModeClient') as mock:
+    with patch("rustic_ai.slack.agents.socket_mode_agent.SocketModeClient") as mock:
         client = MagicMock()
         client.socket_mode_request_listeners = []
         client.connect = MagicMock()
@@ -46,15 +46,17 @@ def mock_slack_client():
 @pytest.fixture
 def mock_web_client():
     """Mock WebClient for auth"""
-    with patch('rustic_ai.slack.agents.socket_mode_agent.WebClient') as mock:
+    with patch("rustic_ai.slack.agents.socket_mode_agent.WebClient") as mock:
         client = MagicMock()
-        client.auth_test = MagicMock(return_value={
-            "ok": True,
-            "user": "testbot",
-            "user_id": "U123BOT",
-            "team": "TestTeam",
-            "team_id": "T123WORKSPACE"
-        })
+        client.auth_test = MagicMock(
+            return_value={
+                "ok": True,
+                "user": "testbot",
+                "user_id": "U123BOT",
+                "team": "TestTeam",
+                "team_id": "T123WORKSPACE",
+            }
+        )
         mock.return_value = client
         yield mock
 
@@ -96,9 +98,7 @@ class TestSocketModeAgentCreation:
 class TestSocketModeConnection:
     """Tests for Socket Mode connection"""
 
-    def test_init_with_tokens(
-        self, mock_env_tokens, mock_slack_client, mock_web_client
-    ):
+    def test_init_with_tokens(self, mock_env_tokens, mock_slack_client, mock_web_client):
         """Test __init__ starts Socket Mode with tokens"""
         # Create agent (initialization happens in __init__)
         agent = SlackSocketModeAgent()
@@ -138,9 +138,7 @@ class TestSocketModeConnection:
         # Should not have created client
         assert agent._socket_client is None
 
-    def test_run_socket_mode_success(
-        self, socket_mode_agent, mock_env_tokens, mock_slack_client, mock_web_client
-    ):
+    def test_run_socket_mode_success(self, socket_mode_agent, mock_env_tokens, mock_slack_client, mock_web_client):
         """Test _run_socket_mode connects successfully"""
         socket_mode_agent._app_token = "xapp-test"
         socket_mode_agent._bot_token = "xoxb-test"
@@ -198,7 +196,7 @@ class TestEventHandling:
                 "channel": "C789",
                 "ts": "1234567890.123456",
                 "text": "<@U123BOT> hello",
-                "event_ts": "1234567890.123456"
+                "event_ts": "1234567890.123456",
             }
         }
 
@@ -225,7 +223,7 @@ class TestEventHandling:
             "channel": "C789",
             "ts": "1234567890.123456",
             "text": "<@U123BOT> hello",
-            "event_ts": "1234567890.123456"
+            "event_ts": "1234567890.123456",
         }
 
         socket_mode_agent._handle_app_mention(event, "env-123")
@@ -255,7 +253,7 @@ class TestEventHandling:
             "ts": "1234567890.123456",
             "text": "<@U123BOT> hello",
             "event_ts": "1234567890.123456",
-            "bot_id": "B123BOT"  # This is from a bot
+            "bot_id": "B123BOT",  # This is from a bot
         }
 
         socket_mode_agent._handle_app_mention(event, "env-123")
@@ -276,7 +274,7 @@ class TestEventHandling:
             "channel_type": "im",
             "ts": "1234567890.123456",
             "text": "hello",
-            "event_ts": "1234567890.123456"
+            "event_ts": "1234567890.123456",
         }
 
         socket_mode_agent._handle_message(event, "env-123")
@@ -299,7 +297,7 @@ class TestEventHandling:
             "channel_type": "channel",
             "ts": "1234567890.123456",
             "text": "hey <@U123BOT> how are you?",
-            "event_ts": "1234567890.123456"
+            "event_ts": "1234567890.123456",
         }
 
         socket_mode_agent._handle_message(event, "env-123")
@@ -320,7 +318,7 @@ class TestEventHandling:
             "channel_type": "channel",
             "ts": "1234567890.123456",
             "text": "just a regular message",
-            "event_ts": "1234567890.123456"
+            "event_ts": "1234567890.123456",
         }
 
         socket_mode_agent._handle_message(event, "env-123")
@@ -341,7 +339,7 @@ class TestEventHandling:
             "channel": "C789",
             "ts": "1234567890.123456",
             "text": "edited message",
-            "event_ts": "1234567890.123456"
+            "event_ts": "1234567890.123456",
         }
 
         socket_mode_agent._handle_message(event, "env-123")
@@ -362,7 +360,7 @@ class TestEventHandling:
             "ts": "1234567890.999999",
             "text": "<@U123BOT> follow up",
             "thread_ts": "1234567890.000000",  # Parent thread
-            "event_ts": "1234567890.999999"
+            "event_ts": "1234567890.999999",
         }
 
         socket_mode_agent._handle_app_mention(event, "env-123")
@@ -397,7 +395,7 @@ class TestPublishEventToGuild:
             channel="C789",
             ts="1234567890.123456",
             text="<@U123BOT> hello",
-            event_ts="1234567890.123456"
+            event_ts="1234567890.123456",
         )
 
         socket_mode_agent._publish_event_to_guild(event_msg)
@@ -407,9 +405,7 @@ class TestPublishEventToGuild:
 
     def test_publish_event_handles_errors(self, socket_mode_agent):
         """Test that publish handles errors gracefully"""
-        socket_mode_agent._send_dict_to_self = MagicMock(
-            side_effect=Exception("Guild error")
-        )
+        socket_mode_agent._send_dict_to_self = MagicMock(side_effect=Exception("Guild error"))
 
         event_msg = SlackEventMessage(
             event_type="app_mention",
@@ -418,7 +414,7 @@ class TestPublishEventToGuild:
             channel="C789",
             ts="1234567890.123456",
             text="test",
-            event_ts="1234567890.123456"
+            event_ts="1234567890.123456",
         )
 
         # Should not raise exception
@@ -470,7 +466,7 @@ class TestEdgeCases:
         # Missing required fields
         event = {
             "type": "app_mention",
-            "user": "U456"
+            "user": "U456",
             # Missing: channel, ts, text, event_ts
         }
 
@@ -491,12 +487,7 @@ class TestEdgeCases:
         mock_req = MagicMock(spec=SocketModeRequest)
         mock_req.envelope_id = "env-123"
         mock_req.type = "events_api"
-        mock_req.payload = {
-            "event": {
-                "type": "unknown_event_type",
-                "some_field": "some_value"
-            }
-        }
+        mock_req.payload = {"event": {"type": "unknown_event_type", "some_field": "some_value"}}
 
         # Should handle without error
         socket_mode_agent._handle_socket_mode_request(mock_client, mock_req)

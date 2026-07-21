@@ -5,7 +5,7 @@ from rustic_ai.core.guild.agent_ext.depends.dependency_resolver import (
     DependencyResolver,
     DependencySpec,
 )
-from rustic_ai.core.guild.dsl import AgentSpec, GuildSpec
+from rustic_ai.core.guild.dsl import AgentSpec, GuildSpec, OpaqueProps
 from rustic_ai.core.guild.g2g.boundary_agent import BoundaryAgent
 from rustic_ai.core.messaging.core.client import Client
 from rustic_ai.core.messaging.core.messaging_interface import MessagingInterface
@@ -22,6 +22,20 @@ def build_agent_from_spec(
     machine_id: int,
     organization_id: Optional[str] = None,
 ) -> Agent:
+
+    # Spec deserialization is tolerant by default: an agent whose class (or a nested
+    # plugin/toolset class referenced by its props) is not importable has its props
+    # degraded to an opaque container, so environments can hold/route peers they do not
+    # run and a core-only GuildManagerAgent can ship specs onward. This is the point
+    # where an agent is instantiated in the environment that actually runs it. If the
+    # props are still opaque here, something was missing when the spec was loaded, so
+    # re-validate strictly: this rebuilds the real typed props using the classes
+    # installed here (e.g. a spec that arrived opaque from a core-only manager), and
+    # fails fast with a clear error if this environment is genuinely missing something
+    # the agent it is about to run requires. A spec whose props are already typed is
+    # left untouched so any live plugin instances it carries keep their identity.
+    if isinstance(agent_spec.properties, OpaqueProps):
+        agent_spec = AgentSpec.model_validate(agent_spec.model_dump(), context={"require_agent_class": True})
 
     agent_class = get_agent_class(agent_spec.class_name)
 

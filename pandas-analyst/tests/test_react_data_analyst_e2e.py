@@ -121,6 +121,7 @@ def build_message_from_payload():
             payload=payload_dict,
             format=computed_format if computed_format else "raw_json",
         )
+
     return _build_message_from_payload
 
 
@@ -164,6 +165,7 @@ def create_tool_call(
 ) -> ChatCompletionMessageToolCall:
     """Helper to create tool call objects."""
     import json
+
     return ChatCompletionMessageToolCall(
         id=tool_id,
         type=ToolType.function,
@@ -262,31 +264,29 @@ class TestReactDataAnalystWithMockedLLM:
             # First: Load the file
             create_mock_response(
                 content="I need to load the sales data file first.",
-                tool_calls=[create_tool_call(
-                    "call_1",
-                    "load_file",
-                    {"filename": "sales_data.csv", "dataset_name": "sales"}
-                )],
+                tool_calls=[
+                    create_tool_call("call_1", "load_file", {"filename": "sales_data.csv", "dataset_name": "sales"})
+                ],
                 finish_reason=FinishReason.tool_calls,
             ),
             # Second: Query the data
             create_mock_response(
                 content="Now I'll query the data to find total quantity.",
-                tool_calls=[create_tool_call(
-                    "call_2",
-                    "query_dataset",
-                    {
-                        "query_language": "sql",
-                        "query_string": "SELECT SUM(quantity) as total FROM sales",
-                        "input_datasets": {"sales": "sales"}
-                    }
-                )],
+                tool_calls=[
+                    create_tool_call(
+                        "call_2",
+                        "query_dataset",
+                        {
+                            "query_language": "sql",
+                            "query_string": "SELECT SUM(quantity) as total FROM sales",
+                            "input_datasets": {"sales": "sales"},
+                        },
+                    )
+                ],
                 finish_reason=FinishReason.tool_calls,
             ),
             # Third: Final answer
-            create_mock_response(
-                content="The total quantity of all products is 160."
-            ),
+            create_mock_response(content="The total quantity of all products is 160."),
         ]
 
         call_count = [0]
@@ -361,20 +361,14 @@ class TestReactDataAnalystWithMockedLLM:
         responses = [
             create_mock_response(
                 content="Loading the file first.",
-                tool_calls=[create_tool_call(
-                    "call_1",
-                    "load_file",
-                    {"filename": "employees.csv", "dataset_name": "employees"}
-                )],
+                tool_calls=[
+                    create_tool_call("call_1", "load_file", {"filename": "employees.csv", "dataset_name": "employees"})
+                ],
                 finish_reason=FinishReason.tool_calls,
             ),
             create_mock_response(
                 content="Now getting the schema.",
-                tool_calls=[create_tool_call(
-                    "call_2",
-                    "get_schema",
-                    {"name": "employees"}
-                )],
+                tool_calls=[create_tool_call("call_2", "get_schema", {"name": "employees"})],
                 finish_reason=FinishReason.tool_calls,
             ),
             create_mock_response(
@@ -493,7 +487,7 @@ class TestReactDataAnalystGuildIntegration:
                     "messages": [
                         {
                             "role": "user",
-                            "content": "Load the sales_data.csv file and tell me the total quantity of all Fruit products."
+                            "content": "Load the sales_data.csv file and tell me the total quantity of all Fruit products.",
                         }
                     ]
                 },
@@ -508,10 +502,7 @@ class TestReactDataAnalystGuildIntegration:
             assert len(messages) >= 1, f"Expected at least 1 message, got {len(messages)}"
 
             # Find ChatCompletionResponse
-            react_responses = [
-                m for m in messages
-                if m.format == get_qualified_class_name(ChatCompletionResponse)
-            ]
+            react_responses = [m for m in messages if m.format == get_qualified_class_name(ChatCompletionResponse)]
             assert len(react_responses) >= 1, "Expected at least one ChatCompletionResponse"
 
             response = ChatCompletionResponse.model_validate(react_responses[-1].payload)
@@ -583,12 +574,7 @@ class TestReactDataAnalystGuildIntegration:
             probe_agent.publish_dict(
                 topic="default_topic",
                 payload={
-                    "messages": [
-                        {
-                            "role": "user",
-                            "content": "Load employees.csv and tell me the average salary."
-                        }
-                    ]
+                    "messages": [{"role": "user", "content": "Load employees.csv and tell me the average salary."}]
                 },
                 format=ChatCompletionRequest,
             )
@@ -598,10 +584,7 @@ class TestReactDataAnalystGuildIntegration:
             messages = probe_agent.get_messages()
             assert len(messages) >= 1
 
-            react_responses = [
-                m for m in messages
-                if m.format == get_qualified_class_name(ChatCompletionResponse)
-            ]
+            react_responses = [m for m in messages if m.format == get_qualified_class_name(ChatCompletionResponse)]
             assert len(react_responses) >= 1
 
             response = ChatCompletionResponse.model_validate(react_responses[-1].payload)
@@ -660,14 +643,12 @@ class TestToolCallVerification:
         responses = [
             create_mock_response(
                 content="Loading sales data.",
-                tool_calls=[create_tool_call(
-                    "call_1",
-                    "load_file",
-                    {"filename": "sales_data.csv", "dataset_name": "sales"}
-                )],
+                tool_calls=[
+                    create_tool_call("call_1", "load_file", {"filename": "sales_data.csv", "dataset_name": "sales"})
+                ],
                 finish_reason=FinishReason.tool_calls,
             ),
-            create_mock_response(content="File loaded successfully with 5 rows.")
+            create_mock_response(content="File loaded successfully with 5 rows."),
         ]
 
         call_count = [0]
@@ -681,9 +662,7 @@ class TestToolCallVerification:
             agent._on_message(
                 build_message_from_payload(
                     generator,
-                    ChatCompletionRequest(
-                        messages=[UserMessage(content="Load sales_data.csv")]
-                    ),
+                    ChatCompletionRequest(messages=[UserMessage(content="Load sales_data.csv")]),
                 )
             )
 

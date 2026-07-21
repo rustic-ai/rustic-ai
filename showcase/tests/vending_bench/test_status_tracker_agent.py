@@ -155,10 +155,10 @@ class TestVendingBenchStatusTrackerAgent:
         chart_data = chart.spec["data"]["values"]
         assert len(chart_data) == 4
         # time_index = (day-1)*24 + (hour-8)
-        assert chart_data[0]["time_index"] == 0   # Hour 8
-        assert chart_data[1]["time_index"] == 1   # Hour 9
-        assert chart_data[2]["time_index"] == 2   # Hour 10
-        assert chart_data[3]["time_index"] == 4   # Hour 12
+        assert chart_data[0]["time_index"] == 0  # Hour 8
+        assert chart_data[1]["time_index"] == 1  # Hour 9
+        assert chart_data[2]["time_index"] == 2  # Hour 10
+        assert chart_data[3]["time_index"] == 4  # Hour 12
 
     def test_net_worth_history_updates_existing_entries(self, agent):
         """Test that net worth history updates existing entries for the same hour."""
@@ -197,7 +197,7 @@ class TestVendingBenchStatusTrackerAgent:
 
         # Simulate adding entries at different hours
         test_data = [
-            {"day": 1, "time": 60, "inventory": {"chips": 18, "candy": 23}},   # Hour 9
+            {"day": 1, "time": 60, "inventory": {"chips": 18, "candy": 23}},  # Hour 9
             {"day": 1, "time": 120, "inventory": {"chips": 15, "candy": 20}},  # Hour 10
             {"day": 1, "time": 240, "inventory": {"chips": 10, "candy": 15}},  # Hour 12
         ]
@@ -236,8 +236,8 @@ class TestVendingBenchStatusTrackerAgent:
         """Test that inventory history updates existing entries for the same hour."""
         # Start with entries
         agent.inventory_history = [
-            {"day": 1, "time": 0, "inventory": {"chips": 20, "candy": 25}},    # Hour 8
-            {"day": 1, "time": 60, "inventory": {"chips": 18, "candy": 23}},   # Hour 9
+            {"day": 1, "time": 0, "inventory": {"chips": 20, "candy": 25}},  # Hour 8
+            {"day": 1, "time": 60, "inventory": {"chips": 18, "candy": 23}},  # Hour 9
         ]
 
         # Try to add another entry for hour 9 (time=65 is still hour 9)
@@ -266,11 +266,11 @@ class TestVendingBenchStatusTrackerAgent:
     def test_inventory_line_chart_time_progression_across_days(self, agent):
         """Test that inventory chart correctly handles time progression across multiple days."""
         agent.inventory_history = [
-            {"day": 1, "time": 0, "inventory": {"chips": 20}},      # Day 1, Hour 8
-            {"day": 1, "time": 240, "inventory": {"chips": 15}},    # Day 1, Hour 12
-            {"day": 1, "time": 600, "inventory": {"chips": 10}},    # Day 1, Hour 18
-            {"day": 2, "time": 0, "inventory": {"chips": 25}},      # Day 2, Hour 8 (restocked)
-            {"day": 2, "time": 120, "inventory": {"chips": 22}},    # Day 2, Hour 10
+            {"day": 1, "time": 0, "inventory": {"chips": 20}},  # Day 1, Hour 8
+            {"day": 1, "time": 240, "inventory": {"chips": 15}},  # Day 1, Hour 12
+            {"day": 1, "time": 600, "inventory": {"chips": 10}},  # Day 1, Hour 18
+            {"day": 2, "time": 0, "inventory": {"chips": 25}},  # Day 2, Hour 8 (restocked)
+            {"day": 2, "time": 120, "inventory": {"chips": 22}},  # Day 2, Hour 10
         ]
 
         chart = agent._generate_inventory_line_chart()
@@ -283,8 +283,8 @@ class TestVendingBenchStatusTrackerAgent:
         # time_index = (day-1)*24 + (hour-8)
         time_indices = [e["time_index"] for e in chart_data]
         expected_indices = [
-            0,   # Day 1, Hour 8: (1-1)*24 + (8-8) = 0
-            4,   # Day 1, Hour 12: (1-1)*24 + (12-8) = 4
+            0,  # Day 1, Hour 8: (1-1)*24 + (8-8) = 0
+            4,  # Day 1, Hour 12: (1-1)*24 + (12-8) = 4
             10,  # Day 1, Hour 18: (1-1)*24 + (18-8) = 10
             24,  # Day 2, Hour 8: (2-1)*24 + (8-8) = 24
             26,  # Day 2, Hour 10: (2-1)*24 + (10-8) = 26
@@ -311,8 +311,8 @@ class TestVendingBenchStatusTrackerAgent:
         # time_index = (day-1)*24 + (hour-8)
         time_indices = [e["time_index"] for e in chart_data]
         expected_indices = [
-            0,   # Day 1, Hour 8
-            4,   # Day 1, Hour 12
+            0,  # Day 1, Hour 8
+            4,  # Day 1, Hour 12
             10,  # Day 1, Hour 18
             24,  # Day 2, Hour 8
             30,  # Day 2, Hour 14
@@ -345,12 +345,14 @@ class TestVendingBenchStatusTrackerAgent:
                     entry_exists = True
                     break
             if not entry_exists:
-                agent.net_worth_history.append({
-                    "day": agent.current_day,
-                    "hour": current_hour,
-                    "net_worth": agent.current_net_worth,
-                    "revenue": agent.total_revenue,
-                })
+                agent.net_worth_history.append(
+                    {
+                        "day": agent.current_day,
+                        "hour": current_hour,
+                        "net_worth": agent.current_net_worth,
+                        "revenue": agent.total_revenue,
+                    }
+                )
 
         # Should only have 1 entry (updated 4 times)
         assert len(agent.net_worth_history) == 1
@@ -395,22 +397,16 @@ class TestVendingBenchStatusTrackerAgent:
         agent.cash_breakdown_history = []
 
         # Add first entry
-        agent._track_cash_breakdown(
-            day=1, hour=8, machine_cash=0.0, operator_cash=100.0, inventory_value=400.0
-        )
+        agent._track_cash_breakdown(day=1, hour=8, machine_cash=0.0, operator_cash=100.0, inventory_value=400.0)
         assert len(agent.cash_breakdown_history) == 1
         assert agent.cash_breakdown_history[0]["machine_cash"] == 0.0
 
         # Add second entry at different time
-        agent._track_cash_breakdown(
-            day=1, hour=10, machine_cash=25.0, operator_cash=100.0, inventory_value=375.0
-        )
+        agent._track_cash_breakdown(day=1, hour=10, machine_cash=25.0, operator_cash=100.0, inventory_value=375.0)
         assert len(agent.cash_breakdown_history) == 2
 
         # Update existing entry (same day/hour)
-        agent._track_cash_breakdown(
-            day=1, hour=10, machine_cash=30.0, operator_cash=100.0, inventory_value=370.0
-        )
+        agent._track_cash_breakdown(day=1, hour=10, machine_cash=30.0, operator_cash=100.0, inventory_value=370.0)
         assert len(agent.cash_breakdown_history) == 2  # Still 2 entries
         # Verify updated values
         entry = next(e for e in agent.cash_breakdown_history if e["hour"] == 10)

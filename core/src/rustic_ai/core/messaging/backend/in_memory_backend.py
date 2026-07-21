@@ -55,6 +55,7 @@ class _ClientDeliveryQueue:
 class MemoryStore:
     _instance = None  # type: ignore
     _id = None  # type: ignore
+    _instance_count = 0  # Helpful in debugging
 
     def __new__(cls):
         if cls._instance is None:

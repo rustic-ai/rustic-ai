@@ -35,10 +35,7 @@ class SlackEventHandlerAgent(Agent):
         """Main event handler - routes events to specific processors"""
         event = ctx.payload
 
-        logging.info(
-            f"Processing Slack event: type={event.event_type} "
-            f"channel={event.channel} user={event.user}"
-        )
+        logging.info(f"Processing Slack event: type={event.event_type} " f"channel={event.channel} user={event.user}")
 
         ctx.send(payload=ctx.payload)  # Echo the event to the guild so route can use it
 
@@ -92,7 +89,7 @@ class SlackEventHandlerAgent(Agent):
                         "slack_thread_ts": event.thread_ts or event.ts,
                         "workspace_id": event.workspace_id,
                         "event_type": event.event_type,
-                    }
+                    },
                 )
             )
 
@@ -127,9 +124,9 @@ class SlackEventHandlerAgent(Agent):
             Output: "hey what's up"
         """
         # Remove all @mentions (format: <@U123ABC>)
-        clean = re.sub(r'<@[A-Z0-9]+>', '', text)
+        clean = re.sub(r"<@[A-Z0-9]+>", "", text)
 
         # Remove extra whitespace
-        clean = ' '.join(clean.split())
+        clean = " ".join(clean.split())
 
         return clean.strip()

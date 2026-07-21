@@ -118,17 +118,13 @@ class Guild:
 
         logging.info(f"Running agent {agent_spec.name} in guild {self.name}")
 
-        logging.info(
-            dedent(
-                f"""-----------------------------------------
+        logging.info(dedent(f"""-----------------------------------------
                    Execution engine: {execution_engine}
                    Messaging: {self.messaging}
                    Client Type: {self.client_type}
                    Client Properties: {self.client_properties}
                    Default Topic: {self.DEFAULT_TOPIC}
-                   -----------------------------------------"""
-            )
-        )
+                   -----------------------------------------"""))
 
         # Check if the agent is already running before running it
         if not execution_engine.is_agent_running(guild_id=self.id, agent_id=agent_spec.id):

@@ -430,9 +430,7 @@ class BaseTestBackendABC(ABC):
     # Per-client subscribe tests (client_id parameter)
     # =========================================================================
 
-    def test_subscribe_per_client(
-        self, backend: MessagingBackend, generator: GemstoneGenerator, topic: str, request
-    ):
+    def test_subscribe_per_client(self, backend: MessagingBackend, generator: GemstoneGenerator, topic: str, request):
         """Smoke test: per-client subscribe delivers messages to the registered handler."""
         messages: List[Message] = []
         namespace = request.node.name
@@ -484,9 +482,7 @@ class BaseTestBackendABC(ABC):
         backend.unsubscribe(topic, client_id="client_A")
         backend.unsubscribe(topic, client_id="client_B")
 
-    def test_unsubscribe_per_client(
-        self, backend: MessagingBackend, generator: GemstoneGenerator, topic: str, request
-    ):
+    def test_unsubscribe_per_client(self, backend: MessagingBackend, generator: GemstoneGenerator, topic: str, request):
         """After unsubscribing client_A, only client_B receives subsequent messages."""
         messages_a: List[Message] = []
         messages_b: List[Message] = []

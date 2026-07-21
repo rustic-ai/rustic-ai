@@ -1,4 +1,5 @@
 """Integration tests for Socket Mode functionality"""
+
 import pytest
 
 
@@ -17,7 +18,7 @@ class TestEventModels:
             channel="C789CHANNEL",
             ts="1234567890.123456",
             text="<@U123BOT> hello",
-            event_ts="1234567890.123456"
+            event_ts="1234567890.123456",
         )
 
         assert event.event_type == "app_mention"
@@ -37,7 +38,7 @@ class TestEventModels:
             ts="1234567890.123456",
             text="reply in thread",
             thread_ts="1234567890.000000",  # Parent message ts
-            event_ts="1234567890.123456"
+            event_ts="1234567890.123456",
         )
 
         assert event.thread_ts == "1234567890.000000"

@@ -40,8 +40,7 @@ class VendingBenchResponderAgent(Agent):
 
     @agent.processor(
         JsonDict,
-        predicate=lambda self, msg: msg.format
-        == "rustic_ai.showcase.vending_bench.messages.SimulationControlRequest",
+        predicate=lambda self, msg: msg.format == "rustic_ai.showcase.vending_bench.messages.SimulationControlRequest",
     )
     def handle_control_request(self, ctx: agent.ProcessContext[JsonDict]) -> None:
         """Handle simulation control requests."""
@@ -64,8 +63,7 @@ class VendingBenchResponderAgent(Agent):
 
     @agent.processor(
         JsonDict,
-        predicate=lambda self, msg: msg.format
-        == "rustic_ai.showcase.vending_bench.messages.AgentActionRequest",
+        predicate=lambda self, msg: msg.format == "rustic_ai.showcase.vending_bench.messages.AgentActionRequest",
     )
     def handle_action_request(self, ctx: agent.ProcessContext[JsonDict]) -> None:
         """Handle agent action requests."""
@@ -102,8 +100,7 @@ class PlayerResponseAgent(Agent):
 
     @agent.processor(
         JsonDict,
-        predicate=lambda self, msg: msg.format
-        == "rustic_ai.showcase.vending_bench.messages.SimulationControlResponse",
+        predicate=lambda self, msg: msg.format == "rustic_ai.showcase.vending_bench.messages.SimulationControlResponse",
     )
     def handle_control_response(self, ctx: agent.ProcessContext[JsonDict]) -> None:
         """Handle simulation control responses."""
@@ -111,8 +108,7 @@ class PlayerResponseAgent(Agent):
 
     @agent.processor(
         JsonDict,
-        predicate=lambda self, msg: msg.format
-        == "rustic_ai.showcase.vending_bench.messages.AgentActionResponse",
+        predicate=lambda self, msg: msg.format == "rustic_ai.showcase.vending_bench.messages.AgentActionResponse",
     )
     def handle_action_response(self, ctx: agent.ProcessContext[JsonDict]) -> None:
         """Handle action responses."""
@@ -231,11 +227,7 @@ class TestVendingBenchG2G:
 
         # Add probe to send requests
         probe_spec = (
-            AgentBuilder(ProbeAgent)
-            .set_id("probe")
-            .set_name("Probe")
-            .set_description("Test probe")
-            .build_spec()
+            AgentBuilder(ProbeAgent).set_id("probe").set_name("Probe").set_description("Test probe").build_spec()
         )
         probe: ProbeAgent = player_guild._add_local_agent(probe_spec)
 
@@ -345,11 +337,7 @@ class TestVendingBenchG2G:
 
         # Probe
         probe_spec = (
-            AgentBuilder(ProbeAgent)
-            .set_id("probe")
-            .set_name("Probe")
-            .set_description("Test probe")
-            .build_spec()
+            AgentBuilder(ProbeAgent).set_id("probe").set_name("Probe").set_description("Test probe").build_spec()
         )
         probe: ProbeAgent = player_guild._add_local_agent(probe_spec)
 
@@ -370,11 +358,7 @@ class TestVendingBenchG2G:
 
         # Check that the probe received the response
         messages = probe.get_messages()
-        responses = [
-            m
-            for m in messages
-            if m.format == "rustic_ai.showcase.vending_bench.messages.AgentActionResponse"
-        ]
+        responses = [m for m in messages if m.format == "rustic_ai.showcase.vending_bench.messages.AgentActionResponse"]
 
         assert len(responses) >= 1, "Should receive action response"
         assert responses[0].payload.get("success") is True

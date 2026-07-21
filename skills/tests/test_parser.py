@@ -115,16 +115,14 @@ More content here.
         """Test parsing allowed-tools as comma-separated string."""
         skill_path = temp_dir / "string-tools"
         skill_path.mkdir()
-        (skill_path / "SKILL.md").write_text(
-            """---
+        (skill_path / "SKILL.md").write_text("""---
 name: string-tools
 description: Test string tools
 allowed-tools: Read, Write, Bash
 ---
 
 Instructions
-"""
-        )
+""")
 
         metadata = SkillParser.parse_metadata_only(skill_path)
         assert metadata.allowed_tools == ["Read", "Write", "Bash"]
@@ -133,8 +131,7 @@ Instructions
         """Test parsing allowed-tools as YAML list."""
         skill_path = temp_dir / "list-tools"
         skill_path.mkdir()
-        (skill_path / "SKILL.md").write_text(
-            """---
+        (skill_path / "SKILL.md").write_text("""---
 name: list-tools
 description: Test list tools
 allowed-tools:
@@ -144,8 +141,7 @@ allowed-tools:
 ---
 
 Instructions
-"""
-        )
+""")
 
         metadata = SkillParser.parse_metadata_only(skill_path)
         assert metadata.allowed_tools == ["Read", "Write", "Bash"]
@@ -154,36 +150,30 @@ Instructions
         """Test script description extraction."""
         skill_path = temp_dir / "desc-skill"
         skill_path.mkdir()
-        (skill_path / "SKILL.md").write_text(
-            """---
+        (skill_path / "SKILL.md").write_text("""---
 name: desc-skill
 description: Skill with script descriptions
 ---
 
 Instructions
-"""
-        )
+""")
 
         scripts_dir = skill_path / "scripts"
         scripts_dir.mkdir()
 
         # Python script with docstring
-        (scripts_dir / "python_script.py").write_text(
-            '''"""Process data and return results.
+        (scripts_dir / "python_script.py").write_text('''"""Process data and return results.
 
 This is a longer description."""
 import sys
 print("hello")
-'''
-        )
+''')
 
         # Shell script with comment
-        (scripts_dir / "shell_script.sh").write_text(
-            """#!/bin/bash
+        (scripts_dir / "shell_script.sh").write_text("""#!/bin/bash
 # Run the setup process
 echo "setup"
-"""
-        )
+""")
 
         skill = SkillParser.parse(skill_path)
 

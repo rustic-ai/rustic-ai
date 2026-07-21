@@ -35,7 +35,7 @@ def sample_event():
         channel="C789CHANNEL",
         ts="1234567890.123456",
         text="<@U123BOT> hello there",
-        event_ts="1234567890.123456"
+        event_ts="1234567890.123456",
     )
 
 
@@ -56,7 +56,7 @@ class TestEventHandlerAgentBasics:
 
     def test_agent_has_processor(self, event_handler_agent):
         """Test that agent has the event processor"""
-        assert hasattr(event_handler_agent, 'handle_slack_event')
+        assert hasattr(event_handler_agent, "handle_slack_event")
         assert callable(event_handler_agent.handle_slack_event)
 
 
@@ -136,7 +136,7 @@ class TestEventHandlerProcessing:
         mock_context.update_context = MagicMock()
 
         # Bypass the processor decorator by calling the handler directly
-        with patch.object(event_handler_agent, 'agent_spec') as mock_spec:
+        with patch.object(event_handler_agent, "agent_spec") as mock_spec:
             mock_spec.name = "TestEventHandler"
             await event_handler_agent._handle_mention(mock_context, sample_event)
 
@@ -146,7 +146,7 @@ class TestEventHandlerProcessing:
         # Find the ChatCompletionRequest
         chat_request = None
         for msg in sent_messages:
-            if hasattr(msg, 'messages'):  # ChatCompletionRequest
+            if hasattr(msg, "messages"):  # ChatCompletionRequest
                 chat_request = msg
                 break
 
@@ -171,7 +171,7 @@ class TestEventHandlerProcessing:
             channel="D123DM",  # DM channel
             ts="1234567890.123456",
             text="hello bot",
-            event_ts="1234567890.123456"
+            event_ts="1234567890.123456",
         )
 
         # Track sent messages
@@ -201,7 +201,7 @@ class TestEventHandlerProcessing:
             channel="C789",
             ts="1234567890.123456",
             text="<@U123BOT>",  # Only mention, no text
-            event_ts="1234567890.123456"
+            event_ts="1234567890.123456",
         )
 
         # Track sent messages
@@ -236,7 +236,7 @@ class TestEventHandlerProcessing:
             ts="1234567890.999999",
             text="<@U123BOT> follow up question",
             thread_ts="1234567890.000000",  # Parent thread
-            event_ts="1234567890.999999"
+            event_ts="1234567890.999999",
         )
 
         # Track sent messages
@@ -269,7 +269,7 @@ class TestEventHandlerProcessing:
             channel="C789",
             ts="1234567890.123456",
             text="test",
-            event_ts="1234567890.123456"
+            event_ts="1234567890.123456",
         )
 
         # This test just verifies the event model accepts unknown types

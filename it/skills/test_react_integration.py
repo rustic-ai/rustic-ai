@@ -198,8 +198,7 @@ Pass the expression as an argument to compute the result.
     scripts_dir.mkdir()
 
     # Real working calculator script
-    (scripts_dir / "calculate.py").write_text(
-        '''#!/usr/bin/env python3
+    (scripts_dir / "calculate.py").write_text('''#!/usr/bin/env python3
 """Evaluate a mathematical expression and return the result."""
 import json
 import os
@@ -253,12 +252,10 @@ def main():
 
 if __name__ == "__main__":
     main()
-'''
-    )
+''')
 
     # Unit conversion script
-    (scripts_dir / "convert.py").write_text(
-        '''#!/usr/bin/env python3
+    (scripts_dir / "convert.py").write_text('''#!/usr/bin/env python3
 """Convert between units of measurement."""
 import json
 import os
@@ -327,8 +324,7 @@ def main():
 
 if __name__ == "__main__":
     main()
-'''
-    )
+''')
 
     return skill_dir
 
@@ -373,8 +369,7 @@ Use the available scripts to process text:
     scripts_dir.mkdir()
 
     # Text analysis script
-    (scripts_dir / "analyze.py").write_text(
-        '''#!/usr/bin/env python3
+    (scripts_dir / "analyze.py").write_text('''#!/usr/bin/env python3
 """Analyze text and return statistics."""
 import json
 import os
@@ -416,12 +411,10 @@ def main():
 
 if __name__ == "__main__":
     main()
-'''
-    )
+''')
 
     # Text transformation script
-    (scripts_dir / "transform.py").write_text(
-        '''#!/usr/bin/env python3
+    (scripts_dir / "transform.py").write_text('''#!/usr/bin/env python3
 """Transform text according to specified operation."""
 import json
 import os
@@ -458,12 +451,10 @@ def main():
 
 if __name__ == "__main__":
     main()
-'''
-    )
+''')
 
     # Pattern extraction script
-    (scripts_dir / "extract.py").write_text(
-        '''#!/usr/bin/env python3
+    (scripts_dir / "extract.py").write_text('''#!/usr/bin/env python3
 """Extract patterns from text using regex."""
 import json
 import os
@@ -514,8 +505,7 @@ def main():
 
 if __name__ == "__main__":
     main()
-'''
-    )
+''')
 
     return skill_dir
 
@@ -560,8 +550,7 @@ Use these scripts to process data:
     scripts_dir.mkdir()
 
     # JSON query script
-    (scripts_dir / "json_query.py").write_text(
-        '''#!/usr/bin/env python3
+    (scripts_dir / "json_query.py").write_text('''#!/usr/bin/env python3
 """Query and filter JSON data."""
 import json
 import os
@@ -613,12 +602,10 @@ def main():
 
 if __name__ == "__main__":
     main()
-'''
-    )
+''')
 
     # Aggregation script
-    (scripts_dir / "aggregate.py").write_text(
-        '''#!/usr/bin/env python3
+    (scripts_dir / "aggregate.py").write_text('''#!/usr/bin/env python3
 """Compute aggregations on numeric data."""
 import json
 import os
@@ -668,12 +655,10 @@ def main():
 
 if __name__ == "__main__":
     main()
-'''
-    )
+''')
 
     # JSON formatting script
-    (scripts_dir / "format_json.py").write_text(
-        '''#!/usr/bin/env python3
+    (scripts_dir / "format_json.py").write_text('''#!/usr/bin/env python3
 """Format JSON data - pretty print or minify."""
 import json
 import os
@@ -709,8 +694,7 @@ def main():
 
 if __name__ == "__main__":
     main()
-'''
-    )
+''')
 
     return skill_dir
 
@@ -756,8 +740,7 @@ Use these scripts for date/time operations:
     scripts_dir.mkdir()
 
     # Current time script
-    (scripts_dir / "now.py").write_text(
-        '''#!/usr/bin/env python3
+    (scripts_dir / "now.py").write_text('''#!/usr/bin/env python3
 """Get the current date and time."""
 import json
 import os
@@ -792,12 +775,10 @@ def main():
 
 if __name__ == "__main__":
     main()
-'''
-    )
+''')
 
     # Date formatting script
-    (scripts_dir / "format.py").write_text(
-        '''#!/usr/bin/env python3
+    (scripts_dir / "format.py").write_text('''#!/usr/bin/env python3
 """Format a date string into different formats."""
 import json
 import os
@@ -842,12 +823,10 @@ def main():
 
 if __name__ == "__main__":
     main()
-'''
-    )
+''')
 
     # Date difference script
-    (scripts_dir / "diff.py").write_text(
-        '''#!/usr/bin/env python3
+    (scripts_dir / "diff.py").write_text('''#!/usr/bin/env python3
 """Calculate the difference between two dates."""
 import json
 import os
@@ -887,8 +866,7 @@ def main():
 
 if __name__ == "__main__":
     main()
-'''
-    )
+''')
 
     return skill_dir
 
@@ -2167,8 +2145,7 @@ class TestEdgeCasesAndErrors:
         skill_dir = temp_install_dir / "empty-skill"
         skill_dir.mkdir(parents=True)
 
-        (skill_dir / "SKILL.md").write_text(
-            """---
+        (skill_dir / "SKILL.md").write_text("""---
 name: empty-skill
 description: A skill with no scripts
 ---
@@ -2176,8 +2153,7 @@ description: A skill with no scripts
 # Empty Skill
 
 This skill has no scripts.
-"""
-        )
+""")
 
         toolset = SkillToolset.from_path(skill_dir)
         assert toolset.tool_count == 0
@@ -2188,26 +2164,22 @@ This skill has no scripts.
         skill_dir = temp_install_dir / "invalid-skill"
         skill_dir.mkdir(parents=True)
 
-        (skill_dir / "SKILL.md").write_text(
-            """---
+        (skill_dir / "SKILL.md").write_text("""---
 name: invalid-skill
 description: A skill with invalid script
 ---
 
 # Invalid Skill
-"""
-        )
+""")
 
         scripts_dir = skill_dir / "scripts"
         scripts_dir.mkdir()
 
         # Create a script with syntax error
-        (scripts_dir / "broken.py").write_text(
-            '''"""Broken script."""
+        (scripts_dir / "broken.py").write_text('''"""Broken script."""
 def broken(
     # Missing closing paren and body
-'''
-        )
+''')
 
         toolset = SkillToolset.from_path(skill_dir)
 
@@ -2223,26 +2195,22 @@ def broken(
         skill_dir = temp_install_dir / "slow-skill"
         skill_dir.mkdir(parents=True)
 
-        (skill_dir / "SKILL.md").write_text(
-            """---
+        (skill_dir / "SKILL.md").write_text("""---
 name: slow-skill
 description: A skill with a slow script
 ---
 
 # Slow Skill
-"""
-        )
+""")
 
         scripts_dir = skill_dir / "scripts"
         scripts_dir.mkdir()
 
-        (scripts_dir / "slow.py").write_text(
-            '''"""Slow script that takes too long."""
+        (scripts_dir / "slow.py").write_text('''"""Slow script that takes too long."""
 import time
 time.sleep(60)  # Sleep for 60 seconds
 print("Done")
-'''
-        )
+''')
 
         # Create toolset with short timeout
         toolset = SkillToolset.from_path(
@@ -2259,24 +2227,20 @@ print("Done")
         skill_dir = temp_install_dir / "my-special_skill"
         skill_dir.mkdir(parents=True)
 
-        (skill_dir / "SKILL.md").write_text(
-            """---
+        (skill_dir / "SKILL.md").write_text("""---
 name: my-special_skill
 description: A skill with special characters in name
 ---
 
 # Special Skill
-"""
-        )
+""")
 
         scripts_dir = skill_dir / "scripts"
         scripts_dir.mkdir()
 
-        (scripts_dir / "action.py").write_text(
-            '''"""Simple action."""
+        (scripts_dir / "action.py").write_text('''"""Simple action."""
 print("action executed")
-'''
-        )
+''')
 
         toolset = SkillToolset.from_path(skill_dir)
 
@@ -2293,24 +2257,20 @@ print("action executed")
             skill_dir = temp_install_dir / f"skill-{i}"
             skill_dir.mkdir(parents=True)
 
-            (skill_dir / "SKILL.md").write_text(
-                f"""---
+            (skill_dir / "SKILL.md").write_text(f"""---
 name: skill-{i}
 description: Skill {i}
 ---
 
 # Skill {i}
-"""
-            )
+""")
 
             scripts_dir = skill_dir / "scripts"
             scripts_dir.mkdir()
 
-            (scripts_dir / "action.py").write_text(
-                f'''"""Action from skill {i}."""
+            (scripts_dir / "action.py").write_text(f'''"""Action from skill {i}."""
 print("Action from skill {i}")
-'''
-            )
+''')
 
         multi_toolset = SkillToolset.from_paths(
             [
@@ -2350,8 +2310,7 @@ class TestPerformance:
             skill_dir = temp_install_dir / f"skill-{i}"
             skill_dir.mkdir(parents=True)
 
-            (skill_dir / "SKILL.md").write_text(
-                f"""---
+            (skill_dir / "SKILL.md").write_text(f"""---
 name: skill-{i}
 description: Skill number {i} for testing
 ---
@@ -2359,19 +2318,16 @@ description: Skill number {i} for testing
 # Skill {i}
 
 Instructions for skill {i}.
-"""
-            )
+""")
 
             scripts_dir = skill_dir / "scripts"
             scripts_dir.mkdir()
 
             for j in range(3):  # 3 scripts per skill
-                (scripts_dir / f"action{j}.py").write_text(
-                    f'''#!/usr/bin/env python3
+                (scripts_dir / f"action{j}.py").write_text(f'''#!/usr/bin/env python3
 """Action {j} for skill {i}."""
 print("Executed action {j} from skill {i}")
-'''
-                )
+''')
 
         # Create SkillToolset with all skills
         skill_paths = [temp_install_dir / f"skill-{i}" for i in range(num_skills)]
@@ -2390,26 +2346,22 @@ print("Executed action {j} from skill {i}")
         skill_dir = temp_install_dir / "large-output-skill"
         skill_dir.mkdir(parents=True)
 
-        (skill_dir / "SKILL.md").write_text(
-            """---
+        (skill_dir / "SKILL.md").write_text("""---
 name: large-output-skill
 description: Skill that produces large output
 ---
 
 # Large Output Skill
-"""
-        )
+""")
 
         scripts_dir = skill_dir / "scripts"
         scripts_dir.mkdir()
 
-        (scripts_dir / "big.py").write_text(
-            '''#!/usr/bin/env python3
+        (scripts_dir / "big.py").write_text('''#!/usr/bin/env python3
 """Generate large output."""
 for i in range(10000):
     print(f"Line {i}: " + "x" * 100)
-'''
-        )
+''')
 
         toolset = SkillToolset.from_path(
             skill_dir,
@@ -2531,14 +2483,12 @@ class TestSpecSerialization:
         for i in range(2):
             skill_dir = temp_install_dir / f"skill-{i}"
             skill_dir.mkdir(parents=True)
-            (skill_dir / "SKILL.md").write_text(
-                f"""---
+            (skill_dir / "SKILL.md").write_text(f"""---
 name: skill-{i}
 description: Test skill {i}
 ---
 # Skill {i}
-"""
-            )
+""")
             scripts_dir = skill_dir / "scripts"
             scripts_dir.mkdir()
             (scripts_dir / "action.py").write_text(f'print("skill {i} action")')
@@ -2563,14 +2513,12 @@ description: Test skill {i}
         for i in range(2):
             skill_dir = temp_install_dir / f"skill-{i}"
             skill_dir.mkdir(parents=True)
-            (skill_dir / "SKILL.md").write_text(
-                f"""---
+            (skill_dir / "SKILL.md").write_text(f"""---
 name: skill-{i}
 description: Test skill {i}
 ---
 # Skill {i}
-"""
-            )
+""")
             scripts_dir = skill_dir / "scripts"
             scripts_dir.mkdir()
             (scripts_dir / "action.py").write_text(f'print("skill {i} action")')
@@ -2673,31 +2621,25 @@ description: Test skill {i}
         for i, name in enumerate(["math", "text"]):
             skill_dir = temp_install_dir / name
             skill_dir.mkdir(parents=True)
-            (skill_dir / "SKILL.md").write_text(
-                f"""---
+            (skill_dir / "SKILL.md").write_text(f"""---
 name: {name}
 description: {name.title()} operations
 ---
 # {name.title()} Skill
-"""
-            )
+""")
             scripts_dir = skill_dir / "scripts"
             scripts_dir.mkdir()
             if name == "math":
-                (scripts_dir / "add.py").write_text(
-                    """
+                (scripts_dir / "add.py").write_text("""
 import sys
 a, b = int(sys.argv[1]), int(sys.argv[2])
 print(f"Result: {a + b}")
-"""
-                )
+""")
             else:
-                (scripts_dir / "upper.py").write_text(
-                    """
+                (scripts_dir / "upper.py").write_text("""
 import sys
 print(sys.argv[1].upper() if len(sys.argv) > 1 else "NO INPUT")
-"""
-                )
+""")
 
         # Create multi-skill toolset
         paths = [temp_install_dir / "math", temp_install_dir / "text"]

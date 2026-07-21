@@ -89,8 +89,10 @@ class TestErrorRecovery:
         """Test that Socket Mode handles connection failures gracefully"""
         from rustic_ai.slack.agents.socket_mode_agent import SlackSocketModeAgent
 
-        with patch('rustic_ai.slack.agents.socket_mode_agent.SocketModeClient') as mock_client, \
-             patch('rustic_ai.slack.agents.socket_mode_agent.WebClient'):
+        with (
+            patch("rustic_ai.slack.agents.socket_mode_agent.SocketModeClient") as mock_client,
+            patch("rustic_ai.slack.agents.socket_mode_agent.WebClient"),
+        ):
 
             # Make connect fail
             mock_client.return_value.connect.side_effect = Exception("Connection failed")
@@ -128,7 +130,7 @@ class TestPerformance:
                 channel="C789",
                 ts=f"{i}.123456",
                 text=f"message {i}",
-                event_ts=f"{i}.123456"
+                event_ts=f"{i}.123456",
             )
             _ = event.model_dump()
 

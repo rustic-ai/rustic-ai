@@ -225,7 +225,9 @@ class DataAnalystReActToolset(ReActToolset):
                 summary_args = (
                     args
                     if isinstance(args, GetDatasetSummaryRequest)
-                    else GetDatasetSummaryRequest.model_validate(args.model_dump() if hasattr(args, "model_dump") else args)
+                    else GetDatasetSummaryRequest.model_validate(
+                        args.model_dump() if hasattr(args, "model_dump") else args
+                    )
                 )
                 result = self.analyzer.get_dataset_summary(name=summary_args.name)
                 return self._format_result(result)
@@ -260,9 +262,7 @@ class DataAnalystReActToolset(ReActToolset):
                 return self._format_result(result)
 
             elif tool_name == "get_schema":
-                schema_args = (
-                    args if isinstance(args, GetSchemaRequest) else GetSchemaRequest.model_validate(args)
-                )
+                schema_args = args if isinstance(args, GetSchemaRequest) else GetSchemaRequest.model_validate(args)
                 result = self.analyzer.get_schema(schema_args.name)
                 return self._format_result(result)
 
@@ -282,7 +282,9 @@ class DataAnalystReActToolset(ReActToolset):
 
             elif tool_name == "correlation_matrix":
                 corr_args = (
-                    args if isinstance(args, CorrelationMatrixRequest) else CorrelationMatrixRequest.model_validate(args)
+                    args
+                    if isinstance(args, CorrelationMatrixRequest)
+                    else CorrelationMatrixRequest.model_validate(args)
                 )
                 result = self.analyzer.get_correlation(
                     name=corr_args.name, columns=corr_args.columns, method=corr_args.method

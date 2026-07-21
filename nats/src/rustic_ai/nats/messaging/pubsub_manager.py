@@ -79,9 +79,7 @@ class NATSPubSubManager:
     def setup(self) -> None:
         """Initialize pub/sub and start health monitoring if configured."""
         should_monitor = (
-            self._config
-            and self._config.pubsub_retry_enabled
-            and self._config.pubsub_health_monitoring_enabled
+            self._config and self._config.pubsub_retry_enabled and self._config.pubsub_health_monitoring_enabled
         )
         if should_monitor:
             self._start_health_monitor()
@@ -146,9 +144,7 @@ class NATSPubSubManager:
             def subscribe_operation():
                 self._subscribe_internal(topic, handler)
 
-            execute_with_retry(
-                f"Subscribe to {topic}", subscribe_operation, self._config, self._shutdown_event
-            )
+            execute_with_retry(f"Subscribe to {topic}", subscribe_operation, self._config, self._shutdown_event)
 
             with self._lock:
                 self._handlers[topic] = handler
@@ -171,9 +167,7 @@ class NATSPubSubManager:
         consumer_name = f"eo_{_sanitize(client_id)}_{_sanitize(topic)}"
         js_subject = _js_subject(topic)
 
-        logging.debug(
-            "Creating push consumer name=%s subject=%s client_id=%s", consumer_name, js_subject, client_id
-        )
+        logging.debug("Creating push consumer name=%s subject=%s client_id=%s", consumer_name, js_subject, client_id)
 
         # Ensure stream exists before creating push consumer (sync call)
         if self._ensure_stream:
@@ -246,13 +240,9 @@ class NATSPubSubManager:
             with self._lock:
                 self._push_subscriptions[(topic, client_id)] = sub
                 self._push_namespaces[(topic, client_id)] = namespace
-            logging.debug(
-                "Created push consumer name=%s topic=%s client_id=%s", consumer_name, topic, client_id
-            )
+            logging.debug("Created push consumer name=%s topic=%s client_id=%s", consumer_name, topic, client_id)
         except Exception as e:
-            logging.error(
-                "Failed to create push consumer name=%s topic=%s: %s", consumer_name, topic, e
-            )
+            logging.error("Failed to create push consumer name=%s topic=%s: %s", consumer_name, topic, e)
             raise
 
     def _subscribe_internal(self, topic: str, handler: Callable[[Message], None]) -> None:
@@ -326,13 +316,9 @@ class NATSPubSubManager:
             if sub:
                 try:
                     self._run_async(sub.unsubscribe())
-                    logging.debug(
-                        "Unsubscribed push consumer topic=%s client_id=%s", topic, client_id
-                    )
+                    logging.debug("Unsubscribed push consumer topic=%s client_id=%s", topic, client_id)
                 except Exception as e:
-                    logging.warning(
-                        "Error unsubscribing push consumer topic=%s client_id=%s: %s", topic, client_id, e
-                    )
+                    logging.warning("Error unsubscribing push consumer topic=%s client_id=%s: %s", topic, client_id, e)
 
     # =========================================================================
     # Publish
@@ -454,9 +440,7 @@ class NATSPubSubManager:
                 with self._reconnection_lock:
                     self._reconnection_active = False
 
-        reconnect_thread = threading.Thread(
-            target=reconnect_with_backoff, daemon=True, name="nats-pubsub-reconnect"
-        )
+        reconnect_thread = threading.Thread(target=reconnect_with_backoff, daemon=True, name="nats-pubsub-reconnect")
         reconnect_thread.start()
 
     def _resubscribe_all(self) -> None:

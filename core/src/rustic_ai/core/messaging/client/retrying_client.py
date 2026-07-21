@@ -188,11 +188,9 @@ class RetryingClient(Client):
                 if attempt < self.max_retries - 1:
                     sleep_time = self.backoff_strategy.get_delay(attempt)
                     logging.warning(f"Failed to process message. Retrying... (attempt {attempt + 1})")
-                    logging.warning(
-                        f"""|
+                    logging.warning(f"""|
                         Encountered Error: {e}
-                        Sleeping for {sleep_time} seconds."""
-                    )
+                        Sleeping for {sleep_time} seconds.""")
                     sleep(sleep_time)
                 else:
                     logging.error(f"Failed after {self.max_retries} attempts. Error: {e}")

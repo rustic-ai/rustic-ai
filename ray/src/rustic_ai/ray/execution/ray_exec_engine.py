@@ -85,7 +85,7 @@ class RayExecutionEngine(ExecutionEngine):
     def get_agents_in_guild(self, guild_id: str) -> Dict[str, AgentSpec]:
         actor_refs = ray.util.list_named_actors(all_namespaces=True)
         namespace = self._get_namespace()
-        agent_specs = {}
+        agent_specs: Dict[str, AgentSpec] = {}
         for actor_ref in actor_refs:
             if actor_ref["namespace"] == namespace:
                 actor = ray.get_actor(name=actor_ref["name"], namespace=namespace)  # type: ignore
@@ -105,7 +105,7 @@ class RayExecutionEngine(ExecutionEngine):
 
             if actor is not None:
                 if self._is_rustic_agent(actor):
-                    return ray.get(actor.is_running.remote())
+                    return ray.get(actor.is_running.remote())  # type: ignore
             return False
         except ValueError:
             return False

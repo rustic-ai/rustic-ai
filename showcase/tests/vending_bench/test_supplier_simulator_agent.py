@@ -207,7 +207,9 @@ class TestSupplierSimulatorAgent:
         response = negotiation_responses[0].payload
 
         # Should reject since negotiation doesn't exist
-        assert response.get("is_rejected", False) is True or "not found" in response.get("supplier_response", "").lower()
+        assert (
+            response.get("is_rejected", False) is True or "not found" in response.get("supplier_response", "").lower()
+        )
 
         guild.shutdown()
 

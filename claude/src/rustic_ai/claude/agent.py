@@ -72,7 +72,7 @@ class ClaudeCodeAgent(Agent[ClaudeCodeAgentProps]):
         self.claude_client = ClaudeSDKClient(options=self.options)
 
     @agent.processor(AddClaudeAgentRequest)
-    def add_agent(self, ctx: agent.ProcessContext[AddClaudeAgentRequest]):
+    async def add_agent(self, ctx: agent.ProcessContext[AddClaudeAgentRequest]):
         """
         Adds a new agent configuration at runtime.
 
@@ -89,10 +89,10 @@ class ClaudeCodeAgent(Agent[ClaudeCodeAgentProps]):
         with open(file_path, "w") as f:
             f.write(payload.config)
 
-        self.refresh()
+        await self.refresh()
 
     @agent.processor(AddClaudeSkillRequest)
-    def add_skill(self, ctx: agent.ProcessContext[AddClaudeSkillRequest]):
+    async def add_skill(self, ctx: agent.ProcessContext[AddClaudeSkillRequest]):
         """
         Adds a new skill at runtime.
 
@@ -108,7 +108,7 @@ class ClaudeCodeAgent(Agent[ClaudeCodeAgentProps]):
         with open(file_path, "w") as f:
             f.write(payload.skill)
 
-        self.refresh()
+        await self.refresh()
 
     @agent.processor(ChatCompletionRequest)
     async def on_message(self, ctx: agent.ProcessContext[ChatCompletionRequest]):

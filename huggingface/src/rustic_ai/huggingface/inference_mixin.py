@@ -9,7 +9,10 @@ from rustic_ai.core.agents.utils.http_client import HttpClientMixin
 class HuggingfaceInferenceMixin(HttpClientMixin):
 
     async def run_inference(
-        self, model: str, prompt_payload: str, inference_endpoint: str = "https://router.huggingface.co/hf-inference/models/"
+        self,
+        model: str,
+        prompt_payload: str,
+        inference_endpoint: str = "https://router.huggingface.co/hf-inference/models/",
     ):
         api_url = urljoin(inference_endpoint, model)
 

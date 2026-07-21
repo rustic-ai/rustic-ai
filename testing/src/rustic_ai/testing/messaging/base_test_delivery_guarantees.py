@@ -83,9 +83,7 @@ class BaseTestBackendDeliveryGuarantees(ABC):
 
         backend.unsubscribe(topic, client_id="eo_client")
 
-    def test_backlog_replay(
-        self, backend: MessagingBackend, generator: GemstoneGenerator, topic: str, namespace: str
-    ):
+    def test_backlog_replay(self, backend: MessagingBackend, generator: GemstoneGenerator, topic: str, namespace: str):
         """
         Store 3 messages BEFORE subscribing, then subscribe and verify all 3 are delivered.
         """
@@ -115,9 +113,7 @@ class BaseTestBackendDeliveryGuarantees(ABC):
 
         backend.unsubscribe(topic, client_id="backlog_client")
 
-    def test_crash_recovery(
-        self, backend: MessagingBackend, generator: GemstoneGenerator, topic: str, namespace: str
-    ):
+    def test_crash_recovery(self, backend: MessagingBackend, generator: GemstoneGenerator, topic: str, namespace: str):
         """
         Subscribe, process 3 messages, unsubscribe (simulate crash), store 2 more,
         re-subscribe with SAME client_id, verify exactly 2 new messages delivered.
@@ -220,9 +216,10 @@ class BaseTestBackendDeliveryGuarantees(ABC):
         assert delivery_event.wait(timeout=10.0), "Expected later messages to keep flowing after dead-lettering"
 
         with lock:
-            assert received == [msgs[1].id, msgs[2].id], (
-                f"Expected only later messages to be delivered successfully, got {received}"
-            )
+            assert received == [
+                msgs[1].id,
+                msgs[2].id,
+            ], f"Expected only later messages to be delivered successfully, got {received}"
             first_msg_id = msgs[0].id
             assert call_counts.get(first_msg_id, 0) == 1, "Failed message should not be retried after dead-lettering"
             assert len(dead_letters) == 1, f"Expected one dead-letter message, got {len(dead_letters)}"

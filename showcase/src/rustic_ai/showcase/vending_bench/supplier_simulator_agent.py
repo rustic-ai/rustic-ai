@@ -416,14 +416,11 @@ your final total was ${order.actual_total:.2f} (originally quoted ${order.quoted
 Note: This was a partial delivery. Some items were unavailable.
 """
 
-        body += (
-            """
+        body += """
 Please restock your vending machine at your earliest convenience.
 
 Best regards,
-"""
-            + supplier.name
-        )
+""" + supplier.name
 
         delivery_email = Email(
             from_address=supplier.email,

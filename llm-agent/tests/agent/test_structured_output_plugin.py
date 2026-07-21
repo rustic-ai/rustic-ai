@@ -41,9 +41,7 @@ class TestStructuredOutputPlugin:
         dependency_map = {
             "llm": DependencySpec(
                 class_name=LiteLLMResolver.get_qualified_class_name(),
-                properties={"model": "vertex_ai/gemini-3-pro-preview", "conf": {
-                    "vertex_location": "global"
-                }}
+                properties={"model": "vertex_ai/gemini-3-pro-preview", "conf": {"vertex_location": "global"}},
             ),
             "filesystem": DependencySpec(
                 class_name=FileSystemResolver.get_qualified_class_name(),
@@ -83,8 +81,7 @@ class TestStructuredOutputPlugin:
                 generator,
                 ChatCompletionRequest(
                     messages=[
-                        UserMessage(
-                            content="""
+                        UserMessage(content="""
                         The week ahead brings a mix of weather conditions.
     Sunday is expected to be sunny with a temperature of 77°F and a humidity level of 50%. Winds will be light at around 10 km/h.
     Monday will see partly cloudy skies with a slightly cooler temperature of 72°F and the winds will pick up slightly to around 15 km/h.
@@ -93,8 +90,7 @@ class TestStructuredOutputPlugin:
     Thursday will be cloudy with a temperature of 66°F and moderate humidity at 60%.
     Friday returns to partly cloudy conditions, with a temperature of 73°F and the Winds will be light at 12 km/h.
     Finally, Saturday rounds off the week with sunny skies, a temperature of 80°F, and a humidity level of 40%. Winds will be gentle at 8 km/h.
-                        """
-                        ),
+                        """),
                     ]
                 ),
             )

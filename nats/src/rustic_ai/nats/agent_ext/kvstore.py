@@ -68,9 +68,7 @@ class NATSKVStoreResolver(DependencyResolver[NATSKVStore]):
         import nats.js.api
 
         try:
-            return await self._js.create_key_value(
-                nats.js.api.KeyValueConfig(bucket=NATSKVStore.KV_BUCKET)
-            )
+            return await self._js.create_key_value(nats.js.api.KeyValueConfig(bucket=NATSKVStore.KV_BUCKET))
         except Exception:
             return await self._js.key_value(NATSKVStore.KV_BUCKET)
 

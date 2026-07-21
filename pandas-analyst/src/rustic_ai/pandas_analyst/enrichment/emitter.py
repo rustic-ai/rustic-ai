@@ -114,9 +114,7 @@ class DatasetLoadedEmitter(ToolCallWrapper):
             preview = analyzer.preview_dataset(dataset_name, num_rows=self.sample_rows)
 
             # Convert list of lists to list of dicts for sample_data
-            sample_data = [
-                dict(zip(preview.columns, row)) for row in preview.data[: self.sample_rows]
-            ]
+            sample_data = [dict(zip(preview.columns, row)) for row in preview.data[: self.sample_rows]]
 
             return DatasetLoadedEvent(
                 dataset_name=dataset_name,

@@ -2,7 +2,7 @@
 
 import asyncio
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 
 import aiohttp
 from cachetools import TTLCache
@@ -57,14 +57,11 @@ class SlackAPIClient:
                 # Run sync slack-sdk call in thread pool
                 loop = asyncio.get_event_loop()
                 # Use api_call with json parameter instead of direct kwargs
-                response = await loop.run_in_executor(
-                    None, lambda: self.client.api_call(method, json=kwargs)
-                )
-                # SlackResponse has a .data attribute that contains the actual dict
-                data = response.data
-                if not isinstance(data, dict):
-                    raise TypeError(f"Unexpected Slack API response type: {type(data)!r}")
-                return data
+                response = await loop.run_in_executor(None, lambda: self.client.api_call(method, json=kwargs))
+                # SlackResponse has a .data attribute that contains the actual dict.
+                # It is typed as dict | bytes because the SDK also serves binary
+                # endpoints; every method reached through here returns JSON.
+                return cast(Dict[str, Any], response.data)
             except SlackApiError as e:
                 if e.response["error"] == "ratelimited":
                     retry_after = int(e.response.headers.get("Retry-After", 60))

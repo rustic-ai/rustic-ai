@@ -63,13 +63,12 @@ class SlackConnectorAgent(Agent):
         # Get token from environment variable
         if not self._token:
             import os
+
             self._token = os.getenv("SLACK_BOT_TOKEN")
 
             if not self._token:
                 logging.error("SLACK_BOT_TOKEN environment variable not found")
-                raise ValueError(
-                    "No Slack bot token found. Please set the SLACK_BOT_TOKEN environment variable."
-                )
+                raise ValueError("No Slack bot token found. Please set the SLACK_BOT_TOKEN environment variable.")
 
         logging.info(f"Creating Slack API client for workspace: {workspace_id}")
 
@@ -93,8 +92,10 @@ class SlackConnectorAgent(Agent):
         try:
             request = ctx.payload
 
-            logging.info(f"📨 Connector received send_message request: channel={request.channel}, "
-                         f"workspace={request.workspace_id}, thread={request.thread_ts}, text_preview={request.text[:50]}...")
+            logging.info(
+                f"📨 Connector received send_message request: channel={request.channel}, "
+                f"workspace={request.workspace_id}, thread={request.thread_ts}, text_preview={request.text[:50]}..."
+            )
 
             # Check if this is a response to a Slack event
             # Use metadata from session state to determine thread/channel context

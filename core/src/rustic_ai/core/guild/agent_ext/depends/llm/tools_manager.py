@@ -52,6 +52,7 @@ class ToolSpec(BaseToolDeclaration):
     """
     Specification for a tool that can be called by the model.
     """
+
     @cached_property
     def chat_tool(self) -> ChatCompletionTool:
         """

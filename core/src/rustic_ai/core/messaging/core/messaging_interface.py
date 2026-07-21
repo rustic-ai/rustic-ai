@@ -156,14 +156,12 @@ class MessagingInterface:
         """
         assert message.topic_published_to is not None
         recipient_id = client.id.split("$")[-1]
-        if (
-            recipient_id != message.sender.id
-            and not message.topic_published_to.startswith(f"{GuildTopics.AGENT_SELF_INBOX_PREFIX}")
+        if recipient_id != message.sender.id and not message.topic_published_to.startswith(
+            f"{GuildTopics.AGENT_SELF_INBOX_PREFIX}"
         ):
             return True
-        elif (
-            recipient_id == message.sender.id
-            and message.topic_published_to.startswith(f"{GuildTopics.AGENT_SELF_INBOX_PREFIX}")
+        elif recipient_id == message.sender.id and message.topic_published_to.startswith(
+            f"{GuildTopics.AGENT_SELF_INBOX_PREFIX}"
         ):
             return True
         return False

@@ -113,15 +113,11 @@ class ResearchManager(Agent[ResearchManagerConf]):
 
             completion_request = ChatCompletionRequest(
                 messages=[
-                    SystemMessage(
-                        content=textwrap.dedent(
-                            """You are a helpful question-answering assistant.
+                    SystemMessage(content=textwrap.dedent("""You are a helpful question-answering assistant.
                             User will ask you question and will provide you the context of the question.
                             Use the context to answer the question. You need to provide the answer to the question based on the context provided.
                             If the context doesn't contain the answer, just say that you don't know.
-                            Use three sentences maximum and keep the answer concise."""
-                        )
-                    ),
+                            Use three sentences maximum and keep the answer concise.""")),
                     UserMessage(
                         content=f"Question: {data.query}\nContext: {context}",
                         name=self.query_users[query_id].id,

@@ -14,8 +14,7 @@ def temp_skill_dir():
         skill_path.mkdir()
 
         # Create SKILL.md
-        (skill_path / "SKILL.md").write_text(
-            """---
+        (skill_path / "SKILL.md").write_text("""---
 name: calculator
 description: A skill for performing mathematical calculations
 ---
@@ -28,15 +27,13 @@ Use the calculate script to evaluate arithmetic expressions.
 ## Usage
 - Provide arithmetic expressions like "2 + 2", "10 * 5", etc.
 - Supports basic operations: +, -, *, /, **, (, )
-"""
-        )
+""")
 
         # Create scripts directory with calculator script
         scripts_dir = skill_path / "scripts"
         scripts_dir.mkdir()
 
-        (scripts_dir / "calculate.py").write_text(
-            '''"""Evaluate mathematical expressions safely."""
+        (scripts_dir / "calculate.py").write_text('''"""Evaluate mathematical expressions safely."""
 import json
 import os
 import sys
@@ -59,7 +56,6 @@ try:
 except Exception as e:
     print(f"Error: {e}")
     sys.exit(1)
-'''
-        )
+''')
 
         yield skill_path

@@ -172,11 +172,13 @@ class VendingBenchStatusTrackerAgent(Agent[VendingBenchStatusTrackerProps]):
             # Use 24-hour day boundary to ensure monotonic time_index even when
             # simulation hours exceed the typical 12-hour business day (hours 8-20)
             time_index = (day - 1) * 24 + (hour - 8)
-            chart_data.append({
-                **entry,
-                "time_index": time_index,
-                "time_label": f"D{day} H{hour}",
-            })
+            chart_data.append(
+                {
+                    **entry,
+                    "time_index": time_index,
+                    "time_label": f"D{day} H{hour}",
+                }
+            )
 
         spec = {
             "$schema": "https://vega.github.io/schema/vega-lite/v6.json",
@@ -216,7 +218,7 @@ class VendingBenchStatusTrackerAgent(Agent[VendingBenchStatusTrackerProps]):
             update_id="vb_net_worth_chart",
             update_type="replace",
             spec=spec,
-            theme={"light": "quartz"}
+            theme={"light": "quartz"},
         )
 
     def _generate_cash_breakdown_chart(self) -> VegaLiteFormat:
@@ -231,24 +233,30 @@ class VendingBenchStatusTrackerAgent(Agent[VendingBenchStatusTrackerProps]):
             time_label = f"D{day} H{hour}"
 
             # Add separate data points for each component
-            chart_data.append({
-                "time_index": time_index,
-                "time_label": time_label,
-                "component": "Machine Cash",
-                "value": entry.get("machine_cash", 0),
-            })
-            chart_data.append({
-                "time_index": time_index,
-                "time_label": time_label,
-                "component": "Operator Cash",
-                "value": entry.get("operator_cash", 0),
-            })
-            chart_data.append({
-                "time_index": time_index,
-                "time_label": time_label,
-                "component": "Inventory Value",
-                "value": entry.get("inventory_value", 0),
-            })
+            chart_data.append(
+                {
+                    "time_index": time_index,
+                    "time_label": time_label,
+                    "component": "Machine Cash",
+                    "value": entry.get("machine_cash", 0),
+                }
+            )
+            chart_data.append(
+                {
+                    "time_index": time_index,
+                    "time_label": time_label,
+                    "component": "Operator Cash",
+                    "value": entry.get("operator_cash", 0),
+                }
+            )
+            chart_data.append(
+                {
+                    "time_index": time_index,
+                    "time_label": time_label,
+                    "component": "Inventory Value",
+                    "value": entry.get("inventory_value", 0),
+                }
+            )
 
         spec = {
             "$schema": "https://vega.github.io/schema/vega-lite/v6.json",
@@ -295,7 +303,7 @@ class VendingBenchStatusTrackerAgent(Agent[VendingBenchStatusTrackerProps]):
             update_id="vb_cash_breakdown_chart",
             update_type="replace",
             spec=spec,
-            theme={"light": "quartz"}
+            theme={"light": "quartz"},
         )
 
     def _generate_inventory_line_chart(self) -> VegaLiteFormat:
@@ -312,12 +320,14 @@ class VendingBenchStatusTrackerAgent(Agent[VendingBenchStatusTrackerProps]):
             inventory = snapshot.get("inventory", {})
             for product, quantity in inventory.items():
                 product_name = product.replace("_", " ").title()
-                chart_data.append({
-                    "time_index": time_index,
-                    "time_label": f"D{day} H{hour}",
-                    "product": product_name,
-                    "quantity": quantity,
-                })
+                chart_data.append(
+                    {
+                        "time_index": time_index,
+                        "time_label": f"D{day} H{hour}",
+                        "product": product_name,
+                        "quantity": quantity,
+                    }
+                )
 
         spec = {
             "$schema": "https://vega.github.io/schema/vega-lite/v6.json",
@@ -364,7 +374,7 @@ class VendingBenchStatusTrackerAgent(Agent[VendingBenchStatusTrackerProps]):
             update_id="vb_inventory_chart",
             update_type="replace",
             spec=spec,
-            theme={"light": "quartz"}
+            theme={"light": "quartz"},
         )
 
     def _generate_email_table(self) -> Optional[TableFormat]:
@@ -377,20 +387,24 @@ class VendingBenchStatusTrackerAgent(Agent[VendingBenchStatusTrackerProps]):
         all_emails = []
 
         for email in self.emails_sent[-10:]:  # Last 10 sent emails
-            all_emails.append({
-                "direction": "Sent",
-                "day": email.get("day", "?"),
-                "to_from": email.get("to_address", "Unknown"),
-                "subject": email.get("subject", "No subject")[:50],
-            })
+            all_emails.append(
+                {
+                    "direction": "Sent",
+                    "day": email.get("day", "?"),
+                    "to_from": email.get("to_address", "Unknown"),
+                    "subject": email.get("subject", "No subject")[:50],
+                }
+            )
 
         for email in self.emails_received[-10:]:  # Last 10 received emails
-            all_emails.append({
-                "direction": "Received",
-                "day": email.get("day", "?"),
-                "to_from": email.get("from_address", "Unknown"),
-                "subject": email.get("subject", "No subject")[:50],
-            })
+            all_emails.append(
+                {
+                    "direction": "Received",
+                    "day": email.get("day", "?"),
+                    "to_from": email.get("from_address", "Unknown"),
+                    "subject": email.get("subject", "No subject")[:50],
+                }
+            )
 
         # Sort by day (descending)
         all_emails.sort(key=lambda x: x.get("day", 0), reverse=True)
@@ -456,7 +470,7 @@ class VendingBenchStatusTrackerAgent(Agent[VendingBenchStatusTrackerProps]):
             update_id="vb_sales_chart",
             update_type="replace",
             spec=spec,
-            theme={"light": "quartz"}
+            theme={"light": "quartz"},
         )
 
     def _track_net_worth(self, day: int, hour: int, net_worth: float, revenue: float):
@@ -464,12 +478,14 @@ class VendingBenchStatusTrackerAgent(Agent[VendingBenchStatusTrackerProps]):
         for entry in self.net_worth_history:
             if entry.get("day") == day and entry.get("hour") == hour:
                 return
-        self.net_worth_history.append({
-            "day": day,
-            "hour": hour,
-            "net_worth": net_worth,
-            "revenue": revenue,
-        })
+        self.net_worth_history.append(
+            {
+                "day": day,
+                "hour": hour,
+                "net_worth": net_worth,
+                "revenue": revenue,
+            }
+        )
         self.net_worth_history.sort(key=lambda x: (x.get("day", 0), x.get("hour", 0)))
 
     def _track_cash_breakdown(
@@ -483,13 +499,15 @@ class VendingBenchStatusTrackerAgent(Agent[VendingBenchStatusTrackerProps]):
                 entry["operator_cash"] = operator_cash
                 entry["inventory_value"] = inventory_value
                 return
-        self.cash_breakdown_history.append({
-            "day": day,
-            "hour": hour,
-            "machine_cash": machine_cash,
-            "operator_cash": operator_cash,
-            "inventory_value": inventory_value,
-        })
+        self.cash_breakdown_history.append(
+            {
+                "day": day,
+                "hour": hour,
+                "machine_cash": machine_cash,
+                "operator_cash": operator_cash,
+                "inventory_value": inventory_value,
+            }
+        )
         self.cash_breakdown_history.sort(key=lambda x: (x.get("day", 0), x.get("hour", 0)))
 
     @agent.processor(SimulationControlResponse)
@@ -506,28 +524,30 @@ class VendingBenchStatusTrackerAgent(Agent[VendingBenchStatusTrackerProps]):
         if response.vending_machine_state:
             state = response.vending_machine_state
             # Calculate net worth
-            inventory_value = sum(
-                qty * 0.75 for qty in state.inventory.values()  # Approximate cost
-            )
+            inventory_value = sum(qty * 0.75 for qty in state.inventory.values())  # Approximate cost
             self.current_net_worth = state.machine_cash + state.operator_cash + inventory_value
 
             # Reset all tracking data when starting a new simulation
             if response.command.value == "start":
                 self.net_worth_history = [{"day": 1, "hour": 8, "net_worth": self.current_net_worth, "revenue": 0}]
                 # Initialize cash_breakdown_history with starting values
-                self.cash_breakdown_history = [{
-                    "day": 1,
-                    "hour": 8,
-                    "machine_cash": state.machine_cash,
-                    "operator_cash": state.operator_cash,
-                    "inventory_value": inventory_value,
-                }]
+                self.cash_breakdown_history = [
+                    {
+                        "day": 1,
+                        "hour": 8,
+                        "machine_cash": state.machine_cash,
+                        "operator_cash": state.operator_cash,
+                        "inventory_value": inventory_value,
+                    }
+                ]
                 # Initialize inventory_history with starting inventory snapshot
-                self.inventory_history = [{
-                    "day": 1,
-                    "time": 0,
-                    "inventory": {k.value: v for k, v in state.inventory.items()},
-                }]
+                self.inventory_history = [
+                    {
+                        "day": 1,
+                        "time": 0,
+                        "inventory": {k.value: v for k, v in state.inventory.items()},
+                    }
+                ]
                 self.daily_sales = []
                 self.emails_sent = []
                 self.emails_received = []
@@ -594,11 +614,13 @@ class VendingBenchStatusTrackerAgent(Agent[VendingBenchStatusTrackerProps]):
         )
 
         # Add daily sales data (use current_day counters which track real-time purchases)
-        self.daily_sales.append({
-            "day": event.day,
-            "sales": self.current_day_sales,
-            "revenue": self.current_day_revenue,
-        })
+        self.daily_sales.append(
+            {
+                "day": event.day,
+                "sales": self.current_day_sales,
+                "revenue": self.current_day_revenue,
+            }
+        )
 
         # Reset day counters for next day
         self.current_day_sales = 0
@@ -627,9 +649,7 @@ class VendingBenchStatusTrackerAgent(Agent[VendingBenchStatusTrackerProps]):
         # This is more reliable than the time in the response, which may be stale
         guild_state = self.get_guild_state() or {}
         self.current_day = guild_state.get(CURRENT_DAY, response.simulation_time.current_day)
-        current_time_minutes = guild_state.get(
-            CURRENT_TIME_MINUTES, response.simulation_time.current_time_minutes
-        )
+        current_time_minutes = guild_state.get(CURRENT_TIME_MINUTES, response.simulation_time.current_time_minutes)
         # Convert to hour (simulation time: 0 = 8 AM, so hour = 8 + minutes/60)
         current_hour = 8 + (current_time_minutes // 60)
 
@@ -646,12 +666,14 @@ class VendingBenchStatusTrackerAgent(Agent[VendingBenchStatusTrackerProps]):
                 break
 
         if not entry_exists:
-            self.net_worth_history.append({
-                "day": self.current_day,
-                "hour": current_hour,
-                "net_worth": self.current_net_worth,
-                "revenue": self.total_revenue,
-            })
+            self.net_worth_history.append(
+                {
+                    "day": self.current_day,
+                    "hour": current_hour,
+                    "net_worth": self.current_net_worth,
+                    "revenue": self.total_revenue,
+                }
+            )
             # Sort by day and hour to ensure proper ordering after potential out-of-order appends
             self.net_worth_history.sort(key=lambda x: (x.get("day", 0), x.get("hour", 0)))
 
@@ -682,9 +704,7 @@ class VendingBenchStatusTrackerAgent(Agent[VendingBenchStatusTrackerProps]):
         # This is more reliable than the time in the response, which may be stale
         guild_state = self.get_guild_state() or {}
         self.current_day = guild_state.get(CURRENT_DAY, response.simulation_time.current_day)
-        current_time_minutes = guild_state.get(
-            CURRENT_TIME_MINUTES, response.simulation_time.current_time_minutes
-        )
+        current_time_minutes = guild_state.get(CURRENT_TIME_MINUTES, response.simulation_time.current_time_minutes)
         current_hour = 8 + (current_time_minutes // 60)
 
         # Check if an entry for this day/hour already exists and update it,
@@ -703,11 +723,13 @@ class VendingBenchStatusTrackerAgent(Agent[VendingBenchStatusTrackerProps]):
 
         if not entry_exists:
             # Store new inventory snapshot
-            self.inventory_history.append({
-                "day": self.current_day,
-                "time": current_time_minutes,
-                "inventory": {k.value: v for k, v in response.inventory.items()},
-            })
+            self.inventory_history.append(
+                {
+                    "day": self.current_day,
+                    "time": current_time_minutes,
+                    "inventory": {k.value: v for k, v in response.inventory.items()},
+                }
+            )
             # Sort by day and time to ensure proper ordering
             self.inventory_history.sort(key=lambda x: (x.get("day", 0), x.get("time", 0)))
 
@@ -728,12 +750,14 @@ class VendingBenchStatusTrackerAgent(Agent[VendingBenchStatusTrackerProps]):
         response = ctx.payload
 
         # Track sent email (we don't have full email details here, but we can track it)
-        self.emails_sent.append({
-            "day": response.simulation_time.current_day,
-            "to_address": "supplier@vendingsupply.com",  # Assume supplier
-            "subject": "Order Request",
-            "success": response.success,
-        })
+        self.emails_sent.append(
+            {
+                "day": response.simulation_time.current_day,
+                "to_address": "supplier@vendingsupply.com",  # Assume supplier
+                "subject": "Order Request",
+                "success": response.success,
+            }
+        )
 
         self._persist_state(ctx)
         email_table = self._generate_email_table()

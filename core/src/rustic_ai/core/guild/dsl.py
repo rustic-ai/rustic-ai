@@ -36,6 +36,25 @@ class BaseAgentProps(BaseModel):
         return f"{cls.__module__}.{cls.__name__}"
 
 
+class OpaqueProps(BaseAgentProps):
+    """
+    Fallback container for an agent's properties when the agent's implementation
+    class is NOT importable in the current environment.
+
+    Enables isolated per-agent deployments: an environment that has only a subset
+    of agent packages installed (e.g. a core-only GuildManagerAgent or API server,
+    or a per-agent worker container) can still deserialize, hold, route, and
+    re-persist a full GuildSpec without importing agent classes it does not run.
+    The raw properties dict is preserved verbatim (``extra="allow"``) so it
+    round-trips losslessly back to storage / the wire.
+
+    Only ever produced for agents the current environment does not own; the owning
+    environment, which has the class, types the props into the concrete props model.
+    """
+
+    model_config = ConfigDict(extra="allow")
+
+
 APT = TypeVar("APT", bound=BaseAgentProps)
 
 
@@ -258,25 +277,47 @@ class AgentSpec(BaseModel, Generic[APT]):
 
     @model_validator(mode="before")
     @classmethod
-    def pre_build_validator(cls, data):
+    def pre_build_validator(cls, data, info):
+
+        if not isinstance(data, dict):
+            # Revalidation from an already-built instance — nothing to resolve.
+            return data
 
         class_name = data.get("class_name")
         agent_class: Type
 
         if not class_name:
             raise ValueError("class_name is required")
-        else:
-            try:
-                agent_class = get_class_from_name(class_name)
 
-                # Loading the class from the string to avoid circular imports
+        # Strict resolution is opt-in via a validation context; the default is
+        # tolerant. Tolerance lets an environment that lacks an agent's package
+        # (a core-only GuildManagerAgent or API server, or an isolated per-agent
+        # worker container) still deserialize, hold, route, and re-persist a full
+        # GuildSpec without importing agent classes it does not run. Pass
+        # ``context={"require_agent_class": True}`` (e.g. from CI/authoring, where
+        # all classes are installed) to restore fail-fast behaviour.
+        require_class = bool(info.context.get("require_agent_class")) if info and info.context else False
 
-                agent_base_class = get_class_from_name("rustic_ai.core.guild.Agent")
-            except Exception as e:
-                raise ValueError(f"Invalid class name: {class_name}") from e
+        try:
+            agent_class = get_class_from_name(class_name)
 
-            if not issubclass(agent_class, agent_base_class):
-                raise ValueError(f"Class {class_name} is not a subclass of Agent")
+            # Loading the class from the string to avoid circular imports
+            agent_base_class = get_class_from_name("rustic_ai.core.guild.Agent")
+        except ImportError as e:
+            # The agent's package is not importable in this environment. This is
+            # the isolation signal: degrade the properties to a lossless opaque
+            # container instead of failing, unless strict resolution was requested.
+            if require_class:
+                raise ValueError(f"Agent class '{class_name}' is not importable in this environment") from e
+            data["properties"] = cls._to_opaque_props(data.get("properties"))
+            return data
+        except Exception as e:
+            # Malformed name, or module present but attribute missing — a genuine
+            # spec error, not an isolation artifact.
+            raise ValueError(f"Invalid class name: {class_name}") from e
+
+        if not issubclass(agent_class, agent_base_class):
+            raise ValueError(f"Class {class_name} is not a subclass of Agent")
 
         properties_type: Type[BaseAgentProps] = agent_class.__annotations__[MetaclassConstants.AGENT_PROPS_TYPE] or BaseAgentProps  # type: ignore
 
@@ -286,13 +327,41 @@ class AgentSpec(BaseModel, Generic[APT]):
             if not properties or type(properties) is BaseAgentProps:
                 data["properties"] = properties_type()
             elif properties and isinstance(properties, dict):
-                data["properties"] = properties_type.model_validate(properties)
+                try:
+                    data["properties"] = properties_type.model_validate(properties)
+                except ImportError as e:
+                    # A nested class referenced by the props (e.g. a toolset/plugin
+                    # ``kind`` or a ``ToolSpec.parameter_class``) is not importable
+                    # here — typically a peer agent's plugin package. Degrade the whole
+                    # props subtree to a lossless opaque container unless strict
+                    # resolution was requested. Genuine prop errors surface as
+                    # ValidationError (pydantic wraps ValueError/AssertionError, not
+                    # ImportError) and still propagate.
+                    if require_class:
+                        raise ValueError(
+                            f"A class referenced by the properties of '{class_name}' "
+                            f"is not importable in this environment"
+                        ) from e
+                    data["properties"] = cls._to_opaque_props(properties)
             elif not isinstance(properties, properties_type):
                 raise ValueError(f"Properties must be an instance of {properties_type}")
         elif properties and type(properties) is not BaseAgentProps:
             raise ValueError(f"Agent {class_name} does not accept properties")
 
         return data
+
+    @staticmethod
+    def _to_opaque_props(properties) -> "OpaqueProps":
+        """Coerce raw properties into an OpaqueProps without importing the agent class."""
+        if properties is None:
+            return OpaqueProps()
+        if isinstance(properties, OpaqueProps):
+            return properties
+        if isinstance(properties, dict):
+            return OpaqueProps.model_validate(properties)
+        if isinstance(properties, BaseModel):
+            return OpaqueProps.model_validate(properties.model_dump())
+        raise ValueError("properties must be a dict or BaseModel when the agent class is unavailable")
 
     @classmethod
     def get_pydantic_generic_type(cls) -> Type[BaseAgentProps]:
@@ -343,9 +412,6 @@ class GuildSpec(BaseModel):
     routes: RoutingSlip = Field(default_factory=RoutingSlip)
 
     gateway: Optional[GatewayConfig] = None
-
-    def __init__(self, **data):
-        super().__init__(**data)
 
     def add_agent_spec(self, agent: AgentSpec):
         if agent not in self.agents:

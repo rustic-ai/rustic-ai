@@ -42,7 +42,7 @@ class CatalogStore:
         self.engine = engine
 
     def create_or_get_tags(self, tag_names: List[str]) -> List[Tag]:
-        query = select(Tag).where(Tag.tag.in_(tag_names))  # type:ignore
+        query = select(Tag).where(Tag.tag.in_(tag_names))  # type: ignore
         with Session(self.engine) as session:
             existing_tags = session.exec(query).all()
             existing_tag_names = {tag.tag for tag in existing_tags}
@@ -404,20 +404,20 @@ class CatalogStore:
                 select(
                     GuildModel.id,
                     GuildModel.name,
-                    Blueprint.id.label("blueprint_id"),  # type:ignore
+                    Blueprint.id.label("blueprint_id"),  # type: ignore
                     Blueprint.icon,
                     GuildModel.status,
                 )
                 .select_from(GuildModel)
-                .outerjoin(BlueprintGuild, GuildModel.id == BlueprintGuild.guild_id)  # type:ignore
-                .outerjoin(Blueprint, Blueprint.id == BlueprintGuild.blueprint_id)  # type:ignore
+                .outerjoin(BlueprintGuild, GuildModel.id == BlueprintGuild.guild_id)  # type: ignore
+                .outerjoin(Blueprint, Blueprint.id == BlueprintGuild.blueprint_id)  # type: ignore
                 .where(GuildModel.organization_id == org_id)
             )
 
             if statuses:
                 statement = statement.where(GuildModel.status.in_(statuses))
 
-            guilds: Sequence[BasicGuildInfo] = session.exec(statement).all()  # type:ignore
+            guilds: Sequence[BasicGuildInfo] = session.exec(statement).all()  # type: ignore
             return list(guilds)
 
     def add_user_to_guild(self, guild_id: str, user_id: str):
@@ -446,14 +446,14 @@ class CatalogStore:
                 select(
                     GuildModel.id,
                     GuildModel.name,
-                    Blueprint.id.label("blueprint_id"),  # type:ignore
+                    Blueprint.id.label("blueprint_id"),  # type: ignore
                     Blueprint.icon,
                     GuildModel.status,
                 )
                 .select_from(
-                    join(GuildModel, UserGuild, GuildModel.id == UserGuild.guild_id)  # type:ignore
-                    .outerjoin(BlueprintGuild, GuildModel.id == BlueprintGuild.guild_id)  # type:ignore
-                    .outerjoin(Blueprint, Blueprint.id == BlueprintGuild.blueprint_id)  # type:ignore
+                    join(GuildModel, UserGuild, GuildModel.id == UserGuild.guild_id)  # type: ignore
+                    .outerjoin(BlueprintGuild, GuildModel.id == BlueprintGuild.guild_id)  # type: ignore
+                    .outerjoin(Blueprint, Blueprint.id == BlueprintGuild.blueprint_id)  # type: ignore
                 )
                 .where(UserGuild.user_id == user_id)
             )
@@ -464,7 +464,7 @@ class CatalogStore:
             if statuses:
                 statement = statement.where(GuildModel.status.in_(statuses))
 
-            guilds: Sequence[BasicGuildInfo] = session.exec(statement).all()  # type:ignore
+            guilds: Sequence[BasicGuildInfo] = session.exec(statement).all()  # type: ignore
             return list(guilds)
 
     def get_users_for_guild(self, guild_id: str) -> List[str]:
@@ -475,7 +475,7 @@ class CatalogStore:
                 raise HTTPException(status_code=404, detail=f"Guild {guild_id} not found")
 
             statement = select(UserGuild.user_id).where(UserGuild.guild_id == guild_id)
-            user_ids: Sequence[str] = session.exec(statement).all()  # type:ignore
+            user_ids: Sequence[str] = session.exec(statement).all()  # type: ignore
             return list(user_ids)
 
     def add_agent_icon(self, agent_class: str, icon: str):

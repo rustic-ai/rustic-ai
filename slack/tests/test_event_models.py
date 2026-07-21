@@ -23,7 +23,7 @@ class TestSlackEventMessage:
             channel="C789CHANNEL",
             ts="1234567890.123456",
             text="<@U123BOT> hello",
-            event_ts="1234567890.123456"
+            event_ts="1234567890.123456",
         )
 
         assert event.event_type == "app_mention"
@@ -48,7 +48,7 @@ class TestSlackEventMessage:
             ts="1234567890.123456",
             text="reply in thread",
             thread_ts="1234567890.000000",
-            event_ts="1234567890.123456"
+            event_ts="1234567890.123456",
         )
 
         assert event.thread_ts == "1234567890.000000"
@@ -67,7 +67,7 @@ class TestSlackEventMessage:
             event_ts="1234567890.123456",
             bot_id="B123BOT",
             edited=True,
-            envelope_id="env-123"
+            envelope_id="env-123",
         )
 
         assert event.bot_id == "B123BOT"
@@ -79,13 +79,13 @@ class TestSlackEventMessage:
         with pytest.raises(ValidationError) as exc_info:
             SlackEventMessage(
                 event_type="message",
-                workspace_id="T123"
+                workspace_id="T123",
                 # Missing: user, channel, ts, text, event_ts
             )
 
         errors = exc_info.value.errors()
-        required_fields = {'user', 'channel', 'ts', 'text', 'event_ts'}
-        missing_fields = {err['loc'][0] for err in errors}
+        required_fields = {"user", "channel", "ts", "text", "event_ts"}
+        missing_fields = {err["loc"][0] for err in errors}
         assert required_fields.issubset(missing_fields)
 
     def test_event_message_serialization(self):
@@ -97,13 +97,13 @@ class TestSlackEventMessage:
             channel="C789",
             ts="1234567890.123456",
             text="hello",
-            event_ts="1234567890.123456"
+            event_ts="1234567890.123456",
         )
 
         # Serialize to dict
         data = original.model_dump()
         assert isinstance(data, dict)
-        assert data['event_type'] == "app_mention"
+        assert data["event_type"] == "app_mention"
 
         # Deserialize from dict
         restored = SlackEventMessage.model_validate(data)
@@ -123,7 +123,7 @@ class TestSlackAppMentionEvent:
             channel="C789",
             ts="1234567890.123456",
             text="<@U123BOT> hello",
-            event_ts="1234567890.123456"
+            event_ts="1234567890.123456",
         )
 
         assert event.event_type == "app_mention"
@@ -136,7 +136,7 @@ class TestSlackAppMentionEvent:
             channel="C789",
             ts="1234567890.123456",
             text="<@U123BOT> hello",
-            event_ts="1234567890.123456"
+            event_ts="1234567890.123456",
         )
 
         assert isinstance(event, SlackEventMessage)
@@ -153,7 +153,7 @@ class TestSlackMessageEvent:
             channel="C789",
             ts="1234567890.123456",
             text="hello",
-            event_ts="1234567890.123456"
+            event_ts="1234567890.123456",
         )
 
         assert event.event_type == "message"
@@ -168,7 +168,7 @@ class TestSlackMessageEvent:
             ts="1234567890.123456",
             text="private message",
             event_ts="1234567890.123456",
-            channel_type="im"
+            channel_type="im",
         )
 
         assert event.channel_type == "im"
@@ -182,7 +182,7 @@ class TestSlackMessageEvent:
             ts="1234567890.123456",
             text="group message",
             event_ts="1234567890.123456",
-            channel_type="group"
+            channel_type="group",
         )
 
         assert event.channel_type == "group"
@@ -199,12 +199,8 @@ class TestSlackReactionEvent:
             user="U456",
             item_user="U789",
             reaction="thumbsup",
-            item={
-                "type": "message",
-                "channel": "C123",
-                "ts": "1234567890.123456"
-            },
-            event_ts="1234567890.123456"
+            item={"type": "message", "channel": "C123", "ts": "1234567890.123456"},
+            event_ts="1234567890.123456",
         )
 
         assert event.event_type == "reaction_added"
@@ -223,7 +219,7 @@ class TestSlackReactionEvent:
             item_user="U789",
             reaction="thumbsdown",
             item={"type": "message", "channel": "C123", "ts": "123.456"},
-            event_ts="1234567890.123456"
+            event_ts="1234567890.123456",
         )
 
         assert event.event_type == "reaction_removed"
@@ -235,7 +231,7 @@ class TestSlackReactionEvent:
             SlackReactionEvent(
                 event_type="reaction_added",
                 workspace_id="T123",
-                user="U456"
+                user="U456",
                 # Missing: item_user, reaction, item, event_ts
             )
 
@@ -252,7 +248,7 @@ class TestEventModelEdgeCases:
             channel="C789",
             ts="1234567890.123456",
             text="",  # Empty text
-            event_ts="1234567890.123456"
+            event_ts="1234567890.123456",
         )
 
         assert event.text == ""
@@ -267,7 +263,7 @@ class TestEventModelEdgeCases:
             channel="C789",
             ts="1234567890.123456",
             text=long_text,
-            event_ts="1234567890.123456"
+            event_ts="1234567890.123456",
         )
 
         assert len(event.text) == 10000
@@ -282,7 +278,7 @@ class TestEventModelEdgeCases:
             channel="C789",
             ts="1234567890.123456",
             text=special_text,
-            event_ts="1234567890.123456"
+            event_ts="1234567890.123456",
         )
 
         assert event.text == special_text
@@ -296,7 +292,7 @@ class TestEventModelEdgeCases:
             channel="C789",
             ts="1234567890.123456",
             text="test",
-            event_ts="1234567890.123456"
+            event_ts="1234567890.123456",
         )
 
         data = event.model_dump(exclude_none=True)

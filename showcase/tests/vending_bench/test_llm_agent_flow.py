@@ -161,18 +161,24 @@ class TestLLMAgentFlow:
         mock_llm: MockLLMAgent = guild._add_local_agent(mock_llm_spec)
 
         # Set up tool calls to return
-        mock_llm.set_tool_calls([
-            [ChatCompletionMessageToolCall(
-                id="call_1",
-                type="function",
-                function=FunctionCall(name="search_suppliers", arguments="{}"),
-            )],
-            [ChatCompletionMessageToolCall(
-                id="call_2",
-                type="function",
-                function=FunctionCall(name="check_inventory", arguments="{}"),
-            )],
-        ])
+        mock_llm.set_tool_calls(
+            [
+                [
+                    ChatCompletionMessageToolCall(
+                        id="call_1",
+                        type="function",
+                        function=FunctionCall(name="search_suppliers", arguments="{}"),
+                    )
+                ],
+                [
+                    ChatCompletionMessageToolCall(
+                        id="call_2",
+                        type="function",
+                        function=FunctionCall(name="check_inventory", arguments="{}"),
+                    )
+                ],
+            ]
+        )
 
         # Add probe to send messages
         probe_spec = (
@@ -254,7 +260,9 @@ class TestLLMAgentFlow:
         tool_calls = ToolsHelper.extract_tool_calls(toolset, response)
 
         assert len(tool_calls) == 1, "Should extract one tool call"
-        assert isinstance(tool_calls[0], SupplierSearchRequest), f"Tool call should be SupplierSearchRequest, got {type(tool_calls[0])}"
+        assert isinstance(
+            tool_calls[0], SupplierSearchRequest
+        ), f"Tool call should be SupplierSearchRequest, got {type(tool_calls[0])}"
 
         print(f"[Test] Extracted tool call: {tool_calls[0]}")
 
@@ -317,13 +325,9 @@ class TestLLMAgentFlow:
         time.sleep(0.3)
 
         # Test that ToolsManagerPlugin preprocesses correctly
-        plugin = ToolsManagerPlugin(
-            toolset=VendingBenchToolspecsProvider()
-        )
+        plugin = ToolsManagerPlugin(toolset=VendingBenchToolspecsProvider())
 
-        request = ChatCompletionRequest(
-            messages=[{"role": "user", "content": "Start the simulation"}]
-        )
+        request = ChatCompletionRequest(messages=[{"role": "user", "content": "Start the simulation"}])
 
         # Preprocess should add tools
         preprocessed = plugin.preprocess(None, None, request, mock_llm)
@@ -338,7 +342,9 @@ class TestLLMAgentFlow:
         tool_calls = plugin.postprocess(None, None, preprocessed, mock_llm.completion.return_value, mock_llm)
         assert tool_calls is not None, "Should extract tool calls"
         assert len(tool_calls) == 1, "Should have one tool call"
-        assert isinstance(tool_calls[0], SupplierSearchRequest), f"Should be SupplierSearchRequest, got {type(tool_calls[0])}"
+        assert isinstance(
+            tool_calls[0], SupplierSearchRequest
+        ), f"Should be SupplierSearchRequest, got {type(tool_calls[0])}"
 
         print(f"[Test] Extracted tool call: {tool_calls[0]}")
 
@@ -373,11 +379,25 @@ class TestLLMAgentFlow:
         mock_llm: MockLLMAgent = guild._add_local_agent(mock_llm_spec)
 
         # Set up multiple tool calls
-        mock_llm.set_tool_calls([
-            [ChatCompletionMessageToolCall(id="call_1", type="function", function=FunctionCall(name="search_suppliers", arguments="{}"))],
-            [ChatCompletionMessageToolCall(id="call_2", type="function", function=FunctionCall(name="check_inventory", arguments="{}"))],
-            [ChatCompletionMessageToolCall(id="call_3", type="function", function=FunctionCall(name="end_day", arguments="{}"))],
-        ])
+        mock_llm.set_tool_calls(
+            [
+                [
+                    ChatCompletionMessageToolCall(
+                        id="call_1", type="function", function=FunctionCall(name="search_suppliers", arguments="{}")
+                    )
+                ],
+                [
+                    ChatCompletionMessageToolCall(
+                        id="call_2", type="function", function=FunctionCall(name="check_inventory", arguments="{}")
+                    )
+                ],
+                [
+                    ChatCompletionMessageToolCall(
+                        id="call_3", type="function", function=FunctionCall(name="end_day", arguments="{}")
+                    )
+                ],
+            ]
+        )
 
         # Add probe
         probe_spec = (
@@ -407,7 +427,12 @@ class TestLLMAgentFlow:
         # Step 2: Send another ChatCompletionRequest (simulating AgentActionResponse transformed)
         print("\n=== Step 2: Sending second ChatCompletionRequest (after tool result) ===")
         request2 = ChatCompletionRequest(
-            messages=[{"role": "user", "content": "Action: search_suppliers - Success. Response: {...}. Day 1, sunny weather. What would you like to do next?"}]
+            messages=[
+                {
+                    "role": "user",
+                    "content": "Action: search_suppliers - Success. Response: {...}. Day 1, sunny weather. What would you like to do next?",
+                }
+            ]
         )
         probe.publish(topic="PLAYER_INPUT", payload=request2)
         time.sleep(0.5)
@@ -418,7 +443,12 @@ class TestLLMAgentFlow:
         # Step 3: Send third ChatCompletionRequest
         print("\n=== Step 3: Sending third ChatCompletionRequest ===")
         request3 = ChatCompletionRequest(
-            messages=[{"role": "user", "content": "Action: check_inventory - Success. Inventory: {...}. What would you like to do next?"}]
+            messages=[
+                {
+                    "role": "user",
+                    "content": "Action: check_inventory - Success. Inventory: {...}. What would you like to do next?",
+                }
+            ]
         )
         probe.publish(topic="PLAYER_INPUT", payload=request3)
         time.sleep(0.5)
@@ -534,19 +564,21 @@ class TestRealLLMAgentFlow:
         """
 
         # Build the guild with routes that transform AgentActionResponse
-        routes = RoutingSlip(steps=[
-            RoutingRule(
-                agent={"name": "TestGateway"},
-                message_format="rustic_ai.showcase.vending_bench.messages.AgentActionResponse",
-                transformer={
-                    "style": "simple",
-                    "output_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest",
-                    "expression": "({'messages': [{'role': 'user', 'content': 'Action: ' & $.action_type & ' - Success. What next?'}]})"
-                },
-                destination=RoutingDestination(topics="PLAYER_INPUT"),
-                route_times=-1,
-            ),
-        ])
+        routes = RoutingSlip(
+            steps=[
+                RoutingRule(
+                    agent={"name": "TestGateway"},
+                    message_format="rustic_ai.showcase.vending_bench.messages.AgentActionResponse",
+                    transformer={
+                        "style": "simple",
+                        "output_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest",
+                        "expression": "({'messages': [{'role': 'user', 'content': 'Action: ' & $.action_type & ' - Success. What next?'}]})",
+                    },
+                    destination=RoutingDestination(topics="PLAYER_INPUT"),
+                    route_times=-1,
+                ),
+            ]
+        )
 
         guild = (
             GuildBuilder(guild_name="test_gateway_routing", guild_description="Test Gateway Routing")
@@ -568,9 +600,15 @@ class TestRealLLMAgentFlow:
         mock_llm: MockLLMAgent = guild._add_local_agent(mock_llm_spec)
 
         # Set up tool calls
-        mock_llm.set_tool_calls([
-            [ChatCompletionMessageToolCall(id="call_1", type="function", function=FunctionCall(name="check_inventory", arguments="{}"))],
-        ])
+        mock_llm.set_tool_calls(
+            [
+                [
+                    ChatCompletionMessageToolCall(
+                        id="call_1", type="function", function=FunctionCall(name="check_inventory", arguments="{}")
+                    )
+                ],
+            ]
+        )
 
         # Add gateway agent
         gateway_spec = (
@@ -579,11 +617,13 @@ class TestRealLLMAgentFlow:
             .set_name("TestGateway")
             .set_description("Test Gateway")
             .listen_to_default_topic(True)
-            .set_properties({
-                "input_formats": ["*"],
-                "output_formats": ["*"],
-                "returned_formats": ["rustic_ai.showcase.vending_bench.messages.AgentActionResponse"],
-            })
+            .set_properties(
+                {
+                    "input_formats": ["*"],
+                    "output_formats": ["*"],
+                    "returned_formats": ["rustic_ai.showcase.vending_bench.messages.AgentActionResponse"],
+                }
+            )
             .build_spec()
         )
         guild._add_local_agent(gateway_spec)

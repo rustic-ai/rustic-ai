@@ -39,10 +39,7 @@ class TestDatasetLoadedEmitter:
         mock_analyzer.get_schema.return_value = Mock(
             dataschema={"a": "int64", "b": "object", "c": "float64", "d": "bool", "e": "datetime64"}
         )
-        mock_analyzer.preview_dataset.return_value = Mock(
-            columns=["a", "b"],
-            data=[[1, "x"], [2, "y"], [3, "z"]]
-        )
+        mock_analyzer.preview_dataset.return_value = Mock(columns=["a", "b"], data=[[1, "x"], [2, "y"], [3, "z"]])
         mock_agent.config = Mock()
         mock_agent.config.toolset = Mock()
         mock_agent.config.toolset._analyzer = mock_analyzer
