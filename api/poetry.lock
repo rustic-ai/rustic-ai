@@ -3654,7 +3654,7 @@ url = "../core"
 
 [[package]]
 name = "rusticai-ray"
-version = "1.3.0"
+version = "1.4.0"
 description = "Rustic AI execution engine running on Ray Cluster"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -3678,7 +3678,7 @@ url = "../ray"
 
 [[package]]
 name = "rusticai-testing"
-version = "1.3.0"
+version = "1.4.0"
 description = "Test Utilities for Rustic AI Framework"
 optional = false
 python-versions = ">=3.13,<3.14"

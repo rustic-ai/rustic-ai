@@ -2239,7 +2239,7 @@ url = "../core"
 
 [[package]]
 name = "rusticai-testing"
-version = "1.3.0"
+version = "1.4.0"
 description = "Test Utilities for Rustic AI Framework"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -2583,26 +2583,21 @@ testing = ["check_manifest", "pyroma", "pytest (>=4.3)", "pytest-cov", "pytest-m
 
 [[package]]
 name = "uniko"
-version = "0.1.1"
+version = "0.2.0"
 description = "Python bindings for uniko cognitive memory"
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "uniko-0.1.1-cp310-abi3-macosx_11_0_arm64.whl", hash = "sha256:50db3dc4ac755e2b68441fefa5ea5ace859ffe0cb85e585e6d88ca9606d5a2cf"},
-    {file = "uniko-0.1.1-cp310-abi3-manylinux_2_28_aarch64.whl", hash = "sha256:43f36c961ca17ad10a46896ac7bbce8d9437a2ec9ef8757693a938de52b2c44f"},
-    {file = "uniko-0.1.1-cp310-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:5f96be6b2af2ba742f889a612e3ed2d1881695cdb70290d6422aba4c3e7fa851"},
-    {file = "uniko-0.1.1-cp310-abi3-win_amd64.whl", hash = "sha256:41d429b4d28ca39d2722a2680aaf360845c6045f167e904f01aecbe0467ee19c"},
-    {file = "uniko-0.1.1.tar.gz", hash = "sha256:6d34efd14210a887035b78fb820c6861a8087cf67f6fdbb080469584d82ee89f"},
+    {file = "uniko-0.2.0-cp310-abi3-macosx_11_0_arm64.whl", hash = "sha256:01ddadf08130a0fc8195c086548d938a9ef31e7fbe98431597d7889085062efd"},
+    {file = "uniko-0.2.0-cp310-abi3-manylinux_2_28_aarch64.whl", hash = "sha256:863f404d965bb2dededebab7ad66ade86f520885eb118720c3b5a184fb6257c0"},
+    {file = "uniko-0.2.0-cp310-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:24350720cd0044ab937cfba0b36a2425d8b432c2c7650ccc8ac1dbc29f6e7283"},
+    {file = "uniko-0.2.0-cp310-abi3-win_amd64.whl", hash = "sha256:5416fdb454f2ef9fe8440472ff12413863654f31d129c4e7f9a9b1cc9ecad8cc"},
+    {file = "uniko-0.2.0.tar.gz", hash = "sha256:2b207276e2b5ef02e9199f3b6332ce137c7c0b5ba6cff5c798afd7a28bb0d41e"},
 ]
 
 [package.dependencies]
 pydantic = ">=2"
-
-[package.source]
-type = "legacy"
-url = "https://rustic-ai.github.io/uniko/packages"
-reference = "uniko"
 
 [[package]]
 name = "virtualenv"
@@ -2759,4 +2754,4 @@ test = []
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.13,<3.14"
-content-hash = "ee8641db460dbf004b77c0d3e4603f202e6298623383cb5e61032a3ccf924f80"
+content-hash = "cc9271a4d872c1041b0a7908a751f3f236f16ba66a32add57a92cb9cbdf30b8f"

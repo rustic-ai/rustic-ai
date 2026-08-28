@@ -2722,7 +2722,7 @@ url = "../core"
 
 [[package]]
 name = "rusticai-llm-agent"
-version = "1.3.1"
+version = "1.4.0"
 description = "A complete set of LLM agents"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -2745,7 +2745,7 @@ url = "../llm-agent"
 
 [[package]]
 name = "rusticai-testing"
-version = "1.3.0"
+version = "1.4.0"
 description = "Test Utilities for Rustic AI Framework"
 optional = false
 python-versions = ">=3.13,<3.14"

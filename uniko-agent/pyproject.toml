@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [project]
 name = "rusticai-uniko-agent"
-version = "0.0.1"
+version = "0.0.2"
 description = "module boilerplate"
 authors = [{name = "Dragonscale Industries Inc.", email = "dev@dragonscale.ai"}]
 license = "Apache-2.0"
@@ -18,12 +18,7 @@ packages = [{ include = "rustic_ai", from = "src" }]
 
 [tool.poetry.dependencies]
 rusticai-core = { path = "../core", develop = true }
-uniko = { version = "0.1.1", source = "uniko" }
-
-[[tool.poetry.source]]
-name = "uniko"
-url = "https://rustic-ai.github.io/uniko/packages/"
-priority = "explicit"
+uniko = ">=0.2.0"
 
 [tool.poetry-monorepo.deps]
 
@@ -76,4 +71,3 @@ force_sort_within_sections = true # For the sorting order issues
 lines_between_sections = 1 # For the newline issue
 known_third_party = ["pydantic"]
 known_first_party = ["rustic_ai.core"]
-

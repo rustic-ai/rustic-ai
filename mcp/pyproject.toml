@@ -5,7 +5,7 @@ build-backend = "poetry.core.masonry.api"
 
 [project]
 name = "rusticai-mcp"
-version = "2.1.1"
+version = "2.1.2"
 description = "support for mcps"
 authors = [{name = "Dragonscale Industries Inc.", email = "dev@dragonscale.ai"}]
 license = "Apache-2.0"
@@ -73,4 +73,3 @@ lines_between_sections = 1 # For the newline issue
 known_third_party = ["pydantic", "fastapi", "starlette", "uvicorn", "ray", "dotenv", "openai", "litellm", "pytest", "playwright", "redis", "serpapi", "vertexai"]
 known_first_party = ["rustic_ai"]
 known_local_folder = ["core", "rustic_ai.testing"]
-
