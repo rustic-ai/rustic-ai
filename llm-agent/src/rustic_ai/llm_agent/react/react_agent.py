@@ -5,6 +5,7 @@ import time
 from typing import List, Literal, Optional, Union
 import uuid
 
+import openai
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -346,6 +347,30 @@ class ReActAgent(Agent[ReActAgentConfig]):
             # Send the final ChatCompletionResponse
             ctx.send(result)
 
+        except openai.APIConnectionError as e:
+            logger.error("Provider connection error in ReAct loop: %s", e, exc_info=True)
+            error = ChatCompletionError(
+                status_code=(
+                    ResponseCodes.API_TIMEOUT_ERROR
+                    if isinstance(e, openai.APITimeoutError)
+                    else ResponseCodes.API_CONNECTION_ERROR
+                ),
+                message=str(e),
+                model=str(self.config.model) if self.config.model else self.name,
+                request_messages=list(request.messages),
+            )
+            ctx.send_error(error)
+        except openai.APIStatusError as e:
+            logger.error("Provider error in ReAct loop: %s", e, exc_info=True)
+            error = ChatCompletionError(
+                status_code=ResponseCodes(e.status_code),
+                message=e.message,
+                response=e.response.text if e.response else None,
+                model=str(self.config.model) if self.config.model else self.name,
+                request_messages=list(request.messages),
+                body=e.body if hasattr(e, "body") else None,
+            )
+            ctx.send_error(error)
         except Exception as e:
             logger.error(f"Error in ReAct loop: {e}", exc_info=True)
             ctx.send_error(
@@ -461,8 +486,6 @@ class ReActAgent(Agent[ReActAgentConfig]):
             iteration_request = self._build_react_iteration_request(state)
             iteration_request = self._preprocess_iteration_if_needed(ctx, llm, iteration_request, iteration)
             response = self._call_llm_direct(llm, iteration_request)
-            if isinstance(response, str):
-                return response
             if response.usage:
                 state.total_usage = CompletionUsage(
                     prompt_tokens=state.total_usage.prompt_tokens + response.usage.prompt_tokens,
@@ -1163,7 +1186,7 @@ class ReActAgent(Agent[ReActAgentConfig]):
         llm: LLM,
         messages: List[DiscriminatedLLMMessage],
         tools: Optional[list] = None,
-    ) -> Union[ChatCompletionResponse, str]:
+    ) -> ChatCompletionResponse:
         """
         Call the LLM with the given messages and tools.
 
@@ -1173,7 +1196,7 @@ class ReActAgent(Agent[ReActAgentConfig]):
             tools: Optional tools list (uses toolset if not provided).
 
         Returns:
-            ChatCompletionResponse on success, error string on failure.
+            ChatCompletionResponse on success.
         """
         if tools is None:
             tools = self.config.toolset.chat_tools if self.config.toolset.tool_count > 0 else None
@@ -1191,7 +1214,7 @@ class ReActAgent(Agent[ReActAgentConfig]):
         self,
         llm: LLM,
         request: ChatCompletionRequest,
-    ) -> Union[ChatCompletionResponse, str]:
+    ) -> ChatCompletionResponse:
         """
         Call the LLM with a pre-built request.
 
@@ -1200,14 +1223,9 @@ class ReActAgent(Agent[ReActAgentConfig]):
             request: The chat completion request.
 
         Returns:
-            ChatCompletionResponse on success, error string on failure.
+            ChatCompletionResponse on success.
         """
-        try:
-            response = llm.completion(request, self.config.model)
-            return response
-        except Exception as e:
-            logger.error(f"LLM call failed: {e}", exc_info=True)
-            return f"LLM call failed: {e}"
+        return llm.completion(request, self.config.model)
 
     @staticmethod
     def _structured_tool_error(code: str, message: str) -> str:
