@@ -2,12 +2,15 @@ import json
 from typing import Any, ClassVar, List, Optional
 from unittest.mock import patch
 
+import httpx
+import openai
 from pydantic import BaseModel, ConfigDict, ValidationError
 import pytest
 
 from rustic_ai.core.guild.agent_ext.depends.dependency_resolver import DependencySpec
 from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     AssistantMessage,
+    ChatCompletionError,
     ChatCompletionMessageToolCall,
     ChatCompletionRequest,
     ChatCompletionResponse,
@@ -15,6 +18,7 @@ from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     CompletionUsage,
     FinishReason,
     FunctionCall,
+    ResponseCodes,
     SystemMessage,
     ToolType,
     UserMessage,
@@ -569,6 +573,154 @@ class TestReActAgent:
         assert provider_fields is not None
         assert "react_trace" in provider_fields
         assert len(provider_fields["react_trace"]) == 0  # No tool calls
+
+    def test_provider_error_is_emitted_as_typed_error(self, generator, build_message_from_payload):
+        agent_spec: AgentSpec = (
+            AgentBuilder(ReActAgent)
+            .set_id("react_agent")
+            .set_name("ReAct Agent")
+            .set_description("A ReAct agent for testing")
+            .set_properties(
+                ReActAgentConfig(
+                    model="test-model",
+                    toolset=CalculatorToolset(),
+                )
+            )
+            .build_spec()
+        )
+        agent, results = wrap_agent_for_testing(
+            agent_spec,
+            dependency_map={
+                "llm": DependencySpec(
+                    class_name="rustic_ai.litellm.agent_ext.llm.LiteLLMResolver",
+                    properties={"model": "test-model"},
+                )
+            },
+        )
+        provider_error = openai.RateLimitError(
+            "You have no credits remaining. PRIVATE_PROVIDER_DETAIL",
+            response=httpx.Response(
+                429,
+                request=httpx.Request("POST", "https://provider.invalid/chat"),
+                json={"error": {"code": "insufficient_quota"}},
+            ),
+            body={"error": {"code": "insufficient_quota"}},
+        )
+
+        with patch.object(agent, "_call_llm_direct", side_effect=provider_error):
+            agent._on_message(
+                build_message_from_payload(
+                    generator,
+                    ChatCompletionRequest(messages=[UserMessage(content="PRIVATE_USER_PROMPT")]),
+                )
+            )
+
+        assert len(results) == 1
+        assert results[0].format.endswith(".ChatCompletionError")
+        error = ChatCompletionError.model_validate(results[0].payload)
+        assert error.status_code == ResponseCodes.RATE_LIMIT_ERROR
+        assert error.body == {"error": {"code": "insufficient_quota"}}
+        assert error.request_messages[0].content == "PRIVATE_USER_PROMPT"
+
+    @pytest.mark.parametrize(
+        ("provider_error", "expected_status"),
+        [
+            (
+                openai.APIConnectionError(
+                    message="PRIVATE_CONNECTION_DETAIL",
+                    request=httpx.Request("POST", "https://provider.invalid/chat"),
+                ),
+                ResponseCodes.API_CONNECTION_ERROR,
+            ),
+            (
+                openai.APITimeoutError(
+                    request=httpx.Request("POST", "https://provider.invalid/chat")
+                ),
+                ResponseCodes.API_TIMEOUT_ERROR,
+            ),
+        ],
+    )
+    def test_provider_transport_error_is_emitted_as_typed_error(
+        self,
+        generator,
+        build_message_from_payload,
+        provider_error,
+        expected_status,
+    ):
+        agent_spec: AgentSpec = (
+            AgentBuilder(ReActAgent)
+            .set_id("react_agent")
+            .set_name("ReAct Agent")
+            .set_description("A ReAct agent for testing")
+            .set_properties(
+                ReActAgentConfig(
+                    model="test-model",
+                    toolset=CalculatorToolset(),
+                )
+            )
+            .build_spec()
+        )
+        agent, results = wrap_agent_for_testing(
+            agent_spec,
+            dependency_map={
+                "llm": DependencySpec(
+                    class_name="rustic_ai.litellm.agent_ext.llm.LiteLLMResolver",
+                    properties={"model": "test-model"},
+                )
+            },
+        )
+
+        with patch.object(agent, "_call_llm_direct", side_effect=provider_error):
+            agent._on_message(
+                build_message_from_payload(
+                    generator,
+                    ChatCompletionRequest(messages=[UserMessage(content="PRIVATE_USER_PROMPT")]),
+                )
+            )
+
+        assert len(results) == 1
+        assert results[0].format.endswith(".ChatCompletionError")
+        error = ChatCompletionError.model_validate(results[0].payload)
+        assert error.status_code == expected_status
+        assert error.request_messages[0].content == "PRIVATE_USER_PROMPT"
+
+    def test_unexpected_error_is_emitted_once_as_internal_error(self, generator, build_message_from_payload):
+        agent_spec: AgentSpec = (
+            AgentBuilder(ReActAgent)
+            .set_id("react_agent")
+            .set_name("ReAct Agent")
+            .set_description("A ReAct agent for testing")
+            .set_properties(
+                ReActAgentConfig(
+                    model="test-model",
+                    toolset=CalculatorToolset(),
+                )
+            )
+            .build_spec()
+        )
+        agent, results = wrap_agent_for_testing(
+            agent_spec,
+            dependency_map={
+                "llm": DependencySpec(
+                    class_name="rustic_ai.litellm.agent_ext.llm.LiteLLMResolver",
+                    properties={"model": "test-model"},
+                )
+            },
+        )
+
+        with patch.object(agent, "_call_llm_direct", side_effect=RuntimeError("PRIVATE_INTERNAL_DETAIL")):
+            agent._on_message(
+                build_message_from_payload(
+                    generator,
+                    ChatCompletionRequest(messages=[UserMessage(content="PRIVATE_USER_PROMPT")]),
+                )
+            )
+
+        assert len(results) == 1
+        assert results[0].format.endswith(".ChatCompletionError")
+        error = ChatCompletionError.model_validate(results[0].payload)
+        assert error.status_code == ResponseCodes.INTERNAL_SERVER_ERROR
+        assert error.message == "Error in ReAct loop: PRIVATE_INTERNAL_DETAIL"
 
     def test_agent_with_tool_call(self, generator, build_message_from_payload):
         """Test agent with tool calls."""
