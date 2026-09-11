@@ -59,7 +59,9 @@ class TestMCPPlaywrightIntegration:
                 command="npx",
                 args=[
                     "-y",
-                    "@playwright/mcp@latest",
+                    "@playwright/mcp@0.0.79",
+                    "--browser",
+                    "chromium",
                     "--isolated",
                     "--headless",
                     "--executable-path",
