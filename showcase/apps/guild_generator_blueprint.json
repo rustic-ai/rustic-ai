@@ -1,0 +1,521 @@
+{
+    "name": "Guild Generator",
+    "description": "A meta-guild for building other guilds interactively. Tag @Orchestrator to add agents, routes, and configure your guild. Send normal messages to test the flow.",
+    "version": "v1",
+    "icon": null,
+    "intro_msg": "Welcome to the **Guild Generator**! I help you build guilds interactively.\n\nTag **@Orchestrator** to:\n- Add agents: `@Orchestrator add an LLM agent that summarizes text`\n- Add routes: `@Orchestrator connect summarizer to formatter`\n- View flow: `@Orchestrator show flow`\n- Export: `@Orchestrator publish`\n\nType `@Orchestrator help` for more information.",
+    "exposure": "private",
+    "author_id": "dummyuserid",
+    "organization_id": null,
+    "category_id": null,
+    "tags": [
+        "meta",
+        "builder",
+        "generator"
+    ],
+    "commands": [],
+    "starter_prompts": [
+        "@Orchestrator help",
+        "@Orchestrator add an LLM agent that summarizes text",
+        "@Orchestrator show flow"
+    ],
+    "spec": {
+        "name": "Guild Generator",
+        "description": "A meta-guild for building other guilds interactively.",
+        "properties": {},
+        "guild_state": {
+            "guild_builder": {
+                "name": "New Guild",
+                "description": "A guild created with Guild Generator",
+                "agents": [],
+                "routes": [],
+                "agent_message_info": []
+            }
+        },
+        "agents": [
+            {
+                "id": "orchestrator",
+                "name": "Orchestrator",
+                "description": "ReAct orchestrator that interprets user commands and dispatches actions to appropriate handlers",
+                "class_name": "rustic_ai.llm_agent.react.react_agent.ReActAgent",
+                "additional_topics": [
+                    "ORCHESTRATOR"
+                ],
+                "properties": {
+                    "max_iterations": 5,
+                    "temperature": 0.7,
+                    "system_prompt": "You are the Guild Generator Orchestrator. You help users build agent guilds by adding agents and creating routes between them.\n\n## RULE #1: Direct Commands (Highest Priority)\n\nWhen user says:\n- \"add route\" / \"connect\" → use add_route tool\n- \"add agent\" / \"create agent\" → use add_agent tool  \n- \"show flow\" → use show_flow tool\n- \"publish\" / \"export\" → use publish tool\n\nUse the EXACT tool the user requests!\n\n## RULE #2: NO Duplicate Agents!\n\n**Each agent purpose = ONE agent only**\n\nBefore calling add_agent:\n1. Check observations - did you already create a summarizer? Don't create another!\n2. Count: If you need 2 agents, create exactly 2, then STOP\n\nExample (WRONG - creates duplicates):\n```\nadd_agent(purpose=\"summarize text\")\n→ Observation: \"Added agent: Text Summarizer\"\nadd_agent(purpose=\"text summarization\")  ← WRONG! Already have a summarizer!\n```\n\nExample (CORRECT):\n```\nadd_agent(purpose=\"summarize text\") \n→ Observation: \"Added agent: Text Summarizer\" (1/2 done)\nadd_agent(purpose=\"create mindmap\")\n→ Observation: \"Added agent: Mindmap Generator\" (2/2 done)\n→ STOP! Both agents created.\n```\n\n## RULE #3: Two-Phase Workflow\n\nWhen user describes a workflow:\n\n**Phase 1 - Create ALL agents (count them!):**\n1. Decide how many agents needed (e.g., \"I need 2 agents\")\n2. Call add_agent for each agent ONCE\n3. Observe \"Added agent: [NAME]\" and record the NAME\n4. Stop when count reached - NO MORE AGENTS!\n\n**Phase 2 - Create ALL routes:**  \n5. Use EXACT agent names from Phase 1 observations\n6. Create routes: UserProxyAgent → Agent1 → Agent2 → user_message_broadcast\n\n**Example:**\n```\nUser: \"Create a summarizer then mindmap system\"\n\nThought: Need 2 agents, then 3 routes\n\nPhase 1:\nadd_agent(purpose=\"Summarize text\")\n→ \"Added agent: Text Summarizer\" [saved: name1=\"Text Summarizer\"]\nadd_agent(purpose=\"Create mindmaps\") \n→ \"Added agent: Mindmap Gen\" [saved: name2=\"Mindmap Gen\"]\n\nPhase 2:\nadd_route(source_agent=\"UserProxyAgent\", target_agent=\"Text Summarizer\")\nadd_route(source_agent=\"Text Summarizer\", target_agent=\"Mindmap Gen\")\nadd_route(source_agent=\"Mindmap Gen\", target_agent=\"user_message_broadcast\")\n```\n\n## RULE #4: Use Exact Agent Names in Routes\n\nWhen you call add_agent(purpose=\"summarize text\"), the system creates an agent with a SPECIFIC name like \"Text Summarizer Agent\".\n\n**Extract this EXACT name from observations and use it in routes!**\n\n✅ CORRECT:\n```\nadd_agent(purpose=\"summarize\")\n→ Observation: \"Added agent: Text Summarizer Agent\"\nadd_route(source_agent=\"UserProxyAgent\", target_agent=\"Text Summarizer Agent\")\n```\n\n❌ WRONG:\n```  \nadd_agent(purpose=\"summarize\")\nadd_route(source_agent=\"UserProxyAgent\", target_agent=\"summarize\")  ← Used purpose, not name!\n```\n\n## Three Route Types\n\n1. **Input route**: UserProxyAgent → YourAgent (so agent gets user input)\n2. **Processing route**: Agent1 → Agent2 (for pipelines)\n3. **Output route**: YourAgent → user_message_broadcast (so user sees results)\n\n## Key Rules Summary\n\n- Direct commands: Use the exact tool user requests\n- NO duplicates: Each purpose = 1 agent, then STOP\n- Phase 1 first: Create ALL agents before ANY routes\n- Phase 2 second: Create routes using exact names from observations\n- Count agents: If you need 2, create 2, then move to routes\n- Routes need agents: Never create routes before agents exist\n\n## Error Handling\n\nIf add_agent fails: Use suggested agent types from error message and retry with a different valid agent type.",
+                    "toolset": {
+                        "kind": "rustic_ai.showcase.guild_generator.toolset.GuildGeneratorToolset"
+                    },
+                    "tool_wrappers": [
+                        {
+                            "kind": "rustic_ai.showcase.guild_generator.toolset.GuildGeneratorToolWrapper"
+                        }
+                    ]
+                },
+                "listen_to_default_topic": false,
+                "act_only_when_tagged": true
+            },
+            {
+                "id": "agent_registry",
+                "name": "Agent Registry",
+                "description": "Knows available agent types and suggests appropriate ones based on user requirements",
+                "class_name": "rustic_ai.showcase.guild_generator.agent_registry.AgentRegistryAgent",
+                "additional_topics": [
+                    "AGENT_LOOKUP"
+                ],
+                "properties": {},
+                "listen_to_default_topic": false,
+                "act_only_when_tagged": false
+            },
+            {
+                "id": "transformation_builder",
+                "name": "Transformation Builder",
+                "description": "Creates JSONata transformations between message types",
+                "class_name": "rustic_ai.showcase.guild_generator.transformation_builder.TransformationBuilderAgent",
+                "additional_topics": [
+                    "TRANSFORM_BUILD"
+                ],
+                "properties": {},
+                "listen_to_default_topic": false,
+                "act_only_when_tagged": false
+            },
+            {
+                "id": "route_builder",
+                "name": "Route Builder",
+                "description": "Creates routing rules from agent and transformation information",
+                "class_name": "rustic_ai.showcase.guild_generator.route_builder.RouteBuilderAgent",
+                "additional_topics": [
+                    "ROUTE_BUILD"
+                ],
+                "properties": {},
+                "listen_to_default_topic": false,
+                "act_only_when_tagged": false
+            },
+            {
+                "id": "guild_export",
+                "name": "Guild Export",
+                "description": "Assembles and validates the final guild specification",
+                "class_name": "rustic_ai.showcase.guild_generator.guild_export.GuildExportAgent",
+                "additional_topics": [
+                    "EXPORT"
+                ],
+                "properties": {},
+                "listen_to_default_topic": false,
+                "act_only_when_tagged": false
+            },
+            {
+                "id": "state_manager",
+                "name": "State Manager",
+                "description": "Manages guild builder state and provides help",
+                "class_name": "rustic_ai.showcase.guild_generator.state_manager.StateManagerAgent",
+                "additional_topics": [
+                    "STATE_MGMT"
+                ],
+                "properties": {},
+                "listen_to_default_topic": false,
+                "act_only_when_tagged": false
+            }
+        ],
+        "dependency_map": {},
+        "routes": {
+            "steps": [
+                {
+                    "agent": null,
+                    "agent_type": "rustic_ai.core.agents.utils.user_proxy_agent.UserProxyAgent",
+                    "method_name": "unwrap_and_forward_message",
+                    "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest",
+                    "destination": {
+                        "topics": "ORCHESTRATOR",
+                        "recipient_list": [
+                            {
+                                "name": "Orchestrator"
+                            }
+                        ],
+                        "priority": null
+                    },
+                    "route_times": -1,
+                    "transformer": {
+                        "style": "content_based_router",
+                        "expression_type": "jsonata",
+                        "handler": "($contains($.payload.messages[0].content[0].text, '@Orchestrator') ? {\"topics\": \"ORCHESTRATOR\", \"recipient_list\": [{\"name\": \"Orchestrator\"}]} : {\"topics\": \"TEST_FLOW\"})"
+                    }
+                },
+                {
+                    "agent": {
+                        "name": "Orchestrator"
+                    },
+                    "agent_type": null,
+                    "method_name": null,
+                    "message_format": "rustic_ai.showcase.guild_generator.models.OrchestratorAction",
+                    "destination": null,
+                    "route_times": -1,
+                    "transformer": {
+                        "style": "content_based_router",
+                        "expression_type": "jsonata",
+                        "handler": "($.payload.action = 'add_agent' ? {\"topics\": \"AGENT_LOOKUP\"} : $.payload.action = 'add_route' ? {\"topics\": \"ROUTE_BUILD\"} : $.payload.action = 'show_flow' ? {\"topics\": \"STATE_MGMT\"} : $.payload.action = 'publish' ? {\"topics\": \"EXPORT\"} : {\"topics\": \"STATE_MGMT\"})"
+                    }
+                },
+                {
+                    "agent": {
+                        "name": "Agent Registry"
+                    },
+                    "agent_type": null,
+                    "method_name": null,
+                    "message_format": "rustic_ai.showcase.guild_generator.models.AgentLookupResponse",
+                    "destination": {
+                        "topics": "STATE_MGMT",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "Agent Registry"
+                    },
+                    "agent_type": null,
+                    "method_name": null,
+                    "message_format": "rustic_ai.showcase.guild_generator.models.AgentLookupResponse",
+                    "destination": {
+                        "topics": "system_topic",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "route_times": -1,
+                    "transformer": {
+                        "style": "content_based_router",
+                        "expression_type": "jsonata",
+                        "handler": "({\"format\": \"rustic_ai.core.agents.system.models.AgentLaunchRequest\", \"payload\": {\"agent_spec\": {\"id\": $.payload.agent_spec.id, \"name\": $.payload.agent_spec.name, \"description\": $.payload.agent_spec.description, \"class_name\": $.payload.agent_spec.class_name, \"additional_topics\": $.payload.agent_spec.additional_topics ? $.payload.agent_spec.additional_topics : [], \"properties\": $.payload.agent_spec.properties ? $.payload.agent_spec.properties : {}, \"listen_to_default_topic\": $.payload.agent_spec.listen_to_default_topic ? $.payload.agent_spec.listen_to_default_topic : true, \"act_only_when_tagged\": $.payload.agent_spec.act_only_when_tagged ? $.payload.agent_spec.act_only_when_tagged : false}}})"
+                    },
+                    "guild_state_update": {
+                        "expression_type": "jsonata",
+                        "update_format": "json-merge-patch",
+                        "state_update": "({\"dynamic_agent_specs\": $append($.guild_state.dynamic_agent_specs ? $.guild_state.dynamic_agent_specs : [], {\"id\": $.payload.agent_spec.id, \"name\": $.payload.agent_spec.name, \"description\": $.payload.agent_spec.description, \"class_name\": $.payload.agent_spec.class_name, \"additional_topics\": $.payload.agent_spec.additional_topics ? $.payload.agent_spec.additional_topics : [], \"properties\": $.payload.agent_spec.properties ? $.payload.agent_spec.properties : {}, \"listen_to_default_topic\": $.payload.agent_spec.listen_to_default_topic ? $.payload.agent_spec.listen_to_default_topic : true, \"act_only_when_tagged\": $.payload.agent_spec.act_only_when_tagged ? $.payload.agent_spec.act_only_when_tagged : false})})"
+                    },
+                    "process_status": "completed"
+                },
+                {
+                    "agent": {
+                        "name": "Route Builder"
+                    },
+                    "agent_type": null,
+                    "method_name": null,
+                    "message_format": "rustic_ai.showcase.guild_generator.models.RouteResponse",
+                    "destination": {
+                        "topics": "STATE_MGMT",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Route transformation requests from Route Builder to Transformation Builder",
+                    "agent": {
+                        "name": "Route Builder"
+                    },
+                    "agent_type": null,
+                    "method_name": null,
+                    "message_format": "rustic_ai.showcase.guild_generator.models.TransformRequest",
+                    "destination": {
+                        "topics": "TRANSFORM_BUILD",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "route_times": -1
+                },
+                {
+                    "description": "Route transformation responses back to Route Builder to complete routing rule",
+                    "agent": {
+                        "name": "Transformation Builder"
+                    },
+                    "agent_type": null,
+                    "method_name": null,
+                    "message_format": "rustic_ai.showcase.guild_generator.models.TransformResponse",
+                    "destination": {
+                        "topics": "ROUTE_BUILD",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "route_times": -1
+                },
+                {
+                    "agent": {
+                        "name": "Route Builder"
+                    },
+                    "agent_type": null,
+                    "method_name": null,
+                    "message_format": "rustic_ai.core.ui_protocol.types.TextFormat",
+                    "destination": {
+                        "topics": "user_message_broadcast",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "transformer": {
+                        "style": "content_based_router",
+                        "expression_type": "jsonata",
+                        "handler": "({\"topics\": \"user_message_broadcast\", \"format\": \"MarkdownFormat\", \"payload\": {\"text\": $.payload.text}})"
+                    },
+                    "route_times": -1,
+                    "process_status": "completed"
+                },
+                {
+                    "description": "Route errors from Route Builder to user as visible error messages",
+                    "agent": {
+                        "name": "Route Builder"
+                    },
+                    "agent_type": null,
+                    "method_name": null,
+                    "message_format": "rustic_ai.core.agents.commons.message_formats.ErrorMessage",
+                    "destination": {
+                        "topics": "user_message_broadcast",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "route_times": -1,
+                    "transformer": {
+                        "style": "content_based_router",
+                        "expression_type": "jsonata",
+                        "handler": "({\"topics\": \"user_message_broadcast\", \"format\": \"MarkdownFormat\", \"payload\": {\"text\": \"**Route Builder Error**\\n\\n\" & $.payload.error_message}})"
+                    },
+                    "process_status": "completed"
+                },
+                {
+                    "description": "Route errors from Route Builder back to Orchestrator for retry",
+                    "agent": {
+                        "name": "Route Builder"
+                    },
+                    "agent_type": null,
+                    "method_name": null,
+                    "message_format": "rustic_ai.core.agents.commons.message_formats.ErrorMessage",
+                    "destination": {
+                        "topics": "ORCHESTRATOR",
+                        "recipient_list": [
+                            {
+                                "name": "Orchestrator"
+                            }
+                        ],
+                        "priority": null
+                    },
+                    "route_times": -1,
+                    "transformer": {
+                        "style": "content_based_router",
+                        "expression_type": "jsonata",
+                        "handler": "({\"format\": \"rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest\", \"payload\": {\"messages\": [{\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": \"ERROR: Route creation failed. \" & $.payload.error_message & \". Please check the agent names and try again.\"}]}]}})"
+                    }
+                },
+                {
+                    "agent": {
+                        "name": "State Manager"
+                    },
+                    "agent_type": null,
+                    "method_name": null,
+                    "message_format": "rustic_ai.core.ui_protocol.types.TextFormat",
+                    "destination": {
+                        "topics": "user_message_broadcast",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "transformer": {
+                        "style": "content_based_router",
+                        "expression_type": "jsonata",
+                        "handler": "({\"topics\": \"user_message_broadcast\", \"format\": \"MarkdownFormat\", \"payload\": {\"text\": $.payload.text}})"
+                    },
+                    "route_times": -1,
+                    "process_status": "completed"
+                },
+                {
+                    "agent": {
+                        "name": "Guild Export"
+                    },
+                    "agent_type": null,
+                    "method_name": null,
+                    "message_format": "rustic_ai.showcase.guild_generator.models.ExportResponse",
+                    "destination": {
+                        "topics": "user_message_broadcast",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "route_times": -1,
+                    "process_status": "completed"
+                },
+                {
+                    "agent": {
+                        "name": "Guild Export"
+                    },
+                    "agent_type": null,
+                    "method_name": null,
+                    "message_format": "rustic_ai.core.ui_protocol.types.TextFormat",
+                    "destination": {
+                        "topics": "user_message_broadcast",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "route_times": -1,
+                    "transformer": {
+                        "style": "content_based_router",
+                        "expression_type": "jsonata",
+                        "handler": "({\"topics\": \"user_message_broadcast\", \"format\": \"MarkdownFormat\", \"payload\": {\"text\": $.payload.text}})"
+                    },
+                    "process_status": "completed"
+                },
+                {
+                    "description": "Route TextFormat error messages from Agent Registry to user",
+                    "agent": {
+                        "name": "Agent Registry"
+                    },
+                    "agent_type": null,
+                    "method_name": null,
+                    "message_format": "rustic_ai.core.ui_protocol.types.TextFormat",
+                    "destination": {
+                        "topics": "user_message_broadcast",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "transformer": {
+                        "style": "content_based_router",
+                        "expression_type": "jsonata",
+                        "handler": "({\"topics\": \"user_message_broadcast\", \"format\": \"MarkdownFormat\", \"payload\": {\"text\": $.payload.text}})"
+                    },
+                    "route_times": -1,
+                    "process_status": "completed"
+                },
+                {
+                    "description": "Route errors from Agent Registry to user as visible error messages",
+                    "agent": {
+                        "name": "Agent Registry"
+                    },
+                    "agent_type": null,
+                    "method_name": null,
+                    "message_format": "rustic_ai.core.agents.commons.message_formats.ErrorMessage",
+                    "destination": {
+                        "topics": "user_message_broadcast",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "route_times": -1,
+                    "transformer": {
+                        "style": "content_based_router",
+                        "expression_type": "jsonata",
+                        "handler": "({\"topics\": \"user_message_broadcast\", \"format\": \"MarkdownFormat\", \"payload\": {\"text\": \"**Agent Registry Error**\\n\\n\" & $.payload.error_message}})"
+                    },
+                    "process_status": "completed"
+                },
+                {
+                    "description": "Route errors from Agent Registry back to Orchestrator for retry",
+                    "agent": {
+                        "name": "Agent Registry"
+                    },
+                    "agent_type": null,
+                    "method_name": null,
+                    "message_format": "rustic_ai.core.agents.commons.message_formats.ErrorMessage",
+                    "destination": {
+                        "topics": "ORCHESTRATOR",
+                        "recipient_list": [
+                            {
+                                "name": "Orchestrator"
+                            }
+                        ],
+                        "priority": null
+                    },
+                    "route_times": -1,
+                    "transformer": {
+                        "style": "content_based_router",
+                        "expression_type": "jsonata",
+                        "handler": "({\"format\": \"rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest\", \"payload\": {\"messages\": [{\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": \"ERROR: Agent creation failed. \" & $.payload.error_message & \". Please try again with a different agent or check the available agents from the registry.\"}]}]}})"
+                    }
+                },
+                {
+                    "description": "Route errors from Guild Manager (agent launch failures) back to Orchestrator for retry",
+                    "agent_type": "rustic_ai.core.agents.system.guild_manager_agent.GuildManagerAgent",
+                    "agent": null,
+                    "method_name": null,
+                    "message_format": "rustic_ai.core.agents.commons.message_formats.ErrorMessage",
+                    "destination": {
+                        "topics": "ORCHESTRATOR",
+                        "recipient_list": [
+                            {
+                                "name": "Orchestrator"
+                            }
+                        ],
+                        "priority": null
+                    },
+                    "route_times": -1,
+                    "transformer": {
+                        "style": "content_based_router",
+                        "expression_type": "jsonata",
+                        "handler": "({\"format\": \"rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest\", \"payload\": {\"messages\": [{\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": \"ERROR: Agent launch failed. \" & $.payload.error_message & \". The agent class may not exist in the registry. Please try again with a different agent type.\"}]}]}})"
+                    }
+                },
+                {
+                    "description": "Route errors from Transformation Builder to user as visible error messages",
+                    "agent": {
+                        "name": "Transformation Builder"
+                    },
+                    "agent_type": null,
+                    "method_name": null,
+                    "message_format": "rustic_ai.core.agents.commons.message_formats.ErrorMessage",
+                    "destination": {
+                        "topics": "user_message_broadcast",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "route_times": -1,
+                    "transformer": {
+                        "style": "content_based_router",
+                        "expression_type": "jsonata",
+                        "handler": "({\"topics\": \"user_message_broadcast\", \"format\": \"MarkdownFormat\", \"payload\": {\"text\": \"**Transformation Builder Error**\\n\\n\" & $.payload.error_message}})"
+                    },
+                    "process_status": "completed"
+                },
+                {
+                    "description": "Route errors from Transformation Builder back to Orchestrator",
+                    "agent": {
+                        "name": "Transformation Builder"
+                    },
+                    "agent_type": null,
+                    "method_name": null,
+                    "message_format": "rustic_ai.core.agents.commons.message_formats.ErrorMessage",
+                    "destination": {
+                        "topics": "ORCHESTRATOR",
+                        "recipient_list": [
+                            {
+                                "name": "Orchestrator"
+                            }
+                        ],
+                        "priority": null
+                    },
+                    "route_times": -1,
+                    "transformer": {
+                        "style": "content_based_router",
+                        "expression_type": "jsonata",
+                        "handler": "({\"format\": \"rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest\", \"payload\": {\"messages\": [{\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": \"ERROR: Transformation creation failed. \" & $.payload.error_message & \". Please verify the message formats.\"}]}]}})"
+                    }
+                },
+                {
+                    "description": "Route TextFormat messages from Transformation Builder to user",
+                    "agent": {
+                        "name": "Transformation Builder"
+                    },
+                    "agent_type": null,
+                    "method_name": null,
+                    "message_format": "rustic_ai.core.ui_protocol.types.TextFormat",
+                    "destination": {
+                        "topics": "user_message_broadcast",
+                        "recipient_list": [],
+                        "priority": null
+                    },
+                    "transformer": {
+                        "style": "content_based_router",
+                        "expression_type": "jsonata",
+                        "handler": "({\"topics\": \"user_message_broadcast\", \"format\": \"MarkdownFormat\", \"payload\": {\"text\": $.payload.text}})"
+                    },
+                    "route_times": -1,
+                    "process_status": "completed"
+                }
+            ]
+        },
+        "gateway": null
+    }
+}

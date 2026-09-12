@@ -1,0 +1,647 @@
+"""
+State Manager Agent for the Guild Generator.
+
+This agent handles updating the guild state with new agents and routes
+as they are created by other agents.
+"""
+
+import json
+import logging
+from typing import Any, Dict, List, Optional
+
+from rustic_ai.core.guild.agent import Agent, ProcessContext, processor
+from rustic_ai.core.guild.dsl import BaseAgentProps
+from rustic_ai.core.state.models import StateUpdateFormat
+from rustic_ai.core.ui_protocol.types import TextFormat
+from rustic_ai.showcase.guild_generator.constants import (
+    DEFAULT_GUILD_DESCRIPTION,
+    DEFAULT_GUILD_NAME,
+    MAX_DESCRIPTION_DISPLAY_LENGTH,
+    SYSTEM_USER_PROXY_AGENT,
+)
+from rustic_ai.showcase.guild_generator.models import (
+    ActionType,
+    AgentLookupResponse,
+    AgentMessageInfo,
+    GuildBuilderState,
+    OrchestratorAction,
+    RouteResponse,
+)
+
+
+class StateManagerAgentProps(BaseAgentProps):
+    """Properties for the StateManagerAgent."""
+
+    pass
+
+
+class StateManagerAgent(Agent[StateManagerAgentProps]):
+    """
+    Agent that manages the guild builder state.
+
+    This agent receives agent specs and routing rules from other agents
+    and updates the guild_builder state accordingly.
+
+    Uses local state cache to avoid race conditions when multiple updates come in quickly.
+    The cache is initialized from guild_state on first access and synced back on updates.
+    """
+
+    def __init__(self):
+        """Initialize agent with state management."""
+        self._local_guild_builder: Optional[Dict[str, Any]] = None
+        self._state_initialized: bool = False
+
+    def _get_default_guild_builder_state(self) -> Dict[str, Any]:
+        """Get default guild builder state structure."""
+        return {
+            "name": DEFAULT_GUILD_NAME,
+            "description": DEFAULT_GUILD_DESCRIPTION,
+            "agents": [],
+            "routes": [],
+            "agent_message_info": []
+        }
+
+    def _get_local_state(self) -> Dict[str, Any]:
+        """
+        Get the local guild builder state, initializing from guild_state if needed.
+
+        Returns:
+            Dict containing the current guild builder state
+        """
+        if self._local_guild_builder is None:
+            # First access - load from guild_state
+            guild_state = self.get_guild_state() or {}
+            guild_builder = guild_state.get("guild_builder", None)
+
+            if guild_builder is None:
+                # No existing state - use default
+                self._local_guild_builder = self._get_default_guild_builder_state()
+                logging.info("StateManagerAgent initialized with default empty guild builder state")
+            else:
+                # Validate and use existing state
+                try:
+                    # Ensure all required fields exist
+                    default_state = self._get_default_guild_builder_state()
+                    for key, default_value in default_state.items():
+                        if key not in guild_builder:
+                            guild_builder[key] = default_value
+
+                    self._local_guild_builder = guild_builder
+                    num_agents = len(guild_builder.get("agents", []))
+                    num_routes = len(guild_builder.get("routes", []))
+                    logging.info(
+                        f"StateManagerAgent initialized from guild_state with "
+                        f"{num_agents} agents and {num_routes} routes"
+                    )
+                except Exception as e:
+                    logging.error(f"Failed to load guild builder state: {e}, using defaults")
+                    self._local_guild_builder = self._get_default_guild_builder_state()
+
+            self._state_initialized = True
+
+        return self._local_guild_builder
+
+    def _save_local_state(self, ctx: ProcessContext) -> None:
+        """
+        Save local state to guild state.
+
+        Uses JSON merge patch to atomically update guild_state without reading first.
+        This prevents race conditions from concurrent updates.
+        """
+        if self._local_guild_builder is None:
+            logging.warning("Attempted to save null local state - skipping")
+            return
+
+        try:
+            num_agents = len(self._local_guild_builder.get("agents", []))
+            num_routes = len(self._local_guild_builder.get("routes", []))
+
+            logging.info(
+                f"Saving local guild builder state with {num_agents} agents and {num_routes} routes"
+            )
+
+            self.update_guild_state(
+                ctx=ctx,
+                update_format=StateUpdateFormat.JSON_MERGE_PATCH,
+                update={"guild_builder": self._local_guild_builder}
+            )
+        except Exception as e:
+            logging.error(f"Failed to save local state to guild_state: {e}")
+            raise
+
+    def _generate_guild_overview(self) -> str:
+        """
+        Generate a markdown overview of the current guild state.
+
+        Returns a formatted string with tables showing agents and routes.
+        """
+        guild_builder = self._get_local_state()
+        guild_name = guild_builder.get("name", "New Guild")
+        guild_desc = guild_builder.get("description", "A guild created with Guild Generator")
+        agents = guild_builder.get("agents", [])
+        routes = guild_builder.get("routes", [])
+        agent_message_info = guild_builder.get("agent_message_info", [])
+
+        # Build agents table
+        agent_lines = ["## 📦 Agents\n"]
+
+        if not agents:
+            agent_lines.append("*No agents added yet.*\n")
+        else:
+            agent_lines.append("| Agent Name | Type | Accepts | Sends | Description |")
+            agent_lines.append("|------------|------|---------|-------|-------------|")
+
+            for agent in agents:
+                name = agent.get("name", "Unknown")
+                agent_id = agent.get("id", "")
+                class_name = agent.get("class_name", "")
+                agent_type = class_name.split(".")[-1] if class_name else "Unknown"
+                description = agent.get("description", "")
+
+                # Find message info for this agent
+                input_fmts = "any"
+                output_fmts = "any"
+                for info in agent_message_info:
+                    if info.get("agent_id") == agent_id or info.get("agent_name") == name:
+                        input_formats = info.get("input_formats", [])
+                        output_formats = info.get("output_formats", [])
+                        input_fmts = ", ".join([f.split(".")[-1] for f in input_formats]) or "any"
+                        output_fmts = ", ".join([f.split(".")[-1] for f in output_formats]) or "any"
+                        break
+
+                # Truncate description for table
+                desc_short = (description[:MAX_DESCRIPTION_DISPLAY_LENGTH] + "...") if len(description) > MAX_DESCRIPTION_DISPLAY_LENGTH else description
+
+                agent_lines.append(f"| {name} | `{agent_type}` | {input_fmts} | {output_fmts} | {desc_short} |")
+
+        agent_lines.append("")  # Empty line after table
+
+        # Build routes table
+        route_lines = ["## 🔀 Routes\n"]
+
+        if not routes:
+            route_lines.append("*No routes configured yet.*\n")
+        else:
+            route_lines.append("| From | To | Message Format | Transformer | Status |")
+            route_lines.append("|------|-----|----------------|-------------|--------|")
+
+            for route in routes:
+                # Extract source
+                source = "Unknown"
+                if route.get("agent"):
+                    source = route["agent"].get("name") or route["agent"].get("id", "Unknown")
+                elif route.get("agent_type"):
+                    source = route["agent_type"].split(".")[-1]
+
+                # Extract destination
+                dest = route.get("destination", {})
+                target = dest.get("topics", "default") if dest else "default"
+                if isinstance(target, list):
+                    target = ", ".join(target)
+
+                # Extract message format
+                msg_format = route.get("message_format", "")
+                msg_format_short = msg_format.split(".")[-1] if msg_format else "Any"
+
+                # Check for transformer
+                has_transformer = "✓" if route.get("transformer") else "-"
+
+                # Extract process status
+                process_status = route.get("process_status", "ongoing")
+
+                route_lines.append(f"| {source} | {target} | `{msg_format_short}` | {has_transformer} | {process_status} |")
+
+        route_lines.append("")  # Empty line after table
+
+        # Build full overview
+        overview = f"# {guild_name}\n\n"
+        overview += f"*{guild_desc}*\n\n"
+        overview += f"**Total Agents:** {len(agents)} | **Total Routes:** {len(routes)}\n\n"
+        overview += "---\n\n"
+        overview += "\n".join(agent_lines)
+        overview += "\n".join(route_lines)
+
+        # Add helpful tip at the bottom
+        if len(agents) == 0:
+            overview += "\n💡 **Tip:** Start by adding an agent with `@Orchestrator add an LLM agent`\n"
+        elif len(routes) == 0:
+            overview += "\n💡 **Tip:** Connect your agents with `@Orchestrator add route from [source] to [target]`\n"
+        else:
+            overview += "\n💡 **Tip:** Export your guild with `@Orchestrator publish`\n"
+
+        return overview
+
+    def _generate_routing_suggestions(self, agent_name: str) -> str:
+        """
+        Generate routing suggestions for a newly added agent.
+
+        Returns a formatted string with routing suggestions, or empty string if none needed.
+        """
+        routes = self._local_guild_builder.get("routes", [])
+        agents = self._local_guild_builder.get("agents", [])
+
+        # Check if this agent has any routes
+        has_input_route = False
+        has_output_route = False
+
+        for route in routes:
+            # Check if agent is a destination
+            dest = route.get("destination", {})
+            dest_topics = dest.get("topics", "")
+
+            # Check if agent is a source
+            source_agent = route.get("agent", {})
+            source_name = source_agent.get("name", "")
+
+            if agent_name in str(dest_topics):
+                has_input_route = True
+            if source_name == agent_name:
+                has_output_route = True
+
+        suggestions = []
+
+        # Only provide suggestions if this is one of the first few agents
+        # (after many agents are added, suggestions become noise)
+        if len(agents) <= 3:
+            if not has_input_route:
+                suggestions.append(
+                    f"• Add input route: `@Orchestrator add route from {SYSTEM_USER_PROXY_AGENT} to {agent_name}`"
+                )
+
+            if not has_output_route:
+                suggestions.append(
+                    f"• Add output route: `@Orchestrator add route from {agent_name} to user_message_broadcast`"
+                )
+
+        return "\n".join(suggestions) if suggestions else ""
+
+    def _send_guild_overview(self, ctx: ProcessContext):
+        """Send the guild overview to the user."""
+        overview = self._generate_guild_overview()
+        ctx.send(
+            TextFormat(
+                text=overview,
+                title="Guild Overview",
+            )
+        )
+
+    @processor(AgentLookupResponse)
+    def add_agent_to_state(self, ctx: ProcessContext[AgentLookupResponse]):
+        """
+        Add a new agent to the guild builder state.
+        """
+        response = ctx.payload
+        agent_spec = response.agent_spec
+
+        logging.info(f"Received AgentLookupResponse with agent_spec: {agent_spec}")
+
+        if not agent_spec:
+            ctx.send(
+                TextFormat(
+                    text="Failed to add agent: No agent specification provided.",
+                    title="Error",
+                )
+            )
+            return
+
+        # Store message format info for the agent (used by route builder)
+        agent_id = agent_spec.get("id", "")
+        agent_name = agent_spec.get("name", "Unknown")
+        agent_class = agent_spec.get("class_name", "")
+
+        # Update session state with agent message info for downstream processors
+        agent_msg_info = AgentMessageInfo(
+            agent_id=agent_id,
+            agent_name=agent_name,
+            class_name=agent_class,
+            input_formats=response.input_formats,
+            output_formats=response.output_formats,
+        )
+        ctx.update_context({"new_agent_message_info": agent_msg_info.model_dump()})
+
+        # Update LOCAL state first (no read from guild_state, avoids race condition)
+        self._get_local_state()
+
+        # Ensure agents and agent_message_info lists exist
+        if "agents" not in self._local_guild_builder:
+            self._local_guild_builder["agents"] = []
+        if "agent_message_info" not in self._local_guild_builder:
+            self._local_guild_builder["agent_message_info"] = []
+
+        # Append the new agent spec
+        self._local_guild_builder["agents"].append(agent_spec)
+
+        # Append the agent message info
+        self._local_guild_builder["agent_message_info"].append(agent_msg_info.model_dump())
+
+        # Push local state to guild_state (write-only, no read)
+        self._save_local_state(ctx)
+
+        agent_type = agent_class.split(".")[-1]
+
+        # Format message types for display
+        input_fmts = ", ".join([f.split(".")[-1] for f in response.input_formats]) or "any"
+        output_fmts = ", ".join([f.split(".")[-1] for f in response.output_formats]) or "any"
+
+        # Generate routing suggestions
+        routing_suggestions = self._generate_routing_suggestions(agent_name)
+
+        message_text = (
+            f"**Added agent:** {agent_name}\n\n"
+            f"**Type:** {agent_type}\n\n"
+            f"**Accepts:** {input_fmts}\n\n"
+            f"**Sends:** {output_fmts}\n\n"
+            f"**Explanation:** {response.explanation}\n\n"
+        )
+
+        if routing_suggestions:
+            message_text += f"\n**⚠️ Routing Suggestions:**\n{routing_suggestions}\n\n"
+
+        ctx.send(
+            TextFormat(
+                text=message_text,
+                title="Agent Added",
+            )
+        )
+
+        # Automatically show the updated guild overview
+        self._send_guild_overview(ctx)
+
+    @processor(RouteResponse)
+    def add_route_to_state(self, ctx: ProcessContext[RouteResponse]):
+        """
+        Add a new route to the guild builder state.
+        """
+        response = ctx.payload
+        routing_rule = response.routing_rule
+
+        logging.info(f"Received RouteResponse with routing_rule: {routing_rule}")
+
+        if not routing_rule:
+            ctx.send(
+                TextFormat(
+                    text="Failed to add route: No routing rule provided.",
+                    title="Error",
+                )
+            )
+            return
+
+        # Update LOCAL state first (no read from guild_state, avoids race condition)
+        self._get_local_state()
+
+        # Ensure routes list exists
+        if "routes" not in self._local_guild_builder:
+            self._local_guild_builder["routes"] = []
+
+        # Append the new routing rule
+        self._local_guild_builder["routes"].append(routing_rule)
+
+        # Push local state to guild_state (write-only, no read)
+        self._save_local_state(ctx)
+
+        # Extract source and destination for display
+        source = "Unknown"
+        if routing_rule.get("agent"):
+            source = routing_rule["agent"].get("name") or routing_rule["agent"].get("id", "Unknown")
+        elif routing_rule.get("agent_type"):
+            source = routing_rule["agent_type"].split(".")[-1]
+
+        dest = routing_rule.get("destination", {})
+        target = dest.get("topics", "default_topic") if dest else "default_topic"
+
+        ctx.send(
+            TextFormat(
+                text=f"**Added route:**\n\n"
+                f"**From:** {source}\n"
+                f"**To:** {target}\n\n"
+                f"**Explanation:** {response.explanation}",
+                title="Route Added",
+            )
+        )
+
+        # Automatically show the updated guild overview
+        self._send_guild_overview(ctx)
+
+    @processor(
+        OrchestratorAction,
+        predicate=lambda self, msg: msg.payload.get("action") == ActionType.HELP,
+    )
+    def show_help(self, ctx: ProcessContext[OrchestratorAction]):
+        """
+        Show help information.
+        """
+        help_text = """
+# Guild Generator Help
+
+Welcome to the Guild Generator! This tool helps you build guilds interactively.
+
+## How to Use
+
+Tag **@Orchestrator** to modify your guild:
+
+### Adding Agents
+```
+@Orchestrator add an LLM agent that summarizes text
+@Orchestrator add a splitter agent to process lists
+@Orchestrator add an agent for fact-checking
+```
+
+### Adding Routes
+```
+@Orchestrator connect the summarizer to the formatter
+@Orchestrator route output from LLM to user
+@Orchestrator add a route from splitter to aggregator
+```
+
+### Viewing Your Guild
+```
+@Orchestrator show flow
+@Orchestrator show the current guild diagram
+```
+
+### Configuring Your Guild
+```
+@Orchestrator name this guild "My Pipeline"
+@Orchestrator set description to "A text processing pipeline"
+```
+
+### Exporting
+```
+@Orchestrator publish
+@Orchestrator export the guild
+```
+
+## Testing
+
+Send messages **without** tagging @Orchestrator to test your guild flow:
+```
+Hello, test this message through the pipeline
+```
+
+## Tips
+
+1. Start by adding the agents you need
+2. Then connect them with routes
+3. Use "show flow" to visualize your progress
+4. Test with sample messages
+5. Export when satisfied!
+"""
+        ctx.send(
+            TextFormat(text=help_text, title="Guild Generator Help")
+        )
+
+    @processor(
+        OrchestratorAction,
+        predicate=lambda self, msg: msg.payload.get("action") == ActionType.SET_NAME,
+    )
+    def set_guild_name(self, ctx: ProcessContext[OrchestratorAction]):
+        """
+        Set the guild name.
+        """
+        action = ctx.payload
+        new_name = action.details.get("name", "New Guild")
+
+        ctx.send(
+            TextFormat(
+                text=f"Guild name set to: **{new_name}**",
+                title="Name Updated",
+            )
+        )
+
+    @processor(
+        OrchestratorAction,
+        predicate=lambda self, msg: msg.payload.get("action") == ActionType.SET_DESCRIPTION,
+    )
+    def set_guild_description(self, ctx: ProcessContext[OrchestratorAction]):
+        """
+        Set the guild description.
+        """
+        action = ctx.payload
+        new_description = action.details.get("description", "")
+
+        ctx.send(
+            TextFormat(
+                text=f"Guild description set to:\n\n{new_description}",
+                title="Description Updated",
+            )
+        )
+
+    @processor(
+        OrchestratorAction,
+        predicate=lambda self, msg: msg.payload.get("action") == ActionType.REMOVE_AGENT,
+    )
+    def remove_agent(self, ctx: ProcessContext[OrchestratorAction]):
+        """
+        Remove an agent from the guild builder state.
+        """
+        action = ctx.payload
+        agent_name = action.details.get("agent_name", "")
+
+        # Update LOCAL state first (no read from guild_state, avoids race condition)
+        guild_builder = self._get_local_state()
+        agents = guild_builder.get("agents", [])
+
+        # Find and remove the agent
+        removed = False
+        new_agents = []
+        for agent in agents:
+            if agent.get("name") == agent_name or agent.get("id") == agent_name:
+                removed = True
+            else:
+                new_agents.append(agent)
+
+        if removed:
+            # Update local state and push to guild_state
+            guild_builder["agents"] = new_agents
+            self._save_local_state(ctx)
+
+            ctx.send(
+                TextFormat(
+                    text=f"**Removed agent:** {agent_name}\n\n"
+                    "The agent and any associated routes should be reviewed.",
+                    title="Agent Removed",
+                )
+            )
+
+            # Automatically show the updated guild overview
+            self._send_guild_overview(ctx)
+        else:
+            ctx.send(
+                TextFormat(
+                    text=f"**Agent not found:** {agent_name}\n\n"
+                    "No agent with that name or ID exists in the guild.",
+                    title="Error",
+                )
+            )
+
+    @processor(
+        OrchestratorAction,
+        predicate=lambda self, msg: msg.payload.get("action") == ActionType.REMOVE_ROUTE,
+    )
+    def remove_route(self, ctx: ProcessContext[OrchestratorAction]):
+        """
+        Remove a route from the guild builder state.
+        """
+        action = ctx.payload
+        source_agent = action.details.get("source_agent", "")
+        target_agent = action.details.get("target_agent", "")
+
+        # Update LOCAL state first (no read from guild_state, avoids race condition)
+        guild_builder = self._get_local_state()
+        routes = guild_builder.get("routes", [])
+
+        # Find and remove matching routes
+        removed_count = 0
+        new_routes = []
+        for route in routes:
+            # Check if this route matches the source and target
+            route_source = None
+            if route.get("agent"):
+                route_source = route["agent"].get("name") or route["agent"].get("id")
+            elif route.get("agent_type"):
+                route_source = route["agent_type"].split(".")[-1]
+
+            route_target = None
+            dest = route.get("destination", {})
+            if dest and dest.get("topics"):
+                topics = dest["topics"]
+                route_target = topics[0] if isinstance(topics, list) else topics
+
+            # Match route
+            if (route_source and source_agent in str(route_source)) and \
+               (route_target and target_agent in str(route_target)):
+                removed_count += 1
+            else:
+                new_routes.append(route)
+
+        if removed_count > 0:
+            # Update local state and push to guild_state
+            guild_builder["routes"] = new_routes
+            self._save_local_state(ctx)
+
+            ctx.send(
+                TextFormat(
+                    text=f"**Removed {removed_count} route(s)** from {source_agent} to {target_agent}",
+                    title="Route Removed",
+                )
+            )
+
+            # Automatically show the updated guild overview
+            self._send_guild_overview(ctx)
+        else:
+            ctx.send(
+                TextFormat(
+                    text=f"**No matching routes found** from {source_agent} to {target_agent}",
+                    title="Error",
+                )
+            )
+
+    @processor(
+        OrchestratorAction,
+        predicate=lambda self, msg: msg.payload.get("action") == ActionType.SHOW_FLOW,
+    )
+    def show_flow(self, ctx: ProcessContext[OrchestratorAction]):
+        """
+        Show the current guild overview with agents and routes.
+        """
+        self._send_guild_overview(ctx)
