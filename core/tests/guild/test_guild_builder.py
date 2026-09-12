@@ -108,6 +108,27 @@ class TestGuildBuilder:
         assert spec.name == guild_name
         assert spec.description == guild_description
 
+    def test_configuration_templates_preserve_json_sensitive_strings(self, agent_spec):
+        prompt = 'R&D <team> says "quoted" at C:\\models\\new\nNext line'
+        agent = agent_spec.model_dump(mode="json")
+        agent["name"] = "{{agent_name}}"
+        agent["description"] = "{{#labels}}{{value}} {{/labels}}"
+        spec_dict = {
+            "name": "Configured guild",
+            "description": "Configured guild",
+            "configuration": {
+                "agent_name": prompt,
+                "labels": [{"value": "R&D"}, {"value": "<review>"}],
+            },
+            "agents": [agent],
+            "routes": {"steps": []},
+        }
+
+        spec = GuildBuilder._from_spec_dict(spec_dict).build_spec()
+
+        assert spec.agents[0].name == prompt
+        assert spec.agents[0].description == "R&D <review>"
+
     def test_setting_client_type(self, guild_id, guild_name, guild_description):
         spec_builder = GuildBuilder(guild_id, guild_name, guild_description)
         spec_builder.set_property("client_type", MessageTrackingClient)

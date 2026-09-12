@@ -3,6 +3,7 @@ from inspect import isclass
 import json
 import logging
 import os
+import re
 from typing import (
     Any,
     Callable,
@@ -64,6 +65,26 @@ from rustic_ai.core.utils import class_utils
 from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 from rustic_ai.core.utils.jexpr import JxScript
 from rustic_ai.core.utils.yaml_utils import load_yaml
+
+_MUSTACHE_VARIABLE = re.compile(r"{{\s*([A-Za-z0-9_.-]+)\s*}}")
+
+
+def _json_escape_template_values(value: Any) -> Any:
+    if isinstance(value, str):
+        return json.dumps(value, ensure_ascii=False)[1:-1]
+    if isinstance(value, dict):
+        return {key: _json_escape_template_values(entry) for key, entry in value.items()}
+    if isinstance(value, list):
+        return [_json_escape_template_values(entry) for entry in value]
+    return value
+
+
+def _render_json_template(template: str, configuration: dict) -> str:
+    raw_variables = _MUSTACHE_VARIABLE.sub(r"{{{\1}}}", template)
+    return chevron.render(
+        raw_variables,
+        _json_escape_template_values(configuration),
+    )
 
 
 class OriginFilterKeys(StrEnum):
@@ -478,13 +499,13 @@ class GuildBuilder:
             updated_agents = []
             updated_routes = []
             for agent_spec in spec_dict.get(KeyConstants.AGENTS, []):
-                transformed_agent_json = chevron.render(json.dumps(agent_spec), configuration)
+                transformed_agent_json = _render_json_template(json.dumps(agent_spec), configuration)
                 agent_spec_with_config = AgentSpec.model_validate(json.loads(transformed_agent_json))
                 updated_agents.append(agent_spec_with_config)
             routing_slip_dict = spec_dict.get(KeyConstants.ROUTES, {})
             if routing_slip_dict:
                 for routing_rule in routing_slip_dict.get("steps"):
-                    transformed_rule_json = chevron.render(json.dumps(routing_rule), configuration)
+                    transformed_rule_json = _render_json_template(json.dumps(routing_rule), configuration)
                     routing_rule_with_spec = RoutingRule.model_validate(json.loads(transformed_rule_json))
                     updated_routes.append(routing_rule_with_spec)
 
