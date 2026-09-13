@@ -17,6 +17,7 @@ from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     ResponseCodes,
     SystemMessage,
 )
+from rustic_ai.llm_agent.completion_controllers import CompletionControllerError
 from rustic_ai.llm_agent.llm_plugin_mixin import PluginConfigProtocol
 
 if TYPE_CHECKING:
@@ -77,7 +78,9 @@ class LLMAgentHelper:
     The plugin pipeline consists of:
     1. Request preprocessors - modify the request before the LLM call
     2. LLM call wrappers - preprocess before and postprocess after the LLM call
-    3. Response postprocessors - act on the response after the LLM call
+    3. An optional LLMAgent completion controller - performs bounded calls that
+       produce one logical response
+    4. Response postprocessors - act on the final logical response
 
     Key methods:
     - preprocess_request(): Run preprocessing only, return prepared request
@@ -203,7 +206,7 @@ class LLMAgentHelper:
         model: Optional[str] = None,
     ) -> LLMCompletionResult:
         """
-        Execute the full plugin pipeline: preprocess, call LLM, postprocess.
+        Execute the full plugin pipeline: preprocess, call/controller, postprocess.
 
         This method does NOT send any messages. The caller (agent) is responsible
         for deciding how to send the response and plugin messages.
@@ -233,8 +236,38 @@ class LLMAgentHelper:
         # Normalize and deduplicate messages before calling the LLM
         final_request = LLMAgentHelper._normalize_messages(final_request)
 
-        # Call LLM
-        response = llm.completion(final_request, model)
+        controller = getattr(config, "completion_controller", None)
+        if controller:
+            try:
+                final_request = controller.prepare_request(final_request)
+                # Provider adapters may normalize response_format in place. Keep
+                # the controller's canonical request intact so it can recover
+                # the original schema and construct bounded follow-up calls.
+                response = llm.completion(final_request.model_copy(deep=True), model)
+                response = controller.complete(
+                    agent=agent,
+                    ctx=ctx,
+                    request=final_request,
+                    response=response,
+                    llm=llm,
+                    model=model,
+                )
+            except CompletionControllerError as exc:
+                # Controller errors contain only bounded validation categories;
+                # never log the rejected provider content.
+                logging.warning("Completion controller rejected provider output: %s", exc)
+                return LLMCompletionResult(
+                    response=ChatCompletionError(
+                        status_code=ResponseCodes.RESPONSE_PROCESSING_ERROR,
+                        message="The model response could not be completed reliably.",
+                        model=agent.name,
+                        request_messages=ctx.payload.messages if ctx.payload else [],
+                    ),
+                    final_request=final_request,
+                    plugin_messages=[],
+                )
+        else:
+            response = llm.completion(final_request, model)
 
         # Postprocess with retry logic
         return LLMAgentHelper._postprocess_with_retry(
