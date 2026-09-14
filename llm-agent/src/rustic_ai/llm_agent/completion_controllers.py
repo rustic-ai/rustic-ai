@@ -51,6 +51,156 @@ class CompletionController(BasePlugin, ABC):
         """Return the single response exposed to wrappers and postprocessors."""
 
 
+class TextContinuationController(CompletionController):
+    """Reconstruct a bounded plain-text answer after provider truncation."""
+
+    max_continuations: int = Field(default=3, ge=0)
+    combined_max_characters: int = Field(default=16000, ge=256)
+
+    _minimum_overlap_characters = 32
+
+    def prepare_request(self, request: ChatCompletionRequest) -> ChatCompletionRequest:
+        if getattr(request, "stream", False):
+            raise CompletionControllerError("Text continuation does not support streaming responses.")
+        if request.tools or request.tool_choice:
+            raise CompletionControllerError("Text continuation does not support tool calls.")
+        if request.n not in (None, 1):
+            raise CompletionControllerError("Text continuation requires exactly one response choice.")
+        if request.response_format is not None:
+            raise CompletionControllerError("Text continuation requires a plain-text response.")
+        return request
+
+    def complete(
+        self,
+        agent: Agent,
+        ctx: ProcessContext[ChatCompletionRequest],
+        request: ChatCompletionRequest,
+        response: ChatCompletionResponse,
+        llm: LLM,
+        model: Optional[str] = None,
+    ) -> ChatCompletionResponse:
+        del agent, ctx  # The controller is intentionally stateless and emits no messages.
+
+        responses = [response]
+        current_response = response
+        accumulated = ""
+        continuations = 0
+
+        while True:
+            chunk, choice = self._parse_chunk(current_response)
+            novel_chunk = self._remove_overlap(accumulated, chunk)
+            if not novel_chunk.strip():
+                raise CompletionControllerError("The text continuation made no progress.")
+
+            accumulated += novel_chunk
+            if len(accumulated) > self.combined_max_characters:
+                raise CompletionControllerError("The combined text response exceeded its configured limit.")
+
+            if choice.finish_reason == FinishReason.stop:
+                if len(responses) == 1:
+                    return response
+                return self._combined_response(response, current_response, accumulated, responses, request)
+
+            if continuations >= self.max_continuations:
+                raise CompletionControllerError("The text response remained incomplete after bounded continuation.")
+
+            continuations += 1
+            continuation_request = self._continuation_request(
+                request,
+                accumulated,
+                continuations,
+            )
+            current_response = llm.completion(continuation_request.model_copy(deep=True), model)
+            responses.append(current_response)
+
+    @staticmethod
+    def _parse_chunk(response: ChatCompletionResponse):
+        if len(response.choices) != 1:
+            raise CompletionControllerError("Text continuation requires exactly one response choice.")
+        choice = response.choices[0]
+        if choice.finish_reason not in (FinishReason.stop, FinishReason.length):
+            raise CompletionControllerError("The provider did not return usable text content.")
+        if choice.message.tool_calls:
+            raise CompletionControllerError("Text continuation does not accept tool calls.")
+        content = choice.message.content
+        if not isinstance(content, str) or not content.strip():
+            raise CompletionControllerError("The provider returned no text content.")
+        return content, choice
+
+    def _remove_overlap(self, accumulated: str, chunk: str) -> str:
+        if not accumulated:
+            return chunk
+
+        max_overlap = min(len(accumulated), len(chunk))
+        for size in range(max_overlap, self._minimum_overlap_characters - 1, -1):
+            if accumulated.endswith(chunk[:size]):
+                return chunk[size:]
+
+        # A continuation that consists only of a repeated short suffix still
+        # represents no progress, but short partial overlaps are otherwise left
+        # untouched to avoid deleting legitimate repeated prose.
+        if accumulated.endswith(chunk):
+            return ""
+        return chunk
+
+    def _continuation_request(
+        self,
+        base_request: ChatCompletionRequest,
+        accumulated: str,
+        continuation_number: int,
+    ) -> ChatCompletionRequest:
+        final_instruction = (
+            " This is the final permitted continuation, so finish the response."
+            if continuation_number == self.max_continuations
+            else ""
+        )
+        instruction = (
+            "Continue the assistant response exactly where it stopped. Return only new plain text. "
+            "Do not repeat, summarize, restart, or comment on the accepted response."
+            f"{final_instruction} Continuation {continuation_number} of {self.max_continuations}."
+        )
+        return base_request.model_copy(
+            update={
+                "messages": [
+                    *base_request.messages,
+                    AssistantMessage(content=accumulated),
+                    UserMessage(content=instruction),
+                ]
+            }
+        )
+
+    @staticmethod
+    def _combined_response(
+        first_response: ChatCompletionResponse,
+        final_response: ChatCompletionResponse,
+        content: str,
+        responses: list[ChatCompletionResponse],
+        request: ChatCompletionRequest,
+    ) -> ChatCompletionResponse:
+        final_choice = final_response.choices[0].model_copy(
+            update={
+                "finish_reason": FinishReason.stop,
+                "message": final_response.choices[0].message.model_copy(
+                    update={"content": content, "reasoning_content": None}
+                ),
+            }
+        )
+        usage = None
+        if all(item.usage is not None for item in responses):
+            usage = CompletionUsage(
+                completion_tokens=sum(item.usage.completion_tokens for item in responses if item.usage),
+                prompt_tokens=sum(item.usage.prompt_tokens for item in responses if item.usage),
+                total_tokens=sum(item.usage.total_tokens for item in responses if item.usage),
+            )
+        return first_response.model_copy(
+            update={
+                "choices": [final_choice],
+                "usage": usage,
+                "input_messages": request.messages,
+            }
+        )
+
+
 class StructuredContinuationController(CompletionController):
     """Reconstruct a bounded structured answer from sentence-aligned chunks."""
 
@@ -422,6 +572,8 @@ class StructuredContinuationController(CompletionController):
         if not self.status_field:
             return
         status = data.get(self.status_field)
+        if not isinstance(status, str):
+            return
         for field in self.empty_fields_by_status.get(status, []):
             if not self._is_empty(data.get(field)):
                 raise RepairableCompletionControllerError(

@@ -8,10 +8,12 @@ from rustic_ai.core.guild.agent import Agent, ProcessContext, processor
 from rustic_ai.core.guild.agent_ext.depends.llm.llm import LLM
 from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     ArrayOfContentParts,
+    ChatCompletionError,
     ChatCompletionRequest,
     FileContentPart,
     ImageContentPart,
     ImageUrl,
+    ResponseCodes,
     SystemMessage,
     TextContentPart,
     UserMessage,
@@ -68,11 +70,30 @@ class LLMAgent(Agent[LLMAgentConfig]):
         predicate=lambda self, msg: LLMAgentUtils.has_attachments(msg),
         depends_on=["llm", "filesystem:guild_fs:True"],
     )
-    def invoke_llm_with_attachments(self, ctx: ProcessContext[ChatCompletionRequest], llm: LLM, guild_fs: FileSystem):
+    async def invoke_llm_with_attachments(
+        self,
+        ctx: ProcessContext[ChatCompletionRequest],
+        llm: LLM,
+        guild_fs: FileSystem,
+    ):
         """
         Invoke the LLM with attachments. Converts filesystem image paths to base64 data URLs.
         """
-        prompt = self._convert_filesystem_images_to_base64(ctx.payload, guild_fs)
+        try:
+            prompt = await self._convert_filesystem_images_to_base64(ctx.payload, guild_fs)
+        except (OSError, UnicodeError, ValueError):
+            # File paths, file contents, and backend exceptions may contain sensitive
+            # user data. Publish only a fixed category and omit request messages.
+            self.logger.warning("Unable to prepare an attachment for the model request")
+            ctx.send_error(
+                ChatCompletionError(
+                    status_code=ResponseCodes.RESPONSE_PROCESSING_ERROR,
+                    message="attachment_read_failed",
+                    model=self.name,
+                    request_messages=[],
+                )
+            )
+            return
 
         if self._system_prompt:
             messages = [SystemMessage(content=self._system_prompt)] + prompt.messages
@@ -89,7 +110,7 @@ class LLMAgent(Agent[LLMAgentConfig]):
             prompt,
         )
 
-    def _convert_filesystem_images_to_base64(
+    async def _convert_filesystem_images_to_base64(
         self, request: ChatCompletionRequest, filesystem: FileSystem
     ) -> ChatCompletionRequest:
         """
@@ -114,39 +135,34 @@ class LLMAgent(Agent[LLMAgentConfig]):
                     url = str(part.image_url.url)
                     # Check if this is a filesystem path (not an HTTP URL or data URL)
                     if not url.startswith(("http://", "https://", "data:")):
-                        try:
-                            # Read the image from filesystem and convert to base64
+                        if getattr(filesystem, "asynchronous", False):
+                            image_bytes = await filesystem._cat_file(url)
+                        else:
                             with filesystem.open(url, "rb") as f:
                                 image_bytes = f.read()
-                            b64_content = base64.b64encode(image_bytes).decode("utf-8")
-                            mimetype = mimetypes.guess_type(url)[0] or "image/png"
-                            data_url = f"data:{mimetype};base64,{b64_content}"
-                            # Create new ImageContentPart with base64 data URL
-                            converted_part = ImageContentPart(
-                                image_url=ImageUrl(url=data_url, detail=part.image_url.detail)
-                            )
-                            converted_parts.append(converted_part)
-                            continue
-                        except Exception as e:
-                            self.logger.error(f"Failed to read image {url} from filesystem: {e}")
-                            # Fall through to append original part
+                        b64_content = base64.b64encode(image_bytes).decode("utf-8")
+                        mimetype = mimetypes.guess_type(url)[0] or "image/png"
+                        data_url = f"data:{mimetype};base64,{b64_content}"
+                        converted_part = ImageContentPart(
+                            image_url=ImageUrl(url=data_url, detail=part.image_url.detail)
+                        )
+                        converted_parts.append(converted_part)
+                        continue
                 elif isinstance(part, FileContentPart) and part.file_url and part.file_url.url:
                     url = str(part.file_url.url)
                     # Check if this is a filesystem path (not an HTTP URL)
                     if not url.startswith(("http://", "https://")):
-                        try:
-                            # Read the file content as text
+                        if getattr(filesystem, "asynchronous", False):
+                            file_bytes = await filesystem._cat_file(url)
+                        else:
                             with filesystem.open(url, "r", encoding="utf-8") as f:
-                                file_content = f.read()
-                            # Convert to TextContentPart with file context
-                            filename = url.split("/")[-1] if "/" in url else url
-                            text_content = f"--- Content of {filename} ---\n{file_content}\n--- End of {filename} ---"
-                            converted_part = TextContentPart(text=text_content)
-                            converted_parts.append(converted_part)
-                            continue
-                        except Exception as e:
-                            self.logger.error(f"Failed to read file {url} from filesystem: {e}")
-                            # Fall through to append original part
+                                file_bytes = f.read().encode("utf-8")
+                        file_content = file_bytes.decode("utf-8")
+                        filename = url.split("/")[-1] if "/" in url else url
+                        text_content = f"--- Content of {filename} ---\n{file_content}\n--- End of {filename} ---"
+                        converted_part = TextContentPart(text=text_content)
+                        converted_parts.append(converted_part)
+                        continue
                 converted_parts.append(part)
 
             new_content = content.model_copy(update={"root": converted_parts})

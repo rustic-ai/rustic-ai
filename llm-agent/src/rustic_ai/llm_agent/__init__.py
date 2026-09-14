@@ -1,6 +1,7 @@
 from .completion_controllers import (
     CompletionController,
     StructuredContinuationController,
+    TextContinuationController,
 )
 from .llm_agent import LLMAgent
 from .llm_agent_conf import LLMAgentConfig
@@ -37,6 +38,7 @@ __all__ = [
     "LLMCompletionResult",
     "CompletionController",
     "StructuredContinuationController",
+    "TextContinuationController",
     # Plugin infrastructure
     "LLMPluginMixin",
     "PluginConfigProtocol",

@@ -6,6 +6,7 @@ cognitive memory system for episodic, semantic, and procedural memory.
 
 from .agent import MemoryAgent
 from .config import MemoryAgentConfig
+from .memories import UnikoMemoriesStore
 from .models import (  # Observation; Recall; Answer; Document ingestion; Goal management; Task management; Error
     AnswerRequest,
     AnswerResponse,
@@ -39,6 +40,7 @@ __all__ = [
     "MemoryAgent",
     "MemoryAgentConfig",
     "UnikoResolver",
+    "UnikoMemoriesStore",
     # Observation payloads
     "ObserveTurnRequest",
     "ObserveResult",
