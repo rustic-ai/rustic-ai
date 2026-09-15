@@ -12,6 +12,8 @@ from typing import Any, Dict, List
 
 from pydantic import BaseModel, Field
 
+from ..memory import DatasetLoadedEvent, DatasetProfile
+
 
 def _utc_now() -> datetime:
     """Return current UTC time as a timezone-aware datetime."""
@@ -103,32 +105,4 @@ class DatasetEnrichmentMetadata(BaseModel):
     """Known limitations, caveats, or data quality issues."""
 
 
-class DatasetLoadedEvent(BaseModel):
-    """
-    Event emitted when a dataset is loaded, triggers enrichment.
-
-    This event is emitted by the DatasetLoadedEmitter tool wrapper
-    after a successful load_file operation. It is routed to the
-    enrichment LLMAgent for metadata generation.
-    """
-
-    dataset_name: str
-    """Name assigned to the loaded dataset."""
-
-    row_count: int
-    """Number of rows in the dataset."""
-
-    column_count: int
-    """Number of columns in the dataset."""
-
-    columns: List[str]
-    """List of column names."""
-
-    column_schema: Dict[str, str]
-    """Column name to dtype mapping (e.g., {"id": "int64", "name": "object"})."""
-
-    sample_data: List[Dict]
-    """First few rows as dictionaries for LLM analysis."""
-
-    load_summary: str
-    """Original output from the load_file tool."""
+__all__ = ["ColumnSemantics", "DatasetEnrichmentMetadata", "DatasetLoadedEvent", "DatasetProfile"]

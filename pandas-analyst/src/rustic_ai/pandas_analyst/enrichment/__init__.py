@@ -24,13 +24,19 @@ Usage:
 """
 
 from .emitter import DatasetLoadedEmitter
-from .models import ColumnSemantics, DatasetEnrichmentMetadata, DatasetLoadedEvent
+from .models import (
+    ColumnSemantics,
+    DatasetEnrichmentMetadata,
+    DatasetLoadedEvent,
+    DatasetProfile,
+)
 from .preprocessor import EnrichmentContextPreprocessor
 
 __all__ = [
     "ColumnSemantics",
     "DatasetEnrichmentMetadata",
     "DatasetLoadedEvent",
+    "DatasetProfile",
     "DatasetLoadedEmitter",
     "EnrichmentContextPreprocessor",
 ]

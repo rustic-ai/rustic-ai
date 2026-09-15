@@ -2,21 +2,24 @@
 
 import pytest
 
+from rustic_ai.core.agents.commons.media import MediaLink
 from rustic_ai.uniko_agent import (
     BatchSubmitRequest,
     BatchSubmitResponse,
     CreateGoalRequest,
     CreateTaskRequest,
+    FinalizeMemorySessionRequest,
     GetGoalsRequest,
     GoalsListResponse,
     GoalStatusResponse,
     GoalView,
     IngestDocumentRequest,
     IngestOutcome,
-    ObserveResult,
-    ObserveTurnRequest,
+    MemoryRecordKind,
+    MemoryScope,
     RecallRequest,
     RecallResponse,
+    RecordMemoryRequest,
     TaskStatusResponse,
     TaskView,
     UpdateGoalRequest,
@@ -81,22 +84,32 @@ class TestResearchWorkflow:
             "Lifetimes track how long references are valid",
         ]
 
-        for finding in findings:
+        for index, finding in enumerate(findings):
             memory_test_harness.send_message(
-                ObserveTurnRequest(
+                RecordMemoryRequest(
+                    record_id=f"rust-finding-{index}",
+                    session_id="test-session",
                     sender_id="researcher",
+                    kind=MemoryRecordKind.EXTERNAL_EVIDENCE,
                     content=finding,
-                    metadata={"goal_id": "research-rust-memory", "task_id": "task-1"},
                 )
             )
 
         responses = memory_test_harness.get_sent_messages()
         assert len(responses) == len(findings)
         for response in responses:
-            assert isinstance(response.payload, ObserveResult)
+            assert response.payload.record_id.startswith("rust-finding-")
 
         # Step 5: Recall research findings
-        memory_test_harness.send_message(RecallRequest(query="How does Rust ensure memory safety?", max_tokens=1000))
+        memory_test_harness.send_message(
+            RecallRequest(
+                query="How does Rust ensure memory safety?",
+                scope=MemoryScope(sessions=["test-session"]),
+                allowed_record_kinds=[MemoryRecordKind.EXTERNAL_EVIDENCE],
+                item_limit=10,
+                max_characters=1000,
+            )
+        )
 
         responses = memory_test_harness.get_sent_messages()
         recall_response = responses[0].payload
@@ -122,22 +135,36 @@ class TestDocumentIngestion:
     """Tests for document ingestion workflows."""
 
     @pytest.mark.asyncio
-    async def test_ingest_document_from_path(self, memory_test_harness, tmp_path):
-        """Test ingesting a document from file path."""
-        # Create a test document
-        test_doc = tmp_path / "research.md"
-        test_doc.write_text("""
+    async def test_ingest_document_from_guild_filesystem(self, memory_test_harness):
+        """Test ingesting a document referenced through the guild filesystem."""
+        import fsspec
+
+        agent = memory_test_harness.agent
+        guild_path = f"/test/test_organization_id/{agent.guild_id}/GUILD_GLOBAL/research.md"
+        fs = fsspec.filesystem("memory")
+        fs.makedirs(guild_path.rsplit("/", 1)[0], exist_ok=True)
+        with fs.open(guild_path, "w") as test_doc:
+            test_doc.write("""
 # Rust Memory Safety
 
 Rust ensures memory safety through:
 1. Ownership system
 2. Borrow checker
 3. Lifetime annotations
-        """)
+            """)
 
         # Ingest the document
         memory_test_harness.send_message(
-            IngestDocumentRequest(source_spec={"path": str(test_doc), "metadata": {"source": "test", "topic": "rust"}})
+            IngestDocumentRequest(
+                record_id="rust-memory-safety",
+                session_id="test-session",
+                media_link=MediaLink(
+                    url="research.md",
+                    name="research.md",
+                    mimetype="text/markdown",
+                    on_filesystem=True,
+                ),
+            )
         )
 
         responses = memory_test_harness.get_sent_messages()
@@ -276,17 +303,39 @@ class TestMemoryPersistence:
         """Test that observations persist and can be recalled multiple times."""
         # Observe some information
         memory_test_harness.send_message(
-            ObserveTurnRequest(sender_id="user", content="Python is great for data science and machine learning")
+            RecordMemoryRequest(
+                record_id="python-data-science",
+                session_id="test-session",
+                sender_id="user",
+                kind=MemoryRecordKind.USER_ASSERTION,
+                content="Python is great for data science and machine learning",
+            )
         )
+        memory_test_harness.get_sent_messages()
+        memory_test_harness.send_message(FinalizeMemorySessionRequest(session_id="test-session"))
         memory_test_harness.get_sent_messages()
 
         # First recall
-        memory_test_harness.send_message(RecallRequest(query="programming languages for data science"))
+        recall_scope = MemoryScope(sessions=["test-session"])
+        allowed_kinds = [MemoryRecordKind.USER_ASSERTION]
+        memory_test_harness.send_message(
+            RecallRequest(
+                query="programming languages for data science",
+                scope=recall_scope,
+                allowed_record_kinds=allowed_kinds,
+            )
+        )
         responses1 = memory_test_harness.get_sent_messages()
         recall1 = responses1[0].payload
 
         # Second recall (should return same/similar results)
-        memory_test_harness.send_message(RecallRequest(query="data science languages"))
+        memory_test_harness.send_message(
+            RecallRequest(
+                query="data science languages",
+                scope=recall_scope,
+                allowed_record_kinds=allowed_kinds,
+            )
+        )
         responses2 = memory_test_harness.get_sent_messages()
         recall2 = responses2[0].payload
 
@@ -306,22 +355,44 @@ class TestScopeFiltering:
         """Test recall filtered by session."""
         # Observe in session 1
         memory_test_harness.send_message(
-            ObserveTurnRequest(session_id="session-1", sender_id="user", content="Information specific to session 1")
+            RecordMemoryRequest(
+                record_id="session-1-information",
+                session_id="session-1",
+                sender_id="user",
+                kind=MemoryRecordKind.USER_ASSERTION,
+                content="Information specific to session 1",
+            )
         )
+        memory_test_harness.get_sent_messages()
+        memory_test_harness.send_message(FinalizeMemorySessionRequest(session_id="session-1"))
         memory_test_harness.get_sent_messages()
 
         # Observe in session 2
         memory_test_harness.send_message(
-            ObserveTurnRequest(session_id="session-2", sender_id="user", content="Information specific to session 2")
+            RecordMemoryRequest(
+                record_id="session-2-information",
+                session_id="session-2",
+                sender_id="user",
+                kind=MemoryRecordKind.USER_ASSERTION,
+                content="Information specific to session 2",
+            )
         )
+        memory_test_harness.get_sent_messages()
+        memory_test_harness.send_message(FinalizeMemorySessionRequest(session_id="session-2"))
         memory_test_harness.get_sent_messages()
 
         # Recall scoped to session 1
-        memory_test_harness.send_message(RecallRequest(query="information", scope={"sessions": ["session-1"]}))
+        memory_test_harness.send_message(
+            RecallRequest(
+                query="information",
+                scope=MemoryScope(sessions=["session-1"]),
+                allowed_record_kinds=[MemoryRecordKind.USER_ASSERTION],
+            )
+        )
 
         responses = memory_test_harness.get_sent_messages()
         recall = responses[0].payload
 
         assert isinstance(recall, RecallResponse)
-        # Should find results (from session 1)
-        assert len(recall.items) >= 0
+        assert recall.items
+        assert all("session 2" not in item.content for item in recall.items)

@@ -8473,7 +8473,7 @@ url = "litellm"
 
 [[package]]
 name = "rusticai-llm-agent"
-version = "1.4.3"
+version = "1.4.4"
 description = "A complete set of LLM agents"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -8539,7 +8539,7 @@ url = "nats"
 
 [[package]]
 name = "rusticai-pandas-analyst"
-version = "0.2.2"
+version = "0.2.3"
 description = "Pandas and DuckDB powered implementation of data analyst dependency."
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -8550,6 +8550,7 @@ develop = true
 [package.dependencies]
 duckdb = "^1.5.4"
 pandas = "^3.0.3"
+pyarrow = "^25.0.0"
 rusticai-core = {path = "../core", develop = true}
 rusticai-llm-agent = {path = "../llm-agent", develop = true}
 
@@ -8782,7 +8783,9 @@ files = []
 develop = true
 
 [package.dependencies]
+rusticai-core = ">=1.4.2,<1.5.0"
 rusticai-llm-agent = ">=1.4.3,<1.5.0"
+uniko = ">=0.2.0"
 
 [package.source]
 type = "directory"
@@ -10403,6 +10406,24 @@ tzdata = {version = "*", markers = "platform_system == \"Windows\""}
 [package.extras]
 devenv = ["zest.releaser"]
 testing = ["check_manifest", "pyroma", "pytest (>=4.3)", "pytest-cov", "pytest-mock (>=3.3)", "ruff"]
+
+[[package]]
+name = "uniko"
+version = "0.2.1"
+description = "Python bindings for uniko cognitive memory"
+optional = false
+python-versions = ">=3.10"
+groups = ["main"]
+files = [
+    {file = "uniko-0.2.1-cp310-abi3-macosx_11_0_arm64.whl", hash = "sha256:4649e696ee3d33c44b4b6075b31fc4ecfafac19e6e958d193091937cdd9b2ad0"},
+    {file = "uniko-0.2.1-cp310-abi3-manylinux_2_28_aarch64.whl", hash = "sha256:43cb5eaa1292fbb933a784893e5eeaa361e61cf1f72234a484378bc372648a52"},
+    {file = "uniko-0.2.1-cp310-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:d0eb0977cfa6f50bf05d8cdd07d06f1d37510e77659bcd7f7d1b08b44461f9d0"},
+    {file = "uniko-0.2.1-cp310-abi3-win_amd64.whl", hash = "sha256:cd78853a798c567cf765fb715b7e71efa06c5bed219775a7ce41b7a190e4dd8e"},
+    {file = "uniko-0.2.1.tar.gz", hash = "sha256:ddaf58ef8e96a06f22b3515e2d9b18e3b4b8e55d3e5d3d0e806361383fdd6fb8"},
+]
+
+[package.dependencies]
+pydantic = ">=2"
 
 [[package]]
 name = "uritemplate"

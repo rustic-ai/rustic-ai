@@ -6,10 +6,13 @@ from rustic_ai.core.agents.commons.media import MediaLink
 from rustic_ai.uniko_agent import (
     AnswerRequest,
     MemoryAgentError,
+    MemoryRecordKind,
+    MemoryScope,
     ObserveResult,
     ObserveTurnRequest,
     RecallRequest,
     RecallResponse,
+    RecordMemoryRequest,
 )
 from rustic_ai.uniko_agent.models import IngestDocumentRequest, IngestOutcome
 
@@ -42,7 +45,7 @@ class TestObserveTurn:
     @pytest.mark.asyncio
     async def test_observe_multiple_turns(self, memory_test_harness, sample_turns):
         """Test observing multiple conversation turns."""
-        for turn_data in sample_turns:
+        for index, turn_data in enumerate(sample_turns):
             memory_test_harness.send_message(
                 ObserveTurnRequest(sender_id=turn_data["sender_id"], content=turn_data["content"])
             )
@@ -92,17 +95,29 @@ class TestRecallKnowledge:
     @pytest.mark.asyncio
     async def test_recall_returns_results(self, memory_test_harness, sample_turns):
         """Test that recall returns relevant memories."""
-        # First, observe several turns
-        for turn_data in sample_turns:
+        # First, store several explicitly categorized turns.
+        for index, turn_data in enumerate(sample_turns):
             memory_test_harness.send_message(
-                ObserveTurnRequest(sender_id=turn_data["sender_id"], content=turn_data["content"])
+                RecordMemoryRequest(
+                    record_id=f"turn-{index}",
+                    session_id="test-session",
+                    sender_id=turn_data["sender_id"],
+                    kind=MemoryRecordKind.USER_ASSERTION,
+                    content=turn_data["content"],
+                )
             )
 
         # Clear previous responses
         memory_test_harness.get_sent_messages()
 
         # Now recall
-        memory_test_harness.send_message(RecallRequest(query="programming preferences"))
+        memory_test_harness.send_message(
+            RecallRequest(
+                query="programming preferences",
+                scope=MemoryScope(sessions=["test-session"]),
+                allowed_record_kinds=[MemoryRecordKind.USER_ASSERTION],
+            )
+        )
 
         responses = memory_test_harness.get_sent_messages()
         assert len(responses) == 1
@@ -116,36 +131,60 @@ class TestRecallKnowledge:
     @pytest.mark.asyncio
     async def test_recall_with_max_tokens(self, memory_test_harness, sample_turns):
         """Test recall with custom max_tokens parameter."""
-        # Observe turns
-        for turn_data in sample_turns:
+        # Store turns
+        for index, turn_data in enumerate(sample_turns):
             memory_test_harness.send_message(
-                ObserveTurnRequest(sender_id=turn_data["sender_id"], content=turn_data["content"])
+                RecordMemoryRequest(
+                    record_id=f"turn-{index}",
+                    session_id="test-session",
+                    sender_id=turn_data["sender_id"],
+                    kind=MemoryRecordKind.USER_ASSERTION,
+                    content=turn_data["content"],
+                )
             )
 
         memory_test_harness.get_sent_messages()
 
         # Recall with limited tokens
-        memory_test_harness.send_message(RecallRequest(query="user preferences", max_tokens=500))
+        memory_test_harness.send_message(
+            RecallRequest(
+                query="user preferences",
+                scope=MemoryScope(sessions=["test-session"]),
+                allowed_record_kinds=[MemoryRecordKind.USER_ASSERTION],
+                max_characters=500,
+            )
+        )
 
         responses = memory_test_harness.get_sent_messages()
         result = responses[0].payload
 
         assert isinstance(result, RecallResponse)
-        assert result.total_tokens <= 500
+        assert sum(len(item.content) for item in result.items) <= 500
 
     @pytest.mark.asyncio
     async def test_recall_phase1_only(self, memory_test_harness, sample_turns):
         """Test recall with phase1_only flag (facts/procedures)."""
-        # Observe turns
-        for turn_data in sample_turns:
+        # Store turns
+        for index, turn_data in enumerate(sample_turns):
             memory_test_harness.send_message(
-                ObserveTurnRequest(sender_id=turn_data["sender_id"], content=turn_data["content"])
+                RecordMemoryRequest(
+                    record_id=f"turn-{index}",
+                    session_id="test-session",
+                    sender_id=turn_data["sender_id"],
+                    kind=MemoryRecordKind.USER_ASSERTION,
+                    content=turn_data["content"],
+                )
             )
 
         memory_test_harness.get_sent_messages()
 
-        # Recall phase 1 only
-        memory_test_harness.send_message(RecallRequest(query="programming", phase1_only=True))
+        memory_test_harness.send_message(
+            RecallRequest(
+                query="programming",
+                scope=MemoryScope(sessions=["test-session"]),
+                allowed_record_kinds=[MemoryRecordKind.USER_ASSERTION],
+            )
+        )
 
         responses = memory_test_harness.get_sent_messages()
         result = responses[0].payload
@@ -159,15 +198,27 @@ class TestRecallKnowledge:
     async def test_recall_item_structure(self, memory_test_harness, sample_turns):
         """Test that RecallItem has correct structure."""
         # Observe turns
-        for turn_data in sample_turns[:2]:
+        for index, turn_data in enumerate(sample_turns[:2]):
             memory_test_harness.send_message(
-                ObserveTurnRequest(sender_id=turn_data["sender_id"], content=turn_data["content"])
+                RecordMemoryRequest(
+                    record_id=f"turn-{index}",
+                    session_id="test-session",
+                    sender_id=turn_data["sender_id"],
+                    kind=MemoryRecordKind.USER_ASSERTION,
+                    content=turn_data["content"],
+                )
             )
 
         memory_test_harness.get_sent_messages()
 
         # Recall
-        memory_test_harness.send_message(RecallRequest(query="user information"))
+        memory_test_harness.send_message(
+            RecallRequest(
+                query="user information",
+                scope=MemoryScope(sessions=["test-session"]),
+                allowed_record_kinds=[MemoryRecordKind.USER_ASSERTION],
+            )
+        )
 
         responses = memory_test_harness.get_sent_messages()
         result = responses[0].payload
@@ -176,6 +227,7 @@ class TestRecallKnowledge:
             item = result.items[0]
             assert hasattr(item, "node_id")
             assert hasattr(item, "kind")
+            assert item.record_kind == MemoryRecordKind.USER_ASSERTION
             assert hasattr(item, "score")
             assert hasattr(item, "content")
             assert hasattr(item, "sources")
@@ -285,6 +337,8 @@ class TestIngestDocument:
         # Send ingest request with MediaLink
         memory_test_harness.send_message(
             IngestDocumentRequest(
+                record_id="document-1",
+                session_id="test-session",
                 media_link=media_link,
             )
         )
@@ -327,6 +381,8 @@ class TestIngestDocument:
 
         memory_test_harness_async_fs.send_message(
             IngestDocumentRequest(
+                record_id="document-async-1",
+                session_id="test-session",
                 media_link=media_link,
             )
         )
@@ -336,37 +392,26 @@ class TestIngestDocument:
 
         result = responses[0].payload
         assert isinstance(result, IngestOutcome)
-        assert result.success is True, f"Ingestion failed: {result.error_message}"
+        assert result.success is True
         assert result.chunk_count >= 0
 
     @pytest.mark.asyncio
     async def test_ingest_with_source_spec(self, memory_test_harness):
         """Test ingesting a document using source_spec (text)."""
-        memory_test_harness.send_message(
-            IngestDocumentRequest(
-                source_spec={
-                    "text": "This is inline text content for ingestion.",
-                    "mime_type": "text/plain",
-                },
+        with pytest.raises(Exception):
+            IngestDocumentRequest.model_validate(
+                {
+                    "record_id": "document-2",
+                    "session_id": "test-session",
+                    "source_spec": {
+                        "text": "This is inline text content for ingestion.",
+                        "mime_type": "text/plain",
+                    },
+                }
             )
-        )
-
-        responses = memory_test_harness.get_sent_messages()
-        assert len(responses) == 1
-
-        result = responses[0].payload
-        assert isinstance(result, IngestOutcome)
-        assert result.success is True
 
     @pytest.mark.asyncio
     async def test_ingest_without_source_returns_error(self, memory_test_harness):
         """Test that ingesting without media_link or source_spec returns error."""
-        memory_test_harness.send_message(IngestDocumentRequest())
-
-        responses = memory_test_harness.get_sent_messages()
-        assert len(responses) == 1
-
-        result = responses[0].payload
-        assert isinstance(result, IngestOutcome)
-        assert result.success is False
-        assert "Either media_link or source_spec must be provided" in result.error_message
+        with pytest.raises(Exception):
+            IngestDocumentRequest()

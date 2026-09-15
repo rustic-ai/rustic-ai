@@ -1,13 +1,27 @@
+import json
 import mimetypes
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from pathlib import PurePosixPath, PureWindowsPath
+from typing import TYPE_CHECKING, Any, List, Optional
+from urllib.parse import unquote, urlsplit
 
-from fsspec import filesystem as create_filesystem
+from fsspec.implementations.asyn_wrapper import AsyncFileSystemWrapper
 from pydantic import BaseModel, Field, PrivateAttr
+from rustic_ai.llm_agent.react.toolset import (
+    ReActToolOutcome,
+    ReActToolset,
+    ToolOutcomeDisposition,
+)
 
 from rustic_ai.core.agents.commons.media import MediaLink
 from rustic_ai.core.guild.agent_ext.depends.code_execution.data_analyzer import (
     DataAnalyzer,
+    DataAnalyzerError,
+    DatasetNotFoundError,
+    FileLoadError,
+    InvalidQueryError,
+    InvalidTransformationError,
     LoadDatasetRequest,
+    UnsupportedFormatError,
 )
 from rustic_ai.core.guild.agent_ext.depends.code_execution.data_analyzer.models import (
     CorrelationMatrixRequest,
@@ -23,7 +37,6 @@ from rustic_ai.core.guild.agent_ext.depends.code_execution.data_analyzer.tools i
 )
 from rustic_ai.core.guild.agent_ext.depends.filesystem import FileSystem
 from rustic_ai.core.guild.agent_ext.depends.llm.tools_manager import ToolSpec
-from rustic_ai.llm_agent.react.toolset import ReActToolset
 
 from .analyzer import PandasDataAnalyzer
 
@@ -44,24 +57,12 @@ class DataAnalystReActToolset(ReActToolset):
     A ReActToolset that wraps a DataAnalyzer to provide data analysis tools
     compatible with the ReActAgent loop.
 
-    This toolset is self-contained and creates its own analyzer and filesystem
-    from configuration. It can be used directly with the base ReActAgent.
-
-    When use_guild_filesystem is True (default), the toolset will automatically
-    configure its filesystem path to match the guild filesystem structure
-    ({base_path}/{org_id}/{guild_id}/GUILD_GLOBAL) when bind_agent_context is called.
+    The owning DataAnalystAgent injects Forge-resolved dependencies. The toolset
+    never constructs paths outside that scoped filesystem.
     """
-
-    filesystem_base_path: str = Field(default="/tmp", description="Base path for filesystem operations")
-    filesystem_protocol: str = Field(default="file", description="Filesystem protocol (e.g., 'file', 's3')")
-    filesystem_options: Dict[str, Any] = Field(
-        default_factory=lambda: {"auto_mkdir": True}, description="Filesystem storage options"
-    )
-    use_guild_filesystem: bool = Field(default=True, description="If True, use guild filesystem path structure")
 
     _analyzer: Optional[DataAnalyzer] = PrivateAttr(default=None)
     _filesystem: Optional[FileSystem] = PrivateAttr(default=None)
-    _guild_filesystem_path: Optional[str] = PrivateAttr(default=None)
 
     @property
     def analyzer(self) -> DataAnalyzer:
@@ -72,55 +73,19 @@ class DataAnalystReActToolset(ReActToolset):
 
     @property
     def filesystem(self) -> FileSystem:
-        """Lazily initialize the filesystem from config."""
+        """Return the injected guild-scoped filesystem."""
         if self._filesystem is None:
-            from fsspec.implementations.dirfs import DirFileSystem
-
-            basefs = create_filesystem(
-                self.filesystem_protocol,
-                **self.filesystem_options,
-            )
-            # Use guild filesystem path if configured, otherwise use base path
-            path = self._guild_filesystem_path or self.filesystem_base_path
-            self._filesystem = DirFileSystem(
-                path=path,
-                fs=basefs,
-            )
+            raise RuntimeError("The guild filesystem dependency is unavailable.")
         return self._filesystem
 
-    def bind_agent_context(self, org_id: str, guild_id: str, agent_id: str) -> None:
-        """
-        Configure the filesystem to use the guild filesystem path structure.
-
-        This is called by ReActAgent at the start of processing to provide
-        guild context. When use_guild_filesystem is True, the filesystem path
-        is constructed as: {base_path}/{org_id}/{guild_id}/GUILD_GLOBAL
-
-        The base_path is taken from filesystem_base_path, which callers must
-        configure (via the guild/agent config) to match the root used by the
-        guild file-upload/download API endpoints, otherwise load_file will
-        raise FileNotFoundError.
-
-        Args:
-            org_id: The organization ID.
-            guild_id: The guild ID.
-            agent_id: The agent ID (not used for guild-scoped filesystem).
-        """
-        if self.use_guild_filesystem:
-            # Construct guild filesystem path matching FileSystemResolver convention
-            # Guild-scoped filesystems use GUILD_GLOBAL instead of agent_id
-            self._guild_filesystem_path = f"{self.filesystem_base_path}/{org_id}/{guild_id}/GUILD_GLOBAL"
-            # Reset filesystem so it gets recreated with new path
-            self._filesystem = None
-
-    def set_dependencies(self, analyzer: DataAnalyzer, filesystem: FileSystem):
-        """
-        Inject dependencies after initialization.
-
-        This is kept for backward compatibility but is no longer required.
-        The toolset can create its own analyzer and filesystem from config.
-        """
-        self._analyzer = analyzer
+    def bind_filesystem(self, filesystem: FileSystem) -> None:
+        """Bind Forge's guild filesystem for the synchronous data analyzer."""
+        if isinstance(filesystem.fs, AsyncFileSystemWrapper):
+            filesystem = FileSystem(
+                path=filesystem.path,
+                fs=filesystem.fs.sync_fs,
+                asynchronous=False,
+            )
         self._filesystem = filesystem
 
     def validate_plugins(
@@ -182,7 +147,7 @@ class DataAnalystReActToolset(ReActToolset):
 
     def _load_file(self, args: LoadFileRequest) -> str:
         """Helper method to load a file as a dataset."""
-        filename = args.filename
+        filename = self._safe_relative_path(args.filename)
         name = args.dataset_name if args.dataset_name else filename.split("/")[-1].split(".")[0]
 
         # Guess mimetype
@@ -206,12 +171,12 @@ class DataAnalystReActToolset(ReActToolset):
         Execute a tool by name with the given arguments.
         Delegates to the underlying DataAnalyzer instance.
         """
-        if tool_name == "load_file":
-            load_args = args if isinstance(args, LoadFileRequest) else LoadFileRequest.model_validate(args)
-            return self._load_file(load_args)
-
-        # Map tool names to analyzer methods
         try:
+            if tool_name == "load_file":
+                load_args = args if isinstance(args, LoadFileRequest) else LoadFileRequest.model_validate(args)
+                return self._load_file(load_args)
+
+            # Map tool names to analyzer methods
             if tool_name == "preview_dataset":
                 preview_args = (
                     args if isinstance(args, PreviewDatasetRequest) else PreviewDatasetRequest.model_validate(args)
@@ -293,16 +258,112 @@ class DataAnalystReActToolset(ReActToolset):
 
             elif tool_name == "ask_user":
                 ask_args = args if isinstance(args, AskUserRequest) else AskUserRequest.model_validate(args)
-                return f"ASK_USER: {ask_args.question}"
+                question = " ".join(ask_args.question.split())[:500]
+                return self._outcome_result(
+                    ToolOutcomeDisposition.CLARIFICATION_REQUIRED,
+                    "clarification_required",
+                    question or "Please clarify the data-analysis request.",
+                )
 
             else:
                 raise ValueError(f"Unknown tool: {tool_name}")
 
-        except Exception as e:
-            return f"Error executing {tool_name}: {str(e)}"
+        except Exception as error:
+            return self._failure_result(error)
+
+    def _failure_result(self, error: Exception) -> str:
+        """Map tool failures to bounded outcomes without exposing exception text."""
+        if isinstance(error, UnsafeGuildPathError):
+            return self._outcome_result(
+                ToolOutcomeDisposition.TERMINAL_ERROR,
+                "unsafe_file_path",
+                "The requested file path is outside the guild filesystem.",
+            )
+        if isinstance(error, DatasetNotFoundError):
+            available = ", ".join(sorted(self.analyzer.datasets)) or "none"
+            return self._outcome_result(
+                ToolOutcomeDisposition.RETRYABLE_ERROR,
+                "dataset_not_found",
+                f"The dataset was not found. Available datasets: {available}.",
+            )
+        if isinstance(error, InvalidQueryError):
+            return self._outcome_result(
+                ToolOutcomeDisposition.RETRYABLE_ERROR,
+                "invalid_query",
+                "The query was invalid. Check its dataset aliases, column names, and syntax.",
+            )
+        if isinstance(error, (FileLoadError, FileNotFoundError, UnsupportedFormatError)):
+            return self._outcome_result(
+                ToolOutcomeDisposition.RETRYABLE_ERROR,
+                "file_load_failed",
+                "The file could not be loaded. Check the listed guild filename and supported format.",
+            )
+        if isinstance(error, (DataAnalyzerError, InvalidTransformationError, ValueError)):
+            return self._outcome_result(
+                ToolOutcomeDisposition.RETRYABLE_ERROR,
+                "invalid_data_operation",
+                "The data operation was invalid. Check the dataset and column names and correct the operation.",
+            )
+        return self._outcome_result(
+            ToolOutcomeDisposition.TERMINAL_ERROR,
+            "unexpected_data_failure",
+            "The data operation failed safely.",
+        )
+
+    def interpret_result(self, tool_name: str, args: BaseModel, result: str) -> ReActToolOutcome:
+        """Interpret the toolset's private, structured outcome marker."""
+        del tool_name, args
+        try:
+            payload = json.loads(result)
+        except (TypeError, ValueError):
+            return ReActToolOutcome(disposition=ToolOutcomeDisposition.SUCCESS)
+        if not isinstance(payload, dict) or payload.get("_rustic_data_analyst_outcome") is not True:
+            return ReActToolOutcome(disposition=ToolOutcomeDisposition.SUCCESS)
+        return ReActToolOutcome(
+            disposition=ToolOutcomeDisposition(payload["disposition"]),
+            code=payload.get("code"),
+            message=payload.get("message"),
+        )
+
+    @staticmethod
+    def _outcome_result(disposition: ToolOutcomeDisposition, code: str, message: str) -> str:
+        return json.dumps(
+            {
+                "_rustic_data_analyst_outcome": True,
+                "disposition": disposition.value,
+                "code": code,
+                "message": message,
+            },
+            ensure_ascii=True,
+            separators=(",", ":"),
+        )
+
+    @staticmethod
+    def _safe_relative_path(value: str) -> str:
+        raw = value.strip()
+        if not raw or any(ord(character) < 32 for character in raw):
+            raise UnsafeGuildPathError
+        decoded = unquote(raw)
+        if unquote(decoded) != decoded:
+            raise UnsafeGuildPathError
+        if urlsplit(decoded).scheme or decoded.startswith(("/", "\\", "//")) or "\\" in decoded:
+            raise UnsafeGuildPathError
+        if any(part in ("", ".", "..") for part in decoded.split("/")):
+            raise UnsafeGuildPathError
+        posix_path = PurePosixPath(decoded)
+        windows_path = PureWindowsPath(decoded)
+        if posix_path.is_absolute() or windows_path.is_absolute() or windows_path.drive:
+            raise UnsafeGuildPathError
+        if any(part in ("", ".", "..") for part in posix_path.parts):
+            raise UnsafeGuildPathError
+        return posix_path.as_posix()
 
     def _format_result(self, result: Any) -> str:
         """Format the result Pydantic model into a string for the LLM."""
         if hasattr(result, "model_dump_json"):
             return result.model_dump_json(indent=2)
         return str(result)
+
+
+class UnsafeGuildPathError(ValueError):
+    """A requested path was not confined to the injected guild filesystem."""

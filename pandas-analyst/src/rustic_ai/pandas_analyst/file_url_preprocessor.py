@@ -12,8 +12,11 @@ context about available data across conversation turns.
 """
 
 import logging
-import os
+from pathlib import PurePosixPath
 from typing import List, Optional
+from urllib.parse import unquote, urlsplit
+
+from rustic_ai.llm_agent.plugins.request_preprocessor import RequestPreprocessor
 
 from rustic_ai.core.guild.agent import Agent, ProcessContext
 from rustic_ai.core.guild.agent_ext.depends.llm.llm import LLM
@@ -23,9 +26,11 @@ from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     SystemMessage,
     UserMessage,
 )
-from rustic_ai.llm_agent.plugins.request_preprocessor import RequestPreprocessor
 
 logger = logging.getLogger(__name__)
+
+MAX_VISIBLE_GUILD_FILES = 50
+MAX_FILE_CONTEXT_CHARACTERS = 4000
 
 
 class FileUrlExtractorPreprocessor(RequestPreprocessor):
@@ -60,6 +65,22 @@ class FileUrlExtractorPreprocessor(RequestPreprocessor):
             logger.debug(f"Could not get loaded datasets: {e}")
         return None
 
+    def _get_guild_files(self, agent: Agent) -> List[str]:
+        """List a bounded set of safe names from the injected guild filesystem."""
+        try:
+            toolset = agent.config.toolset
+            filesystem = toolset.filesystem
+            safe_names = []
+            for value in filesystem.find("", detail=False, withdirs=False):
+                safe_name = toolset._safe_relative_path(str(value))
+                if any(part.startswith(".") for part in PurePosixPath(safe_name).parts):
+                    continue
+                safe_names.append(safe_name)
+            return sorted(set(safe_names))[:MAX_VISIBLE_GUILD_FILES]
+        except Exception as exc:
+            logger.debug("Could not list guild files: %s", exc)
+            return []
+
     def preprocess(
         self,
         agent: Agent,
@@ -93,8 +114,13 @@ class FileUrlExtractorPreprocessor(RequestPreprocessor):
                             # Extract just the filename, not the full path
                             # The toolset's filesystem is already configured with the base path
                             full_url = part.file_url.url
-                            filename = os.path.basename(full_url)
-                            file_names.append(filename)
+                            parsed_path = urlsplit(full_url).path or full_url
+                            filename = PurePosixPath(unquote(parsed_path).replace("\\", "/")).name
+                            if filename:
+                                file_names.append(filename)
+
+        guild_files = self._get_guild_files(agent)
+        file_names = list(dict.fromkeys([*file_names, *guild_files]))[:MAX_VISIBLE_GUILD_FILES]
 
         # Get currently loaded datasets from the analyzer
         loaded_datasets = self._get_loaded_datasets(agent)
@@ -109,9 +135,10 @@ class FileUrlExtractorPreprocessor(RequestPreprocessor):
         # Add information about newly uploaded files
         if file_names:
             file_info = "\n".join(f"- {name}" for name in file_names)
+            file_info = file_info[:MAX_FILE_CONTEXT_CHARACTERS]
             system_parts.append(
-                f"The user has uploaded the following file(s):\n{file_info}\n\n"
-                "Use the load_file tool with these filenames to load the data for analysis."
+                f"The guild filesystem contains the following user-uploaded file(s):\n{file_info}\n\n"
+                "Use load_file with one of these relative names. Never construct an absolute or parent path."
             )
 
         # Add information about already loaded datasets
