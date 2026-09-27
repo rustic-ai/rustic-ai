@@ -1,8 +1,10 @@
+import gc
 from types import SimpleNamespace
 from typing import cast
 from unittest.mock import Mock
 
 import pytest
+import uniko
 from rustic_ai.llm_agent.llm_agent_conf import LLMAgentConfig
 from rustic_ai.llm_agent.llm_agent_helper import LLMAgentHelper
 
@@ -33,16 +35,25 @@ from rustic_ai.uniko_agent.memories import (
 
 
 class FakeSession:
-    def __init__(self, fail_observe_at=None, fail_finalize=False):
+    def __init__(self, fail_commit=False, fail_finalize=False):
         self.turns = []
-        self.fail_observe_at = fail_observe_at
+        self.fail_commit = fail_commit
         self.fail_finalize = fail_finalize
         self.finalized = 0
+        self.replays = 0
 
-    def observe_sync(self, turn):
-        if self.fail_observe_at == len(self.turns):
+    def commit_unit_sync(self, turns):
+        if self.fail_commit:
             raise ValueError("private write failure")
-        self.turns.append(turn)
+        if self.turns:
+            if [(turn.message_id, turn.content) for turn in turns] != [
+                (turn.message_id, turn.content) for turn in self.turns
+            ]:
+                raise ValueError("private id conflict")
+            self.replays += 1
+            return ([], True)
+        self.turns.extend(turns)
+        return ([], False)
 
     def finalize_sync(self):
         if self.fail_finalize:
@@ -260,8 +271,9 @@ def test_duplicate_delivery_reuses_session_and_turn_ids(monkeypatch):
 
     assert uniko.sessions[0] == uniko.sessions[1]
     ids = [turn.message_id for turn in uniko.session_value.turns]
-    assert ids.count("rustic-memory:user_assertion:123:user") == 2
-    assert ids.count("rustic-memory:assistant_response:123:assistant") == 2
+    assert ids.count("rustic-memory:user_assertion:123:user") == 1
+    assert ids.count("rustic-memory:assistant_response:123:assistant") == 1
+    assert uniko.session_value.replays == 1
     assert uniko.session_value.finalized == 2
 
 
@@ -303,11 +315,8 @@ def test_recall_failure_uses_fixed_category():
     assert "private database error" not in str(error.value)
 
 
-@pytest.mark.parametrize(
-    "session",
-    [FakeSession(fail_observe_at=0), FakeSession(fail_observe_at=1)],
-)
-def test_partial_or_failed_recording_uses_fixed_category(session):
+def test_failed_atomic_commit_records_neither_turn_and_uses_fixed_category():
+    session = FakeSession(fail_commit=True)
     store = UnikoMemoriesStore()
     request = ChatCompletionRequest(messages=[UserMessage(content="hello")])
 
@@ -321,6 +330,55 @@ def test_partial_or_failed_recording_uses_fixed_category(session):
         )
 
     assert "private" not in str(error.value)
+    assert session.turns == []
+    assert session.finalized == 0
+
+
+def test_conflicting_replay_preserves_original_pair(monkeypatch):
+    monkeypatch.setattr("rustic_ai.uniko_agent.memories.Turn", FakeTurn)
+    session = FakeSession()
+    store = UnikoMemoriesStore()
+    request = ChatCompletionRequest(messages=[UserMessage(content="hello")])
+    agent = plugin_agent(FakeUniko(session=session))
+
+    store.postprocess(agent, context(request), request, response(), Mock())
+    with pytest.raises(RuntimeError, match=MEMORY_RECORD_FAILED):
+        store.postprocess(agent, context(request), request, response("changed answer"), Mock())
+
+    assert len(session.turns) == 2
+    assert session.turns[1].content.endswith("A useful answer")
+    assert session.finalized == 1
+
+
+@pytest.mark.skipif(uniko.__version__ != "0.3.0", reason="requires the Uniko 0.3.0 wheel")
+def test_native_atomic_pair_replay_conflict_and_reopen(tmp_path):
+    database = tmp_path / "assistant-memory.db"
+    engine = uniko.Uniko.open_sync(str(database))
+    native_agent = engine.agent("memory_assistant")
+    store = UnikoMemoriesStore()
+    request = ChatCompletionRequest(messages=[UserMessage(content="I prefer tea to coffee")])
+    ctx = context(request, request_id=321)
+    agent = plugin_agent(native_agent)
+
+    store.postprocess(agent, ctx, request, response("I'll remember your preference."), Mock())
+    store.postprocess(agent, ctx, request, response("I'll remember your preference."), Mock())
+    with pytest.raises(RuntimeError, match=MEMORY_RECORD_FAILED):
+        store.postprocess(agent, ctx, request, response("A conflicting response."), Mock())
+
+    user_id = "rustic-memory:user_assertion:321:user"
+    assistant_id = "rustic-memory:assistant_response:321:assistant"
+    assert native_agent.data.message_sync(user_id).content.endswith("I prefer tea to coffee")
+    assert native_agent.data.message_sync(assistant_id).content.endswith("I'll remember your preference.")
+    del agent, native_agent
+    gc.collect()
+    engine.shutdown_sync()
+
+    reopened = uniko.Uniko.open_sync(str(database))
+    persisted = reopened.agent("memory_assistant")
+    assert persisted.data.message_sync(user_id) is not None
+    assert persisted.data.message_sync(assistant_id) is not None
+    del persisted
+    reopened.shutdown_sync()
 
 
 def test_finalize_failure_uses_fixed_category():
@@ -356,7 +414,7 @@ def test_configuration_serializes_public_contract():
     ("uniko", "expected"),
     [
         (FakeUniko(recall_error=ValueError("private recall detail")), MEMORY_RECALL_FAILED),
-        (FakeUniko(session=FakeSession(fail_observe_at=0)), MEMORY_RECORD_FAILED),
+        (FakeUniko(session=FakeSession(fail_commit=True)), MEMORY_RECORD_FAILED),
     ],
 )
 def test_llm_pipeline_emits_one_fixed_error_and_no_partial_answer(uniko, expected):

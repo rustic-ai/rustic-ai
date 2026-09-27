@@ -44,7 +44,9 @@ async def test_real_ingested_document_recall_preserves_category_and_private_stor
         assert len(sent) == 1
         return sent[0]
 
-    assert not (await recall(handle, ["research-evidence"], ["external_evidence"])).items
+    scoped = await recall(handle, ["research-evidence"], ["external_evidence"])
+    assert scoped.items
+    assert not (await recall(handle, ["other-session"], ["external_evidence"])).items
     result = await recall(handle, None, ["external_evidence"])
     assert result.items
     assert "42000" in " ".join(item.content for item in result.items)

@@ -197,17 +197,17 @@ class UnikoMemoriesStore(LLMCallWrapper):
             session = self._uniko(agent).session(session_id)
             user_record_id = f"{request_id}:user"
             assistant_record_id = f"{request_id}:assistant"
-            session.observe_sync(
-                Turn(
-                    user_id,
-                    self._record_text("user_assertion", user_record_id, user_id, user_content),
-                ).id(f"{_USER_RECORD_PREFIX}{user_record_id}")
-            )
-            session.observe_sync(
-                Turn(
-                    agent.id,
-                    self._record_text("assistant_response", assistant_record_id, agent.id, assistant_content),
-                ).id(f"{_ASSISTANT_RECORD_PREFIX}{assistant_record_id}")
+            session.commit_unit_sync(
+                [
+                    Turn(
+                        user_id,
+                        self._record_text("user_assertion", user_record_id, user_id, user_content),
+                    ).id(f"{_USER_RECORD_PREFIX}{user_record_id}"),
+                    Turn(
+                        agent.id,
+                        self._record_text("assistant_response", assistant_record_id, agent.id, assistant_content),
+                    ).id(f"{_ASSISTANT_RECORD_PREFIX}{assistant_record_id}"),
+                ]
             )
         except Exception as exc:
             raise RuntimeError(MEMORY_RECORD_FAILED) from exc

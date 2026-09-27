@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [project]
 name = "rusticai-uniko-agent"
-version = "0.0.4"
+version = "0.0.5"
 description = "module boilerplate"
 authors = [{name = "Dragonscale Industries Inc.", email = "dev@dragonscale.ai"}]
 license = "Apache-2.0"
@@ -13,7 +13,7 @@ requires-python = ">=3.13,<3.14"
 dependencies = [
     "rusticai-core>=1.4.2,<1.5.0",
     "rusticai-llm-agent>=1.4.3,<1.5.0",
-    "uniko>=0.2.2,<0.3.0",
+    "uniko>=0.3.0,<0.4.0",
 ]
 urls = { Homepage = "https://www.rustic.ai/", Repository = "https://github.com/dragonscale-ai/rustic-ai", "Rustic AI Core" = "https://pypi.org/project/rusticai-core/" }
 
@@ -24,7 +24,7 @@ packages = [{ include = "rustic_ai", from = "src" }]
 [tool.poetry.dependencies]
 rusticai-core = { path = "../core", develop = true }
 rusticai-llm-agent = { path = "../llm-agent", develop = true }
-uniko = { version = ">=0.2.2,<0.3.0", source = "uniko" }
+uniko = ">=0.3.0,<0.4.0"
 
 [tool.poetry-monorepo.deps]
 
@@ -45,11 +45,6 @@ rusticai-testing = {path = "../testing", develop = true}
 
 [tool.poetry.extras]
 test = ["pytest"]
-
-[[tool.poetry.source]]
-name = "uniko"
-url = "https://rustic-ai.github.io/uniko/packages/"
-priority = "explicit"
 
 [tool.black]
 line-length = 120

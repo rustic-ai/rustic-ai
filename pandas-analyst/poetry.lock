@@ -2995,6 +2995,25 @@ type = "directory"
 url = "../testing"
 
 [[package]]
+name = "rusticai-uniko-agent"
+version = "0.0.5"
+description = "module boilerplate"
+optional = false
+python-versions = ">=3.13,<3.14"
+groups = ["main"]
+files = []
+develop = true
+
+[package.dependencies]
+rusticai-core = ">=1.4.2,<1.5.0"
+rusticai-llm-agent = ">=1.4.3,<1.5.0"
+uniko = ">=0.3.0,<0.4.0"
+
+[package.source]
+type = "directory"
+url = "../uniko-agent"
+
+[[package]]
 name = "shortuuid"
 version = "1.0.13"
 description = "A generator library for concise, unambiguous and URL-safe UUIDs."
@@ -3354,6 +3373,24 @@ devenv = ["zest.releaser"]
 testing = ["check_manifest", "pyroma", "pytest (>=4.3)", "pytest-cov", "pytest-mock (>=3.3)", "ruff"]
 
 [[package]]
+name = "uniko"
+version = "0.3.0"
+description = "Python bindings for uniko cognitive memory"
+optional = false
+python-versions = ">=3.10"
+groups = ["main"]
+files = [
+    {file = "uniko-0.3.0-cp310-abi3-macosx_11_0_arm64.whl", hash = "sha256:934776997526bd87f8b7d10654186785407e17cde3429480f31135073571fa56"},
+    {file = "uniko-0.3.0-cp310-abi3-manylinux_2_28_aarch64.whl", hash = "sha256:e87a476ad0247dbb352a8ee01ceb61be8ec0874468a45630754d0d1fa8434d92"},
+    {file = "uniko-0.3.0-cp310-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:ce32cd3d0a9d8ae535cd2b954daa965b6a6923082bb74fa1af0e2b54a688a1eb"},
+    {file = "uniko-0.3.0-cp310-abi3-win_amd64.whl", hash = "sha256:0b9e6ce7cb90304c4c19fe9cdd6af39f84fcc74c31a3c0855ce67e014f758d68"},
+    {file = "uniko-0.3.0.tar.gz", hash = "sha256:7f5be78e442b9de77b81139226c8ef3d1096cd8cd30778cfdbf45eaab24e3c2f"},
+]
+
+[package.dependencies]
+pydantic = ">=2"
+
+[[package]]
 name = "virtualenv"
 version = "21.6.1"
 description = "Virtual Python Environment builder"
@@ -3502,10 +3539,7 @@ idna = ">=2.0"
 multidict = ">=4.0"
 propcache = ">=0.2.1"
 
-[extras]
-test = []
-
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.13,<3.14"
-content-hash = "9ca17c4b50bf257b83c573a3c974c205222e004b3ae0d254c72dd61a0c68e630"
+content-hash = "b91af174536c0950aaceb40865b2fe4b9a6c1495014123188a16947433df09e4"

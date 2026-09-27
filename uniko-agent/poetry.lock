@@ -2679,7 +2679,7 @@ url = "../core"
 
 [[package]]
 name = "rusticai-llm-agent"
-version = "1.4.3"
+version = "1.4.4"
 description = "A complete set of LLM agents"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -3080,17 +3080,17 @@ testing = ["check_manifest", "pyroma", "pytest (>=4.3)", "pytest-cov", "pytest-m
 
 [[package]]
 name = "uniko"
-version = "0.2.1"
+version = "0.3.0"
 description = "Python bindings for uniko cognitive memory"
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "uniko-0.2.1-cp310-abi3-macosx_11_0_arm64.whl", hash = "sha256:4649e696ee3d33c44b4b6075b31fc4ecfafac19e6e958d193091937cdd9b2ad0"},
-    {file = "uniko-0.2.1-cp310-abi3-manylinux_2_28_aarch64.whl", hash = "sha256:43cb5eaa1292fbb933a784893e5eeaa361e61cf1f72234a484378bc372648a52"},
-    {file = "uniko-0.2.1-cp310-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:d0eb0977cfa6f50bf05d8cdd07d06f1d37510e77659bcd7f7d1b08b44461f9d0"},
-    {file = "uniko-0.2.1-cp310-abi3-win_amd64.whl", hash = "sha256:cd78853a798c567cf765fb715b7e71efa06c5bed219775a7ce41b7a190e4dd8e"},
-    {file = "uniko-0.2.1.tar.gz", hash = "sha256:ddaf58ef8e96a06f22b3515e2d9b18e3b4b8e55d3e5d3d0e806361383fdd6fb8"},
+    {file = "uniko-0.3.0-cp310-abi3-macosx_11_0_arm64.whl", hash = "sha256:934776997526bd87f8b7d10654186785407e17cde3429480f31135073571fa56"},
+    {file = "uniko-0.3.0-cp310-abi3-manylinux_2_28_aarch64.whl", hash = "sha256:e87a476ad0247dbb352a8ee01ceb61be8ec0874468a45630754d0d1fa8434d92"},
+    {file = "uniko-0.3.0-cp310-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:ce32cd3d0a9d8ae535cd2b954daa965b6a6923082bb74fa1af0e2b54a688a1eb"},
+    {file = "uniko-0.3.0-cp310-abi3-win_amd64.whl", hash = "sha256:0b9e6ce7cb90304c4c19fe9cdd6af39f84fcc74c31a3c0855ce67e014f758d68"},
+    {file = "uniko-0.3.0.tar.gz", hash = "sha256:7f5be78e442b9de77b81139226c8ef3d1096cd8cd30778cfdbf45eaab24e3c2f"},
 ]
 
 [package.dependencies]
@@ -3248,4 +3248,4 @@ propcache = ">=0.2.1"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.13,<3.14"
-content-hash = "bcc16cfc698f9543f405e2ffd3dd3386da668a3834215e035e1e5d05f1b55b46"
+content-hash = "62c8eb4b649d1c51b94705e1ed18ef333e9424d6fec01bbfd1cfe62886a28aa8"
