@@ -5,6 +5,7 @@ This section contains documentation for Rustic AI's SerpAPI integration, which p
 ## Available Agents
 
 - [SERPAgent](serp_agent.md) - Retrieve search engine results via the SerpAPI service
+- [LocalSERPAgent](local_serp_agent.md) - Key-free search through a browser on the user's own machine (local use only)
 
 ## Overview
 

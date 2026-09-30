@@ -1,6 +1,6 @@
 from enum import Enum
 import os
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse
 
 from pydantic import BaseModel, Field
@@ -62,6 +62,41 @@ class SearchError(BaseModel):
     response: JsonDict
 
 
+def build_result_link(
+    url: str,
+    title: str,
+    snippet: str,
+    position: int,
+    query_id: str,
+    favicon: str = "",
+    date: str = "",
+    extra_metadata: Optional[Dict[str, Any]] = None,
+) -> MediaLink:
+    """Build the MediaLink emitted for a single search result."""
+    filename = os.path.basename(urlparse(url).path)
+    if not filename:
+        filename = f"{shortuuid.uuid()}.html"
+
+    metadata: Dict[str, Any] = {
+        "title": title,
+        "favicon": favicon,
+        "search_position": position,
+        "snippet": snippet,
+        "date": date,
+        "query_id": query_id,
+    }
+    if extra_metadata:
+        metadata.update(extra_metadata)
+
+    return MediaLink(
+        url=url,
+        name=filename,
+        metadata=metadata,
+        mimetype="text/html",
+        encoding="utf-8",
+    )
+
+
 class SERPAgent(Agent):
     def __init__(self):
         self.serp_api_key = os.getenv("SERP_API_KEY", "")
@@ -102,27 +137,14 @@ class SERPAgent(Agent):
             for result in search_results:
                 result.update({"search_parameters": search_params})
 
-                filepath = urlparse(result["link"]).path
-                filename = os.path.basename(filepath)
-
-                if not filename:
-                    filename = f"{shortuuid.uuid()}.html"
-
-                metadata = {
-                    "title": result["title"],
-                    "favicon": result.get("favicon", ""),
-                    "search_position": result["position"],
-                    "snippet": result["snippet"],
-                    "date": result.get("date", ""),
-                    "query_id": search_query.id,
-                }
-
-                link = MediaLink(
+                link = build_result_link(
                     url=result["link"],
-                    name=filename,
-                    metadata=metadata,
-                    mimetype="text/html",
-                    encoding="utf-8",
+                    title=result["title"],
+                    snippet=result["snippet"],
+                    position=result["position"],
+                    query_id=search_query.id,
+                    favicon=result.get("favicon", ""),
+                    date=result.get("date", ""),
                 )
 
                 result_links.append(link)
