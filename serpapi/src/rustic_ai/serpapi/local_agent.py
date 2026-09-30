@@ -18,18 +18,13 @@ Run `python -m rustic_ai.serpapi.local_setup` once to accept consent pages / sol
 """
 
 import asyncio
+import dataclasses
 from enum import StrEnum
 import random
 import time
-from typing import Any, Dict, List, Optional, Tuple
-from urllib.parse import urljoin, urlparse
+from typing import List, Optional, Set, Tuple
 
-from install_playwright import install
-from playwright.async_api import BrowserContext
-from playwright.async_api import Error as PlaywrightError
-from playwright.async_api import Page, Playwright
 from playwright.async_api import TimeoutError as PlaywrightTimeoutError
-from playwright.async_api import async_playwright
 from pydantic import Field, model_validator
 
 from rustic_ai.core.guild import Agent, agent
@@ -41,14 +36,7 @@ from rustic_ai.serpapi.agent import (
     SERPResults,
     build_result_link,
 )
-from rustic_ai.serpapi.local_browser import (
-    is_channel_missing,
-    is_display_missing,
-    is_profile_locked,
-    launch_args,
-    resolve_profile_dir,
-    set_window_state,
-)
+from rustic_ai.serpapi.local_browser import BrowserOptions, LocalBrowser, PageContent
 from rustic_ai.serpapi.local_engines import (
     ENGINES,
     BlockReason,
@@ -126,13 +114,7 @@ class LocalSERPAgent(Agent[LocalSERPConfig]):
     _user_poll_s: float = 1.0
 
     def __init__(self):
-        self._playwright: Optional[Playwright] = None
-        self._context: Optional[BrowserContext] = None
-        self._page: Optional[Page] = None
-        self._user_agent: Optional[str] = None
-        self._private_profile = False
-        self._force_headless = False
-        self._asked_user = False
+        self._browser: Optional[LocalBrowser] = None
         self._search_lock = asyncio.Lock()
         self._loop_thread = get_playwright_loop_thread()
 
@@ -140,57 +122,28 @@ class LocalSERPAgent(Agent[LocalSERPConfig]):
     def search(self, ctx: agent.ProcessContext[SERPQuery]) -> None:
         query = ctx.payload
         self.logger.debug(f"Received local search query: {query.query} for engine: {query.engine}")
-
         try:
-            if query.engine not in ENGINES:
-                raise LocalSearchFailure(
-                    SearchFailureReason.UNSUPPORTED_ENGINE,
-                    f"Engine '{query.engine}' is not supported; use one of {', '.join(sorted(ENGINES))}",
-                )
             results, total_results = self._loop_thread.run_coroutine(
-                self._search_with_deadline(query), timeout=self._deadline_s() + _DEADLINE_SLACK_S
+                self._run_search(self._engine_for(query), query), timeout=self._deadline_s() + _DEADLINE_SLACK_S
             )
         except Exception as e:
             failure = self._as_failure(e)
             self.logger.warning(f"Local search on {query.engine} failed ({failure.reason.value}): {failure}")
-            ctx.send(
-                SearchError(
-                    id=query.id,
-                    response={
-                        "status": "Error",
-                        "engine": query.engine,
-                        "reason": failure.reason.value,
-                        "error": str(failure),
-                    },
-                )
-            )
+            ctx.send(self._error_message(query, failure))
             return
+        ctx.send(self._results_message(query, results, total_results), new_thread=True)
 
-        offset = query.start or 0
-        links = [
-            build_result_link(
-                url=result.url,
-                title=result.title,
-                snippet=result.snippet,
-                position=offset + i + 1,
-                query_id=query.id,
-                date=result.date,
-                extra_metadata={"engine": query.engine, "source": "local_browser"},
+    # ------------------------------------------------------------------ messages
+
+    @staticmethod
+    def _engine_for(query: SERPQuery) -> LocalSearchEngine:
+        engine = ENGINES.get(query.engine)
+        if engine is None:
+            raise LocalSearchFailure(
+                SearchFailureReason.UNSUPPORTED_ENGINE,
+                f"Engine '{query.engine}' is not supported; use one of {', '.join(sorted(ENGINES))}",
             )
-            for i, result in enumerate(results)
-        ]
-        self.logger.debug(f"Publishing {len(links)} local search results for query: {query.query}")
-        ctx.send(
-            SERPResults(
-                count=len(links),
-                results=links,
-                total_results=total_results,
-                id=query.id,
-                query=query.query,
-                engine=query.engine,
-            ),
-            new_thread=True,
-        )
+        return engine
 
     @staticmethod
     def _as_failure(error: BaseException) -> LocalSearchFailure:
@@ -200,305 +153,174 @@ class LocalSERPAgent(Agent[LocalSERPConfig]):
             return LocalSearchFailure(SearchFailureReason.TIMEOUT, "The search timed out")
         return LocalSearchFailure(SearchFailureReason.BROWSER_ERROR, str(error) or repr(error))
 
+    @staticmethod
+    def _error_message(query: SERPQuery, failure: LocalSearchFailure) -> SearchError:
+        return SearchError(
+            id=query.id,
+            response={"status": "Error", "engine": query.engine, "reason": failure.reason.value, "error": str(failure)},
+        )
+
+    @staticmethod
+    def _results_message(query: SERPQuery, results: List[RawResult], total_results: Optional[int]) -> SERPResults:
+        first_position = (query.start or 0) + 1
+        links = [
+            build_result_link(
+                url=result.url,
+                title=result.title,
+                snippet=result.snippet,
+                position=position,
+                query_id=query.id,
+                date=result.date,
+                extra_metadata={"engine": query.engine, "source": "local_browser"},
+            )
+            for position, result in enumerate(results, start=first_position)
+        ]
+        return SERPResults(
+            count=len(links),
+            results=links,
+            total_results=total_results,
+            id=query.id,
+            query=query.query,
+            engine=query.engine,
+        )
+
     # ------------------------------------------------------------------ search
 
-    @property
-    def _headless(self) -> bool:
-        return self.config.headless or self._force_headless
+    def _create_browser(self) -> LocalBrowser:
+        options = BrowserOptions(
+            headless=self.config.headless,
+            hide_window=self.config.hide_window,
+            channel=self.config.browser_channel,
+            user_data_dir=self.config.user_data_dir,
+            locale=f"{self.config.hl}-{self.config.gl.upper()}",
+            navigation_timeout_s=self.config.navigation_timeout_s,
+            private_profile_id=self.id,
+            headless_without_display=True,
+        )
+        return LocalBrowser(options, self.logger)
 
     def _deadline_s(self) -> float:
         user_wait = 0.0 if self.config.headless else self.config.captcha_wait_s
         return self.config.search_timeout_s + user_wait
 
-    async def _search_with_deadline(self, query: SERPQuery) -> Tuple[List[RawResult], Optional[int]]:
+    async def _run_search(self, engine: LocalSearchEngine, query: SERPQuery) -> Tuple[List[RawResult], Optional[int]]:
         async with self._search_lock:
-            self._asked_user = False
+            if self._browser is None:
+                self._browser = self._create_browser()
             try:
-                return await asyncio.wait_for(self._search(ENGINES[query.engine], query), self._deadline_s())
+                return await asyncio.wait_for(self._collect(self._browser, engine, query), self._deadline_s())
             finally:
                 if self.config.close_browser_after_request:
-                    await self._cleanup()
+                    await self._browser.close()
 
-    async def _search(self, engine: LocalSearchEngine, query: SERPQuery) -> Tuple[List[RawResult], Optional[int]]:
-        """Collect `query.num` results starting at `query.start`, paginating as needed."""
-        page = await self._ensure_page()
+    async def _collect(
+        self, browser: LocalBrowser, engine: LocalSearchEngine, query: SERPQuery
+    ) -> Tuple[List[RawResult], Optional[int]]:
+        """Collect `query.num` results starting at `query.start`, page by page."""
         offset = query.start or 0
         wanted = query.num or engine.page_size
-        # Click-paginated engines always start from page one, so collect `offset` extra results and drop them.
-        skip = offset if engine.paginate_by_click else 0
+        # Click-paginated engines always open on page one, so the results before `offset` are loaded and dropped.
+        first_offset = 0 if engine.paginate_by_click else offset
+        skip = offset - first_offset
         needed = skip + wanted
 
         collected: List[RawResult] = []
-        seen: set = set()
-        total: Optional[int] = None
-        pages = 0
-        retried_next = False
+        seen: Set[str] = set()
+        total_results: Optional[int] = None
+        pages_read = 0
+        asked_user = retried_next = False
 
-        first_url = engine.search_url(
-            query.query, 0 if engine.paginate_by_click else offset, self.config.hl, self.config.gl
+        content: Optional[PageContent] = await browser.goto(
+            self._search_url(engine, query, first_offset), engine.consent_selectors
         )
-        html, url = await self._fetch(page, first_url, engine)
+        while content is not None:
+            parsed = engine.parse(content.html, content.url)
 
-        while True:
-            parsed = engine.parse(html, url)
             if parsed.block_reason is not None:
-                solved = await self._wait_for_user(page, engine, parsed.block_reason)
-                if solved is not None:
-                    html, url = solved
-                    continue
+                if not asked_user:
+                    asked_user = True  # at most once per search, so an unattended guild is not stalled repeatedly
+                    content = await self._wait_for_user(browser, engine, parsed.block_reason)
+                    if content is not None:
+                        continue
                 if collected:
-                    self.logger.info(f"{engine.name} blocked after {pages} page(s); returning the results so far")
+                    self.logger.info(f"{engine.name} blocked after {pages_read} page(s); returning results so far")
                     break
-                raise LocalSearchFailure(
-                    SearchFailureReason(parsed.block_reason.value),
-                    f"{engine.name} showed a {parsed.block_reason.value} page",
-                )
+                reason = parsed.block_reason.value
+                raise LocalSearchFailure(SearchFailureReason(reason), f"{engine.name} showed a {reason} page")
 
-            pages += 1
-            if total is None:
-                total = parsed.total_results
+            pages_read += 1
+            if total_results is None:
+                total_results = parsed.total_results
 
-            page_results = await self._resolve_links(parsed.results[: needed - len(collected)])
-            new_results = [r for r in page_results if r.url not in seen]
-            for result in new_results:
-                seen.add(result.url)
-                collected.append(result)
+            page_results = await self._resolve_links(browser, parsed.results[: needed - len(collected)])
+            new_results = [result for result in page_results if result.url not in seen]
+            seen.update(result.url for result in new_results)
+            collected.extend(new_results)
 
-            if len(collected) >= needed or pages >= self.config.max_pages:
+            if len(collected) >= needed or pages_read >= self.config.max_pages:
                 break
             if not new_results:
-                # Bing's first "Next" click in a fresh session goes through a cookie-setting redirect that serves page
-                # one again; clicking once more reaches the real next page. Other engines have simply run out.
-                if not (engine.paginate_by_click and pages > 1) or retried_next:
+                if not (engine.next_may_repeat_page and pages_read > 1) or retried_next:
                     break
                 retried_next = True
 
             await asyncio.sleep(random.uniform(self.config.min_delay_s, self.config.max_delay_s))
+            content = await self._next_page(browser, engine, query, first_offset + pages_read * engine.page_size)
 
-            if engine.paginate_by_click:
-                next_page = await self._next_page(page, engine)
-                if next_page is None:
-                    break
-                html, url = next_page
-            else:
-                next_offset = offset + pages * engine.page_size
-                html, url = await self._fetch(
-                    page, engine.search_url(query.query, next_offset, self.config.hl, self.config.gl), engine
-                )
+        return collected[skip:needed], total_results
 
-        return collected[skip:needed], total
+    def _search_url(self, engine: LocalSearchEngine, query: SERPQuery, offset: int) -> str:
+        return engine.search_url(query.query, offset, self.config.hl, self.config.gl)
+
+    async def _next_page(
+        self, browser: LocalBrowser, engine: LocalSearchEngine, query: SERPQuery, offset: int
+    ) -> Optional[PageContent]:
+        if engine.next_page_selector is not None:
+            return await browser.click_next(engine.next_page_selector)
+        return await browser.goto(self._search_url(engine, query, offset), engine.consent_selectors)
 
     async def _wait_for_user(
-        self, page: Page, engine: LocalSearchEngine, reason: BlockReason
-    ) -> Optional[Tuple[str, str]]:
+        self, browser: LocalBrowser, engine: LocalSearchEngine, reason: BlockReason
+    ) -> Optional[PageContent]:
         """
         Headed mode: show the window and wait for the user to clear a CAPTCHA / consent page.
 
-        Returns the page's (html, url) once it is no longer blocked, or None when waiting is disabled or times out.
-        Asks at most once per search so an unattended guild is not stalled repeatedly.
+        Returns the page once it is no longer blocked, or None when waiting is disabled or the user does not respond.
         """
-        if self._headless or self.config.captcha_wait_s <= 0 or self._asked_user:
+        if browser.headless or self.config.captcha_wait_s <= 0:
             return None
-        self._asked_user = True
 
         self.logger.warning(
             f"{engine.name} is showing a {reason.value} page. Please complete it in the browser window within "
             f"{self.config.captcha_wait_s:.0f}s; the search will then continue."
         )
-        await self._set_window_state(page, minimized=False)
+        await browser.show_window()
         try:
             deadline = time.monotonic() + self.config.captcha_wait_s
             while time.monotonic() < deadline:
                 await asyncio.sleep(self._user_poll_s)
-                snapshot = await self._snapshot(page)
-                if snapshot is not None and not engine.parse(*snapshot).blocked:
+                snapshot = await browser.snapshot()
+                if snapshot is not None and not engine.parse(snapshot.html, snapshot.url).blocked:
                     self.logger.info(f"{engine.name} {reason.value} page completed; continuing the search")
-                    return await self._read_page(page)
+                    return await browser.read()
             return None
         finally:
             if self.config.hide_window:
-                await self._set_window_state(page, minimized=True)
+                await browser.hide_window()
 
-    async def _resolve_links(self, results: List[RawResult]) -> List[RawResult]:
+    @staticmethod
+    async def _resolve_links(browser: LocalBrowser, results: List[RawResult]) -> List[RawResult]:
         """Replace engine redirect links with their targets; results whose target cannot be resolved are dropped."""
-        pending = [r for r in results if r.needs_resolve]
+        pending = [result for result in results if result.needs_resolve]
         if not pending:
             return results
-        targets = await asyncio.gather(*(self._resolve_url(r.url) for r in pending), return_exceptions=True)
-        target_by_link = {r.url: t for r, t in zip(pending, targets) if isinstance(t, str)}
+        targets = await asyncio.gather(*(browser.resolve_redirect(r.url) for r in pending), return_exceptions=True)
+        target_by_link = {r.url: target for r, target in zip(pending, targets) if isinstance(target, str)}
 
         resolved = []
         for result in results:
             if not result.needs_resolve:
                 resolved.append(result)
             elif result.url in target_by_link:
-                resolved.append(
-                    RawResult(
-                        url=target_by_link[result.url], title=result.title, snippet=result.snippet, date=result.date
-                    )
-                )
+                resolved.append(dataclasses.replace(result, url=target_by_link[result.url], needs_resolve=False))
         return resolved
-
-    async def _resolve_url(self, url: str) -> Optional[str]:
-        """Request one redirect link with the browser's cookies, without following it, and return its target."""
-        assert self._context is not None
-        response = await self._context.request.get(
-            url, max_redirects=0, timeout=self.config.navigation_timeout_s * 1000
-        )
-        location = response.headers.get("location")
-        target = urljoin(url, location) if location else None
-        return target if target and urlparse(target).scheme in ("http", "https") else None
-
-    # ------------------------------------------------------------------ page interaction
-
-    async def _fetch(self, page: Page, url: str, engine: LocalSearchEngine) -> Tuple[str, str]:
-        """Navigate to `url`, dismiss any consent banner, and return (html, final_url)."""
-        await page.goto(url, wait_until="domcontentloaded")
-        await self._dismiss_consent(page, engine)
-        return await self._read_page(page)
-
-    async def _next_page(self, page: Page, engine: LocalSearchEngine) -> Optional[Tuple[str, str]]:
-        """Click the engine's "next page" control; returns (html, final_url), or None when there is no next page."""
-        if not engine.next_page_selector:
-            return None
-        button = page.locator(engine.next_page_selector).first
-        if not await button.count():
-            return None
-        async with page.expect_navigation(wait_until="domcontentloaded"):
-            await button.click()
-        return await self._read_page(page)
-
-    async def _dismiss_consent(self, page: Page, engine: LocalSearchEngine) -> None:
-        for selector in engine.consent_selectors:
-            try:
-                button = page.locator(selector).first
-                if await button.count() and await button.is_visible():
-                    await button.click()
-                    await page.wait_for_load_state("domcontentloaded")
-                    return
-            except PlaywrightError:
-                continue
-
-    async def _read_page(self, page: Page) -> Tuple[str, str]:
-        try:
-            await page.wait_for_load_state("load", timeout=self.config.navigation_timeout_s * 1000)
-        except PlaywrightTimeoutError:
-            pass  # use whatever has rendered so far
-        try:
-            html = await page.content()
-        except PlaywrightError as e:
-            if "navigating and changing the content" not in str(e):
-                raise
-            await page.wait_for_load_state("load")
-            html = await page.content()
-        return html, page.url
-
-    async def _snapshot(self, page: Page) -> Optional[Tuple[str, str]]:
-        """Current (html, url) without waiting; None while the page is mid-navigation."""
-        try:
-            return await page.content(), page.url
-        except PlaywrightError:
-            return None
-
-    async def _set_window_state(self, page: Page, minimized: bool) -> None:
-        try:
-            await set_window_state(page, minimized)
-        except Exception as e:
-            self.logger.debug(f"Could not {'minimize' if minimized else 'show'} the browser window: {e}")
-
-    # ------------------------------------------------------------------ browser lifecycle
-
-    async def _ensure_page(self) -> Page:
-        """The single long-lived tab searches run in (closing the last tab of a headed browser would quit it)."""
-        context = await self._ensure_context()
-        if self._page is None or self._page.is_closed():
-            self._page = context.pages[0] if context.pages else await context.new_page()
-            self._page.set_default_timeout(self.config.navigation_timeout_s * 1000)
-            if not self._headless and self.config.hide_window:
-                await self._set_window_state(self._page, minimized=True)
-        return self._page
-
-    async def _ensure_context(self) -> BrowserContext:
-        if self._context is not None:
-            return self._context
-        if self._playwright is None:
-            self._playwright = await async_playwright().start()
-
-        channel = self.config.browser_channel
-        try:
-            context = await self._launch(channel)
-        except PlaywrightError as e:
-            if not channel or not is_channel_missing(e):
-                raise
-            self.logger.warning(f"Browser channel '{channel}' is not installed; using bundled Chromium")
-            if not install([self._playwright.chromium]):
-                raise RuntimeError("Failed to install Chromium") from e
-            channel = None
-            context = await self._launch(channel)
-
-        if self._headless and self._user_agent is None:
-            # Headless Chrome identifies itself as "HeadlessChrome"; relaunch with the marker removed.
-            probe = context.pages[0] if context.pages else await context.new_page()
-            user_agent = await probe.evaluate("navigator.userAgent")
-            if "HeadlessChrome" in user_agent:
-                self._user_agent = user_agent.replace("HeadlessChrome", "Chrome")
-                await context.close()
-                context = await self._launch(channel)
-
-        context.on("close", lambda _: self._forget_browser())
-        self._context = context
-        self.logger.info(
-            f"Local search browser started ({channel or 'chromium'}, {'headless' if self._headless else 'headed'})"
-        )
-        return context
-
-    async def _launch(self, channel: Optional[str]) -> BrowserContext:
-        assert self._playwright is not None
-        profile = resolve_profile_dir(self.config.user_data_dir, channel, self.id if self._private_profile else None)
-        try:
-            return await self._playwright.chromium.launch_persistent_context(profile, **self._launch_kwargs(channel))
-        except PlaywrightError as e:
-            if not self._headless and is_display_missing(e):
-                self.logger.warning("No display available for a headed browser; running headless instead")
-                self._force_headless = True
-            elif not self._private_profile and is_profile_locked(e):
-                # Another browser (e.g. a second LocalSERPAgent) has the shared profile open; use one of our own.
-                self.logger.warning("The shared browser profile is in use; using a profile private to this agent")
-                self._private_profile = True
-            else:
-                raise
-            return await self._launch(channel)
-
-    def _launch_kwargs(self, channel: Optional[str]) -> Dict[str, Any]:
-        kwargs: Dict[str, Any] = {
-            "headless": self._headless,
-            "locale": f"{self.config.hl}-{self.config.gl.upper()}",
-            "args": launch_args(self._headless, self.config.hide_window),
-        }
-        if self._headless:
-            kwargs["viewport"] = {"width": 1366, "height": 768}
-            if self._user_agent:
-                kwargs["user_agent"] = self._user_agent
-        else:
-            kwargs["no_viewport"] = True  # size pages to the real window, as a normal browser does
-        if channel:
-            kwargs["channel"] = channel
-        return kwargs
-
-    def _forget_browser(self) -> None:
-        self._context = None
-        self._page = None
-
-    async def _cleanup(self) -> None:
-        if self._context is not None:
-            try:
-                await self._context.close()
-            except Exception:
-                pass
-        self._forget_browser()
-        if self._playwright is not None:
-            try:
-                await self._playwright.stop()
-            except Exception:
-                pass
-            self._playwright = None

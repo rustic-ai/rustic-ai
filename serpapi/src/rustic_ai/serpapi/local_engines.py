@@ -22,7 +22,7 @@ class BlockReason(StrEnum):
     CONSENT = "consent"  # a cookie / consent wall that could not be dismissed
 
 
-@dataclass
+@dataclass(frozen=True)
 class RawResult:
     url: str
     title: str
@@ -83,10 +83,15 @@ class LocalSearchEngine(ABC):
     name: str
     page_size: int
     # Playwright selectors for buttons that dismiss a cookie/consent wall.
-    consent_selectors: List[str] = []
-    # When True the next page is reached by clicking `next_page_selector`, not by building a URL.
-    paginate_by_click: bool = False
+    consent_selectors: Tuple[str, ...] = ()
+    # Set for engines whose later pages are reached by clicking "Next" rather than by an offset in the URL.
     next_page_selector: Optional[str] = None
+    # The first "Next" click may land on the same page again; click once more before concluding there are no more.
+    next_may_repeat_page: bool = False
+
+    @property
+    def paginate_by_click(self) -> bool:
+        return self.next_page_selector is not None
 
     @abstractmethod
     def search_url(self, query: str, offset: int, hl: str, gl: str) -> str:
@@ -110,11 +115,11 @@ class LocalSearchEngine(ABC):
 class GoogleEngine(LocalSearchEngine):
     name = "google"
     page_size = 10
-    consent_selectors = [
+    consent_selectors = (
         'button:has-text("Reject all")',
         'button:has-text("Accept all")',
         'form[action*="consent"] button',
-    ]
+    )
 
     _BLOCK_MARKERS = ("unusual traffic from your computer network", "our systems have detected unusual traffic")
 
@@ -135,12 +140,7 @@ class GoogleEngine(LocalSearchEngine):
 
     @staticmethod
     def _is_google_host(url: str) -> bool:
-        host = urlparse(url).hostname or ""
-        return (
-            host == "google.com"
-            or host.endswith(".google.com")
-            or re.match(r"(.*\.)?google\.[a-z.]+$", host) is not None
-        )
+        return re.fullmatch(r"(.+\.)?google\.[a-z.]+", urlparse(url).hostname or "") is not None
 
     def parse(self, html: str, final_url: str) -> ParsedPage:
         soup = BeautifulSoup(html, "html.parser")
@@ -191,12 +191,14 @@ class GoogleEngine(LocalSearchEngine):
 class BingEngine(LocalSearchEngine):
     name = "bing"
     page_size = 10
-    consent_selectors = ["#bnp_btn_accept", "button#bnp_btn_reject"]
+    consent_selectors = ("#bnp_btn_accept", "button#bnp_btn_reject")
     # Bing ignores `first=` on a fresh request and serves page 1 again; its own "Next" link paginates reliably.
-    paginate_by_click = True
     next_page_selector = "a.sb_pagN"
+    # In a fresh session the first "Next" click goes through a cookie-setting redirect that serves page 1 again.
+    next_may_repeat_page = True
 
     def search_url(self, query: str, offset: int, hl: str, gl: str) -> str:
+        # Always the first page: later pages are reached by clicking "Next".
         return f"https://www.bing.com/search?q={quote_plus(query)}&setlang={hl}&cc={gl}"
 
     @staticmethod
@@ -238,11 +240,10 @@ class BingEngine(LocalSearchEngine):
 class DuckDuckGoEngine(LocalSearchEngine):
     name = "duckduckgo"
     page_size = 10
-    paginate_by_click = True
     next_page_selector = "input[type='submit'][value='Next']"
 
     def search_url(self, query: str, offset: int, hl: str, gl: str) -> str:
-        # The html endpoint does not expose a stable offset parameter; later pages are reached by clicking "Next".
+        # Always the first page: the html endpoint has no offset parameter; later pages are reached by clicking "Next".
         return f"https://html.duckduckgo.com/html/?q={quote_plus(query)}&kl={gl}-{hl}"
 
     @staticmethod

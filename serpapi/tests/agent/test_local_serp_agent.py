@@ -1,8 +1,8 @@
 import asyncio
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional
-from unittest.mock import AsyncMock, MagicMock, patch
+from typing import Any, Dict, List, Optional, Sequence
+from unittest.mock import patch
 from urllib.parse import parse_qs, urlparse
 
 from playwright.async_api import Error as PlaywrightError
@@ -15,27 +15,11 @@ from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 from rustic_ai.core.utils.priority import Priority
 from rustic_ai.serpapi.agent import SearchError, SERPQuery, SERPResults
 from rustic_ai.serpapi.local_agent import LocalSERPAgent
-from rustic_ai.serpapi.local_browser import launch_args, resolve_profile_dir
+from rustic_ai.serpapi.local_browser import PageContent
 
 from rustic_ai.testing.helpers import wrap_agent_for_testing
 
 FIXTURES = Path(__file__).parent / "fixtures" / "local_serp"
-
-
-def fixture(name: str) -> str:
-    return (FIXTURES / name).read_text()
-
-
-def _google_page(url: str) -> str:
-    start = int(parse_qs(urlparse(url).query).get("start", ["0"])[0])
-    return "google_page2.html" if start >= 10 else "google_page1.html"
-
-
-DEFAULT_PAGES = {
-    "www.google.com": _google_page,
-    "www.bing.com": lambda url: "bing_page1.html",
-    "html.duckduckgo.com": lambda url: "ddg_page1.html",
-}
 
 GOTO_TARGETS = {
     "https://www.google.com/goto?url=CAESbgHrOzAVTOKENONE": "https://goto-a.example/page",
@@ -43,87 +27,78 @@ GOTO_TARGETS = {
 }
 
 
+def fixture(name: str) -> str:
+    return (FIXTURES / name).read_text()
+
+
+def _default_page(host: str, url: str) -> str:
+    if host == "www.google.com":
+        start = int(parse_qs(urlparse(url).query).get("start", ["0"])[0])
+        return "google_page2.html" if start >= 10 else "google_page1.html"
+    return {"www.bing.com": "bing_page1.html", "html.duckduckgo.com": "ddg_page1.html"}[host]
+
+
 class FakeBrowser:
-    """Serves fixture pages in place of real navigation and records what was requested."""
+    """
+    Stands in for LocalBrowser: serves fixture pages and records what the agent asked for.
+
+    `solved_page`, when set, is what the page turns into once the "user" solves a CAPTCHA in the window.
+    """
 
     def __init__(self):
-        self.pages: Dict[str, str] = {}  # host -> fixture name, overriding DEFAULT_PAGES
+        self.headless = True
+        self.pages: Dict[str, str] = {}  # host -> fixture name, overriding the defaults
+        self.solved_page: Optional[str] = None
         self.requests: List[str] = []
+        self.window: List[str] = []
+        self.closed = 0
+        self._current = PageContent("", "")
 
-    def _page_for(self, host: str, url: str) -> str:
-        return fixture(self.pages.get(host) or DEFAULT_PAGES[host](url))
+    def _load(self, host: str, url: str) -> PageContent:
+        self._current = PageContent(fixture(self.pages.get(host) or _default_page(host, url)), url)
+        return self._current
 
-    async def fetch(self, page, url, engine):
+    async def goto(self, url: str, consent_selectors: Sequence[str] = ()) -> PageContent:
         self.requests.append(url)
-        return self._page_for(urlparse(url).hostname or "", url), url
+        return self._load(urlparse(url).hostname or "", url)
 
-    async def next_page(self, page, engine):
-        self.requests.append(f"next:{engine.name}")
-        host = "www.bing.com" if engine.name == "bing" else "html.duckduckgo.com"
-        url = f"https://{host}/next"
-        return self._page_for(host, url), url
+    async def click_next(self, selector: str) -> Optional[PageContent]:
+        host = "www.bing.com" if selector == "a.sb_pagN" else "html.duckduckgo.com"
+        self.requests.append(f"next:{host}")
+        return self._load(host, f"https://{host}/next")
 
-    async def resolve_url(self, url):
+    async def read(self) -> PageContent:
+        return self._current
+
+    async def snapshot(self) -> Optional[PageContent]:
+        if self.solved_page is not None:
+            self._current = PageContent(fixture(self.solved_page), "https://www.google.com/search?q=x")
+        return self._current
+
+    async def resolve_redirect(self, url: str) -> Optional[str]:
         self.requests.append(f"resolve:{url}")
         return GOTO_TARGETS.get(url)
 
-    async def ensure_page(self):
-        return MagicMock()
+    async def show_window(self) -> None:
+        self.window.append("shown")
 
+    async def hide_window(self) -> None:
+        self.window.append("minimized")
 
-class FakeWindow:
-    """The headed browser window, and a user who solves (or ignores) the CAPTCHA shown in it."""
-
-    def __init__(self, solved_page: Optional[str]):
-        self.solved_page = solved_page
-        self.states: List[str] = []
-
-    async def set_window_state(self, page, minimized):
-        self.states.append("minimized" if minimized else "shown")
-
-    async def snapshot(self, page):
-        if self.solved_page is None:
-            return fixture("google_captcha.html"), "https://www.google.com/sorry/index"
-        return fixture(self.solved_page), "https://www.google.com/search?q=x"
-
-
-def _patch(name: str, fn):
-    return patch.object(LocalSERPAgent, name, lambda _agent, *args, **kwargs: fn(*args, **kwargs))
+    async def close(self) -> None:
+        self.closed += 1
 
 
 @pytest.fixture
 def browser():
     fake = FakeBrowser()
-    with (
-        _patch("_fetch", fake.fetch),
-        _patch("_next_page", fake.next_page),
-        _patch("_resolve_url", fake.resolve_url),
-        _patch("_ensure_page", fake.ensure_page),
-    ):
-        yield fake
 
-
-@pytest.fixture
-def window():
-    patches: List[Any] = []
-
-    def make(solved_page: Optional[str]) -> FakeWindow:
-        fake = FakeWindow(solved_page)
-        patches.extend(
-            [
-                _patch("_set_window_state", fake.set_window_state),
-                _patch("_snapshot", fake.snapshot),
-                _patch("_read_page", fake.snapshot),
-                patch.object(LocalSERPAgent, "_user_poll_s", 0.01),
-            ]
-        )
-        for p in patches:
-            p.start()
+    def create(agent):
+        fake.headless = agent.config.headless
         return fake
 
-    yield make
-    for p in patches:
-        p.stop()
+    with patch.object(LocalSERPAgent, "_create_browser", create), patch.object(LocalSERPAgent, "_user_poll_s", 0.01):
+        yield fake
 
 
 def make_agent(**properties):
@@ -149,16 +124,27 @@ def search(generator, agent, **payload) -> Message:
     return query
 
 
+def only_results(results) -> SERPResults:
+    assert len(results) == 1
+    return SERPResults.model_validate(results[0].payload)
+
+
+def only_error(results) -> Dict[str, Any]:
+    assert len(results) == 1
+    error = SearchError.model_validate(results[0].payload)
+    assert error.id == "q1"
+    assert error.response["status"] == "Error"
+    return error.response
+
+
 class TestSearch:
     def test_google_results(self, generator, browser):
         agent, results = make_agent()
         query = search(generator, agent, engine="google", num=5)
 
-        assert len(results) == 1
         assert results[0].in_response_to == query.id
         assert results[0].current_thread_id == query.id
-
-        result = SERPResults.model_validate(results[0].payload)
+        result = only_results(results)
         assert (result.engine, result.query, result.id) == ("google", "multi-agent AI", "q1")
         assert result.count == 5
         assert result.total_results == 1234000
@@ -183,7 +169,7 @@ class TestSearch:
         agent, results = make_agent()
         search(generator, agent, engine="google", num=15)
 
-        result = SERPResults.model_validate(results[0].payload)
+        result = only_results(results)
         assert result.count == 15
         assert [r.metadata["search_position"] for r in result.results] == list(range(1, 16))  # type: ignore[index]
         # Page one: 10 direct links + 1 resolved /goto link (the unresolvable one is dropped); page two fills the rest
@@ -197,222 +183,180 @@ class TestSearch:
         agent, results = make_agent()
         search(generator, agent, engine="google", num=3, start=10)
 
-        result = SERPResults.model_validate(results[0].payload)
         assert "start=10" in browser.requests[0]
-        assert [r.metadata["search_position"] for r in result.results] == [11, 12, 13]  # type: ignore[index]
+        positions = [r.metadata["search_position"] for r in only_results(results).results]  # type: ignore[index]
+        assert positions == [11, 12, 13]
 
-    def test_bing_results(self, generator, browser):
+    def test_bing_retries_a_repeated_page_once(self, generator, browser):
         agent, results = make_agent()
-        search(generator, agent, engine="bing", num=5)
+        search(generator, agent, engine="bing", num=12)
 
-        result = SERPResults.model_validate(results[0].payload)
-        assert result.engine == "bing"
+        # The "next" fixture repeats page one: Bing's "Next" is retried once, then the search stops with what it has
+        result = only_results(results)
+        assert result.count == 10
         assert result.results[1].url == "https://example.org/b/2"
+        assert browser.requests.count("next:www.bing.com") == 2
 
-    def test_click_pagination_retries_next_once(self, generator, browser):
+    def test_duckduckgo_stops_on_a_repeated_page(self, generator, browser):
         agent, results = make_agent()
         search(generator, agent, engine="duckduckgo", num=12)
 
-        # The "next" fixture repeats page one: "Next" is retried once, then the search stops with what it has
-        result = SERPResults.model_validate(results[0].payload)
-        assert result.count == 10
-        assert browser.requests.count("next:duckduckgo") == 2
+        assert only_results(results).count == 10
+        assert browser.requests.count("next:html.duckduckgo.com") == 1
 
     def test_no_results_is_an_empty_response(self, generator, browser):
         browser.pages["www.google.com"] = "google_empty.html"
         agent, results = make_agent()
         search(generator, agent, engine="google")
 
-        result = SERPResults.model_validate(results[0].payload)
-        assert result.count == 0
-        assert result.results == []
+        result = only_results(results)
+        assert (result.count, result.results) == (0, [])
+
+    def test_browser_kept_open_between_searches_by_default(self, generator, browser):
+        agent, _ = make_agent()
+        search(generator, agent, engine="google", num=3)
+        assert browser.closed == 0
+
+    def test_close_browser_after_request(self, generator, browser):
+        agent, _ = make_agent(close_browser_after_request=True)
+        search(generator, agent, engine="google", num=3)
+        assert browser.closed == 1
 
 
 class TestErrors:
-    def _error(self, results) -> Dict[str, Any]:
-        assert len(results) == 1
-        error = SearchError.model_validate(results[0].payload)
-        assert error.id == "q1"
-        assert error.response["status"] == "Error"
-        return error.response
-
     @pytest.mark.parametrize(
-        "engine,page",
-        [("google", "google_captcha.html"), ("bing", "bing_captcha.html"), ("duckduckgo", "ddg_anomaly.html")],
+        "engine,host,page",
+        [
+            ("google", "www.google.com", "google_captcha.html"),
+            ("bing", "www.bing.com", "bing_captcha.html"),
+            ("duckduckgo", "html.duckduckgo.com", "ddg_anomaly.html"),
+        ],
     )
-    def test_blocked_engine_returns_error_without_fallback(self, generator, browser, engine, page):
-        host = {"google": "www.google.com", "bing": "www.bing.com", "duckduckgo": "html.duckduckgo.com"}[engine]
+    def test_blocked_engine_returns_error_without_fallback(self, generator, browser, engine, host, page):
         browser.pages[host] = page
         agent, results = make_agent()
         search(generator, agent, engine=engine)
 
-        response = self._error(results)
-        assert response["engine"] == engine
-        assert response["reason"] == "captcha"
+        response = only_error(results)
+        assert (response["engine"], response["reason"]) == (engine, "captcha")
         assert len(browser.requests) == 1  # no other engine was tried
 
     def test_unsupported_engine(self, generator, browser):
         agent, results = make_agent()
         search(generator, agent, engine="ebay")
 
-        response = self._error(results)
+        response = only_error(results)
         assert response["reason"] == "unsupported_engine"
         assert "ebay" in response["error"]
         assert browser.requests == []
 
     def test_page_timeout(self, generator, browser):
-        async def time_out(page, url, engine):
+        async def time_out(url, consent_selectors=()):
             raise PlaywrightTimeoutError("Timeout 30000ms exceeded")
 
-        with _patch("_fetch", time_out):
-            agent, results = make_agent()
-            search(generator, agent, engine="google")
+        browser.goto = time_out  # type: ignore[method-assign]
+        agent, results = make_agent()
+        search(generator, agent, engine="google")
 
-        assert self._error(results)["reason"] == "timeout"
+        assert only_error(results)["reason"] == "timeout"
 
     def test_search_deadline_cancels_and_releases_the_agent(self, generator, browser):
-        slow_fetch_done = []
+        load_page = browser.goto
+        finished: List[str] = []
 
-        async def hang(page, url, engine):
+        async def hang(url, consent_selectors=()):
             await asyncio.sleep(5)
-            slow_fetch_done.append(url)  # never reached: the search is cancelled at its deadline
-            return fixture("google_page1.html"), url
+            finished.append(url)  # never reached: the search is cancelled at its deadline
+            return await load_page(url)
 
+        browser.goto = hang  # type: ignore[method-assign]
         agent, results = make_agent(search_timeout_s=0.1)
-        with _patch("_fetch", hang):
-            search(generator, agent, engine="google")
-        assert self._error(results)["reason"] == "timeout"
+        search(generator, agent, engine="google")
+        assert only_error(results)["reason"] == "timeout"
 
         # The lock was released, so the next search runs normally
+        browser.goto = load_page  # type: ignore[method-assign]
         search(generator, agent, engine="bing", num=3)
         assert SERPResults.model_validate(results[1].payload).count == 3
-        assert slow_fetch_done == []
+        assert finished == []
 
     def test_browser_error(self, generator, browser):
-        async def crash(page, url, engine):
+        async def crash(url, consent_selectors=()):
             raise PlaywrightError("Target page, context or browser has been closed")
 
-        with _patch("_fetch", crash):
-            agent, results = make_agent()
-            search(generator, agent, engine="google")
+        browser.goto = crash  # type: ignore[method-assign]
+        agent, results = make_agent()
+        search(generator, agent, engine="google")
 
-        response = self._error(results)
+        response = only_error(results)
         assert response["reason"] == "browser_error"
         assert "has been closed" in response["error"]
 
 
 class TestHeadedMode:
-    def test_user_solves_captcha(self, generator, browser, window):
+    @pytest.fixture(autouse=True)
+    def google_captcha(self, browser):
         browser.pages["www.google.com"] = "google_captcha.html"
-        fake_window = window(solved_page="google_page1.html")
+
+    def test_user_solves_captcha(self, generator, browser):
+        browser.solved_page = "google_page1.html"
         agent, results = make_agent(headless=False, captcha_wait_s=5)
         search(generator, agent, engine="google", num=5)
 
-        result = SERPResults.model_validate(results[0].payload)
-        assert result.results[0].url == "https://example.com/g/1"
-        assert fake_window.states == ["shown", "minimized"]
+        assert only_results(results).results[0].url == "https://example.com/g/1"
+        assert browser.window == ["shown", "minimized"]
 
-    def test_unsolved_captcha_returns_error(self, generator, browser, window):
-        browser.pages["www.google.com"] = "google_captcha.html"
-        fake_window = window(solved_page=None)
+    def test_unsolved_captcha_returns_error(self, generator, browser):
         agent, results = make_agent(headless=False, captcha_wait_s=0.05)
         search(generator, agent, engine="google")
 
-        assert SearchError.model_validate(results[0].payload).response["reason"] == "captcha"
-        assert fake_window.states == ["shown", "minimized"]
+        assert only_error(results)["reason"] == "captcha"
+        assert browser.window == ["shown", "minimized"]
 
-    def test_window_left_open_when_not_hiding(self, generator, browser, window):
-        browser.pages["www.google.com"] = "google_captcha.html"
-        fake_window = window(solved_page="google_page1.html")
+    def test_window_left_open_when_not_hiding(self, generator, browser):
+        browser.solved_page = "google_page1.html"
         agent, results = make_agent(headless=False, hide_window=False, captcha_wait_s=5)
         search(generator, agent, engine="google", num=5)
 
-        assert SERPResults.model_validate(results[0].payload).count == 5
-        assert fake_window.states == ["shown"]
+        assert only_results(results).count == 5
+        assert browser.window == ["shown"]
 
-    def test_waiting_disabled(self, generator, browser, window):
-        browser.pages["www.google.com"] = "google_captcha.html"
-        fake_window = window(solved_page="google_page1.html")
+    def test_waiting_disabled(self, generator, browser):
+        browser.solved_page = "google_page1.html"
         agent, results = make_agent(headless=False, captcha_wait_s=0)
         search(generator, agent, engine="google")
 
-        assert SearchError.model_validate(results[0].payload).response["reason"] == "captcha"
-        assert fake_window.states == []
+        assert only_error(results)["reason"] == "captcha"
+        assert browser.window == []
 
-    def test_headless_never_waits_for_user(self, generator, browser, window):
-        browser.pages["www.google.com"] = "google_captcha.html"
-        fake_window = window(solved_page="google_page1.html")
+    def test_headless_never_waits_for_user(self, generator, browser):
+        browser.solved_page = "google_page1.html"
         agent, results = make_agent(headless=True, captcha_wait_s=5)
         search(generator, agent, engine="google")
 
-        assert SearchError.model_validate(results[0].payload).response["reason"] == "captcha"
-        assert fake_window.states == []
+        assert only_error(results)["reason"] == "captcha"
+        assert browser.window == []
 
 
-class TestBrowserLaunch:
-    def test_launch_kwargs_per_mode(self, tmp_path):
-        headless, _ = make_agent(user_data_dir=str(tmp_path))
-        kwargs = headless._launch_kwargs("chrome")
-        assert kwargs["headless"] is True
-        assert kwargs["viewport"] == {"width": 1366, "height": 768}
-        assert "--start-minimized" not in kwargs["args"]
-
-        headed, _ = make_agent(headless=False, user_data_dir=str(tmp_path))
-        kwargs = headed._launch_kwargs("chrome")
-        assert kwargs["headless"] is False
-        assert kwargs["no_viewport"] is True
-        assert "viewport" not in kwargs
-        assert "--start-minimized" in kwargs["args"]
-        assert kwargs["channel"] == "chrome"
-
-    def _launch(self, agent, *errors):
-        chromium = MagicMock()
-        chromium.launch_persistent_context = AsyncMock(side_effect=[*errors, "context"])
-        agent._playwright = MagicMock(chromium=chromium)
-        assert agent._loop_thread.run_coroutine(agent._launch("chrome")) == "context"
-        return chromium.launch_persistent_context.call_args_list
-
-    def test_headed_without_display_falls_back_to_headless(self, tmp_path):
-        agent, _ = make_agent(headless=False, user_data_dir=str(tmp_path))
-        calls = self._launch(
-            agent, PlaywrightError("Looks like you launched a headed browser without having a XServer")
-        )
-
-        assert agent._force_headless
-        assert calls[1].kwargs["headless"] is True
-
-    def test_locked_profile_uses_private_profile(self, tmp_path):
-        agent, _ = make_agent(user_data_dir=str(tmp_path))
-        calls = self._launch(agent, PlaywrightError("Failed to create a ProcessSingleton for your profile directory"))
-
-        assert calls[0].args[0] == str(tmp_path / "chrome")
-        assert calls[1].args[0] == str(tmp_path / "chrome-local_serp_agent")
-
-    def test_other_launch_errors_propagate(self, tmp_path):
-        agent, _ = make_agent(user_data_dir=str(tmp_path))
-        chromium = MagicMock()
-        chromium.launch_persistent_context = AsyncMock(side_effect=PlaywrightError("boom"))
-        agent._playwright = MagicMock(chromium=chromium)
-        with pytest.raises(PlaywrightError):
-            agent._loop_thread.run_coroutine(agent._launch("chrome"))
-
+class TestConfig:
     def test_deadline_includes_captcha_wait_only_when_headed(self):
         assert make_agent()[0]._deadline_s() == 120.0
         assert make_agent(headless=False, captcha_wait_s=60)[0]._deadline_s() == 180.0
         assert make_agent(search_timeout_s=30)[0]._deadline_s() == 30.0
 
+    def test_browser_options_follow_config(self, tmp_path):
+        agent, _ = make_agent(headless=False, hide_window=False, user_data_dir=str(tmp_path), hl="de", gl="de")
+        options = agent._create_browser()._options
 
-class TestBrowserHelpers:
-    def test_profile_dirs(self, tmp_path):
-        assert resolve_profile_dir(str(tmp_path), "chrome") == str(tmp_path / "chrome")
-        assert resolve_profile_dir(str(tmp_path), None) == str(tmp_path / "chromium")
-        assert resolve_profile_dir(str(tmp_path), "chrome", "agent1") == str(tmp_path / "chrome-agent1")
-        assert (tmp_path / "chrome-agent1").is_dir()
+        assert (options.headless, options.hide_window) == (False, False)
+        assert options.user_data_dir == str(tmp_path)
+        assert options.locale == "de-DE"
+        assert options.private_profile_id == "local_serp_agent"
+        assert options.headless_without_display
 
-    def test_launch_args(self):
-        assert "--start-minimized" in launch_args(headless=False, hide_window=True)
-        assert "--start-minimized" not in launch_args(headless=False, hide_window=False)
-        assert "--start-minimized" not in launch_args(headless=True, hide_window=True)
+    def test_invalid_delays_rejected(self):
+        with pytest.raises(Exception, match="max_delay_s"):
+            make_agent(min_delay_s=3, max_delay_s=1)
 
 
 @pytest.mark.skipif(
@@ -424,6 +368,6 @@ class TestLive:
         agent, results = make_agent()
         search(generator, agent, engine=engine, num=5)
 
-        result = SERPResults.model_validate(results[0].payload)
+        result = only_results(results)
         assert result.count > 0
         assert result.results[0].url.startswith("http")
