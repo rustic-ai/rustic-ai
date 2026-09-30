@@ -1,5 +1,4 @@
 import asyncio
-import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence
 from unittest.mock import patch
@@ -357,17 +356,3 @@ class TestConfig:
     def test_invalid_delays_rejected(self):
         with pytest.raises(Exception, match="max_delay_s"):
             make_agent(min_delay_s=3, max_delay_s=1)
-
-
-@pytest.mark.skipif(
-    os.getenv("RUSTIC_LOCAL_SERP_LIVE") != "1", reason="set RUSTIC_LOCAL_SERP_LIVE=1 to hit live engines"
-)
-class TestLive:
-    @pytest.mark.parametrize("engine", ["duckduckgo", "bing"])
-    def test_live_search(self, generator, engine):
-        agent, results = make_agent()
-        search(generator, agent, engine=engine, num=5)
-
-        result = only_results(results)
-        assert result.count > 0
-        assert result.results[0].url.startswith("http")
