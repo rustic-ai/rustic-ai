@@ -62,6 +62,7 @@ nav:
       - SerpAPI:
           - Overview: agents/serpapi/index.md
           - SERP Agent: agents/serpapi/serp_agent.md
+          - Local SERP Agent: agents/serpapi/local_serp_agent.md
       - Marvin:
           - Overview: agents/marvin/index.md
           - Marvin Agent: agents/marvin/marvin_agent.md

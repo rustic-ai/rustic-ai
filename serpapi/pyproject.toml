@@ -21,6 +21,12 @@ packages = [{ include = "rustic_ai", from = "src" }]
 [tool.poetry.dependencies]
 rusticai-core = { path = "../core", develop = true }
 serpapi = "^1.0.2"
+# Optional: browser-based LocalSERPAgent (install with the `local` extra)
+rusticai-playwright = { path = "../playwright", develop = true, optional = true }
+beautifulsoup4 = { version = "^4.12", optional = true }
+
+[tool.poetry.scripts]
+rustic-local-serp-setup = "rustic_ai.serpapi.local_setup:main"
 
 [tool.poetry-monorepo.deps]
 
@@ -38,7 +44,8 @@ mypy = "^2.3.0"
 rusticai-testing = { path = "../testing", develop = true }
 
 [tool.poetry.extras]
-test = ["pytest", "rusticai-testing"]
+local = ["rusticai-playwright", "beautifulsoup4"]
+test = ["pytest", "rusticai-testing", "rusticai-playwright", "beautifulsoup4"]
 
 [tool.black]
 line-length = 120
