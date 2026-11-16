@@ -28,7 +28,7 @@ from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder
 from rustic_ai.core.guild.dsl import DependencySpec
 from rustic_ai.uniko_agent import MemoryAgent, MemoryAgentConfig, ObserveTurnRequest, RecallRequest
 
-# Configure uniko dependency (guild-scoped, in-memory)
+# Configure uniko dependency (agent-scoped, in-memory)
 uniko_dep = DependencySpec(
     class_name="rustic_ai.uniko_agent.UnikoResolver",
     properties={
@@ -74,9 +74,7 @@ guild.send_message(
 uniko_dep = DependencySpec(
     class_name="rustic_ai.uniko_agent.UnikoResolver",
     properties={
-        "storage_path": "./data/memory",  # Persistent
-        "org_level": True,   # Append org_id to storage_path
-        "guild_level": True, # Append guild_id to storage_path
+        "storage_path": "memory",  # Within the injected agent filesystem
         "llm_spec": {
             "alias": "openai",
             "model_id": "gpt-4o-mini",
@@ -195,9 +193,7 @@ config = MemoryAgentConfig(
 
 ```python
 {
-    "storage_path": str | None,      # None = in-memory, str = base path
-    "org_level": bool,               # Append org_id to storage_path
-    "guild_level": bool,             # Append guild_id to storage_path
+    "storage_path": str | None,      # None = in-memory; otherwise agent-filesystem location
     "llm_spec": dict | None,         # LLM config for answer generation
     "streaming": bool,               # Enable streaming mode
     "scope_to_agent": bool,          # Scope memory to individual agents (not recommended)
@@ -278,18 +274,18 @@ poetry run pytest --cov=rustic_ai.uniko_agent
 
 ### Guild-Scoped Memory
 
-- One `uniko.Uniko` instance per guild
-- All agents in guild share memory graph
-- Guild ID maps to uniko agent ID
-- Enables collaborative memory across LLMAgent, KnowledgeAgent, etc.
+- One private `uniko.Uniko` store per organization, guild, and agent
+- Persistent storage is resolved from the injected agent filesystem, never cwd
+- Other agents share memory through typed requests to MemoryAgent
+- Incoming documents are read from the separate guild-scoped filesystem
 
 ### Dependency Injection
 
 ```
 GuildSpec
-  └─ dependency_map["uniko"] = UnikoResolver  (guild-scoped)
+  └─ dependency_map["uniko"] = UnikoResolver  (agent-scoped)
        └─ resolve(org_id, guild_id, agent_id) → uniko.Agent
-            └─ Returns guild-scoped agent handle
+            └─ Injects dependency_map["filesystem"] at agent scope for storage
 ```
 
 ### Message Flow

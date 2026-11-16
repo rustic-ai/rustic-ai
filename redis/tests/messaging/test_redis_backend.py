@@ -55,7 +55,9 @@ class TestRedisBackendConfiguration:
         assert config.socket_keepalive is True
         # Check that socket_keepalive_options is not None before subscripting
         assert config.socket_keepalive_options is not None
-        assert config.socket_keepalive_options[socket.TCP_KEEPIDLE] == 300
+        keepidle = getattr(socket, "TCP_KEEPIDLE", None)
+        if keepidle is not None:
+            assert config.socket_keepalive_options[keepidle] == 300
         assert config.socket_keepalive_options[socket.TCP_KEEPINTVL] == 60
         assert config.socket_keepalive_options[socket.TCP_KEEPCNT] == 3
         assert config.health_check_interval == 30
@@ -121,11 +123,15 @@ class TestRedisBackendConfiguration:
     @patch("rustic_ai.redis.messaging.connection_manager.redis.StrictRedis")
     def test_redis_client_initialization_with_keepalive(self, mock_redis):
         """Test that Redis client is initialized with keepalive settings."""
+        keepalive_options = {socket.TCP_KEEPINTVL: 60, socket.TCP_KEEPCNT: 3}
+        keepidle = getattr(socket, "TCP_KEEPIDLE", None)
+        if keepidle is not None:
+            keepalive_options[keepidle] = 300
         config = RedisBackendConfig(
             host="localhost",
             port=6379,
             socket_keepalive=True,
-            socket_keepalive_options={socket.TCP_KEEPIDLE: 300, socket.TCP_KEEPINTVL: 60, socket.TCP_KEEPCNT: 3},
+            socket_keepalive_options=keepalive_options,
         )
 
         backend = RedisMessagingBackend(config)
@@ -141,7 +147,7 @@ class TestRedisBackendConfiguration:
             ssl_keyfile=None,
             ssl_ca_certs=None,
             socket_keepalive=True,
-            socket_keepalive_options={socket.TCP_KEEPIDLE: 300, socket.TCP_KEEPINTVL: 60, socket.TCP_KEEPCNT: 3},
+            socket_keepalive_options=keepalive_options,
             health_check_interval=30,
             socket_connect_timeout=10,
             socket_timeout=30,

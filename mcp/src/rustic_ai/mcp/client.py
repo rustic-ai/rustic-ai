@@ -3,7 +3,7 @@ import logging
 import os
 from typing import Optional
 
-import httpx
+import httpx2 as httpx
 
 from mcp import ClientSession, StdioServerParameters, Tool
 from mcp.client.stdio import stdio_client

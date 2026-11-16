@@ -20,6 +20,8 @@ from rustic_ai.core.agents.eip.aggregating_agent import (
     PayloadWithFormat,
     TypeCollector,
 )
+from rustic_ai.core.state.models import StateUpdateFormat
+from rustic_ai.core.state.updater.json_merge_patch_updater import JsonMergePatchUpdater
 from rustic_ai.core.utils.json_utils import JsonDict
 
 
@@ -134,6 +136,27 @@ class TestAggregatingAgentRaceCondition:
 
         # Verify the correlation is now tracked
         assert "new_correlation" in agent._processed_correlations
+
+        # Cleanup removes the completed entry from the parent map using an
+        # idempotent merge patch instead of treating "/" as a root pointer.
+        agent.update_state.assert_called_once_with(
+            mock_ctx,
+            update_format=StateUpdateFormat.JSON_MERGE_PATCH,
+            update={"new_correlation": None},
+            update_path="aggregations",
+        )
+
+    def test_cleanup_patch_is_idempotent_and_preserves_other_correlations(self):
+        state = {
+            "completed": [{"type": "test", "data": {"value": 1}}],
+            "in_flight": [{"type": "test", "data": {"value": 2}}],
+        }
+
+        cleaned = JsonMergePatchUpdater.apply_update(state, {"completed": None})
+        cleaned_again = JsonMergePatchUpdater.apply_update(cleaned, {"completed": None})
+
+        assert cleaned == {"in_flight": state["in_flight"]}
+        assert cleaned_again == cleaned
 
     def test_second_state_update_does_not_resend(self):
         """Test that a second state update for the same correlation doesn't cause duplicate send.

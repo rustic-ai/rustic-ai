@@ -31,7 +31,7 @@ from datamodel_code_generator import (
     generate,
 )
 from dotenv import load_dotenv
-import httpx
+import httpx2 as httpx
 from pydantic import BaseModel, Field
 import yaml
 
@@ -109,7 +109,7 @@ async def get_provider_tools(provider: MCPProvider) -> List[Tool]:
             raise ValueError(f"Token environment variable '{provider.token_env_var}' not found")
     http_client = httpx.AsyncClient(headers=headers) if headers else None
     try:
-        async with streamable_http_client(provider.url, http_client=http_client) as (read_stream, write_stream, _):
+        async with streamable_http_client(provider.url, http_client=http_client) as (read_stream, write_stream):
             # Create a session using the client streams
             async with ClientSession(read_stream, write_stream) as session:
                 # Initialize the connection
@@ -142,7 +142,7 @@ def _tool_to_dict(tool: Tool) -> Dict[str, Any]:
     return {
         "name": tool.name,
         "description": tool.description,
-        "inputSchema": tool.inputSchema if hasattr(tool, "inputSchema") else {},
+        "inputSchema": tool.input_schema,
     }
 
 
@@ -264,7 +264,7 @@ def _create_combined_schema(
         tool_name = tool.name
 
         # Add input schema - use the actual inputSchema from the tool
-        input_schema = tool.inputSchema
+        input_schema = tool.input_schema
         if input_schema:
             # Use tool name as definition key
             input_def_name = f"{tool_name}_input"

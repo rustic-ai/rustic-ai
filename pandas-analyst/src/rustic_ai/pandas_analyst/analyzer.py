@@ -502,7 +502,7 @@ class PandasDataAnalyzer(PythonExecExecutor, DataAnalyzer):
         return self.get_dataset_summary(cleaned_name)
 
     def execute_query(self, request: QueryExecutionRequest) -> QueryExecutionResponse:
-        logging.info(f"Executing query: language={request.query_language}, expr={request.query_string}")
+        logging.info("Executing data query: language=%s", request.query_language)
         if request.query_language == "pandas_query":
             if len(request.input_datasets) != 1:
                 raise InvalidQueryError("pandas_query supports only one input dataset.")
@@ -519,7 +519,7 @@ class PandasDataAnalyzer(PythonExecExecutor, DataAnalyzer):
             except Exception as e:
                 raise InvalidQueryError(f"Failed to evaluate pandas query: {e}")
         elif request.query_language == "sql":
-            con = duckdb.connect()
+            con = duckdb.connect(config={"enable_external_access": "false"})
             for alias, dataset_name in request.input_datasets.items():
                 if dataset_name not in self.datasets:
                     raise DatasetNotFoundError(

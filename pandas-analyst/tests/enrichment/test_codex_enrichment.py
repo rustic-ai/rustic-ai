@@ -7,7 +7,12 @@ Tests cover:
 - DatasetEnrichmentMetadata: Pydantic model serialization
 """
 
+from types import SimpleNamespace
 from unittest.mock import Mock
+
+import fsspec
+from fsspec.implementations.dirfs import DirFileSystem
+import pandas as pd
 
 from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     ChatCompletionRequest,
@@ -19,6 +24,7 @@ from rustic_ai.pandas_analyst.enrichment import (
     DatasetEnrichmentMetadata,
     DatasetLoadedEmitter,
     DatasetLoadedEvent,
+    DatasetProfile,
     EnrichmentContextPreprocessor,
 )
 
@@ -40,11 +46,32 @@ class TestDatasetLoadedEmitter:
             dataschema={"a": "int64", "b": "object", "c": "float64", "d": "bool", "e": "datetime64"}
         )
         mock_analyzer.preview_dataset.return_value = Mock(columns=["a", "b"], data=[[1, "x"], [2, "y"], [3, "z"]])
+        mock_analyzer.datasets = {
+            "test": pd.DataFrame({"a": [1, 2], "b": ["x", "y"], "c": [1.0, 2.0], "d": [True, False], "e": ["a", "b"]})
+        }
         mock_agent.config = Mock()
+        fs = fsspec.filesystem("memory")
+        fs.pipe("/guild/test.csv", b"a,b\n1,x\n")
+        mock_agent.guild_id = "guild-1"
+        mock_agent.id = "react_data_analyst"
         mock_agent.config.toolset = Mock()
         mock_agent.config.toolset._analyzer = mock_analyzer
+        mock_agent.config.toolset._safe_relative_path.return_value = "test.csv"
+        mock_agent.config.toolset.filesystem = DirFileSystem("/guild", fs=fs)
 
-        mock_ctx = Mock()
+        sender = SimpleNamespace(id="upa-user-1")
+        mock_ctx = Mock(
+            message=SimpleNamespace(
+                sender=sender,
+                id="request-1",
+                forward_header=SimpleNamespace(on_behalf_of=sender, origin_message_id="request-1"),
+            )
+        )
+        mock_ctx.get_context.return_value = {
+            "analysis_user": "upa-user-1",
+            "analysis_session": "analysis-request-1",
+            "analysis_request_id": "request-1",
+        }
         mock_input = Mock(filename="test.csv", dataset_name=None)
 
         result = emitter.postprocess(
@@ -60,8 +87,9 @@ class TestDatasetLoadedEmitter:
         assert len(result.messages) == 1
         assert isinstance(result.messages[0], DatasetLoadedEvent)
         assert result.messages[0].dataset_name == "test"
-        assert result.messages[0].row_count == 100
-        assert result.messages[0].column_count == 5
+        assert result.messages[0].profile.row_count == 100
+        assert result.messages[0].profile.column_count == 5
+        assert len(result.messages[0].dataset_fingerprint) == 64
 
     def test_extracts_name_from_input_dataset_name(self):
         """Verify dataset name is extracted from input when provided."""
@@ -72,13 +100,33 @@ class TestDatasetLoadedEmitter:
         mock_analyzer.get_dataset_summary.return_value = Mock(num_rows=50, num_columns=3, column_names=["x", "y", "z"])
         mock_analyzer.get_schema.return_value = Mock(dataschema={"x": "int64"})
         mock_analyzer.preview_dataset.return_value = Mock(columns=["x"], data=[[1]])
+        mock_analyzer.datasets = {"my_dataset": pd.DataFrame({"x": [1]})}
+        fs = fsspec.filesystem("memory")
+        fs.pipe("/guild/data.csv", b"x\n1\n")
+        mock_agent.guild_id = "guild-1"
+        mock_agent.id = "react_data_analyst"
         mock_agent.config.toolset._analyzer = mock_analyzer
+        mock_agent.config.toolset._safe_relative_path.return_value = "data.csv"
+        mock_agent.config.toolset.filesystem = DirFileSystem("/guild", fs=fs)
 
         mock_input = Mock(filename="data.csv", dataset_name="my_dataset")
+        sender = SimpleNamespace(id="upa-user-1")
+        context = Mock(
+            message=SimpleNamespace(
+                sender=sender,
+                id="request-1",
+                forward_header=SimpleNamespace(on_behalf_of=sender, origin_message_id="request-1"),
+            )
+        )
+        context.get_context.return_value = {
+            "analysis_user": "upa-user-1",
+            "analysis_session": "analysis-request-1",
+            "analysis_request_id": "request-1",
+        }
 
         result = emitter.postprocess(
             agent=mock_agent,
-            ctx=Mock(),
+            ctx=context,
             tool_name="load_file",
             tool_input=mock_input,
             tool_output='{"status": "loaded"}',
@@ -423,33 +471,45 @@ class TestDatasetLoadedEvent:
         """Verify event can be created with required fields."""
         event = DatasetLoadedEvent(
             dataset_name="test_dataset",
-            row_count=100,
-            column_count=5,
-            columns=["a", "b", "c", "d", "e"],
-            column_schema={"a": "int64", "b": "object"},
+            source_name="test.csv",
+            dataset_fingerprint="a" * 64,
+            profile=DatasetProfile(
+                row_count=100,
+                column_count=5,
+                column_schema={"a": "int64", "b": "object"},
+                null_counts={"a": 0, "b": 1},
+                duplicate_rows=0,
+            ),
             sample_data=[{"a": 1, "b": "x"}],
-            load_summary="Loaded successfully",
+            record_id="request-1:dataset:a",
+            session_id="analysis-user-1",
         )
 
         assert event.dataset_name == "test_dataset"
-        assert event.row_count == 100
-        assert len(event.columns) == 5
+        assert event.profile.row_count == 100
+        assert event.profile.column_count == 5
 
     def test_event_serialization(self):
         """Verify event can be serialized to/from JSON."""
         event = DatasetLoadedEvent(
             dataset_name="sales",
-            row_count=1000,
-            column_count=10,
-            columns=["id", "amount", "date"],
-            column_schema={"id": "int64", "amount": "float64", "date": "datetime64"},
+            source_name="sales.parquet",
+            dataset_fingerprint="b" * 64,
+            profile=DatasetProfile(
+                row_count=1000,
+                column_count=10,
+                column_schema={"id": "int64", "amount": "float64", "date": "datetime64"},
+                null_counts={"id": 0, "amount": 2, "date": 0},
+                duplicate_rows=3,
+            ),
             sample_data=[{"id": 1, "amount": 99.99, "date": "2024-01-01"}],
-            load_summary="Loaded 1000 rows",
+            record_id="request-2:dataset:b",
+            session_id="analysis-user-1",
         )
 
         json_str = event.model_dump_json()
         restored = DatasetLoadedEvent.model_validate_json(json_str)
 
         assert restored.dataset_name == "sales"
-        assert restored.row_count == 1000
+        assert restored.profile.row_count == 1000
         assert len(restored.sample_data) == 1

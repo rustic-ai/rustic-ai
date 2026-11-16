@@ -108,12 +108,10 @@ class TestUnikoResolverIntegration:
         assert resolver.llm_spec is None
 
     def test_resolver_with_storage_path(self):
-        """Test resolver with storage path and org/guild level flags."""
-        resolver = UnikoResolver(storage_path="./data", org_level=True, guild_level=True, llm_spec=None)
+        """Storage paths are locations within the injected agent filesystem."""
+        resolver = UnikoResolver(storage_path="memory", llm_spec=None)
 
-        assert resolver.storage_path == "./data"
-        assert resolver.org_level is True
-        assert resolver.guild_level is True
+        assert resolver.storage_path == "memory"
 
     def test_resolver_builds_uniko_instance_with_llm(self):
         """Test that resolver can build a complete Uniko instance with LLM spec."""

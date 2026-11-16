@@ -1,6 +1,6 @@
 """Configuration for MemoryAgent."""
 
-from typing import Optional
+from typing import Dict, List, Optional
 
 from pydantic import Field
 
@@ -29,3 +29,11 @@ class MemoryAgentConfig(BaseAgentProps):
     answer_max_tokens: int = Field(default=500, ge=50, le=5000, description="Max tokens for generated answers")
 
     auto_flush: bool = Field(default=True, description="Auto-flush observations after each turn")
+
+    allowed_record_producers: Dict[str, List[str]] = Field(
+        default_factory=dict,
+        description="Optional record-kind to allowed sender-id map. Configured kinds fail closed for other senders.",
+    )
+
+    conversation_request_producers: List[str] = Field(default_factory=list)
+    conversation_response_producers: List[str] = Field(default_factory=list)

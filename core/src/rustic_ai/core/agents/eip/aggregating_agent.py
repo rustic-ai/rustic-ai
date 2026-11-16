@@ -348,7 +348,7 @@ class AggregatingAgent(Agent[AggregatorConf]):
                 # sends during the race window between send and state cleanup completion
                 self.update_state(  # type: ignore[no-untyped-call]
                     ctx,
-                    update_format=StateUpdateFormat.JSON_PATCH,
-                    update={"operations": [{"op": "remove", "path": "/"}]},
-                    update_path=f'aggregations["{correlation_id}"]',
+                    update_format=StateUpdateFormat.JSON_MERGE_PATCH,
+                    update={correlation_id: None},
+                    update_path="aggregations",
                 )

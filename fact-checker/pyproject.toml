@@ -18,8 +18,8 @@ packages = [{ include = "rustic_ai", from = "src" }]
 
 [tool.poetry.dependencies]
 rusticai-core = { path = "../core", develop = true }
-google-api-python-client = "^2.198.0"
-spacy = "^3.8.14"
+google-api-python-client = "^2.202.0"
+spacy = "^3.8.18"
 spacytextblob = "^5.1.0"
 
 [tool.poetry-monorepo.deps]
@@ -28,7 +28,7 @@ spacytextblob = "^5.1.0"
 optional = true
 
 [tool.poetry.group.dev.dependencies]
-pytest = "^9.1.1"
+pytest = "^9.2.0"
 rusticai-testing = { path = "../testing", develop = true }
 
 [tool.poetry.extras]

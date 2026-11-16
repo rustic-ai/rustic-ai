@@ -2,12 +2,16 @@ import json
 from typing import Any, ClassVar, List, Optional
 from unittest.mock import patch
 
-import httpx
+import httpx2 as httpx
 import openai
 from pydantic import BaseModel, ConfigDict, ValidationError
 import pytest
 
-from rustic_ai.core.guild.agent_ext.depends.dependency_resolver import DependencySpec
+from rustic_ai.core.guild.agent_ext.depends.dependency_resolver import (
+    DependencyResolver,
+    DependencySpec,
+)
+from rustic_ai.core.guild.agent_ext.depends.llm.llm import LLM
 from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     AssistantMessage,
     ChatCompletionError,
@@ -26,6 +30,7 @@ from rustic_ai.core.guild.agent_ext.depends.llm.models import (
 from rustic_ai.core.guild.agent_ext.depends.llm.tools_manager import ToolSpec
 from rustic_ai.core.guild.builders import AgentBuilder
 from rustic_ai.core.guild.dsl import AgentSpec
+from rustic_ai.llm_agent.completion_controllers import TextContinuationController
 from rustic_ai.llm_agent.react import (
     DEFAULT_REACT_SYSTEM_PROMPT,
     CompositeToolset,
@@ -185,6 +190,45 @@ class CountingMathToolset(MathToolset):
     def execute(self, tool_name: str, args: BaseModel) -> str:
         type(self).execution_count += 1
         return super().execute(tool_name, args)
+
+
+class SequenceLLM(LLM):
+    def __init__(self, responses: list[ChatCompletionResponse]):
+        self.responses = responses
+        self.requests: list[ChatCompletionRequest] = []
+
+    def completion(self, prompt: ChatCompletionRequest, model: Optional[str] = None) -> ChatCompletionResponse:
+        self.requests.append(prompt)
+        return self.responses.pop(0)
+
+    async def async_completion(
+        self, prompt: ChatCompletionRequest, model: Optional[str] = None
+    ) -> ChatCompletionResponse:
+        return self.completion(prompt, model)
+
+    @property
+    def model(self) -> str:
+        return "test-model"
+
+    def get_config(self) -> dict:
+        return {"model": self.model}
+
+
+class SequenceLLMResolver(DependencyResolver[LLM]):
+    last_llm: ClassVar[Optional[SequenceLLM]] = None
+
+    def __init__(self, chunks: list[dict]):
+        super().__init__()
+        self.llm = SequenceLLM(
+            [
+                create_mock_response(item["content"], finish_reason=FinishReason(item["finish_reason"]))
+                for item in chunks
+            ]
+        )
+        type(self).last_llm = self.llm
+
+    def resolve(self, org_id: str, guild_id: str, agent_id: str) -> LLM:
+        return self.llm
 
 
 class FixedLookupToolset(ReActToolset):
@@ -518,6 +562,23 @@ class TestReActAgentConfig:
         assert config.model == "gpt-4"
         assert isinstance(config.toolset, CalculatorToolset)
 
+    def test_completion_controller_serializes_and_excludes_provider_parameters(self):
+        config = ReActAgentConfig(
+            model="gpt-4",
+            toolset=CalculatorToolset(),
+            completion_controller=TextContinuationController(max_continuations=2),
+        )
+
+        assert config.model_dump()["completion_controller"]["max_continuations"] == 2
+        assert "completion_controller" not in config.get_llm_params()
+        with pytest.raises(ValidationError, match="cannot be combined with max_retries"):
+            ReActAgentConfig(
+                model="gpt-4",
+                toolset=CalculatorToolset(),
+                completion_controller=TextContinuationController(),
+                max_retries=1,
+            )
+
 
 class TestReActAgent:
     """Tests for ReActAgent."""
@@ -573,6 +634,95 @@ class TestReActAgent:
         assert provider_fields is not None
         assert "react_trace" in provider_fields
         assert len(provider_fields["react_trace"]) == 0  # No tool calls
+
+    def test_final_text_is_continued_before_it_is_emitted(self, generator, build_message_from_payload):
+        agent_spec = (
+            AgentBuilder(ReActAgent)
+            .set_id("react_agent")
+            .set_name("ReAct Agent")
+            .set_description("Test ReAct agent")
+            .set_properties(
+                ReActAgentConfig(
+                    model="test-model",
+                    toolset=CalculatorToolset(),
+                    completion_controller=TextContinuationController(max_continuations=2),
+                )
+            )
+            .build_spec()
+        )
+        agent, results = wrap_agent_for_testing(
+            agent_spec,
+            dependency_map={
+                "llm": DependencySpec(
+                    class_name=f"{__name__}.SequenceLLMResolver",
+                    properties={
+                        "chunks": [
+                            {"content": "First part. ", "finish_reason": "length"},
+                            {"content": "Second part.", "finish_reason": "stop"},
+                        ]
+                    },
+                )
+            },
+        )
+
+        agent._on_message(
+            build_message_from_payload(
+                generator,
+                ChatCompletionRequest(messages=[UserMessage(content="Give a long answer")]),
+            )
+        )
+
+        assert len(results) == 1
+        response = ChatCompletionResponse.model_validate(results[0].payload)
+        assert response.choices[0].message.content == "First part. Second part."
+        assert response.choices[0].finish_reason == FinishReason.stop
+        assert response.usage == CompletionUsage(prompt_tokens=20, completion_tokens=40, total_tokens=60)
+        assert SequenceLLMResolver.last_llm is not None
+        assert SequenceLLMResolver.last_llm.requests[0].tools is not None
+        assert SequenceLLMResolver.last_llm.requests[1].tools is None
+
+    def test_continuation_exhaustion_emits_one_sanitized_error(self, generator, build_message_from_payload):
+        agent_spec = (
+            AgentBuilder(ReActAgent)
+            .set_id("react_agent")
+            .set_name("ReAct Agent")
+            .set_description("Test ReAct agent")
+            .set_properties(
+                ReActAgentConfig(
+                    model="test-model",
+                    toolset=CalculatorToolset(),
+                    completion_controller=TextContinuationController(max_continuations=1),
+                )
+            )
+            .build_spec()
+        )
+        agent, results = wrap_agent_for_testing(
+            agent_spec,
+            dependency_map={
+                "llm": DependencySpec(
+                    class_name=f"{__name__}.SequenceLLMResolver",
+                    properties={
+                        "chunks": [
+                            {"content": "PRIVATE_PARTIAL_ONE", "finish_reason": "length"},
+                            {"content": "PRIVATE_PARTIAL_TWO", "finish_reason": "length"},
+                        ]
+                    },
+                )
+            },
+        )
+
+        agent._on_message(
+            build_message_from_payload(
+                generator,
+                ChatCompletionRequest(messages=[UserMessage(content="Give a long answer")]),
+            )
+        )
+
+        assert len(results) == 1
+        error = ChatCompletionError.model_validate(results[0].payload)
+        assert error.status_code == ResponseCodes.RESPONSE_PROCESSING_ERROR
+        assert error.message == "The model response could not be completed reliably."
+        assert "PRIVATE_PARTIAL" not in error.model_dump_json()
 
     def test_provider_error_is_emitted_as_typed_error(self, generator, build_message_from_payload):
         agent_spec: AgentSpec = (
@@ -633,9 +783,7 @@ class TestReActAgent:
                 ResponseCodes.API_CONNECTION_ERROR,
             ),
             (
-                openai.APITimeoutError(
-                    request=httpx.Request("POST", "https://provider.invalid/chat")
-                ),
+                openai.APITimeoutError(request=httpx.Request("POST", "https://provider.invalid/chat")),
                 ResponseCodes.API_TIMEOUT_ERROR,
             ),
         ],

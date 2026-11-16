@@ -6,6 +6,8 @@ cognitive memory system for episodic, semantic, and procedural memory.
 
 from .agent import MemoryAgent
 from .config import MemoryAgentConfig
+from .initializer import MemoryRequestInitializerAgent
+from .memories import UnikoMemoriesStore
 from .models import (  # Observation; Recall; Answer; Document ingestion; Goal management; Task management; Error
     AnswerRequest,
     AnswerResponse,
@@ -13,6 +15,11 @@ from .models import (  # Observation; Recall; Answer; Document ingestion; Goal m
     BatchSubmitResponse,
     CreateGoalRequest,
     CreateTaskRequest,
+    DeleteMemorySessionRequest,
+    FinalizeMemorySessionRequest,
+    FinalizeMemorySessionResult,
+    ForgetMemoryParticipantRequest,
+    ForgetMemoryRecordRequest,
     GetGoalsRequest,
     GoalContext,
     GoalContextRequest,
@@ -22,11 +29,17 @@ from .models import (  # Observation; Recall; Answer; Document ingestion; Goal m
     IngestDocumentRequest,
     IngestOutcome,
     MemoryAgentError,
+    MemoryDeletionResult,
+    MemoryRecordKind,
+    MemoryScope,
     ObserveResult,
     ObserveTurnRequest,
     RecallItem,
     RecallRequest,
     RecallResponse,
+    RecallUserSessionsRequest,
+    RecordMemoryRequest,
+    RecordMemoryResult,
     TaskStatusResponse,
     TaskView,
     UpdateGoalRequest,
@@ -37,15 +50,28 @@ from .resolver import UnikoResolver
 __all__ = [
     # Main agent and config
     "MemoryAgent",
+    "MemoryRequestInitializerAgent",
     "MemoryAgentConfig",
     "UnikoResolver",
+    "UnikoMemoriesStore",
     # Observation payloads
     "ObserveTurnRequest",
     "ObserveResult",
     # Recall payloads
     "RecallRequest",
+    "RecallUserSessionsRequest",
     "RecallResponse",
     "RecallItem",
+    "MemoryScope",
+    "MemoryRecordKind",
+    "RecordMemoryRequest",
+    "RecordMemoryResult",
+    "FinalizeMemorySessionRequest",
+    "FinalizeMemorySessionResult",
+    "ForgetMemoryRecordRequest",
+    "DeleteMemorySessionRequest",
+    "ForgetMemoryParticipantRequest",
+    "MemoryDeletionResult",
     # Answer payloads
     "AnswerRequest",
     "AnswerResponse",

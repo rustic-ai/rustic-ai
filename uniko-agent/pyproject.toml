@@ -4,12 +4,17 @@ build-backend = "poetry.core.masonry.api"
 
 [project]
 name = "rusticai-uniko-agent"
-version = "0.0.2"
+version = "0.0.6"
 description = "module boilerplate"
 authors = [{name = "Dragonscale Industries Inc.", email = "dev@dragonscale.ai"}]
 license = "Apache-2.0"
 readme = "README.md"
 requires-python = ">=3.13,<3.14"
+dependencies = [
+    "rusticai-core>=1.4.2,<1.5.0",
+    "rusticai-llm-agent>=1.4.3,<1.5.0",
+    "uniko>=0.3.0,<0.4.0",
+]
 urls = { Homepage = "https://www.rustic.ai/", Repository = "https://github.com/dragonscale-ai/rustic-ai", "Rustic AI Core" = "https://pypi.org/project/rusticai-core/" }
 
 
@@ -18,7 +23,8 @@ packages = [{ include = "rustic_ai", from = "src" }]
 
 [tool.poetry.dependencies]
 rusticai-core = { path = "../core", develop = true }
-uniko = ">=0.2.0"
+rusticai-llm-agent = { path = "../llm-agent", develop = true }
+uniko = ">=0.3.0,<0.4.0"
 
 [tool.poetry-monorepo.deps]
 
@@ -27,14 +33,14 @@ uniko = ">=0.2.0"
 optional = true
 
 [tool.poetry.group.dev.dependencies]
-pytest = "^9.0.3"
-black = { version = "^26.3.1", extras = ["jupyter"] }
-flake8 = "^7.1.2"
-tox = "^4.24.1"
-isort = "^6.0.0"
-mypy = "^1.15.0"
+pytest = "^9.2.0"
+black = { version = "^26.10.1", extras = ["jupyter"] }
+flake8 = "^7.5.0"
+tox = "^4.67.13"
+isort = "^9.0.2"
+mypy = "^2.4.1"
 flaky = "^3.8.1"
-pytest-asyncio = "^1.4.0"
+pytest-asyncio = "^1.5.0"
 rusticai-testing = {path = "../testing", develop = true}
 
 [tool.poetry.extras]

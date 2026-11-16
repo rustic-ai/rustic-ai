@@ -1,11 +1,18 @@
 from enum import Enum
 from typing import Optional, Union
 
-from pydantic import ConfigDict, Field
+from pydantic import (
+    ConfigDict,
+    Field,
+    field_serializer,
+    field_validator,
+    model_validator,
+)
 from typing_extensions import Annotated
 
 from rustic_ai.core.guild.dsl import BaseAgentProps
-from rustic_ai.llm_agent.llm_plugin_mixin import LLMPluginMixin
+from rustic_ai.llm_agent.completion_controllers import CompletionController
+from rustic_ai.llm_agent.llm_plugin_mixin import LLMPluginMixin, build_plugins
 from rustic_ai.llm_agent.plugins.prompt_generators import PromptGenerator
 
 
@@ -96,6 +103,9 @@ class LLMAgentConfig(BaseAgentProps, LLMPluginMixin):
     This is useful if the LLM response is only used for tool calls and not for direct responses.
     """
 
+    completion_controller: Optional[CompletionController] = None
+    """Optional bounded controller that produces one logical completion before postprocessing."""
+
     vertex_location: Optional[str] = None
     """
     Place where vertex model is deployed (us-central1, asia-southeast1, etc.). If None, attempts to use the VERTEXAI_LOCATION environment variable.
@@ -115,7 +125,26 @@ class LLMAgentConfig(BaseAgentProps, LLMPluginMixin):
         "default_system_prompt",
         "system_prompt_generator",
         "send_response",
+        "completion_controller",
     }
+
+    @field_validator("completion_controller", mode="before")
+    @classmethod
+    def _coerce_completion_controller(cls, value):
+        controllers = build_plugins(value, CompletionController)
+        if len(controllers) > 1:
+            raise ValueError("completion_controller accepts exactly one controller")
+        return controllers[0] if controllers else None
+
+    @field_serializer("completion_controller", mode="plain")
+    def _serialize_completion_controller(self, controller):
+        return controller.model_dump(exclude_none=True) if controller else None
+
+    @model_validator(mode="after")
+    def _validate_completion_controller_retry_policy(self):
+        if self.completion_controller and self.max_retries > 0:
+            raise ValueError("completion_controller cannot be combined with max_retries")
+        return self
 
     def get_llm_params(self) -> dict:
         """

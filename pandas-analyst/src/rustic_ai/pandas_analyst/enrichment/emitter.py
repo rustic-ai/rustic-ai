@@ -6,7 +6,9 @@ message containing dataset metadata. The event is routed to the enrichment
 LLMAgent via guild routing rules.
 """
 
+from hashlib import sha256
 import json
+from pathlib import PurePosixPath
 from typing import Optional, Union
 
 from pydantic import BaseModel, Field
@@ -18,7 +20,7 @@ from rustic_ai.llm_agent.plugins.tool_call_wrapper import (
     ToolSkipResult,
 )
 
-from .models import DatasetLoadedEvent
+from ..memory import DatasetLoadedEvent, DatasetProfile, analysis_memory_identity
 
 
 class DatasetLoadedEmitter(ToolCallWrapper):
@@ -68,20 +70,21 @@ class DatasetLoadedEmitter(ToolCallWrapper):
             return ToolCallResult(output=tool_output)
 
         try:
-            event = self._build_event(agent, tool_input, tool_output)
+            event = self._build_event(agent, ctx, tool_input, tool_output)
             if event is None:
                 return ToolCallResult(output=tool_output)
 
             agent.logger.debug(f"Emitting DatasetLoadedEvent for dataset: {event.dataset_name}")
             return ToolCallResult(output=tool_output, messages=[event])
 
-        except Exception as e:
-            agent.logger.warning(f"Failed to emit DatasetLoadedEvent: {e}")
+        except Exception:
+            agent.logger.warning("Failed to emit the bounded dataset profile")
             return ToolCallResult(output=tool_output)
 
     def _build_event(
         self,
         agent: Agent,
+        ctx: ProcessContext,
         tool_input: BaseModel,
         tool_output: str,
     ) -> Optional[DatasetLoadedEvent]:
@@ -108,22 +111,46 @@ class DatasetLoadedEmitter(ToolCallWrapper):
             return None
 
         try:
-            # Get dataset info from analyzer
+            session_id, _, request_id = analysis_memory_identity(agent, ctx)
             summary = analyzer.get_dataset_summary(dataset_name)
             schema = analyzer.get_schema(dataset_name)
             preview = analyzer.preview_dataset(dataset_name, num_rows=self.sample_rows)
+            dataframe = analyzer.datasets[dataset_name]
+
+            raw_filename = getattr(tool_input, "filename", None)
+            if not isinstance(raw_filename, str):
+                return None
+            filename = toolset._safe_relative_path(raw_filename)
+            digest = sha256()
+            with toolset.filesystem.open(filename, "rb") as source:
+                for chunk in iter(lambda: source.read(1024 * 1024), b""):
+                    digest.update(chunk)
+            fingerprint = digest.hexdigest()
 
             # Convert list of lists to list of dicts for sample_data
-            sample_data = [dict(zip(preview.columns, row)) for row in preview.data[: self.sample_rows]]
+            sample_data = json.loads(
+                json.dumps(
+                    [dict(zip(preview.columns, row)) for row in preview.data[: self.sample_rows]],
+                    default=str,
+                )
+            )
+            bounded_columns = list(schema.dataschema)[:200]
+            profile = DatasetProfile(
+                row_count=summary.num_rows,
+                column_count=summary.num_columns,
+                column_schema={column: schema.dataschema[column] for column in bounded_columns},
+                null_counts={column: int(dataframe[column].isna().sum()) for column in bounded_columns},
+                duplicate_rows=int(dataframe.duplicated().sum()),
+            )
 
             return DatasetLoadedEvent(
                 dataset_name=dataset_name,
-                row_count=summary.num_rows,
-                column_count=summary.num_columns,
-                columns=summary.column_names,
-                column_schema=schema.dataschema,
+                source_name=PurePosixPath(filename).name,
+                dataset_fingerprint=fingerprint,
+                profile=profile,
                 sample_data=sample_data,
-                load_summary=tool_output,
+                record_id=f"{request_id}:dataset:{fingerprint}",
+                session_id=session_id,
             )
 
         except Exception as e:

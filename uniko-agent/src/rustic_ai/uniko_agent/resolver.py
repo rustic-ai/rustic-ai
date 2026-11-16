@@ -2,37 +2,36 @@
 
 from typing import Any, Dict, Optional
 
+from fsspec.core import url_to_fs
+from fsspec.implementations.local import LocalFileSystem
 import uniko
 
 from rustic_ai.core.guild.agent_ext.depends.dependency_resolver import (
     DependencyResolver,
 )
+from rustic_ai.core.guild.agent_ext.depends.filesystem import FileSystem
+from rustic_ai.core.guild.agent_ext.depends.filesystem.utils import get_uri
 
 
 class UnikoResolver(DependencyResolver[uniko.Agent]):
-    """Guild-scoped resolver for uniko agents.
+    """Agent-scoped resolver for private Uniko storage.
 
-    Creates one uniko.Uniko instance per guild and returns agent handles
-    scoped to the guild_id. This enables memory sharing across all agents
-    in a guild while maintaining isolation between different guilds.
+    Persistent storage is resolved through the injected agent filesystem.
+    It never depends on the process working directory.
 
     Attributes:
-        storage_path: Base path for persistent storage. If None, uses in-memory storage.
-        org_level: If True, append org_id to storage_path.
-        guild_level: If True, append guild_id to storage_path.
+        storage_path: Location within the agent filesystem. None selects in-memory storage.
         llm_spec: LLM configuration for answer generation. Format:
                  {"alias": "openai", "model_id": "gpt-4o-mini", "key_env": "OPENAI_API_KEY"}
         streaming: Enable streaming mode for async observations
         scope_to_agent: Scope visibility to agent-level (default: False for guild-wide sharing)
     """
 
-    memoize_resolution: bool = True  # Cache per guild
+    memoize_resolution: bool = True
 
     def __init__(
         self,
         storage_path: Optional[str] = None,
-        org_level: bool = False,
-        guild_level: bool = False,
         llm_spec: Optional[Dict[str, Any]] = None,
         streaming: bool = False,
         scope_to_agent: bool = False,
@@ -40,35 +39,30 @@ class UnikoResolver(DependencyResolver[uniko.Agent]):
         """Initialize the UnikoResolver.
 
         Args:
-            storage_path: Optional base path for persistent storage. None = in-memory storage.
-            org_level: If True, append org_id to storage_path.
-            guild_level: If True, append guild_id to storage_path.
+            storage_path: Location within the agent filesystem. None = in-memory storage.
             llm_spec: Optional LLM configuration dict for answer generation.
             streaming: Enable streaming mode for background processing.
             scope_to_agent: If True, scope memory to individual agents (not recommended).
         """
         super().__init__()
         self.storage_path = storage_path
-        self.org_level = org_level
-        self.guild_level = guild_level
         self.llm_spec = llm_spec
         self.streaming = streaming
         self.scope_to_agent = scope_to_agent
         self._uniko_instances: Dict[str, uniko.Uniko] = {}
 
     def resolve(self, org_id: str, guild_id: str, agent_id: str) -> uniko.Agent:
-        """Resolve a uniko.Agent handle scoped to the guild.
+        """Resolve a Uniko handle backed by this agent's private store.
 
         Args:
             org_id: Organization ID
             guild_id: Guild ID (becomes the uniko agent ID for shared memory)
-            agent_id: Rustic AI agent ID (not used unless scope_to_agent=True)
+            agent_id: Rustic AI agent ID, determining private filesystem scope.
 
         Returns:
-            uniko.Agent handle for the guild's shared memory context
+            uniko.Agent handle in the agent's private store
         """
-        # Cache key: org:guild for guild-scoped instances
-        cache_key = f"{org_id}:{guild_id}"
+        cache_key = f"{org_id}:{guild_id}:{agent_id}"
 
         # Lazy initialization of uniko instance
         if cache_key not in self._uniko_instances:
@@ -76,11 +70,10 @@ class UnikoResolver(DependencyResolver[uniko.Agent]):
 
             # Configure storage
             if self.storage_path:
-                path = self.storage_path
-                if self.org_level:
-                    path = f"{path}/{org_id}"
-                if self.guild_level:
-                    path = f"{path}/{guild_id}"
+                agent_fs = self.inject(FileSystem, "filesystem", org_id, guild_id, agent_id)
+                backing_fs, path = url_to_fs(get_uri(agent_fs, "/" + self.storage_path.lstrip("/")))
+                if not isinstance(backing_fs, LocalFileSystem):
+                    raise ValueError("Uniko persistent storage requires a local agent filesystem")
                 builder = builder.path(path)
             else:
                 builder = builder.in_memory()

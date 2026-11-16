@@ -1,11 +1,102 @@
 """Payload models for MemoryAgent requests and responses."""
 
 from datetime import datetime
+from enum import StrEnum
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from rustic_ai.core.agents.commons.media import MediaLink
+
+
+class MemoryRecordKind(StrEnum):
+    """Application-level provenance assigned before content enters memory."""
+
+    USER_ASSERTION = "user_assertion"
+    EXTERNAL_EVIDENCE = "external_evidence"
+    DETERMINISTIC_OBSERVATION = "deterministic_observation"
+    MODEL_INTERPRETATION = "model_interpretation"
+    EXECUTED_RESULT = "executed_result"
+    ASSISTANT_RESPONSE = "assistant_response"
+    CONVERSATION_TURN = "conversation_turn"
+
+
+class MemoryScope(BaseModel):
+    """Explicit dimensional scope for a memory operation."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    sessions: Optional[List[str]] = Field(
+        ...,
+        min_length=1,
+        max_length=32,
+        description="Explicit sessions, or null to search this agent's private store without a session filter.",
+    )
+    participants: List[str] = Field(default_factory=list, max_length=32)
+
+
+class RecordMemoryRequest(BaseModel):
+    """Write one bounded, idempotently identified memory record."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    record_id: str = Field(min_length=1, max_length=256, pattern=r"^[A-Za-z0-9][A-Za-z0-9._:-]*$")
+    session_id: str = Field(min_length=1, max_length=256, pattern=r"^[A-Za-z0-9][A-Za-z0-9._:-]*$")
+    sender_id: str = Field(min_length=1, max_length=256)
+    kind: MemoryRecordKind
+    content: str = Field(min_length=1, max_length=16000)
+    content_type: str = Field(default="text/plain", min_length=1, max_length=128)
+
+
+class RecordMemoryResult(BaseModel):
+    """Acknowledgement for an idempotent memory record write."""
+
+    record_id: str
+    session_id: str
+    kind: MemoryRecordKind
+    stored: bool = True
+
+
+class FinalizeMemorySessionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    session_id: str = Field(min_length=1, max_length=256, pattern=r"^[A-Za-z0-9][A-Za-z0-9._:-]*$")
+
+
+class FinalizeMemorySessionResult(BaseModel):
+    session_id: str
+    rebuilt: bool
+    transcript_chunks: int = 0
+    observation_chunks: int = 0
+
+
+class ForgetMemoryRecordRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    session_id: str = Field(min_length=1, max_length=256, pattern=r"^[A-Za-z0-9][A-Za-z0-9._:-]*$")
+    record_id: str = Field(min_length=1, max_length=256, pattern=r"^[A-Za-z0-9][A-Za-z0-9._:-]*$")
+    kind: MemoryRecordKind
+
+
+class DeleteMemorySessionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    session_id: str = Field(min_length=1, max_length=256, pattern=r"^[A-Za-z0-9][A-Za-z0-9._:-]*$")
+
+
+class ForgetMemoryParticipantRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    participant_id: str = Field(min_length=1, max_length=256)
+
+
+class MemoryDeletionResult(BaseModel):
+    nodes_redacted: int = 0
+    nodes_deleted: int = 0
+    edges_deleted: int = 0
+    facts_invalidated: int = 0
+    root_existed: bool = False
+
 
 # ========== Observation Payloads ==========
 
@@ -66,23 +157,28 @@ class ObserveResult(BaseModel):
 
 
 class RecallRequest(BaseModel):
-    """Request to recall knowledge from memory.
+    """Bounded recall request with an explicit session scope."""
 
-    Attributes:
-        query: Query string for semantic search
-        max_tokens: Maximum tokens in context bundle (overrides config)
-        phase1_only: Only return phase 1 results (facts/procedures)
-        phase2_only: Only return phase 2 results (episodes/observations)
-        scope: Optional scope specification (sessions, participants, time range)
-    """
+    model_config = ConfigDict(extra="forbid")
 
-    query: str = Field(description="Query string for semantic search")
-    max_tokens: Optional[int] = Field(default=None, description="Maximum tokens in context bundle (overrides config)")
-    phase1_only: bool = Field(default=False, description="Only return phase 1 results (facts/procedures)")
-    phase2_only: bool = Field(default=False, description="Only return phase 2 results (episodes/observations)")
-    scope: Optional[Dict[str, Any]] = Field(
-        default=None, description="Scope specification (sessions, participants, since, until)"
-    )
+    query: str = Field(min_length=1, max_length=4000, description="Query string for semantic search")
+    scope: MemoryScope
+    allowed_record_kinds: List[MemoryRecordKind] = Field(min_length=1, max_length=len(MemoryRecordKind))
+    item_limit: int = Field(default=10, ge=1, le=50)
+    max_characters: int = Field(default=6000, ge=1, le=32000)
+
+
+class RecallUserSessionsRequest(BaseModel):
+    """Recall at most 32 finalized request sessions belonging to one user."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    query: str = Field(min_length=1, max_length=4000)
+    user_id: str = Field(pattern=r"^upa-.+", max_length=256)
+    current_session_id: str = Field(pattern=r"^analysis-[0-9a-f]{64}$")
+    allowed_record_kinds: List[MemoryRecordKind] = Field(min_length=1, max_length=len(MemoryRecordKind))
+    item_limit: int = Field(default=10, ge=1, le=50)
+    max_characters: int = Field(default=6000, ge=1, le=32000)
 
 
 class RecallItem(BaseModel):
@@ -98,9 +194,11 @@ class RecallItem(BaseModel):
 
     node_id: int
     kind: str
+    record_kind: MemoryRecordKind
     score: float
     content: str
     sources: List[Dict[str, Any]]
+    source_ids: List[str] = Field(default_factory=list)
 
 
 class RecallResponse(BaseModel):
@@ -119,6 +217,7 @@ class RecallResponse(BaseModel):
     phase1_only: bool
     phase2_only: bool
     coverage: float
+    truncated: bool = False
 
 
 # ========== Answer Payloads ==========
@@ -166,23 +265,13 @@ class AnswerResponse(BaseModel):
 
 
 class IngestDocumentRequest(BaseModel):
-    """Request to ingest a document into memory.
+    """Ingest a document already stored in the injected guild filesystem."""
 
-    Attributes:
-        session_id: Session ID (defaults to agent's default_session_id)
-        source_spec: IngestSource specification (path, url, or bytes)
-        media_link: Optional MediaLink for files stored in guild filesystem
-        metadata: Optional metadata for the document
-    """
+    model_config = ConfigDict(extra="forbid")
 
-    session_id: Optional[str] = Field(default=None, description="Session ID (defaults to agent's default_session_id)")
-    source_spec: Optional[Dict[str, Any]] = Field(
-        default=None, description="IngestSource spec (path, url, or bytes with mime_type)"
-    )
-    media_link: Optional[MediaLink] = Field(
-        default=None, description="MediaLink for files stored in guild filesystem (on_filesystem=True)"
-    )
-    metadata: Optional[Dict[str, Any]] = Field(default=None, description="Optional metadata for the document")
+    record_id: str = Field(min_length=1, max_length=256, pattern=r"^[A-Za-z0-9][A-Za-z0-9._:-]*$")
+    session_id: str = Field(min_length=1, max_length=256, pattern=r"^[A-Za-z0-9][A-Za-z0-9._:-]*$")
+    media_link: MediaLink = Field(description="Guild-filesystem MediaLink (on_filesystem=True)")
 
 
 class IngestOutcome(BaseModel):
@@ -202,7 +291,7 @@ class IngestOutcome(BaseModel):
     page_count: int = 0
     extracted_entities: List[int] = []
     success: bool = True
-    error_message: Optional[str] = None
+    record_id: Optional[str] = None
 
 
 class BatchSubmitRequest(BaseModel):
@@ -466,3 +555,10 @@ class MemoryAgentError(BaseModel):
     error: str
     message: str
     details: Optional[Dict[str, Any]] = None
+    model_config = ConfigDict(extra="forbid")
+
+    model_config = ConfigDict(extra="forbid")
+
+    model_config = ConfigDict(extra="forbid")
+
+    model_config = ConfigDict(extra="forbid")

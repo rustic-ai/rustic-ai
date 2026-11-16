@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 import json
 import logging
 import time
-from typing import List, Literal, Optional, Union
+from typing import Any, Generic, List, Literal, Optional, TypeVar, Union
 import uuid
 
 import openai
@@ -14,6 +14,7 @@ from pydantic import (
     create_model,
     field_serializer,
     field_validator,
+    model_validator,
 )
 
 from rustic_ai.core.guild.agent import Agent, ProcessContext, processor
@@ -38,6 +39,10 @@ from rustic_ai.core.guild.agent_ext.depends.llm.models import (
 from rustic_ai.core.guild.agent_ext.depends.llm.tools_manager import ToolSpec
 from rustic_ai.core.guild.dsl import BaseAgentProps
 from rustic_ai.core.utils.basic_class_utils import get_class_from_name
+from rustic_ai.llm_agent.completion_controllers import (
+    CompletionController,
+    CompletionControllerError,
+)
 from rustic_ai.llm_agent.llm_agent_conf import Models
 from rustic_ai.llm_agent.llm_agent_helper import LLMAgentHelper
 from rustic_ai.llm_agent.llm_plugin_mixin import LLMPluginMixin, build_plugins
@@ -240,6 +245,27 @@ class ReActAgentConfig(BaseAgentProps, LLMPluginMixin):
     def _coerce_tool_wrappers(cls, v):
         return build_plugins(v, ToolCallWrapper)
 
+    completion_controller: Optional[CompletionController] = None
+    """Optional bounded controller for a no-tool final response."""
+
+    @field_validator("completion_controller", mode="before")
+    @classmethod
+    def _coerce_completion_controller(cls, value):
+        controllers = build_plugins(value, CompletionController)
+        if len(controllers) > 1:
+            raise ValueError("completion_controller accepts exactly one controller")
+        return controllers[0] if controllers else None
+
+    @field_serializer("completion_controller", mode="plain")
+    def _serialize_completion_controller(self, controller):
+        return controller.model_dump(exclude_none=True) if controller else None
+
+    @model_validator(mode="after")
+    def _validate_completion_controller_retry_policy(self):
+        if self.completion_controller and self.max_retries > 0:
+            raise ValueError("completion_controller cannot be combined with max_retries")
+        return self
+
     @field_validator("toolset", mode="before")
     @classmethod
     def _load_toolset(cls, v):
@@ -277,6 +303,7 @@ class ReActAgentConfig(BaseAgentProps, LLMPluginMixin):
         "iteration_wrappers",
         "iteration_postprocessors",
         "tool_wrappers",
+        "completion_controller",
         "max_iterations",
         "toolset",
         "system_prompt",
@@ -299,7 +326,10 @@ class ReActAgentConfig(BaseAgentProps, LLMPluginMixin):
         return self.model_dump(exclude={*self._non_llm_fields})
 
 
-class ReActAgent(Agent[ReActAgentConfig]):
+ReActAgentConfigT = TypeVar("ReActAgentConfigT", bound=ReActAgentConfig)
+
+
+class ReActAgent(Agent[ReActAgentConfigT], Generic[ReActAgentConfigT]):
     """
     An agent that implements the ReAct (Reasoning and Acting) pattern.
 
@@ -335,6 +365,10 @@ class ReActAgent(Agent[ReActAgentConfig]):
             ctx: The process context containing the ChatCompletionRequest.
             llm: The LLM dependency for making completion calls.
         """
+        self._handle_chat_completion_request(ctx, llm)
+
+    def _handle_chat_completion_request(self, ctx: ProcessContext[ChatCompletionRequest], llm: LLM) -> None:
+        """Execute the shared ReAct request lifecycle for specialized subclasses."""
         request = ctx.payload
 
         try:
@@ -347,6 +381,16 @@ class ReActAgent(Agent[ReActAgentConfig]):
             # Send the final ChatCompletionResponse
             ctx.send(result)
 
+        except CompletionControllerError as e:
+            logger.warning("Completion controller rejected ReAct provider output: %s", e)
+            ctx.send_error(
+                ChatCompletionError(
+                    status_code=ResponseCodes.RESPONSE_PROCESSING_ERROR,
+                    message="The model response could not be completed reliably.",
+                    model=str(self.config.model) if self.config.model else self.name,
+                    request_messages=list(request.messages),
+                )
+            )
         except openai.APIConnectionError as e:
             logger.error("Provider connection error in ReAct loop: %s", e, exc_info=True)
             error = ChatCompletionError(
@@ -486,6 +530,22 @@ class ReActAgent(Agent[ReActAgentConfig]):
             iteration_request = self._build_react_iteration_request(state)
             iteration_request = self._preprocess_iteration_if_needed(ctx, llm, iteration_request, iteration)
             response = self._call_llm_direct(llm, iteration_request)
+            if self.config.completion_controller and (
+                len(response.choices) != 1 or not response.choices[0].message.tool_calls
+            ):
+                controller_request = iteration_request.model_copy(
+                    update={"tools": None, "tool_choice": None},
+                    deep=True,
+                )
+                controller_request = self.config.completion_controller.prepare_request(controller_request)
+                response = self.config.completion_controller.complete(
+                    agent=self,
+                    ctx=ctx,
+                    request=controller_request,
+                    response=response,
+                    llm=llm,
+                    model=str(self.config.model) if self.config.model else None,
+                )
             if response.usage:
                 state.total_usage = CompletionUsage(
                     prompt_tokens=state.total_usage.prompt_tokens + response.usage.prompt_tokens,
@@ -933,7 +993,7 @@ class ReActAgent(Agent[ReActAgentConfig]):
     @staticmethod
     def _skill_selector_spec(skills: List[ReActSkillSpec]) -> ToolSpec:
         skill_names = tuple(skill.name for skill in skills)
-        skill_type = Literal.__getitem__(skill_names)
+        skill_type: Any = Literal.__getitem__(skill_names)
         args_model = create_model(
             "AvailableToolSkillArgs",
             __base__=ActivateToolSkillArgs,

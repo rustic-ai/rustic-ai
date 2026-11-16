@@ -1,6 +1,7 @@
 from abc import ABC
 import time
 from typing import List
+from uuid import uuid4
 
 import pytest
 
@@ -302,7 +303,7 @@ class BaseTestBackendABC(ABC):
         assert later_high.to_int() < boundary.to_int()
         assert later_urgent.to_int() < boundary.to_int()
 
-        namespace = f"guild_{request.node.name}"
+        namespace = f"guild_{request.node.name}_{uuid4().hex}"
         topic = f"{namespace}:default_topic"
         sender = AgentTag(id="senderId", name="sender")
 

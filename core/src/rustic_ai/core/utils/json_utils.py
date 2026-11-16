@@ -133,20 +133,22 @@ class JsonUtils:
         Returns:
             List of path segments (strings for keys, integers for indices).
         """
-        segments = []
+        segments: list[str | int] = []
 
         def decompose(node):
             if isinstance(node, Fields):
                 segments.extend(node.fields)
             elif isinstance(node, Index):
-                segments.append(node.index)
+                if len(node.indices) != 1:
+                    raise ValueError("Cannot create missing structure for a multi-index JSONPath")
+                segments.append(node.indices[0])
             elif hasattr(node, "left") and hasattr(node, "right"):
                 decompose(node.left)
                 decompose(node.right)
-            elif hasattr(node, "child"):
-                decompose(node.child)
             elif isinstance(node, Root):
                 pass  # skip the root node
+            elif hasattr(node, "child") and not callable(node.child):
+                decompose(node.child)
             else:
                 raise ValueError(f"Unsupported JSONPath node: {type(node).__name__}")
 

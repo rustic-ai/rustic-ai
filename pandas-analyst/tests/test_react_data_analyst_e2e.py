@@ -14,10 +14,14 @@ from unittest.mock import patch
 import uuid
 
 from flaky import flaky
+from fsspec import filesystem
+from fsspec.implementations.dirfs import DirFileSystem
 from pydantic import BaseModel
 import pytest
 
 from rustic_ai.core.agents.testutils.probe_agent import ProbeAgent
+from rustic_ai.core.guild.agent_ext.depends import DependencyResolver
+from rustic_ai.core.guild.agent_ext.depends.filesystem import FileSystemResolver
 from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     AssistantMessage,
     ChatCompletionMessageToolCall,
@@ -36,9 +40,22 @@ from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 from rustic_ai.core.utils.gemstone_id import GemstoneGenerator
 from rustic_ai.core.utils.priority import Priority
 from rustic_ai.litellm.agent_ext.llm import LiteLLMResolver
-from rustic_ai.llm_agent.react import ReActAgent, ReActAgentConfig
+from rustic_ai.pandas_analyst import DataAnalystAgent, DataAnalystAgentConfig
 from rustic_ai.pandas_analyst.file_url_preprocessor import FileUrlExtractorPreprocessor
 from rustic_ai.pandas_analyst.react_toolset import DataAnalystReActToolset
+
+
+class FixedFilesystemResolver(DependencyResolver[DirFileSystem]):
+    """Resolve a test directory without reconstructing deployment paths."""
+
+    def __init__(self, path: str):
+        super().__init__()
+        self.path = path
+
+    def resolve(self, org_id: str, guild_id: str, agent_id: str) -> DirFileSystem:
+        del org_id, guild_id, agent_id
+        return DirFileSystem(path=self.path, fs=filesystem("file"))
+
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -198,11 +215,17 @@ class TestReactDataAnalystToolset:
         assert "preview_dataset" in tool_names
         assert "describe_dataset" in tool_names
 
-    def test_toolset_is_self_contained(self, temp_data_dir):
-        """Test that toolset creates its own dependencies lazily."""
+    def test_toolset_uses_injected_filesystem(self, temp_data_dir):
+        """Test that the toolset loads only through its injected filesystem."""
+        from fsspec import filesystem
+        from fsspec.implementations.dirfs import DirFileSystem
+
         from rustic_ai.pandas_analyst.react_toolset import LoadFileRequest
 
-        toolset = DataAnalystReActToolset(filesystem_base_path=temp_data_dir)
+        toolset = DataAnalystReActToolset()
+        with pytest.raises(RuntimeError, match="guild filesystem"):
+            _ = toolset.filesystem
+        toolset.bind_filesystem(DirFileSystem(path=temp_data_dir, fs=filesystem("file")))
 
         # Verify toolset lazily creates analyzer and filesystem
         assert toolset.analyzer is not None
@@ -226,18 +249,15 @@ class TestReactDataAnalystWithMockedLLM:
         # Create agent spec with self-contained toolset
         # Note: FileUrlExtractorPreprocessor is required by DataAnalystReActToolset
         agent_spec: AgentSpec = (
-            AgentBuilder(ReActAgent)
+            AgentBuilder(DataAnalystAgent)
             .set_id("react_data_analyst")
             .set_name("React Data Analyst")
             .set_description("A ReAct agent for data analysis")
             .set_properties(
-                ReActAgentConfig(
+                DataAnalystAgentConfig(
                     model="test-model",
                     max_iterations=10,
-                    toolset=DataAnalystReActToolset(
-                        filesystem_base_path=temp_data_dir,
-                        use_guild_filesystem=False,
-                    ),
+                    toolset=DataAnalystReActToolset(),
                     request_preprocessors=[FileUrlExtractorPreprocessor()],
                 )
             )
@@ -248,6 +268,10 @@ class TestReactDataAnalystWithMockedLLM:
             "llm": DependencySpec(
                 class_name=LiteLLMResolver.get_qualified_class_name(),
                 properties={"model": "test-model"},
+            ),
+            "filesystem": DependencySpec(
+                class_name=get_qualified_class_name(FixedFilesystemResolver),
+                properties={"path": temp_data_dir},
             ),
         }
 
@@ -330,18 +354,15 @@ class TestReactDataAnalystWithMockedLLM:
         from rustic_ai.testing.helpers import wrap_agent_for_testing
 
         agent_spec: AgentSpec = (
-            AgentBuilder(ReActAgent)
+            AgentBuilder(DataAnalystAgent)
             .set_id("react_data_analyst")
             .set_name("React Data Analyst")
             .set_description("A ReAct agent for data analysis")
             .set_properties(
-                ReActAgentConfig(
+                DataAnalystAgentConfig(
                     model="test-model",
                     max_iterations=5,
-                    toolset=DataAnalystReActToolset(
-                        filesystem_base_path=temp_data_dir,
-                        use_guild_filesystem=False,
-                    ),
+                    toolset=DataAnalystReActToolset(),
                     request_preprocessors=[FileUrlExtractorPreprocessor()],
                 )
             )
@@ -352,6 +373,10 @@ class TestReactDataAnalystWithMockedLLM:
             "llm": DependencySpec(
                 class_name=LiteLLMResolver.get_qualified_class_name(),
                 properties={"model": "test-model"},
+            ),
+            "filesystem": DependencySpec(
+                class_name=get_qualified_class_name(FixedFilesystemResolver),
+                properties={"path": temp_data_dir},
             ),
         }
 
@@ -446,23 +471,24 @@ class TestReactDataAnalystGuildIntegration:
                 class_name=LiteLLMResolver.get_qualified_class_name(),
                 properties={"model": "gpt-4o-mini"},
             ),
+            "filesystem": DependencySpec(
+                class_name=FileSystemResolver.get_qualified_class_name(),
+                properties={"path_base": temp_data_dir, "protocol": "file", "storage_options": {}},
+            ),
         }
 
         # Build the agent spec with self-contained toolset
         # Note: FileUrlExtractorPreprocessor is required by DataAnalystReActToolset
         react_agent_spec: AgentSpec = (
-            AgentBuilder(ReActAgent)
+            AgentBuilder(DataAnalystAgent)
             .set_id("react_data_analyst")
             .set_name("React Data Analyst Agent")
             .set_description("A ReAct agent that analyzes data using pandas")
             .set_properties(
-                ReActAgentConfig(
+                DataAnalystAgentConfig(
                     model="gpt-4o-mini",
                     max_iterations=10,
-                    toolset=DataAnalystReActToolset(
-                        filesystem_base_path=guild_global_dir,
-                        use_guild_filesystem=False,
-                    ),
+                    toolset=DataAnalystReActToolset(),
                     request_preprocessors=[FileUrlExtractorPreprocessor()],
                 )
             )
@@ -542,21 +568,22 @@ class TestReactDataAnalystGuildIntegration:
                 class_name=LiteLLMResolver.get_qualified_class_name(),
                 properties={"model": "gpt-4o-mini"},
             ),
+            "filesystem": DependencySpec(
+                class_name=FileSystemResolver.get_qualified_class_name(),
+                properties={"path_base": temp_data_dir, "protocol": "file", "storage_options": {}},
+            ),
         }
 
         react_agent_spec: AgentSpec = (
-            AgentBuilder(ReActAgent)
+            AgentBuilder(DataAnalystAgent)
             .set_id("react_data_analyst")
             .set_name("React Data Analyst Agent")
             .set_description("A ReAct agent that analyzes data using pandas")
             .set_properties(
-                ReActAgentConfig(
+                DataAnalystAgentConfig(
                     model="gpt-4o-mini",
                     max_iterations=10,
-                    toolset=DataAnalystReActToolset(
-                        filesystem_base_path=guild_global_dir,
-                        use_guild_filesystem=False,
-                    ),
+                    toolset=DataAnalystReActToolset(),
                     request_preprocessors=[FileUrlExtractorPreprocessor()],
                 )
             )
@@ -613,18 +640,15 @@ class TestToolCallVerification:
         from rustic_ai.testing.helpers import wrap_agent_for_testing
 
         agent_spec: AgentSpec = (
-            AgentBuilder(ReActAgent)
+            AgentBuilder(DataAnalystAgent)
             .set_id("react_data_analyst")
             .set_name("React Data Analyst")
             .set_description("A ReAct agent for data analysis")
             .set_properties(
-                ReActAgentConfig(
+                DataAnalystAgentConfig(
                     model="test-model",
                     max_iterations=5,
-                    toolset=DataAnalystReActToolset(
-                        filesystem_base_path=temp_data_dir,
-                        use_guild_filesystem=False,
-                    ),
+                    toolset=DataAnalystReActToolset(),
                     request_preprocessors=[FileUrlExtractorPreprocessor()],
                 )
             )
@@ -635,6 +659,10 @@ class TestToolCallVerification:
             "llm": DependencySpec(
                 class_name=LiteLLMResolver.get_qualified_class_name(),
                 properties={"model": "test-model"},
+            ),
+            "filesystem": DependencySpec(
+                class_name=get_qualified_class_name(FixedFilesystemResolver),
+                properties={"path": temp_data_dir},
             ),
         }
 

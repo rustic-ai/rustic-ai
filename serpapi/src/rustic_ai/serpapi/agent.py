@@ -1,3 +1,4 @@
+from collections.abc import Mapping
 from enum import Enum
 import os
 from typing import Any, Dict, List, Optional
@@ -5,6 +6,12 @@ from urllib.parse import urlparse
 
 from pydantic import BaseModel, Field
 import serpapi
+from serpapi.exceptions import (
+    HTTPConnectionError,
+    HTTPError,
+    SerpApiError,
+    TimeoutError,
+)
 import shortuuid
 
 from rustic_ai.core.agents.commons.media import MediaLink
@@ -118,23 +125,47 @@ class SERPAgent(Agent):
         search_params = SearchEngines[search_query.engine].get_query(search_query.query)
 
         # Execute asynchronous search and add it to the queue
-        results = self.client.search(
-            params=search_params,
-            engine=search_query.engine,
-            num=search_query.num,
-            start=search_query.start,
-        )
+        try:
+            results = self.client.search(
+                params=search_params,
+                engine=search_query.engine,
+                num=search_query.num,
+                start=search_query.start,
+            )
+        except TimeoutError:
+            self._send_search_error(ctx, "search_timeout")
+            return
+        except HTTPConnectionError:
+            self._send_search_error(ctx, "search_unavailable")
+            return
+        except (HTTPError, SerpApiError):
+            self._send_search_error(ctx, "search_provider_error")
+            return
 
-        metadata = results["search_metadata"]
+        if not isinstance(results, Mapping):
+            self._send_search_error(ctx, "invalid_provider_response")
+            return
+
+        provider_results = dict(results)
+        metadata = provider_results.get("search_metadata")
+        if not isinstance(metadata, Mapping) or not isinstance(metadata.get("status"), str):
+            self._send_search_error(ctx, "invalid_provider_response")
+            return
 
         if metadata["status"] == "Success":
             # Get the search results
-            search_results = results["organic_results"] if "organic_results" in results else []
+            search_results = provider_results.get("organic_results", [])
+            if not isinstance(search_results, list) or any(
+                not isinstance(result, Mapping) for result in search_results
+            ):
+                self._send_search_error(ctx, "invalid_provider_response")
+                return
 
             result_links = []
 
             # Publish the message
-            for result in search_results:
+            for provider_result in search_results:
+                result = dict(provider_result)
                 result.update({"search_parameters": search_params})
 
                 link = build_result_link(
@@ -150,8 +181,9 @@ class SERPAgent(Agent):
                 result_links.append(link)
 
             total_results = None
-            if "search_information" in results and "total_results" in results["search_information"]:
-                total_results = results["search_information"]["total_results"]
+            search_information = provider_results.get("search_information")
+            if isinstance(search_information, Mapping) and "total_results" in search_information:
+                total_results = search_information["total_results"]
 
             self.logger.debug(
                 f"Publishing {len(result_links)} search results for query: {search_query.query} with total results: {total_results}"
@@ -169,5 +201,17 @@ class SERPAgent(Agent):
                 new_thread=True,
             )
         else:
-            # Publish the error message
-            ctx.send(SearchError(response=results["search_metadata"], id=search_query.id))
+            self._send_search_error(ctx, "search_rejected")
+
+    @staticmethod
+    def _send_search_error(ctx: agent.ProcessContext[SERPQuery], code: str) -> None:
+        ctx.send_error(
+            SearchError(
+                id=ctx.payload.id,
+                response={
+                    "status": "Error",
+                    "code": code,
+                    "error": "The search provider could not complete the request.",
+                },
+            )
+        )

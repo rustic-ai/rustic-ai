@@ -63,7 +63,9 @@ class LanceDBKBIndexBackend(KBIndexBackend):
         if not self._uri and self._fs:
             self._uri = get_uri(self._fs, f"knowledgebase/{schema.id}")
 
-        self._conn = await lancedb.connect_async(self._uri)  # type: ignore[attr-defined]
+        if not self._uri:
+            raise ValueError("LanceDB URI or filesystem must be configured")
+        self._conn = await lancedb.connect_async(self._uri)
 
         for t in schema.tables:
             await self._ensure_table_ready(t)
