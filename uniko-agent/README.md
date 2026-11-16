@@ -4,7 +4,7 @@ Comprehensive memory agent for Rustic AI that integrates [uniko](https://github.
 
 ## Overview
 
-The Uniko Memory Agent provides a complete integration of uniko's 5-tier memory system (Episodic, Semantic, Procedural, Provenance, Meta-Memory) into the Rustic AI guild framework. It enables:
+The Uniko Memory Agent integrates uniko's memory system into the Rustic AI guild framework. Current coverage, known gaps and acceptance gates are tracked in the [implementation and completion plan](../docs/design/uniko-agent-completion.md). It enables:
 
 - **Zero-cost knowledge ingestion** (local ONNX embeddings, no LLM API calls)
 - **Multi-phase recall** (3-phase cascade: Facts/Procedures → Episodes/Observations → Chunks)

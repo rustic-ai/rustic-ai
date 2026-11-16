@@ -1,0 +1,300 @@
+# Uniko agent implementation and completion plan
+
+This plan tracks completion of Rustic's Uniko memory integration: reliable configuration, ingestion, extraction, retrieval, lifecycle and observable failure handling. Completion is measured by supported user workflows and executable acceptance tests. Configuration acceptance and a successful API response alone do not establish that a requested inference stage ran.
+
+The core text and document integration can progress independently of the upstream feature requests. OCR, multimodal processing and larger deployments have separate release gates and explicit dependencies.
+
+## Baseline and tracking rules
+
+| Item | Baseline |
+| --- | --- |
+| Updated | 2026-11-16 |
+| Rustic code baseline | `7bc3cf0`, on the milliondreams fork's `main` branch |
+| Change under review | [Rustic PR 479](https://github.com/rustic-ai/rustic-ai/pull/479) |
+| Native dependency | Uniko `>=0.5.1,<0.6.0`; locks currently select 0.5.1 |
+| Runtime environment validated | Python 3.13.12, macOS ARM64, CPU Uniko wheel |
+| Upstream source snapshots checked | Uniko `28f8a1ae3e343f62392800b7d693c0bac45c7c80`; uni-xervo `fd312158599cb3fe429e93c56f07f7124d216642` |
+| Last full local CI | 2,012 passed, 88 skipped, 3 xfailed, 2 xpassed; exit 0 |
+| Last focused integration run | 94 passed, 2 skipped |
+| Other baseline checks | Formatting, lint, mypy, strict docs and Uniko package build passed |
+
+These results are a regression baseline. They do not close the OCR, BGE-M3, richer retrieval or multimodal gates below. Existing xfails/xpasses and skipped tests must be reviewed for relevance to each release claim.
+
+Task states are **Open**, **In progress**, **Waiting on upstream**, **Verified**, and **Deferred**. P0 means current contract correctness; P1 means required core functionality; P2 means an extended capability or scale improvement. A task becomes Verified only when its acceptance evidence is linked. A deferred feature must disappear from supported-feature claims or have an explicit unavailable result.
+
+Each task record should include an assignee, implementation PR/commit, test command and result, dependency versions, platform/model profile, and any relevant upstream issue. Assignees remain unassigned until work is taken.
+
+## Scope and completion gates
+
+The scope includes `MemoryAgent`, `UnikoResolver`, `UnikoMemoriesStore`, `MemoryRequestInitializerAgent`, their public models, and their research/analyst Guild integrations. It does not require implementing every uni-xervo task or exposing internal graph mutation APIs without a use case.
+
+| Gate | User outcome | Current state | Required tasks |
+| --- | --- | --- | --- |
+| G1 Core memory | Text and supported documents can be recorded, recalled, attributed and deleted across restart with user isolation | Open | C01–C08, I01–I05, R01–R06, L01–L04, T01–T03 |
+| G2 Structured experience | Tools, actions, facts and goals use native relationships and stable identities | Open | I06–I08, R07, L05, T04 |
+| G3 Hybrid retrieval | A BGE-M3 store demonstrably uses dense, sparse and ColBERT paths with correct persistence | Open | C07, R08, T05 |
+| G4 OCR documents | Scanned PDFs become searchable, traceable text with explicit extraction outcomes | Open | M01, M04, T06 |
+| G5 Multimodal memory | Advertised image/audio/video workflows preserve original media and searchable derivations | Open | M02–M05, T07 |
+| G6 Operational scale | Resource sharing, readiness, bounded queues and recovery satisfy the intended deployment | Open | C05–C06, L03–L04, L06, T08 |
+
+G1 is the immediate milestone. G2 and G3 can proceed after its identity, provenance and retrieval contracts settle. G4/G5 may use external extraction adapters while upstream packaging and adapters evolve. G6 needs a measured deployment budget; no arbitrary concurrency target is assumed.
+
+## Ownership and message flow
+
+| Component | Responsibility |
+| --- | --- |
+| Guild routes and initializer | Carry authenticated user identity and request correlation; route typed requests and authoritative completion events |
+| MemoryAgent | Validate domain requests, authorize scope, translate to native calls, return bounded results and terminal outcomes |
+| UnikoMemoriesStore | Recall bounded conversational context and atomically record user/assistant pairs for LLM-agent use |
+| UnikoResolver | Resolve private storage, configure native builders, manage resource ownership and expose runtime capability/readiness |
+| Extraction dependencies | Turn media into explicit derivations; manage provider credentials and media processing outside routing expressions |
+| Uniko | Own graph, sources, memory semantics, native extraction, consolidation and recall |
+| uni-xervo | Own model/task/provider configuration, loading and inference |
+
+Other Rustic agents access a memory agent's store through messages. They do not acquire a shared guild database merely because a native handle uses the guild ID. Sharing model resources must preserve separate graph stores and access scopes.
+
+```text
+User Proxy
+  -- ChatCompletionRequest --> MemoryRequestInitializerAgent
+  -- initialized ChatCompletionRequest --> research or analyst workflow
+
+Workflow
+  -- RecordMemoryRequest / ObserveTurnRequest / IngestDocumentRequest --> MemoryAgent
+MemoryAgent
+  -- RecordMemoryResult / ObserveResult / IngestOutcome or MemoryAgentError --> workflow
+Workflow
+  -- all expected ingestion outcomes + source enumeration completion --> ingestion barrier
+  -- RecallRequest using the original resolved lookup --> MemoryAgent
+MemoryAgent
+  -- RecallResponse or MemoryAgentError --> synthesis stage
+Synthesis
+  -- ChatCompletionResponse --> User Proxy
+  -- final visible response recording --> memory workflow
+```
+
+Each accepted operation has one terminal outcome correlated with its request. Bulk ingestion additionally has one terminal outcome per item and a batch completion result. Partial success, zero usable sources, irrelevant sources and provider failure remain distinguishable. Late results cannot restart a completed workflow or add extra user responses.
+
+## Existing coverage and known defects
+
+The agent has 19 processors covering conversation recording, typed records, session finalization/deletion, participant forgetting, observation, recall, answers, document ingestion, streaming batches and basic goals/tasks. The resolver now accepts native model/configuration inputs. The separate memory wrapper uses native atomic commits for user/assistant pairs.
+
+| Defect | Impact | Task |
+| --- | --- | --- |
+| Nonempty observation attachments call an undefined `_build_ingest_source` | Advertised attachments fail before observation | I01 |
+| Auto-flush defaults to true while resolver streaming defaults to false | An observation can commit and then produce an error from flush | L01 |
+| Unmarked native recall items are discarded | Ordinary observations or externally populated native records can be invisible | R01 |
+| `sessions=None` becomes process-local session-lock keys | Older persisted sessions may be excluded from unrestricted recall | R02 |
+| Record forgetting treats conversation-turn records as documents | An observed turn can remain stored after the wrong deletion path | L02 |
+| Generated goal/task IDs are reconstructed from node IDs | Returned identifiers may not address the created native object | L05 |
+| Agent recall/answer limits are declared but unused | Caller expectations differ from native execution | C01 |
+| Source/result serializers omit supported native metadata | Provenance, addressed retrieval and diagnostics are incomplete | I05, R05 |
+
+The first defect was confirmed by checking the current class has no attachment helper. The four previously reproduced deletion/flush/session/ID failures need committed regression tests against the selected 0.5.1 runtime; source retention alone is not a new runtime reproduction.
+
+## Configuration implementation
+
+Keep engine settings in the resolver's native `config` surface and operation-specific settings in request models. Define one precedence rule and make it visible in effective configuration. Native validation remains authoritative; Rustic validates its own request relationships, capability requirements and deployment policy.
+
+Preserve the established `alias: openai` input while documenting the native `provider` plus model-alias shape. Reject the removed embedded `mistralrs` input. Do not reinterpret it as the hosted Mistral API.
+
+| ID | Priority | State | Implementation and acceptance |
+| --- | --- | --- | --- |
+| C01 | P0 | Open | Resolve unused `recall_max_tokens`, `recall_phase1_only`, `answer_max_tokens` and `AnswerRequest.max_tokens`. Wire settings supported by native APIs; explicitly reject or retire unsupported controls. Demonstrate changed execution/output limits, rather than merely checking stored config. |
+| C02 | P1 | Open | Publish schemas and examples for native sections and Rustic policy. Document that top-level model overrides replace a whole base-config section and merge partial values with native defaults. Test precedence, invalid combinations and unknown keys. |
+| C03 | P1 | Open | Add typed source, extraction and recall request options; stop accepting undocumented dictionary fields that handlers silently ignore. Export and document the selected public models. |
+| C04 | P1 | Open | Resolve catalog/schema/rule references using an explicit path policy. Validate readability and alias requirements before use; preserve the distinction between shared deployment configuration and private agent data. |
+| C05 | P1 | Open | Expose effective config, compiled capability, model readiness and available diagnostics. Report Unknown when upstream cannot provide a fact. Never convert Unknown into Healthy. Track U56/U59/U60 and X61. |
+| C06 | P1 | Open | Add an explicit readiness/prefetch policy and clear startup errors for unavailable required stages. Credential lookup belongs to dependencies. Parsing configuration must not require a live API call. |
+| C07 | P1 | Open | Preflight existing store compatibility for model/dimension/hybrid changes. Reuse native checks and provide an explicit fresh-store or supported reindex workflow. Track U66. |
+| C08 | P1 | Open | Update README, Guild examples, dependency profiles and package metadata to match supported runtime variants and settings. Install one CPU/Metal/CUDA distribution per environment; unsupported installation profiles must be explicit. |
+
+Minimum documented engine settings include embedding model/provider/dimensions/batching/prefixes/devices/options; vector algorithm/metric; chunk thresholds/size/overlap/context; NLP generation/precision/device; SRL and entity admission; observation rules; OCR; consolidation; recall weights/budget/thresholds; reranker; blob backend and source lifecycle.
+
+## Ingestion and relation extraction implementation
+
+| ID | Priority | State | Implementation and acceptance |
+| --- | --- | --- | --- |
+| I01 | P0 | Open | Implement attachment translation through a typed source specification and injected filesystem boundaries. Test text, document and invalid attachments plus duplicate delivery. Preserve `ATTACHED_TO` relationships. |
+| I02 | P1 | Open | Unify source conversion across observation, document requests and record ingestion. Honor requested MIME/content type, retain original source paths for native detection, and avoid overriding unknown MIME with octet-stream unnecessarily. |
+| I03 | P1 | Open | Carry native category, logical source, revision and visibility fields in supported requests. Preserve producer-assigned record kind without inserting provenance prose into every embedding where native metadata can represent it. Test existing record compatibility. |
+| I04 | P1 | Open | Add byte/page/item limits, bounded file reads or spooling, and complete typed bulk outcomes. Decide inline text/bytes versus filesystem references explicitly. A failed item cannot deadlock an ingestion barrier. |
+| I05 | P1 | Open | Return artifact identity, chunk IDs, deduplication, extraction outcome/error and available page/block references. An artifact stored without extracted text is not a searchable-success result. |
+| I06 | P1 | Open | Add native tool-call/action/episode recording with stable IDs, arguments/output/status/timing and causal references. Avoid replacing these relationships with an executed-result text blob. Preserve bounded outputs and original tool failures. |
+| I07 | P1 | Open | Expose appropriate explicit observation/fact assertion/invalidation and consolidation requests. Keep deterministic extraction as the default; optional LLM consolidation remains explicit and depends on U63. |
+| I08 | P1 | Open | Expose atomic multi-turn units where needed. Typed batches must preserve selected timestamps, recipients, attachments and provenance; document that streamed submit has different session/context semantics. |
+
+Extraction acceptance must demonstrate SRL toggles, model generation/precision selection, custom observation-rule application, entity admission thresholds and code/document chunking on meaningful fixtures. Loading a rule file or selecting an NLP preset is insufficient. A missing model or invalid rule file must produce the selected failure/fallback outcome.
+
+## Retrieval implementation
+
+| ID | Priority | State | Implementation and acceptance |
+| --- | --- | --- | --- |
+| R01 | P0 | Open | Replace envelope-dependent result exclusion with a native-provenance-aware contract. Mark Unknown explicitly when record classification is unavailable; apply producer/visibility policy without silently dropping valid authorized memories. Test ordinary turns, documents and derived facts. |
+| R02 | P0 | Open | Preserve `sessions=None` as no session filter, independent of lock history. Locking must coordinate writes without changing the query domain. Reopen a store, touch one session, and retrieve an older untouched session. |
+| R03 | P1 | Open | Map per-request native limits, token budget, minimum score, reranker override and historical reference timestamp through `recall_with`. Retain separate returned-item/character bounds. Use native token counts or explicitly label any display estimate. |
+| R04 | P1 | Open | Expose time/category/source/revision and viewer scopes as typed fields. Apply available native filters before ranking; test rejected cross-user/team/org access and superseded-source behavior. Post-filtering alone cannot satisfy candidate-budget semantics. |
+| R05 | P1 | Open | Preserve source session/tool/call IDs and item category/source/revision/context/address. Add source search, outline, bounded read and original artifact access contracts. Test page, line and media-segment traceability. |
+| R06 | P1 | Open | Make answer generation obey the same authorized retrieval policy as its returned context. Prefer bounded recall followed by Rustic LLM generation if native answer cannot enforce the contract. Do not filter the displayed context only after the LLM has consumed a broader bundle. |
+| R07 | P2 | Open | Add procedure matching/success feedback and selected rule/query interfaces. Keep arbitrary graph mutation outside ordinary retrieval. Distinguish application authorization from native read/query capability. |
+| R08 | P1 | Open | Verify BGE-M3 dense, sparse and ColBERT indexing/query paths, including diagnostics and persistence. Track X60/X63; memory optimization is not a prerequisite for correctness testing. |
+
+### BGE-M3 acceptance profile
+
+This is a configuration candidate, not a declaration that the profile is release-ready:
+
+```python
+properties = {
+    "embedding": "bge-m3",
+    "reranker": {"enabled": True, "style": "colbert", "top_n": 50},
+    "config": {"recall_sparse_enabled": True, "recall_limit": 15},
+}
+```
+
+- Dense output is 1,024-dimensional. Learned sparse output uses a 250,002-token vocabulary. ColBERT output has 1,024 dimensions per token.
+- The preset prepares hybrid columns on Chunk and Observation. Sparse recall and ColBERT reranking require their separate switches; selecting the preset does not enable both query paths.
+- Inspect populated columns and confirm query-time contributions on fixtures selected to require the relevant recall phase. An early compact-phase answer need not run every channel.
+- Prove that ColBERT changes eligible candidate order against a reference/tolerance and distinguish successful reranking from logged fallback.
+- Test close/reopen, duplicate ingestion, sparse/ColBERT querying after reopen and mismatched configurations.
+- Measure actual memory with the separate dense/hybrid instances. Do not assume X60 resource sharing exists.
+
+## OCR and multimodal implementation
+
+The currently audited Python wheel feature declarations do not enable Uniko's tiered `pdf-ocr` path. Accepting `config.ocr` is not an OCR capability guarantee. Image/audio/video callbacks are available in native Python, but Rustic does not register them, and native TextExtractor retains derived text rather than original media bytes.
+
+| ID | Priority | State | Implementation and acceptance |
+| --- | --- | --- | --- |
+| M01 | P1 for G4 | Open | Implement a verified scanned-PDF path: upstream OCR-capable build/profile or an external extraction dependency. Preserve original PDF and derived page/block references. Identify native-text-only versus OCR output explicitly. Track U55. |
+| M02 | P1 for G5 | Open | Register typed/configurable image OCR/caption and audio transcription adapters. Retain source bytes separately when native callbacks cannot. Test searchable text with regions or timestamps and source identity. Track U61. |
+| M03 | P2 | Open | Define video sampling/transcription/caption composition with bounded duration/frame count and segment locations. Claim support only for the tested composition and providers. |
+| M04 | P1 | Open | Expose extraction tier, model/revision, confidence when available, page/region/time address and retryable failure. Add an explicit re-extraction operation with revision/derivation identity; retries cannot silently duplicate sources. |
+| M05 | P1 | Open | Decide text-derived recall versus native multimodal embedding/query support per profile. Until a real mixed-input index/query path exists, expose media-to-text retrieval accurately. Use direct ingestion while streaming lacks extractor parity; track U62. |
+
+A multimodal source outcome must link original media, extracted text and location metadata. Test unreadable scans, empty captions, unsupported MIME, transcription failure and partially extracted multi-page documents. Preserve the distinction between stored bytes and usable searchable evidence.
+
+## Identity, lifecycle and operations
+
+| ID | Priority | State | Implementation and acceptance |
+| --- | --- | --- | --- |
+| L01 | P0 | Open | Coordinate flush policy with streaming capability. Direct observation must not return failure solely because an unnecessary flush was attempted after commit. Explicit flush requests on unsupported instances return a clear error. |
+| L02 | P0 | Open | Route turn/document forgetting by the actual stored record representation, including routed conversation turns. Coordinate deletion with writes/finalization. Test idempotent deletion, redacted/invalidation outcomes and recall after deletion. |
+| L03 | P1 | Open | Make resolver lifecycle release cached Agent/Session handles before native shutdown. Bound session locks/cache growth, prevent new work during shutdown and prove queued work has an explicit terminal disposition. |
+| L04 | P1 | Open | Expose pipeline health, queue/failure diagnostics, recovery policy and resource counts available upstream. Track U65 for dead-letter replay; unavailable replay must remain explicit. |
+| L05 | P0 | Open | Assign stable external goal/task IDs before creation or consume an upstream creation view when U64 lands. Remove unsupported pause/resume claims and preserve native transition results rather than reporting unconditional success. |
+| L06 | P2 | Open | Measure multiple private stores, CPU/GPU capacity and concurrency; adopt shared runtime APIs when available. One store's shutdown cannot invalidate another store's inference or leak memory between users. Track U57/X60. |
+
+Identity comes from authenticated transport context, not user-provided Cypher or untrusted memory. Every asynchronous branch carries request correlation. Stable record IDs and persisted source identities support retries and restart; process-local lock maps are not durable identity or retrieval scope.
+
+## Public contract changes to design before coding
+
+Names in the proposed column are candidates, not available APIs. Confirm the smallest set needed by each gate before exporting models or changing Guild routes.
+
+| Existing contract | Proposed work |
+| --- | --- |
+| ObserveTurnRequest | Typed attachment/source specification; native provenance/visibility; explicit flush policy |
+| RecordMemoryRequest / IngestDocumentRequest | Consistent SourceSpec with identity/revision/category/MIME; bounded inputs; richer IngestOutcome |
+| BatchSubmitRequest | Typed turn list and per-item terminal results; separate streaming versus atomic-unit operation |
+| RecallRequest / MemoryScope | Native query controls and filters; explicit Unknown record-kind handling; stable addressed sources |
+| AnswerRequest | Authorized bounded context shared with generation; supported generation controls only |
+| No inspection requests | CapabilityRequest, EffectiveConfigRequest and MemoryHealthRequest or equivalent narrow APIs |
+| No source navigation requests | SourceSearchRequest, SourceOutlineRequest and SourceReadRequest with bounded read options |
+| No structured experience requests | RecordToolCallRequest, RecordActionRequest, RecordEpisodeRequest and selected fact/consolidation requests |
+| No media retry request | ReextractSourceRequest with source/revision identity and extraction profile |
+
+Use existing named memory topics for their established contracts; add dedicated control/source topics only when needed. Update producer and consumer routes together. Schema and route tests must prove each emitted format has a subscriber and one terminal result.
+
+## Upstream dependencies
+
+Issues were open when filed on 2026-11-16. Update status and selected release during implementation. These requests do not block fixing Rustic's own defects.
+
+| Reference | Request | Integration decision |
+| --- | --- | --- |
+| [U55](https://github.com/rustic-ai/uniko/issues/55) | PDF OCR in Python wheels | Required for a native-wheel G4 claim; external extraction is a viable interim path |
+| [U56](https://github.com/rustic-ai/uniko/issues/56) | Compiled capabilities/effective execution | Consume when available; report Unknown for missing introspection |
+| [U57](https://github.com/rustic-ai/uniko/issues/57) | Shared runtimes/prefetch | Scale dependency after capacity measurements |
+| [U58](https://github.com/rustic-ai/uniko/issues/58) | General generation providers/catalog alias | Use existing constructors or Rustic LLM generation until supported |
+| [U59](https://github.com/rustic-ai/uniko/issues/59) | Degradation diagnostics | Needed for complete native-stage reporting; probes offer partial evidence |
+| [U60](https://github.com/rustic-ai/uniko/issues/60) | Required-stage readiness | Opt-in readiness probes until native policy exists |
+| [U61](https://github.com/rustic-ai/uniko/issues/61) | Model-backed structured media derivations | Build narrow extraction adapters and retain original media |
+| [U62](https://github.com/rustic-ai/uniko/issues/62) | Streaming extractor mismatch, bug | Use direct media ingestion; reproduce with fixed-text callbacks |
+| [U63](https://github.com/rustic-ai/uniko/issues/63) | Consolidation options/LLM refinement | Keep deterministic default; extended mode depends on SDK support |
+| [U64](https://github.com/rustic-ai/uniko/issues/64) | Generated creation IDs/views | Assign IDs locally now; adopt upstream result later |
+| [U65](https://github.com/rustic-ai/uniko/issues/65) | Dead-letter recovery | Do not imply retry scheduling is available |
+| [U66](https://github.com/rustic-ai/uniko/issues/66) | Store compatibility/reindex | Reuse current checks; choose fresh stores for unsupported migrations |
+| [X60](https://github.com/rustic-ai/uni-xervo/issues/60) | BGE-M3 resource sharing | Optimization; measure current resource requirements |
+| [X61](https://github.com/rustic-ai/uni-xervo/issues/61) | Runtime inspection | Supplies data for C05/L04 |
+| [X62](https://github.com/rustic-ai/uni-xervo/issues/62) | Provider schemas | Consume authoritative schemas rather than duplicating option validation |
+| [X63](https://github.com/rustic-ai/uni-xervo/issues/63) | Deployment acceptance matrix | Use as additional upstream evidence alongside Rustic tests |
+
+The documented uni-db issue 130 is closed. Do not treat the Blackbook's older hybrid-reopen limitation as a current defect without reproduction against the pinned runtime. Similarly, sparse/multi-vector adapter issues already closed upstream are not open dependencies.
+
+## Test and evidence matrix
+
+| ID | State | Required evidence |
+| --- | --- | --- |
+| T01 | Open | Native text/document lifecycle: record, duplicate replay, recall, finalize, close/reopen, forget and recall absence; verify source links and per-user/store isolation |
+| T02 | Open | Committed regressions for attachment helper, flush-after-commit, null session scope, conversation deletion, generated IDs and unmarked recall records |
+| T03 | Open | Sequential Guild rounds: direct question, remembered follow-up, document-based follow-up, irrelevant document, partial failure and terminal failure; exactly one final response and no late mutation |
+| T04 | Open | Native tool/action/episode/fact/goal relationships and atomic units; actual IDs survive restart and transitions reflect native success/failure |
+| T05 | Open | Real BGE-M3 vector population, sparse contribution, ColBERT ordering, persistence/reopen and memory measurement; mock-only runs cannot close G3 |
+| T06 | Open | Scanned, native-text, mixed and malformed PDFs; searchable OCR text and page/block provenance on the selected supported build/profile |
+| T07 | Open | Image/audio and selected video flows; original media retention, addressed derivations, extraction failure/retry, duplicate delivery and user scope |
+| T08 | Open | Intended deployment's concurrent stores, bounded queue/backpressure, shutdown, restart, readiness and degraded provider handling on each claimed platform |
+
+Extend existing tests in `uniko-agent/tests`, analyst memory integration tests and showcase route tests. Existing schema/configuration checks do not establish full live Guild behavior. Assert emitted format/topic/correlation/status and native side effects; avoid tests that merely mirror a builder call.
+
+Representative commands from the repository root, using the locked development environment:
+
+```bash
+poetry install --with dev
+poetry run pytest uniko-agent/tests pandas-analyst/tests/test_analysis_memory.py -q
+poetry run pytest showcase/tests/test_uniko_research_guild.py -q
+tox -e format,lint
+NO_MKDOCS_2_WARNING=1 poetry run mkdocs build --strict
+tox -e test
+```
+
+Full CI requires the configured Redis/NATS services and installed Playwright browser. Use dedicated test services and the repository's declared environment flags. Record model/hardware requirements and run real-model gates explicitly when standard CI skips expensive or credential-dependent work. Build affected packages and verify portable dependency metadata when public contracts or runtime distributions change.
+
+## Implementation sequence and release checklist
+
+1. Fix P0 contract defects and add native regressions. Settle record identity/provenance and null-scope semantics before expanding ingestion.
+2. Unify configuration and effective capability reporting. Update examples with only supported fields.
+3. Complete core source ingestion, bounded retrieval, answers and lifecycle; run G1 sequential Guild/restart tests.
+4. Add structured experience and source navigation; verify G2.
+5. Validate BGE-M3 on a fresh store and intended hardware; verify G3 independently of upstream resource optimization.
+6. Select native or external OCR/media profiles, preserve original sources, and verify G4/G5.
+7. Measure operational scale and adopt upstream improvements as their releases become available; verify G6.
+
+- [ ] Every advertised capability maps to a verified gate or an explicit unavailable/deferred state.
+- [ ] Each task has an assignee and linked implementation/test evidence.
+- [ ] Request models, exports, schemas, examples and routes agree.
+- [ ] Unsupported settings fail clearly instead of being silently ignored.
+- [ ] Ingest/recall/answer failures and fallbacks have explicit observable outcomes.
+- [ ] Persistence, deletion, isolation and shutdown tests pass with native dependencies.
+- [ ] Relevant skips/xfails/xpasses are reviewed; no feature is declared complete from unrelated CI totals.
+- [ ] Selected CPU/GPU/OCR/media profiles have installation and execution evidence.
+- [ ] Upstream issue states and required versions are refreshed.
+- [ ] Package build, lint/types, strict docs and appropriate full regression CI pass.
+
+## Decisions to close during implementation
+
+| Decision | Proposed direction | Gate |
+| --- | --- | --- |
+| One config authority | Engine settings in native resolver config; supported per-query overrides in typed requests | G1 |
+| Provenance migration | Native category/source/revision first; explicitly support existing stored Rustic record identities | G1 |
+| Answer policy | Generate from the exact authorized bounded context; use Rustic LLM dependencies when native answer cannot enforce it | G1 |
+| Media extraction location | Narrow extraction dependencies with original bytes in filesystem storage and explicit derivation identity | G4/G5 |
+| OCR runtime | Verified upstream wheel/build or external extractor; do not infer support from accepted config | G4 |
+| Scale target | Set concurrency/memory/latency budgets from the intended deployment and measured profiles | G6 |
+| Extended reasoning surface | Expose only selected authorized operations with use cases and tests | G2 |
+
+## Source map and maintenance
+
+- [Resolver baseline](https://github.com/milliondreams/rustic-ai/blob/7bc3cf0/uniko-agent/src/rustic_ai/uniko_agent/resolver.py)
+- [MemoryAgent baseline](https://github.com/milliondreams/rustic-ai/blob/7bc3cf0/uniko-agent/src/rustic_ai/uniko_agent/agent.py)
+- [Public requests and responses](https://github.com/milliondreams/rustic-ai/blob/7bc3cf0/uniko-agent/src/rustic_ai/uniko_agent/models.py)
+- [LLM memory wrapper](https://github.com/milliondreams/rustic-ai/blob/7bc3cf0/uniko-agent/src/rustic_ai/uniko_agent/memories.py)
+- [Uniko Blackbook](https://github.com/rustic-ai/uniko/blob/28f8a1ae3e343f62392800b7d693c0bac45c7c80/docs/BLACKBOOK.md)
+- [uni-xervo runtime](https://github.com/rustic-ai/uni-xervo/blob/fd312158599cb3fe429e93c56f07f7124d216642/crates/uni-xervo/src/runtime.rs)
+
+Update this plan in the same PR as a task's implementation. Change its state, link acceptance evidence and refresh affected feature claims. Preserve the evidence baseline when adding a newer run; do not replace an unverified capability with a broad statement that all CI is green.

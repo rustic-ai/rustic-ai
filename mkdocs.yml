@@ -106,6 +106,7 @@ nav:
   - Contributing: contributing.md
   - Design:
       - ReAct Agent Design: design/react-agent-design.md
+      - Uniko Agent Completion Plan: design/uniko-agent-completion.md
 theme:
   icon:
     repo: fontawesome/brands/github
