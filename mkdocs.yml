@@ -33,7 +33,7 @@ nav:
       - State Management: core/state_management.md
   - Agents:
       - Overview: agents/index.md
-      - Agents Deep Dive: Agents.md
+      - Agents Deep Dive: core/agents.md
       - LLM Agent & Plugins: agents/llm_agent.md
       - LLM Agent Memory: agents/llm_agent_memory.md
       - LLM Agent Plugins: agents/llm_agent_plugins.md
@@ -144,4 +144,4 @@ markdown_extensions:
   - pymdownx.extra
   - toc:
       permalink: true 
-  - mdx_truly_sane_lists   
+  - mdx_truly_sane_lists

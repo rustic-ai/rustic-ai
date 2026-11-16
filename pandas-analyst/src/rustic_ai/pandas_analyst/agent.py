@@ -1,12 +1,12 @@
 """A ReAct data analyst with explicit Forge-managed dependencies."""
 
 from fsspec.implementations.dirfs import DirFileSystem as FileSystem
-from rustic_ai.llm_agent.react import ReActAgent, ReActAgentConfig
 
 from rustic_ai.core.guild.agent import ProcessContext, processor
 from rustic_ai.core.guild.agent_ext.depends.llm.llm import LLM
 from rustic_ai.core.guild.agent_ext.depends.llm.models import ChatCompletionRequest
 from rustic_ai.core.guild.metaprog.agent_registry import AgentDependency
+from rustic_ai.llm_agent.react import ReActAgent, ReActAgentConfig
 
 from .react_toolset import DataAnalystReActToolset
 

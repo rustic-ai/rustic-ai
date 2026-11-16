@@ -4,7 +4,6 @@ from hashlib import sha256
 from typing import Any, List, Optional
 
 from pydantic import BaseModel, Field
-from rustic_ai.llm_agent.plugins.llm_call_wrapper import LLMCallWrapper
 from uniko import Scope, Turn
 
 from rustic_ai.core.guild.agent import Agent, ProcessContext
@@ -17,6 +16,7 @@ from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     TextContentPart,
     UserMessage,
 )
+from rustic_ai.llm_agent.plugins.llm_call_wrapper import LLMCallWrapper
 
 MEMORY_IDENTITY_UNAVAILABLE = "uniko_memory_identity_unavailable"
 MEMORY_RECALL_FAILED = "uniko_memory_recall_failed"

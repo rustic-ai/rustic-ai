@@ -2,7 +2,7 @@ import json
 from typing import Any, ClassVar, List, Optional
 from unittest.mock import patch
 
-import httpx
+import httpx2 as httpx
 import openai
 from pydantic import BaseModel, ConfigDict, ValidationError
 import pytest

@@ -34,3 +34,6 @@ class MemoryAgentConfig(BaseAgentProps):
         default_factory=dict,
         description="Optional record-kind to allowed sender-id map. Configured kinds fail closed for other senders.",
     )
+
+    conversation_request_producers: List[str] = Field(default_factory=list)
+    conversation_response_producers: List[str] = Field(default_factory=list)

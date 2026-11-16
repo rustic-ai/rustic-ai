@@ -2,34 +2,20 @@
 
 from hashlib import sha256
 import json
-from typing import Any, List, Optional
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
-from rustic_ai.llm_agent.plugins.llm_call_wrapper import LLMCallWrapper
+
+from rustic_ai.core.guild.agent import Agent, ProcessContext
 from rustic_ai.llm_agent.plugins.tool_call_wrapper import (
     ToolCallResult,
     ToolCallWrapper,
     ToolSkipResult,
 )
 
-from rustic_ai.core.guild.agent import Agent, ProcessContext
-from rustic_ai.core.guild.agent_ext.depends.llm.llm import LLM
-from rustic_ai.core.guild.agent_ext.depends.llm.models import (
-    ArrayOfContentParts,
-    ChatCompletionRequest,
-    ChatCompletionResponse,
-    TextContentPart,
-    UserMessage,
-)
-from rustic_ai.uniko_agent import (
-    FinalizeMemorySessionRequest,
-    MemoryRecordKind,
-    RecordMemoryRequest,
-)
-
 
 def analysis_memory_identity(agent: Agent, ctx: ProcessContext) -> tuple[str, str, str]:
-    """Resolve a stable guild/user session from the original User Proxy request."""
+    """Resolve the explicit request session from the original User Proxy request."""
     context = ctx.get_context() or {}
     context_user = context.get("analysis_user")
     context_session = context.get("analysis_session")
@@ -37,26 +23,7 @@ def analysis_memory_identity(agent: Agent, ctx: ProcessContext) -> tuple[str, st
     if context_user and context_session and context_request:
         digest = sha256(f"{agent.guild_id}\0{context_user}".encode()).hexdigest()
         return str(context_session), f"user-{digest}", str(context_request)
-
-    forward_header = getattr(ctx.message, "forward_header", None)
-    sender = getattr(forward_header, "on_behalf_of", None) or getattr(ctx.message, "sender", None)
-    sender_id = getattr(sender, "id", None)
-    request_id = getattr(forward_header, "origin_message_id", None) or getattr(ctx.message, "id", None)
-    if not sender_id or not str(sender_id).startswith("upa-") or request_id is None:
-        raise ValueError("analysis_memory_identity_unavailable")
-    digest = sha256(f"{agent.guild_id}\0{sender_id}".encode()).hexdigest()
-    return f"analysis-user-{digest}", f"user-{digest}", str(request_id)
-
-
-def _visible_text(message: Any) -> str:
-    content = getattr(message, "content", None)
-    if isinstance(content, str):
-        return content.strip()
-    if isinstance(content, ArrayOfContentParts):
-        return "\n".join(
-            part.text.strip() for part in content.root if isinstance(part, TextContentPart) and part.text.strip()
-        )
-    return ""
+    raise ValueError("analysis_memory_identity_unavailable")
 
 
 class DatasetProfile(BaseModel):
@@ -94,51 +61,6 @@ class AnalysisOutcomeRecord(BaseModel):
     session_id: str = Field(min_length=1, max_length=300)
     tool_name: str = Field(min_length=1, max_length=100)
     content: str = Field(min_length=1, max_length=6000)
-
-
-class AnalysisConversationRecorder(LLMCallWrapper):
-    """Emit visible successful turns to the guild MemoryAgent asynchronously."""
-
-    max_characters: int = Field(default=16000, ge=256, le=16000)
-
-    def preprocess(self, agent: Agent, ctx: ProcessContext, request: ChatCompletionRequest, llm: LLM):
-        return request
-
-    def postprocess(
-        self,
-        agent: Agent,
-        ctx: ProcessContext,
-        final_prompt: ChatCompletionRequest,
-        llm_response: ChatCompletionResponse,
-        llm: LLM,
-    ) -> Optional[List[BaseModel]]:
-        del final_prompt, llm
-        session_id, user_id, request_id = analysis_memory_identity(agent, ctx)
-        users = [_visible_text(message) for message in ctx.payload.messages if isinstance(message, UserMessage)]
-        user_text = next((text for text in reversed(users) if text), "")
-        if not user_text or len(llm_response.choices) != 1:
-            return None
-        choice = llm_response.choices[0]
-        assistant_text = _visible_text(choice.message)
-        if not assistant_text or choice.message.tool_calls:
-            return None
-        return [
-            RecordMemoryRequest(
-                record_id=f"{request_id}:user",
-                session_id=session_id,
-                sender_id=user_id,
-                kind=MemoryRecordKind.USER_ASSERTION,
-                content=user_text[: self.max_characters],
-            ),
-            RecordMemoryRequest(
-                record_id=f"{request_id}:assistant",
-                session_id=session_id,
-                sender_id=agent.id,
-                kind=MemoryRecordKind.ASSISTANT_RESPONSE,
-                content=assistant_text[: self.max_characters],
-            ),
-            FinalizeMemorySessionRequest(session_id=session_id),
-        ]
 
 
 class AnalysisOutcomeEmitter(ToolCallWrapper):

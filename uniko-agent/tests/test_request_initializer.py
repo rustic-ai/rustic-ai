@@ -3,12 +3,13 @@
 from copy import deepcopy
 
 import pytest
-from rustic_ai.testing.helpers import wrap_agent_for_testing
 
 from rustic_ai.core.guild.dsl import AgentSpec
 from rustic_ai.core.messaging.core.message import AgentTag, Message
 from rustic_ai.core.utils.gemstone_id import GemstoneID
 from rustic_ai.uniko_agent import MemoryRequestInitializerAgent
+
+from rustic_ai.testing.helpers import wrap_agent_for_testing
 
 
 @pytest.fixture
@@ -65,7 +66,13 @@ def test_exact_identity_duplicate_delivery_and_payload_preservation(harness, ide
         agent._on_message(msg.model_copy(deep=True))
     assert len(messages) == 2
     for result in messages:
-        assert result.session_state == {"request_id": str(identifier), "request_user": "upa-alice", "other": "keep"}
+        assert result.session_state == {
+            "request_id": str(identifier),
+            "request_user": "upa-alice",
+            "other": "keep",
+            "memory_session_id": result.session_state["memory_session_id"],
+        }
+        assert result.session_state["memory_session_id"].startswith("analysis-")
         assert result.payload == original
         assert result.format == msg.format
     assert msg.id == identifier
@@ -78,6 +85,7 @@ def test_adjacent_requests_do_not_collide(harness):
     for identifier in [9713724488973030400, 9713724488973030401]:
         agent._on_message(request(identifier))
     assert [m.session_state["request_id"] for m in messages] == ["9713724488973030400", "9713724488973030401"]
+    assert messages[0].session_state["memory_session_id"] != messages[1].session_state["memory_session_id"]
 
 
 @pytest.mark.parametrize("sender", [None, "", "upa-", "upa- ", "PRIVATE_UNTRUSTED_SENDER"])

@@ -3,23 +3,12 @@
 from types import SimpleNamespace
 from unittest.mock import Mock
 
+import pytest
+
 from rustic_ai.pandas_analyst.memory import (
-    AnalysisConversationRecorder,
     AnalysisOutcomeEmitter,
     AnalysisOutcomeRecord,
-)
-
-from rustic_ai.core.guild.agent_ext.depends.llm.models import (
-    AssistantMessage,
-    ChatCompletionRequest,
-    ChatCompletionResponse,
-    Choice,
-    UserMessage,
-)
-from rustic_ai.uniko_agent import (
-    FinalizeMemorySessionRequest,
-    MemoryRecordKind,
-    RecordMemoryRequest,
+    analysis_memory_identity,
 )
 
 
@@ -36,58 +25,28 @@ def _agent_and_context():
     return agent, ctx
 
 
-def test_successful_visible_turn_emits_typed_pair_before_finalization():
+def test_analysis_identity_requires_explicit_request_session():
     agent, ctx = _agent_and_context()
-    request = ChatCompletionRequest(messages=[UserMessage(content="Revenue is net of refunds")])
-    ctx.payload = request
-    response = ChatCompletionResponse(
-        id="response-1",
-        created=0,
-        model="test",
-        choices=[Choice(index=0, message=AssistantMessage(content="Understood."), finish_reason="stop")],
-    )
-
-    messages = AnalysisConversationRecorder().postprocess(agent, ctx, request, response, Mock())
-
-    assert messages is not None
-    assert [type(message) for message in messages] == [
-        RecordMemoryRequest,
-        RecordMemoryRequest,
-        FinalizeMemorySessionRequest,
-    ]
-    assert messages[0].kind == MemoryRecordKind.USER_ASSERTION
-    assert messages[0].content == "Revenue is net of refunds"
-    assert messages[1].kind == MemoryRecordKind.ASSISTANT_RESPONSE
-    assert messages[0].session_id == messages[1].session_id == messages[2].session_id
-
-
-def test_internal_prompt_and_reasoning_are_not_recorded():
-    agent, ctx = _agent_and_context()
-    request = ChatCompletionRequest(messages=[UserMessage(content="Visible request")])
-    ctx.payload = request
-    response = ChatCompletionResponse(
-        id="response-1",
-        created=0,
-        model="test",
-        choices=[
-            Choice(
-                index=0,
-                message=AssistantMessage(content="Visible answer", reasoning_content="private reasoning"),
-                finish_reason="stop",
-            )
-        ],
-    )
-
-    messages = AnalysisConversationRecorder().postprocess(agent, ctx, request, response, Mock())
-
-    rendered = "\n".join(message.content for message in messages if isinstance(message, RecordMemoryRequest))
-    assert "Visible request" in rendered
-    assert "Visible answer" in rendered
-    assert "private reasoning" not in rendered
+    with pytest.raises(ValueError, match="analysis_memory_identity_unavailable"):
+        analysis_memory_identity(agent, ctx)
+    ctx.get_context.return_value = {
+        "analysis_user": "upa-user-1",
+        "analysis_session": "analysis-explicit",
+        "analysis_request_id": "123",
+    }
+    session, user, request = analysis_memory_identity(agent, ctx)
+    assert session == "analysis-explicit"
+    assert user.startswith("user-")
+    assert request == "123"
 
 
 def test_verified_tool_result_is_bounded_and_stably_identified():
     agent, ctx = _agent_and_context()
+    ctx.get_context.return_value = {
+        "analysis_user": "upa-user-1",
+        "analysis_session": "analysis-explicit",
+        "analysis_request_id": "123",
+    }
     emitter = AnalysisOutcomeEmitter(max_characters=256)
     tool_input = SimpleNamespace(model_dump=lambda **_: {"name": "sales"})
 

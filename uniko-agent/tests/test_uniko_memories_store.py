@@ -5,8 +5,6 @@ from unittest.mock import Mock
 
 import pytest
 import uniko
-from rustic_ai.llm_agent.llm_agent_conf import LLMAgentConfig
-from rustic_ai.llm_agent.llm_agent_helper import LLMAgentHelper
 
 from rustic_ai.core.guild.agent import Agent, ProcessContext
 from rustic_ai.core.guild.agent_ext.depends.llm.llm import LLM
@@ -24,6 +22,8 @@ from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     TextContentPart,
     UserMessage,
 )
+from rustic_ai.llm_agent.llm_agent_conf import LLMAgentConfig
+from rustic_ai.llm_agent.llm_agent_helper import LLMAgentHelper
 from rustic_ai.uniko_agent.memories import (
     _UNTRUSTED_MEMORY_HEADER,
     MEMORY_FINALIZE_FAILED,
@@ -367,8 +367,12 @@ def test_native_atomic_pair_replay_conflict_and_reopen(tmp_path):
 
     user_id = "rustic-memory:user_assertion:321:user"
     assistant_id = "rustic-memory:assistant_response:321:assistant"
-    assert native_agent.data.message_sync(user_id).content.endswith("I prefer tea to coffee")
-    assert native_agent.data.message_sync(assistant_id).content.endswith("I'll remember your preference.")
+    user_message = native_agent.data.message_sync(user_id)
+    assistant_message = native_agent.data.message_sync(assistant_id)
+    assert user_message is not None
+    assert assistant_message is not None
+    assert user_message.content.endswith("I prefer tea to coffee")
+    assert assistant_message.content.endswith("I'll remember your preference.")
     del agent, native_agent
     gc.collect()
     engine.shutdown_sync()

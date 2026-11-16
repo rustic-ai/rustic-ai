@@ -13,6 +13,12 @@ from unittest.mock import Mock
 import fsspec
 from fsspec.implementations.dirfs import DirFileSystem
 import pandas as pd
+
+from rustic_ai.core.guild.agent_ext.depends.llm.models import (
+    ChatCompletionRequest,
+    SystemMessage,
+    UserMessage,
+)
 from rustic_ai.llm_agent.plugins.tool_call_wrapper import ToolCallResult
 from rustic_ai.pandas_analyst.enrichment import (
     DatasetEnrichmentMetadata,
@@ -20,12 +26,6 @@ from rustic_ai.pandas_analyst.enrichment import (
     DatasetLoadedEvent,
     DatasetProfile,
     EnrichmentContextPreprocessor,
-)
-
-from rustic_ai.core.guild.agent_ext.depends.llm.models import (
-    ChatCompletionRequest,
-    SystemMessage,
-    UserMessage,
 )
 
 
@@ -67,6 +67,11 @@ class TestDatasetLoadedEmitter:
                 forward_header=SimpleNamespace(on_behalf_of=sender, origin_message_id="request-1"),
             )
         )
+        mock_ctx.get_context.return_value = {
+            "analysis_user": "upa-user-1",
+            "analysis_session": "analysis-request-1",
+            "analysis_request_id": "request-1",
+        }
         mock_input = Mock(filename="test.csv", dataset_name=None)
 
         result = emitter.postprocess(
@@ -113,6 +118,11 @@ class TestDatasetLoadedEmitter:
                 forward_header=SimpleNamespace(on_behalf_of=sender, origin_message_id="request-1"),
             )
         )
+        context.get_context.return_value = {
+            "analysis_user": "upa-user-1",
+            "analysis_session": "analysis-request-1",
+            "analysis_request_id": "request-1",
+        }
 
         result = emitter.postprocess(
             agent=mock_agent,

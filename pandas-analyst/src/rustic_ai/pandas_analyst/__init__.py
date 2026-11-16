@@ -8,7 +8,6 @@ from .enrichment import (
 )
 from .file_url_preprocessor import FileUrlExtractorPreprocessor
 from .memory import (
-    AnalysisConversationRecorder,
     AnalysisOutcomeEmitter,
     AnalysisOutcomeRecord,
 )
@@ -24,7 +23,6 @@ __all__ = [
     "EnrichmentContextPreprocessor",
     "DatasetEnrichmentMetadata",
     "DatasetLoadedEvent",
-    "AnalysisConversationRecorder",
     "AnalysisOutcomeEmitter",
     "AnalysisOutcomeRecord",
 ]

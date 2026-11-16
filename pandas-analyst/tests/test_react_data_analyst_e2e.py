@@ -18,10 +18,6 @@ from fsspec import filesystem
 from fsspec.implementations.dirfs import DirFileSystem
 from pydantic import BaseModel
 import pytest
-from rustic_ai.litellm.agent_ext.llm import LiteLLMResolver
-from rustic_ai.pandas_analyst import DataAnalystAgent, DataAnalystAgentConfig
-from rustic_ai.pandas_analyst.file_url_preprocessor import FileUrlExtractorPreprocessor
-from rustic_ai.pandas_analyst.react_toolset import DataAnalystReActToolset
 
 from rustic_ai.core.agents.testutils.probe_agent import ProbeAgent
 from rustic_ai.core.guild.agent_ext.depends import DependencyResolver
@@ -43,6 +39,10 @@ from rustic_ai.core.guild.dsl import AgentSpec, DependencySpec
 from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 from rustic_ai.core.utils.gemstone_id import GemstoneGenerator
 from rustic_ai.core.utils.priority import Priority
+from rustic_ai.litellm.agent_ext.llm import LiteLLMResolver
+from rustic_ai.pandas_analyst import DataAnalystAgent, DataAnalystAgentConfig
+from rustic_ai.pandas_analyst.file_url_preprocessor import FileUrlExtractorPreprocessor
+from rustic_ai.pandas_analyst.react_toolset import DataAnalystReActToolset
 
 
 class FixedFilesystemResolver(DependencyResolver[DirFileSystem]):
@@ -219,6 +219,7 @@ class TestReactDataAnalystToolset:
         """Test that the toolset loads only through its injected filesystem."""
         from fsspec import filesystem
         from fsspec.implementations.dirfs import DirFileSystem
+
         from rustic_ai.pandas_analyst.react_toolset import LoadFileRequest
 
         toolset = DataAnalystReActToolset()

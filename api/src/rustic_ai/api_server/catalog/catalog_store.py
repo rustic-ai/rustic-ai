@@ -205,7 +205,7 @@ class CatalogStore:
                 raise HTTPException(status_code=404, detail=f"Blueprint {blueprint_id} not found")
 
             # Ensure orginal organization has access when sharing bp with org exposure
-            if blueprint.exposure == BlueprintExposure.ORGANIZATION:
+            if blueprint.exposure == BlueprintExposure.ORGANIZATION and blueprint.organization_id is not None:
                 session.add(
                     BlueprintSharedWithOrganization(
                         organization_id=blueprint.organization_id, blueprint_id=blueprint_id

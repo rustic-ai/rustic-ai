@@ -16,8 +16,6 @@ from pathlib import PurePosixPath
 from typing import List, Optional
 from urllib.parse import unquote, urlsplit
 
-from rustic_ai.llm_agent.plugins.request_preprocessor import RequestPreprocessor
-
 from rustic_ai.core.guild.agent import Agent, ProcessContext
 from rustic_ai.core.guild.agent_ext.depends.llm.llm import LLM
 from rustic_ai.core.guild.agent_ext.depends.llm.models import (
@@ -26,6 +24,7 @@ from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     SystemMessage,
     UserMessage,
 )
+from rustic_ai.llm_agent.plugins.request_preprocessor import RequestPreprocessor
 
 logger = logging.getLogger(__name__)
 

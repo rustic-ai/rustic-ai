@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 import json
 import logging
 import time
-from typing import Generic, List, Literal, Optional, TypeVar, Union
+from typing import Any, Generic, List, Literal, Optional, TypeVar, Union
 import uuid
 
 import openai
@@ -993,7 +993,7 @@ class ReActAgent(Agent[ReActAgentConfigT], Generic[ReActAgentConfigT]):
     @staticmethod
     def _skill_selector_spec(skills: List[ReActSkillSpec]) -> ToolSpec:
         skill_names = tuple(skill.name for skill in skills)
-        skill_type = Literal.__getitem__(skill_names)
+        skill_type: Any = Literal.__getitem__(skill_names)
         args_model = create_model(
             "AvailableToolSkillArgs",
             __base__=ActivateToolSkillArgs,

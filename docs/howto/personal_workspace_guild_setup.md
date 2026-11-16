@@ -122,5 +122,5 @@ Then update the orchestrator's system prompt to include GitHub tools.
 - [Model Context Protocol Spec](https://modelcontextprotocol.io/docs)
 - [MCP Servers Repository](https://github.com/modelcontextprotocol/servers)
 - [Creating a Guild Guide](creating_a_guild.md)
-- [LLM Agent Documentation](../agents/litellm/llm_agent.md)
+- [LLM Agent Documentation](../agents/llm_agent.md)
 - [Example Guild Specification](https://github.com/your-repo/demos/blueprints/personal_workspace_guild.json)

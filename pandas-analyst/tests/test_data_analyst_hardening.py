@@ -7,13 +7,6 @@ from fsspec.implementations.asyn_wrapper import AsyncFileSystemWrapper
 from fsspec.implementations.dirfs import DirFileSystem
 import pandas as pd
 import pytest
-from rustic_ai.llm_agent.react import ToolOutcomeDisposition
-from rustic_ai.pandas_analyst import PandasDataAnalyzer
-from rustic_ai.pandas_analyst.file_url_preprocessor import FileUrlExtractorPreprocessor
-from rustic_ai.pandas_analyst.react_toolset import (
-    DataAnalystReActToolset,
-    LoadFileRequest,
-)
 
 from rustic_ai.core.guild.agent_ext.depends.code_execution.data_analyzer import (
     InvalidQueryError,
@@ -21,6 +14,13 @@ from rustic_ai.core.guild.agent_ext.depends.code_execution.data_analyzer import 
 )
 from rustic_ai.core.guild.agent_ext.depends.filesystem import FileSystemResolver
 from rustic_ai.core.guild.metaprog.agent_registry import AgentRegistry
+from rustic_ai.llm_agent.react import ToolOutcomeDisposition
+from rustic_ai.pandas_analyst import PandasDataAnalyzer
+from rustic_ai.pandas_analyst.file_url_preprocessor import FileUrlExtractorPreprocessor
+from rustic_ai.pandas_analyst.react_toolset import (
+    DataAnalystReActToolset,
+    LoadFileRequest,
+)
 
 
 def bound_toolset(root: Path) -> DataAnalystReActToolset:

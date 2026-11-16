@@ -4,13 +4,19 @@ from pydantic import ValidationError
 import pytest
 from uniko import IngestSource, Uniko
 
-from rustic_ai.uniko_agent import MemoryAgent, MemoryScope, RecallRequest
+from rustic_ai.uniko_agent import (
+    MemoryAgent,
+    MemoryScope,
+    RecallRequest,
+    RecallResponse,
+)
 
 
 def test_private_store_scope_must_be_explicit():
     assert MemoryScope(sessions=None).sessions is None
     assert MemoryScope(sessions=["user-1"]).sessions == ["user-1"]
-    for data in [{}, {"sessions": []}]:
+    cases: list[dict[str, object]] = [{}, {"sessions": []}]
+    for data in cases:
         with pytest.raises(ValidationError):
             MemoryScope.model_validate(data)
 
@@ -29,7 +35,7 @@ async def test_real_ingested_document_recall_preserves_category_and_private_stor
     memory = MemoryAgent.__new__(MemoryAgent)
 
     async def recall(handle, sessions, kinds):
-        sent = []
+        sent: list[RecallResponse] = []
         ctx = SimpleNamespace(
             payload=RecallRequest(
                 query="Harbor Project pilot budget coordinator",

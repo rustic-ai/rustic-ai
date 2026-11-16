@@ -37,6 +37,7 @@ from .models import (  # Observation; Recall; Answer; Document ingestion; Goal m
     RecallItem,
     RecallRequest,
     RecallResponse,
+    RecallUserSessionsRequest,
     RecordMemoryRequest,
     RecordMemoryResult,
     TaskStatusResponse,
@@ -58,6 +59,7 @@ __all__ = [
     "ObserveResult",
     # Recall payloads
     "RecallRequest",
+    "RecallUserSessionsRequest",
     "RecallResponse",
     "RecallItem",
     "MemoryScope",

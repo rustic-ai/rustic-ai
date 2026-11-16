@@ -34,7 +34,7 @@ ENV PYTHONUNBUFFERED=1
 
 RUN apt-get update && apt-get install -y --no-install-recommends libpq-dev
 
-RUN pip install poetry==2.3.2
+RUN pip install poetry==2.5.1
 
 ENV POETRY_NO_INTERACTION=1 \
     POETRY_VIRTUALENVS_IN_PROJECT=1 \
@@ -69,7 +69,8 @@ RUN ${VIRTUAL_ENV}/bin/pip install --no-deps ${APPDIR}/dist/*.whl \
 RUN rm -rf ${APPDIR}/dist
 
 # System dependencies required for playwright
-RUN playwright install --with-deps chromium
+RUN apt-get update && apt-get install -y --no-install-recommends libatomic1 \
+    && playwright install --with-deps chromium
 
 RUN python -m spacy download en_core_web_sm
 

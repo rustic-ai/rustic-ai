@@ -6,11 +6,6 @@ from urllib.parse import unquote, urlsplit
 
 from fsspec.implementations.asyn_wrapper import AsyncFileSystemWrapper
 from pydantic import BaseModel, Field, PrivateAttr
-from rustic_ai.llm_agent.react.toolset import (
-    ReActToolOutcome,
-    ReActToolset,
-    ToolOutcomeDisposition,
-)
 
 from rustic_ai.core.agents.commons.media import MediaLink
 from rustic_ai.core.guild.agent_ext.depends.code_execution.data_analyzer import (
@@ -37,6 +32,11 @@ from rustic_ai.core.guild.agent_ext.depends.code_execution.data_analyzer.tools i
 )
 from rustic_ai.core.guild.agent_ext.depends.filesystem import FileSystem
 from rustic_ai.core.guild.agent_ext.depends.llm.tools_manager import ToolSpec
+from rustic_ai.llm_agent.react.toolset import (
+    ReActToolOutcome,
+    ReActToolset,
+    ToolOutcomeDisposition,
+)
 
 from .analyzer import PandasDataAnalyzer
 

@@ -102,6 +102,17 @@ class TestServer:
         server = "127.0.0.1:8880"
         # Increase wait time for shared memory operations
         wait_time = 0.5
+        # Guild startup competes with other workers during the parallel CI suite.
+        request_timeout = 10.0
+
+        async def receive_interaction(websocket):
+            # Wait for both the notification and response, then check for extras.
+            responses = [await asyncio.wait_for(websocket.recv(), request_timeout) for _ in range(2)]
+            while True:
+                try:
+                    responses.append(await asyncio.wait_for(websocket.recv(), wait_time))
+                except TimeoutError:
+                    return responses
 
         routing_slip = RoutingSlip(
             steps=[
@@ -123,17 +134,17 @@ class TestServer:
 
         guild.routes = routing_slip
 
-        async with httpx.AsyncClient(base_url=f"http://{server}", timeout=wait_time * 2) as client:
+        async with httpx.AsyncClient(base_url=f"http://{server}", timeout=request_timeout) as client:
             req = LaunchGuildReq(spec=guild, org_id=org_id)
             req_data = json.loads(req.model_dump_json())
-            new_guild_resp = await asyncio.wait_for(client.post("/api/guilds", json=req_data), wait_time * 2)
+            new_guild_resp = await asyncio.wait_for(client.post("/api/guilds", json=req_data), request_timeout)
 
             assert new_guild_resp.status_code == 201
             # Extra wait to ensure agents are fully subscribed
             time.sleep(wait_time * 2)
 
             no_messages = await asyncio.wait_for(
-                client.get(f"/api/guilds/{guild.id}/user123/messages", timeout=wait_time), wait_time
+                client.get(f"/api/guilds/{guild.id}/user123/messages"), request_timeout
             )
 
             assert no_messages.status_code == 200
@@ -163,13 +174,7 @@ class TestServer:
             await asyncio.wait_for(websocket.send(json.dumps(msg_dict)), wait_time)
             await asyncio.sleep(wait_time * 2)
 
-            wresp0 = []
-            while True:
-                try:
-                    wr = await asyncio.wait_for(websocket.recv(), wait_time)
-                    wresp0.append(wr)
-                except TimeoutError:
-                    break
+            wresp0 = await receive_interaction(websocket)
 
             assert len(wresp0) == 2
 
@@ -199,13 +204,7 @@ class TestServer:
             await asyncio.wait_for(websocket.send(json.dumps(msg_dict)), wait_time)
             await asyncio.sleep(2)
 
-            wrespi = []
-            while True:
-                try:
-                    wr = await asyncio.wait_for(websocket.recv(), wait_time)
-                    wrespi.append(wr)
-                except TimeoutError:
-                    break
+            wrespi = await receive_interaction(websocket)
 
             assert len(wrespi) == 2
 
@@ -233,13 +232,7 @@ class TestServer:
             await asyncio.wait_for(websocket.send(json.dumps(msg_dict)), wait_time)
             await asyncio.sleep(2)
 
-            wsrespx = []
-            while True:
-                try:
-                    wr = await asyncio.wait_for(websocket.recv(), wait_time)
-                    wsrespx.append(wr)
-                except TimeoutError:
-                    break
+            wsrespx = await receive_interaction(websocket)
 
             assert len(wsrespx) == 2
             user_msg = json.loads(wsrespx[0])
@@ -268,13 +261,7 @@ class TestServer:
             await asyncio.wait_for(websocket.send(json.dumps(msg2.model_dump())), wait_time)
             await asyncio.sleep(2)
 
-            wsresp1 = []
-            while True:
-                try:
-                    wr = await asyncio.wait_for(websocket.recv(), wait_time)
-                    wsresp1.append(wr)
-                except TimeoutError:
-                    break
+            wsresp1 = await receive_interaction(websocket)
 
             assert len(wsresp1) == 2
 
@@ -299,13 +286,7 @@ class TestServer:
             await asyncio.wait_for(websocket.send(json.dumps(msg3.model_dump())), wait_time)
             await asyncio.sleep(5)
 
-            wsresp2 = []
-            while True:
-                try:
-                    wr = await asyncio.wait_for(websocket.recv(), wait_time)
-                    wsresp2.append(wr)
-                except TimeoutError:
-                    break
+            wsresp2 = await receive_interaction(websocket)
 
             assert len(wsresp2) == 2
 
@@ -317,8 +298,8 @@ class TestServer:
             assert json2["forward_header"]["on_behalf_of"]["name"] == "EchoAgent"
 
         # Test fetching historical messages
-        async with httpx.AsyncClient(base_url=f"http://{server}", timeout=wait_time * 2) as client:
-            messages = await asyncio.wait_for(client.get(f"/api/guilds/{guild.id}/user123/messages"), wait_time * 2)
+        async with httpx.AsyncClient(base_url=f"http://{server}", timeout=request_timeout) as client:
+            messages = await asyncio.wait_for(client.get(f"/api/guilds/{guild.id}/user123/messages"), request_timeout)
 
             assert messages.status_code == 200
             messages_json = messages.json()
@@ -337,7 +318,7 @@ class TestServer:
             assert messages_json[9]["payload"]["content"] == "Hello, guild 3!"
 
         # Test fetching historical messages for different user
-        async with httpx.AsyncClient(base_url=f"http://{server}", timeout=wait_time * 2) as client:
+        async with httpx.AsyncClient(base_url=f"http://{server}", timeout=request_timeout) as client:
             messages = await asyncio.wait_for(client.get(f"/api/guilds/{guild.id}/user234/messages"), wait_time * 2)
 
             assert messages.status_code == 200

@@ -1,5 +1,7 @@
 """Initialize memory workflow identity before expression-based routing."""
 
+from hashlib import sha256
+
 from rustic_ai.core.agents.commons.message_formats import ErrorMessage
 from rustic_ai.core.guild import Agent, agent
 from rustic_ai.core.guild.agent import ProcessContext
@@ -28,7 +30,10 @@ class MemoryRequestInitializerAgent(Agent):
                 )
             )
             return
-        ctx.update_context({"request_id": str(request_id), "request_user": sender_id})
+        digest = sha256(f"{self.guild_id}\0{sender_id}\0{request_id}".encode()).hexdigest()
+        ctx.update_context(
+            {"request_id": str(request_id), "request_user": sender_id, "memory_session_id": f"analysis-{digest}"}
+        )
         # Preserve attachment metadata carried by the transport payload as well
         # as the typed request; FileUrl's parsed model omits MediaLink fields.
         ctx.send_dict(ctx.message.payload, format=ctx.message.format)

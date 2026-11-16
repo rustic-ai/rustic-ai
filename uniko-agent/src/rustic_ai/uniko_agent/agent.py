@@ -1,6 +1,7 @@
 """Comprehensive memory agent leveraging uniko's cognitive memory system."""
 
 import asyncio
+from hashlib import sha256
 import logging
 from typing import Any, Dict, Optional
 
@@ -10,6 +11,14 @@ from uniko import IngestSource, RecallSource, Scope, Turn
 from rustic_ai.core.guild import agent
 from rustic_ai.core.guild.agent import Agent, ProcessContext
 from rustic_ai.core.guild.agent_ext.depends.filesystem import FileSystem
+from rustic_ai.core.guild.agent_ext.depends.llm.models import (
+    ArrayOfContentParts,
+    ChatCompletionRequest,
+    ChatCompletionResponse,
+    TextContentPart,
+    UserMessage,
+)
+from rustic_ai.core.messaging.core.message import ProcessStatus
 
 from .config import MemoryAgentConfig
 from .models import (
@@ -40,6 +49,7 @@ from .models import (
     RecallItem,
     RecallRequest,
     RecallResponse,
+    RecallUserSessionsRequest,
     RecordMemoryRequest,
     RecordMemoryResult,
     TaskStatusResponse,
@@ -131,6 +141,90 @@ class MemoryAgent(Agent[MemoryAgentConfig]):
     def _producer_is_allowed(self, ctx: ProcessContext, kind: MemoryRecordKind) -> bool:
         allowed = self.config.allowed_record_producers.get(kind.value)
         return allowed is None or ctx.message.sender.id in allowed
+
+    def _conversation_identity(self, ctx: ProcessContext, producer_ids: list[str]) -> Optional[tuple[str, str]]:
+        """Only explicitly routed messages with the initializer's request identity qualify."""
+        context = ctx.get_context() or {}
+        user = context.get("analysis_user") or context.get("request_user")
+        session_id = context.get("analysis_session") or context.get("memory_session_id")
+        request_id = context.get("analysis_request_id") or context.get("request_id")
+        if (
+            ctx.message.sender.id not in producer_ids
+            or not isinstance(user, str)
+            or not user.startswith("upa-")
+            or not isinstance(session_id, str)
+            or not session_id.startswith("analysis-")
+            or not isinstance(request_id, str)
+        ):
+            return None
+        digest = sha256(f"{self.guild_id}\0{user}\0{request_id}".encode()).hexdigest()
+        if session_id != f"analysis-{digest}":
+            return None
+        user_digest = sha256(f"{self.guild_id}\0{user}".encode()).hexdigest()
+        return session_id, f"user-{user_digest}"
+
+    @agent.processor(ChatCompletionRequest, depends_on=["uniko"])
+    async def record_conversation_request(self, ctx: ProcessContext[ChatCompletionRequest], uniko: uniko.Agent):
+        identity = self._conversation_identity(ctx, self.config.conversation_request_producers)
+        if identity is None:
+            self._send_failure(ctx, "record_rejected")
+            return
+        session_id, user_id = identity
+        users = [message for message in ctx.payload.messages if isinstance(message, UserMessage)]
+        if not users:
+            self._send_failure(ctx, "record_rejected")
+            return
+        content = users[-1].content
+        if isinstance(content, ArrayOfContentParts):
+            visible = "\n".join(part.text for part in content.root if isinstance(part, TextContentPart))
+        else:
+            visible = content
+        text = visible.strip()[:16000] or "[User supplied a file attachment]"
+        context = ctx.get_context() or {}
+        key = self._record_key(
+            MemoryRecordKind.CONVERSATION_TURN, context.get("request_id") or context["analysis_request_id"]
+        )
+        turn = (
+            Turn(user_id, self._record_text(MemoryRecordKind.CONVERSATION_TURN, key, user_id, text))
+            .id(key)
+            .metadata("sender_role", "user")
+            .metadata("memory_record_kind", MemoryRecordKind.CONVERSATION_TURN.value)
+        )
+        try:
+            async with self._session_lock(session_id):
+                await uniko.session(session_id).observe(turn)
+        except Exception:
+            logger.exception("Conversation request recording failed")
+            self._send_failure(ctx, "record_failed")
+
+    @agent.processor(ChatCompletionResponse, depends_on=["uniko"])
+    async def close_conversation_session(self, ctx: ProcessContext[ChatCompletionResponse], uniko: uniko.Agent):
+        identity = self._conversation_identity(ctx, self.config.conversation_response_producers)
+        if identity is None or ctx.message.process_status not in {ProcessStatus.COMPLETED, ProcessStatus.ERROR}:
+            self._send_failure(ctx, "record_rejected")
+            return
+        if len(ctx.payload.choices) != 1 or not ctx.payload.choices[0].message.content:
+            self._send_failure(ctx, "record_rejected")
+            return
+        session_id, _ = identity
+        content = ctx.payload.choices[0].message.content.strip()[:16000]
+        key = self._record_key(MemoryRecordKind.ASSISTANT_RESPONSE, str(ctx.message.id))
+        turn = (
+            Turn(
+                ctx.message.sender.id,
+                self._record_text(MemoryRecordKind.ASSISTANT_RESPONSE, key, ctx.message.sender.id, content),
+            )
+            .id(key)
+            .metadata("sender_role", "agent")
+            .metadata("memory_record_kind", MemoryRecordKind.ASSISTANT_RESPONSE.value)
+        )
+        try:
+            async with self._session_lock(session_id):
+                await uniko.session(session_id).observe(turn)
+                await uniko.finalize_session(session_id)
+        except Exception:
+            logger.exception("Conversation session closure failed")
+            self._send_failure(ctx, "finalize_failed")
 
     @staticmethod
     def _deletion_result(report: Any) -> MemoryDeletionResult:
@@ -313,19 +407,59 @@ class MemoryAgent(Agent[MemoryAgentConfig]):
             ctx: Process context with RecallRequest payload
             uniko: Guild-scoped uniko agent (injected dependency)
         """
-        req = ctx.payload
-
-        logger.debug("Recalling bounded knowledge for an explicit memory scope")
-
         try:
-            sessions = req.scope.sessions
+            await self._recall(ctx, uniko, ctx.payload, ctx.payload.scope.sessions)
+        except Exception:
+            logger.exception("Memory recall failed")
+            self._send_failure(ctx, "recall_failed")
+
+    @agent.processor(RecallUserSessionsRequest, depends_on=["uniko"])
+    async def recall_user_sessions(self, ctx: ProcessContext[RecallUserSessionsRequest], uniko: uniko.Agent):
+        identity = self._conversation_identity(ctx, self.config.conversation_request_producers)
+        if identity is None or identity[0] != ctx.payload.current_session_id:
+            self._send_failure(ctx, "record_rejected")
+            return
+        try:
+            # The participant is derived from the authenticated User Proxy identity,
+            # never from a user-supplied Cypher fragment or a shared agent-wide scope.
+            context = ctx.get_context() or {}
+            if ctx.payload.user_id != (context.get("analysis_user") or context.get("request_user")):
+                self._send_failure(ctx, "record_rejected")
+                return
+            rows = await uniko.query(
+                "MATCH (p:Participant {participant_id: '" + identity[1] + "'})"
+                "-[:PARTICIPATED_IN]->(s:Session) "
+                "WHERE s.ended_at IS NOT NULL "
+                "RETURN s.session_id AS sid ORDER BY s.ended_at DESC LIMIT 33"
+            )
+            sessions = list(
+                dict.fromkeys(
+                    row["sid"]
+                    for row in rows
+                    if isinstance(row.get("sid"), str) and row["sid"] != ctx.payload.current_session_id
+                )
+            )[:32]
+            if not sessions:
+                ctx.send(RecallResponse(items=[], total_tokens=0, phase1_only=False, phase2_only=False, coverage=0.0))
+                return
+            await self._recall(ctx, uniko, ctx.payload, sessions)
+        except Exception:
+            logger.exception("User session recall failed")
+            self._send_failure(ctx, "recall_failed")
+
+    async def _recall(self, ctx: ProcessContext, uniko: uniko.Agent, req: Any, sessions: Optional[list[str]]):
+        logger.debug("Recalling bounded knowledge for explicit memory sessions")
+        try:
             if sessions is None:
                 sessions = list(getattr(self, "_session_locks", {}))
             locks = [self._session_lock(session_id) for session_id in sorted(set(sessions))]
             for lock in locks:
                 await lock.acquire()
             try:
-                bundle = await uniko.recall_in(req.query, self._build_scope(req.scope))
+                scope = Scope().sessions(sessions) if sessions else Scope()
+                if isinstance(req, RecallRequest) and req.scope.participants:
+                    scope = scope.participants(req.scope.participants)
+                bundle = await uniko.recall_in(req.query, scope)
             finally:
                 for lock in reversed(locks):
                     lock.release()
@@ -365,8 +499,7 @@ class MemoryAgent(Agent[MemoryAgentConfig]):
             )
 
         except Exception:
-            logger.exception("Memory recall failed")
-            self._send_failure(ctx, "recall_failed")
+            raise
 
     @agent.processor(AnswerRequest, depends_on=["uniko"])
     async def answer_question(self, ctx: ProcessContext[AnswerRequest], uniko: uniko.Agent):

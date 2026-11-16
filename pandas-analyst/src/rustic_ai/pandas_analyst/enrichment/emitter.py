@@ -12,13 +12,13 @@ from pathlib import PurePosixPath
 from typing import Optional, Union
 
 from pydantic import BaseModel, Field
+
+from rustic_ai.core.guild.agent import Agent, ProcessContext
 from rustic_ai.llm_agent.plugins.tool_call_wrapper import (
     ToolCallResult,
     ToolCallWrapper,
     ToolSkipResult,
 )
-
-from rustic_ai.core.guild.agent import Agent, ProcessContext
 
 from ..memory import DatasetLoadedEvent, DatasetProfile, analysis_memory_identity
 

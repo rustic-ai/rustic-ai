@@ -23,7 +23,7 @@ from rustic_ai.core.messaging.core.client import Client
 from rustic_ai.core.messaging.core.message import AgentTag, Message, ProcessEntry
 from rustic_ai.core.messaging.core.messaging_interface import MessagingInterface
 from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
-from rustic_ai.core.utils.gemstone_id import GemstoneGenerator
+from rustic_ai.core.utils.gemstone_id import GemstoneGenerator, GemstoneID
 from rustic_ai.core.utils.priority import Priority
 
 
@@ -293,19 +293,31 @@ class GuildCommunicationManager:
         return result
 
     @staticmethod
-    def historical_message_sort_key(message: Message) -> tuple[int, int, bool, int, int]:
+    def historical_message_sort_key(message: Message) -> tuple[float, int, bool, int, int]:
         """
         Prefer chronological ordering, but keep messages from the same interaction in causal order.
 
         Different agents can generate IDs in the same millisecond with different machine IDs, which can
         invert user-message/agent-response pairs if we sort purely by message ID.
         """
+        # Notifications and responses travel on separate subjects. A response can
+        # arrive before the user's broadcast notification, so use their shared ingress
+        # timestamp and routing depth to preserve the order of each interaction.
+        interaction_id = next(
+            (
+                entry.origin
+                for entry in reversed(message.message_history)
+                if entry.processor == "unwrap_and_forward_message"
+            ),
+            None,
+        )
+        timestamp = GemstoneID.from_int(interaction_id).timestamp if interaction_id is not None else message.timestamp
         # Any message that explicitly responds to an earlier message should come after
         # the user-originated entry for that interaction, even if it shares the same root.
         is_follow_up = message.in_response_to is not None
         return (
-            message.timestamp,
-            message.root_thread_id,
+            timestamp,
+            interaction_id if interaction_id is not None else message.root_thread_id,
             is_follow_up,
             len(message.message_history),
             message.id,

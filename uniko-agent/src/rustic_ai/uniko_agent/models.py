@@ -18,6 +18,7 @@ class MemoryRecordKind(StrEnum):
     MODEL_INTERPRETATION = "model_interpretation"
     EXECUTED_RESULT = "executed_result"
     ASSISTANT_RESPONSE = "assistant_response"
+    CONVERSATION_TURN = "conversation_turn"
 
 
 class MemoryScope(BaseModel):
@@ -162,6 +163,19 @@ class RecallRequest(BaseModel):
 
     query: str = Field(min_length=1, max_length=4000, description="Query string for semantic search")
     scope: MemoryScope
+    allowed_record_kinds: List[MemoryRecordKind] = Field(min_length=1, max_length=len(MemoryRecordKind))
+    item_limit: int = Field(default=10, ge=1, le=50)
+    max_characters: int = Field(default=6000, ge=1, le=32000)
+
+
+class RecallUserSessionsRequest(BaseModel):
+    """Recall at most 32 finalized request sessions belonging to one user."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    query: str = Field(min_length=1, max_length=4000)
+    user_id: str = Field(pattern=r"^upa-.+", max_length=256)
+    current_session_id: str = Field(pattern=r"^analysis-[0-9a-f]{64}$")
     allowed_record_kinds: List[MemoryRecordKind] = Field(min_length=1, max_length=len(MemoryRecordKind))
     item_limit: int = Field(default=10, ge=1, le=50)
     max_characters: int = Field(default=6000, ge=1, le=32000)
