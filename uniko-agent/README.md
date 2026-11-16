@@ -1,6 +1,6 @@
 # Uniko Memory Agent
 
-Comprehensive memory agent for Rustic AI that leverages [uniko](https://github.com/uniko-ai/uniko)'s cognitive memory system.
+Comprehensive memory agent for Rustic AI that integrates [uniko](https://github.com/uniko-ai/uniko)'s cognitive memory system.
 
 ## Overview
 
@@ -10,14 +10,25 @@ The Uniko Memory Agent provides a complete integration of uniko's 5-tier memory 
 - **Multi-phase recall** (3-phase cascade: Facts/Procedures → Episodes/Observations → Chunks)
 - **Full provenance tracking** (every fact traces back to source messages)
 - **Goal and task management** (research workflows with working memory)
-- **Guild-scoped memory sharing** (all agents in a guild access shared knowledge)
+- **Agent-scoped storage** (each resolver instance uses the agent’s private filesystem)
+
+Uniko stores raw messages, actions and source artifacts, then derives observations,
+bitemporal facts and reusable procedures with provenance. Extraction runs at
+write time through rules, code parsing and local NLP; recall combines compact
+knowledge, episodic expansion and chunk search. uni-xervo owns the model runtime,
+provider selection and inference behind stable task aliases. Uniko owns memory
+semantics and the graph; Rustic owns message routing, sessions and dependency
+lifecycle. Streaming enables background ingest/consolidation workers; direct
+observation and explicit consolidation are available without streaming.
 
 ## Installation
 
 This integration supports Uniko 0.5.1 through the 0.5 release series.
-`alias: mistral` uses the hosted Mistral OpenAI-compatible API, reading
-`MISTRAL_API_KEY` by default. Set `base_url` and `key_env` to use another
-OpenAI-compatible endpoint. Uniko no longer embeds the Mistral runtime.
+The embedded `mistralrs` runtime is no longer supported. Old `alias: mistral`
+configurations are rejected; they are not migrated to the hosted Mistral API.
+The base `uniko` wheel runs local ONNX memory models on CPU. Uniko also
+publishes mutually exclusive `uniko-metal` (macOS ARM64) and `uniko-cuda`
+(Linux x86-64) distributions; install one runtime distribution per environment.
 
 ```bash
 cd rustic-ai/uniko-agent
@@ -81,7 +92,8 @@ uniko_dep = DependencySpec(
     properties={
         "storage_path": "memory",  # Within the injected agent filesystem
         "llm_spec": {
-            "alias": "openai",
+            "provider": "openai_with_key_env",
+            "alias": "answer/default",
             "model_id": "gpt-4o-mini",
             "key_env": "OPENAI_API_KEY"
         },
@@ -201,9 +213,58 @@ config = MemoryAgentConfig(
     "storage_path": str | None,      # None = in-memory; otherwise agent-filesystem location
     "llm_spec": dict | None,         # LLM config for answer generation
     "streaming": bool,               # Enable streaming mode
-    "scope_to_agent": bool,          # Scope memory to individual agents (not recommended)
+    "scope_to_agent": bool,          # Restrict visibility to the Uniko agent
+    "config": dict | None,           # Partial native Uniko config
+    "embedding": str | dict | None,  # Native preset/section; overrides config.embedding
+    "nlp": str | dict | None,        # Native preset/section; overrides config.nlp
+    "reranker": str | dict | bool | None,  # False disables; None keeps defaults
 }
 ```
+
+### Model selection and execution modes
+
+Ingestion, extraction, consolidation and recall work without an LLM. Uniko
+uses uni-xervo model aliases for their separate tasks: `embed/default`,
+`nlp/default`, and the configured reranker. The resolver passes model settings
+to the native SDK, which validates them and supplies its own defaults.
+
+```python
+properties = {
+    "embedding": "bge-small",  # Also nomic, nomic-q, minilm, bge-large, bge-m3, gemma
+    "nlp": "v1",  # Also v7-tiny/small/medium/large/xlarge/xlarge-d
+    "reranker": "minilm",  # Also bge-base, a partial config, or False
+    "config": {"recall_limit": 10},
+    "llm_spec": {
+        "provider": "llamacpp",
+        "alias": "answer/local",
+        "model_id": "qwen",  # The model served by your llama-server
+        "base_url": "http://127.0.0.1:8080/v1",
+        # "key_env": "LLAMA_SERVER_KEY",  # Only for authenticated servers
+    },
+}
+```
+
+Generation supports the Python SDK's three modes: `openai` (default key env),
+`openai_with_key_env`, and `llamacpp`. `alias` is a runtime model name, separate
+from `provider`; `model_id` is passed through without a Rustic model whitelist.
+OpenAI modes accept an optional `base_url` for compatible endpoints. llama.cpp
+runs in a separate `llama-server` process, so it works with the CPU wheel too.
+The established `alias: openai` input remains supported.
+
+For advanced memory models, use partial sections such as
+`embedding={"provider": "remote/openai", "model_id": "text-embedding-3-small",
+"dimensions": 1536, "provider_options": {"api_key_env": "OPENAI_API_KEY"}}`,
+or `config={"catalog_path": "/absolute/path/catalog.json"}`. A custom catalog
+replaces the default catalog; include the aliases needed by Uniko's pipelines.
+The optional `llm_spec` entry is appended separately. Changing embedding
+dimensions requires a fresh store; GPU providers require a compatible wheel.
+
+uni-xervo supports additional providers, including `remote/mistral`, Anthropic,
+Gemini, Cohere and others. These can serve supported tasks through the catalog
+when compiled into the runtime. Uniko 0.5.1's Python `LlmSpec` constructors
+expose only OpenAI-compatible and llama.cpp generation, so the resolver does
+not advertise the other providers as direct `llm_spec` modes. Merely adding a
+generation entry to a catalog does not select it for `Agent.answer`.
 
 ## Integration with Research Guild
 

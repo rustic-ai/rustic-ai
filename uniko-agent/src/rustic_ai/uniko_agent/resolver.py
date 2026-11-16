@@ -1,10 +1,11 @@
 """Dependency resolver for uniko memory instances."""
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 
 from fsspec.core import url_to_fs
 from fsspec.implementations.local import LocalFileSystem
 import uniko
+from uniko.models import LlmSpecAdapter
 
 from rustic_ai.core.guild.agent_ext.depends.dependency_resolver import (
     DependencyResolver,
@@ -21,10 +22,13 @@ class UnikoResolver(DependencyResolver[uniko.Agent]):
 
     Attributes:
         storage_path: Location within the agent filesystem. None selects in-memory storage.
-        llm_spec: LLM configuration for answer generation. Format:
-                 {"alias": "openai", "model_id": "gpt-4o-mini", "key_env": "OPENAI_API_KEY"}
+        llm_spec: Native Uniko LLM configuration with provider, alias and model_id.
+        config: Partial native Uniko configuration, merged onto SDK defaults.
+        embedding: Native embedding preset or partial configuration.
+        nlp: Native NLP preset or partial configuration.
+        reranker: Native reranker preset or partial configuration; False disables it.
         streaming: Enable streaming mode for async observations
-        scope_to_agent: Scope visibility to agent-level (default: False for guild-wide sharing)
+        scope_to_agent: Restrict visibility to the Uniko agent within its private store
     """
 
     memoize_resolution: bool = True
@@ -35,6 +39,10 @@ class UnikoResolver(DependencyResolver[uniko.Agent]):
         llm_spec: Optional[Dict[str, Any]] = None,
         streaming: bool = False,
         scope_to_agent: bool = False,
+        config: Optional[Dict[str, Any]] = None,
+        embedding: Optional[Union[str, Dict[str, Any]]] = None,
+        nlp: Optional[Union[str, Dict[str, Any]]] = None,
+        reranker: Optional[Union[str, Dict[str, Any], bool]] = None,
     ):
         """Initialize the UnikoResolver.
 
@@ -42,13 +50,22 @@ class UnikoResolver(DependencyResolver[uniko.Agent]):
             storage_path: Location within the agent filesystem. None = in-memory storage.
             llm_spec: Optional LLM configuration dict for answer generation.
             streaming: Enable streaming mode for background processing.
-            scope_to_agent: If True, scope memory to individual agents (not recommended).
+            scope_to_agent: If True, restrict visibility to the Uniko agent.
+            config: Partial Uniko config, validated by the native SDK.
+            embedding: Embedding preset or section, overriding config.embedding.
+            nlp: NLP preset or section, overriding config.nlp.
+            reranker: Reranker preset or section, overriding config.reranker;
+                False disables reranking, None keeps the SDK/config default.
         """
         super().__init__()
         self.storage_path = storage_path
         self.llm_spec = llm_spec
         self.streaming = streaming
         self.scope_to_agent = scope_to_agent
+        self.config = config
+        self.embedding = embedding
+        self.nlp = nlp
+        self.reranker = reranker
         self._uniko_instances: Dict[str, uniko.Uniko] = {}
 
     def resolve(self, org_id: str, guild_id: str, agent_id: str) -> uniko.Agent:
@@ -56,7 +73,7 @@ class UnikoResolver(DependencyResolver[uniko.Agent]):
 
         Args:
             org_id: Organization ID
-            guild_id: Guild ID (becomes the uniko agent ID for shared memory)
+            guild_id: Guild ID (used as the default Uniko agent ID)
             agent_id: Rustic AI agent ID, determining private filesystem scope.
 
         Returns:
@@ -67,6 +84,16 @@ class UnikoResolver(DependencyResolver[uniko.Agent]):
         # Lazy initialization of uniko instance
         if cache_key not in self._uniko_instances:
             builder = uniko.Uniko.builder()
+            if self.config is not None:
+                builder = builder.config(self.config)
+            if self.embedding is not None:
+                builder = builder.embedding(self.embedding)
+            if self.nlp is not None:
+                builder = builder.nlp(self.nlp)
+            if self.reranker is not None:
+                if self.reranker is True:
+                    raise ValueError("Use a reranker preset or configuration to enable reranking")
+                builder = builder.reranker(None if self.reranker is False else self.reranker)
 
             # Configure storage
             if self.storage_path:
@@ -103,40 +130,22 @@ class UnikoResolver(DependencyResolver[uniko.Agent]):
         return uni.agent(memory_agent_id)
 
     def _build_llm_spec(self, spec: Dict[str, Any]) -> Any:
-        """Build uniko LLM spec from configuration dict.
-
-        Args:
-            spec: Dict with keys: alias, model_id, key_env, base_url (optional)
-
-        Returns:
-            uniko LLM spec object
-        """
-        provider_alias = spec.get("alias", "openai")
-        model_id = spec.get("model_id", "gpt-4o-mini")
-
-        # Build LLM spec based on provider alias
-        if provider_alias == "openai":
-            key_env = spec.get("key_env", "OPENAI_API_KEY")
-            base_url = spec.get("base_url")
-
-            # Uniko requires alias in 'task/provider' format
-            alias = f"answer/{provider_alias}"
-            llm = uniko.LlmSpec.openai_with_key_env(alias, model_id, key_env, base_url=base_url)
-            return llm
-
-        elif provider_alias == "mistral":
-            # Uniko 0.5 uses OpenAI-compatible endpoints for hosted models.
-            alias = f"answer/{provider_alias}"
-            llm = uniko.LlmSpec.openai_with_key_env(
-                alias,
-                model_id,
-                spec.get("key_env", "MISTRAL_API_KEY"),
-                base_url=spec.get("base_url", "https://api.mistral.ai/v1"),
+        """Validate native SDK modes, preserving the established OpenAI input."""
+        native_spec = dict(spec)
+        if "provider" not in native_spec:
+            # Existing Rustic configurations used alias as a provider selector.
+            legacy_alias = native_spec.get("alias", "openai")
+            if legacy_alias in {"mistral", "mistralrs"}:
+                raise ValueError("The embedded mistralrs runtime is no longer supported; configure an SDK provider")
+            if legacy_alias != "openai":
+                raise ValueError(f"Unsupported LLM alias: {legacy_alias}")
+            native_spec.update(
+                provider="openai_with_key_env",
+                alias="answer/openai",
+                model_id=native_spec.get("model_id", "gpt-4o-mini"),
+                key_env=native_spec.get("key_env", "OPENAI_API_KEY"),
             )
-            return llm
-
-        else:
-            raise ValueError(f"Unsupported LLM alias: {provider_alias}")
+        return LlmSpecAdapter.validate_python(native_spec).to_native()
 
     def shutdown(self):
         """Shutdown all uniko instances managed by this resolver.
