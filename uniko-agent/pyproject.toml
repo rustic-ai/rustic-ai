@@ -13,7 +13,7 @@ requires-python = ">=3.13,<3.14"
 dependencies = [
     "rusticai-core>=1.4.2,<1.5.0",
     "rusticai-llm-agent>=1.4.3,<1.5.0",
-    "uniko>=0.3.0,<0.4.0",
+    "uniko>=0.5.1,<0.6.0",
 ]
 urls = { Homepage = "https://www.rustic.ai/", Repository = "https://github.com/dragonscale-ai/rustic-ai", "Rustic AI Core" = "https://pypi.org/project/rusticai-core/" }
 
@@ -24,7 +24,7 @@ packages = [{ include = "rustic_ai", from = "src" }]
 [tool.poetry.dependencies]
 rusticai-core = { path = "../core", develop = true }
 rusticai-llm-agent = { path = "../llm-agent", develop = true }
-uniko = ">=0.3.0,<0.4.0"
+uniko = ">=0.5.1,<0.6.0"
 
 [tool.poetry-monorepo.deps]
 

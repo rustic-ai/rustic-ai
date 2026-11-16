@@ -59,6 +59,26 @@ class TestUnikoResolverLLMSpec:
             llm = resolver._build_llm_spec(spec)
             assert llm is not None
 
+    @pytest.mark.parametrize(
+        "overrides, expected_key, expected_url",
+        [
+            ({}, "MISTRAL_API_KEY", "https://api.mistral.ai/v1"),
+            (
+                {"key_env": "CUSTOM_MISTRAL_KEY", "base_url": "http://localhost:8080/v1"},
+                "CUSTOM_MISTRAL_KEY",
+                "http://localhost:8080/v1",
+            ),
+        ],
+    )
+    def test_mistral_uses_openai_compatible_endpoint(self, overrides, expected_key, expected_url):
+        resolver = UnikoResolver()
+        with patch("rustic_ai.uniko_agent.resolver.uniko.LlmSpec") as native:
+            llm = resolver._build_llm_spec({"alias": "mistral", "model_id": "mistral-large", **overrides})
+        native.openai_with_key_env.assert_called_once_with(
+            "answer/mistral", "mistral-large", expected_key, base_url=expected_url
+        )
+        assert llm is native.openai_with_key_env.return_value
+
     def test_build_llm_spec_unsupported_alias(self):
         """Test that unsupported alias raises ValueError."""
         resolver = UnikoResolver()

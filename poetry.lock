@@ -9733,7 +9733,7 @@ develop = true
 [package.dependencies]
 rusticai-core = ">=1.4.2,<1.5.0"
 rusticai-llm-agent = ">=1.4.3,<1.5.0"
-uniko = ">=0.3.0,<0.4.0"
+uniko = ">=0.5.1,<0.6.0"
 
 [package.source]
 type = "directory"
@@ -11481,17 +11481,17 @@ testing = ["check_manifest", "pyroma", "pytest (>=4.3)", "pytest-cov", "pytest-m
 
 [[package]]
 name = "uniko"
-version = "0.3.0"
+version = "0.5.1"
 description = "Python bindings for uniko cognitive memory"
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "uniko-0.3.0-cp310-abi3-macosx_11_0_arm64.whl", hash = "sha256:934776997526bd87f8b7d10654186785407e17cde3429480f31135073571fa56"},
-    {file = "uniko-0.3.0-cp310-abi3-manylinux_2_28_aarch64.whl", hash = "sha256:e87a476ad0247dbb352a8ee01ceb61be8ec0874468a45630754d0d1fa8434d92"},
-    {file = "uniko-0.3.0-cp310-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:ce32cd3d0a9d8ae535cd2b954daa965b6a6923082bb74fa1af0e2b54a688a1eb"},
-    {file = "uniko-0.3.0-cp310-abi3-win_amd64.whl", hash = "sha256:0b9e6ce7cb90304c4c19fe9cdd6af39f84fcc74c31a3c0855ce67e014f758d68"},
-    {file = "uniko-0.3.0.tar.gz", hash = "sha256:7f5be78e442b9de77b81139226c8ef3d1096cd8cd30778cfdbf45eaab24e3c2f"},
+    {file = "uniko-0.5.1-cp310-abi3-macosx_11_0_arm64.whl", hash = "sha256:bc5ba95e6778366704ab573176fde40484f776399fc20d9e0b4d7e9850772791"},
+    {file = "uniko-0.5.1-cp310-abi3-manylinux_2_28_aarch64.whl", hash = "sha256:3df70354d0ba4fe793eb67648205617ebd1e40d773d19a9e050a03fab42f232e"},
+    {file = "uniko-0.5.1-cp310-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:166b88c1ab28d80791a1ebe31ae5362d50ed25061de186c329a1fbfa77e4ce6b"},
+    {file = "uniko-0.5.1-cp310-abi3-win_amd64.whl", hash = "sha256:8ccfa128f9d66121bec989a3a98e3ecff74e2b8f00fd87f88f8ecb5063af6ca1"},
+    {file = "uniko-0.5.1.tar.gz", hash = "sha256:0f06270b6dfce5b194a7fb966ce52794f52df8452a0866d3f49c800a4031e1b6"},
 ]
 
 [package.dependencies]

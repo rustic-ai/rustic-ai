@@ -125,9 +125,14 @@ class UnikoResolver(DependencyResolver[uniko.Agent]):
             return llm
 
         elif provider_alias == "mistral":
-            # Uniko requires alias in 'task/provider' format
+            # Uniko 0.5 uses OpenAI-compatible endpoints for hosted models.
             alias = f"answer/{provider_alias}"
-            llm = uniko.LlmSpec.mistralrs(alias, model_id)
+            llm = uniko.LlmSpec.openai_with_key_env(
+                alias,
+                model_id,
+                spec.get("key_env", "MISTRAL_API_KEY"),
+                base_url=spec.get("base_url", "https://api.mistral.ai/v1"),
+            )
             return llm
 
         else:

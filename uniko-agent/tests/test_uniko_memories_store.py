@@ -350,7 +350,6 @@ def test_conflicting_replay_preserves_original_pair(monkeypatch):
     assert session.finalized == 1
 
 
-@pytest.mark.skipif(uniko.__version__ != "0.3.0", reason="requires the Uniko 0.3.0 wheel")
 def test_native_atomic_pair_replay_conflict_and_reopen(tmp_path):
     database = tmp_path / "assistant-memory.db"
     engine = uniko.Uniko.open_sync(str(database))

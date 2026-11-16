@@ -387,7 +387,7 @@ class MemoryAgent(Agent[MemoryAgentConfig]):
                     sender_id=result.sender_id,
                     extracted_entities=result.extracted_entities,
                     extracted_observations=result.extracted_observations,
-                    attachment_count=result.attachment_count,
+                    attachment_count=len(result.attachments),
                 )
             )
 

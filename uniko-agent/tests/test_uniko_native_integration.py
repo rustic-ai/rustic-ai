@@ -1,14 +1,11 @@
-"""Native integration checks against the published Uniko 0.3.0 wheel."""
+"""Native integration checks against the supported Uniko wheel."""
 
 import gc
 
-import pytest
 import uniko
 from uniko import Scope, Turn
 
 from rustic_ai.uniko_agent import MemoryAgent, MemoryRecordKind
-
-pytestmark = pytest.mark.skipif(uniko.__version__ != "0.3.0", reason="requires Uniko 0.3.0 wheel")
 
 
 def test_typed_turn_is_idempotent_scoped_persistent_and_deletable(tmp_path):

@@ -14,6 +14,11 @@ The Uniko Memory Agent provides a complete integration of uniko's 5-tier memory 
 
 ## Installation
 
+This integration supports Uniko 0.5.1 through the 0.5 release series.
+`alias: mistral` uses the hosted Mistral OpenAI-compatible API, reading
+`MISTRAL_API_KEY` by default. Set `base_url` and `key_env` to use another
+OpenAI-compatible endpoint. Uniko no longer embeds the Mistral runtime.
+
 ```bash
 cd rustic-ai/uniko-agent
 poetry install --with dev
