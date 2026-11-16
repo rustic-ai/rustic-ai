@@ -24,6 +24,7 @@ Rustic AI includes several specialized agents for various tasks:
 ### Web and API Agents
 - [PlaywrightScraperAgent](playwright/playwright_scraper_agent.md) - Web scraping using Playwright
 - [SERPAgent](serpapi/serp_agent.md) - Search engine results via SerpAPI
+- [LocalSERPAgent](serpapi/local_serp_agent.md) - Key-free local search via the user's browser
 
 ### External Tool Integration
 - [MCP Integration](mcp/index.md) - Connect to MCP (Model Context Protocol) servers for external tools

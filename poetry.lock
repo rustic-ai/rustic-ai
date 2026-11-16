@@ -9614,7 +9614,8 @@ rusticai-core = {path = "../core", develop = true}
 serpapi = "^1.2.0"
 
 [package.extras]
-test = []
+local = ["beautifulsoup4 (>=4.15.0,<5.0.0)", "rusticai-playwright @ file:///Users/rohit/Work/rustic-ai/playwright"]
+test = ["beautifulsoup4 (>=4.15.0,<5.0.0)", "rusticai-playwright @ file:///Users/rohit/Work/rustic-ai/playwright"]
 
 [package.source]
 type = "directory"

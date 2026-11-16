@@ -136,10 +136,14 @@ class PlaywrightEventLoopThread:
         self._started.set()
         self._loop.run_forever()
 
-    def run_coroutine(self, coro) -> Any:
+    def run_coroutine(self, coro, timeout: float = 120.0) -> Any:
         """
         Run a coroutine in the dedicated event loop thread and wait for the result.
         This method is thread-safe and can be called from any thread.
+
+        Args:
+            coro: The coroutine to run.
+            timeout: Seconds to wait for the result (default 2 minutes).
         """
         if self._loop is None or not self._thread or not self._thread.is_alive():
             self.start()
@@ -167,7 +171,7 @@ class PlaywrightEventLoopThread:
                 future.set_exception(e)
 
         self._loop.call_soon_threadsafe(callback)
-        return future.result(timeout=120.0)  # 2 minute timeout
+        return future.result(timeout=timeout)
 
     def stop(self):
         """Stop the event loop and thread."""
