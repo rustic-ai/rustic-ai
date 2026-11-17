@@ -10,7 +10,7 @@ The core text and document integration can progress independently of the upstrea
 | --- | --- |
 | Updated | 2026-11-16 |
 | Rustic code baseline | `7bc3cf0`, on the milliondreams fork's `main` branch |
-| Change under review | [Rustic PR 479](https://github.com/rustic-ai/rustic-ai/pull/479) |
+| Change under review | [Rustic PR 480](https://github.com/rustic-ai/rustic-ai/pull/480); dependency baseline merged through [PR 479](https://github.com/rustic-ai/rustic-ai/pull/479) |
 | Native dependency | Uniko `>=0.5.1,<0.6.0`; locks currently select 0.5.1 |
 | Runtime environment validated | Python 3.13.12, macOS ARM64, CPU Uniko wheel |
 | Upstream source snapshots checked | Uniko `28f8a1ae3e343f62392800b7d693c0bac45c7c80`; uni-xervo `fd312158599cb3fe429e93c56f07f7124d216642` |
