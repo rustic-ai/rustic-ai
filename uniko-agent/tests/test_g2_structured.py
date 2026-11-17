@@ -562,3 +562,128 @@ async def test_creation_replay_rechecks_native_ownership(native):
     await other.goals.create("Foreign title", goal_id="receipt-owned")
     replay = await invoke(agent, native, "create_goal", request, key="retry")
     assert not replay.sent and replay.errors[0].error == "structured_operation_rejected"
+
+
+@pytest.mark.parametrize("priority", [None, 0.0, 0.7, 1.0])
+def test_task_priority_survives_delivery_serialization(priority):
+    request = CreateTaskRequest(goal_id="g", title="t", native_priority=priority)
+    restored = CreateTaskRequest.model_validate(request.model_dump(mode="json"))
+    assert restored == request
+    assert restored.priority == (3 if priority is None else None)
+    assert restored.native_priority == priority
+
+
+@pytest.mark.asyncio
+async def test_goal_listing_filters_conflicting_native_owners(native):
+    agent = memory()
+    for goal_id in ("clean-goal", "conflicted-goal"):
+        result = await invoke(agent, native, "create_goal", CreateGoalRequest(title="Owned", goal_id=goal_id))
+        assert not result.errors
+    other = await agent._actor(native, "other", register=True)
+    await other.goals.create("Foreign title", goal_id="conflicted-goal")
+    for phase in ("all", "active"):
+        result = await invoke(agent, native, "get_goals", GetGoalsRequest(phase=phase))
+        assert not result.errors
+        assert result.sent[0].total_count == 1
+        assert [goal.goal_id for goal in result.sent[0].goals] == ["clean-goal"]
+        assert "Foreign title" not in result.sent[0].model_dump_json()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("cancelled", [False, True])
+async def test_uncertainty_journal_failure_preserves_terminal_error(native, monkeypatch, cancelled):
+    import asyncio
+    import sqlite3
+
+    agent = memory()
+    receipts = runtime_info(native)["runtime"].receipts
+    original_cancel = asyncio.CancelledError("original native cancellation")
+    real_perform = agent._perform
+
+    async def interrupted(*args):
+        await real_perform(*args)
+        raise original_cancel
+
+    def journal_failure(*args):
+        raise sqlite3.OperationalError("journal unavailable")
+
+    monkeypatch.setattr(receipts, "finish", journal_failure)
+    monkeypatch.setattr(receipts, "uncertain", journal_failure)
+    if cancelled:
+        monkeypatch.setattr(agent, "_perform", interrupted)
+    request = RecordEpisodeRequest(action_type="journal-failure", episode_id="journal-effect")
+    ctx = context(request)
+    if cancelled:
+        with pytest.raises(asyncio.CancelledError) as caught:
+            await MemoryAgent.record_episode.__wfn__(agent, ctx, native)
+        assert caught.value is original_cancel
+    else:
+        await MemoryAgent.record_episode.__wfn__(agent, ctx, native)
+    assert not ctx.sent and len(ctx.errors) == 1
+    assert ctx.errors[0].error == "operation_outcome_unknown"
+    assert ctx.errors[0].details == {"operation": "record_episode", "operation_id": "journal-effect"}
+    assert not agent._operation_gate.lock.locked()
+    assert receipts.get("reporter", "record_episode", "journal-effect")["state"] == "pending"
+    monkeypatch.setattr(agent, "_perform", real_perform)
+    repeated = await invoke(agent, native, "record_episode", request)
+    assert len(repeated.errors) == 1 and repeated.errors[0].error == "operation_outcome_unknown"
+    assert len(await native.query("MATCH (e:Episode {episode_id:'journal-effect'}) RETURN id(e) AS nid")) == 1
+
+
+@pytest.mark.asyncio
+async def test_batch_cancel_preserves_committed_item_uncertainty(monkeypatch):
+    import asyncio
+
+    from rustic_ai.uniko_agent import BatchSubmitRequest
+
+    resolver = UnikoResolver(storage_path=None, streaming=True)
+    native = resolver.get_or_resolve("org", "g2-batch", "memory")
+    try:
+        agent = memory()
+        real_perform = agent._perform
+
+        async def interrupted(*args):
+            await real_perform(*args)
+            raise asyncio.CancelledError()
+
+        monkeypatch.setattr(agent, "_perform", interrupted)
+        request = BatchSubmitRequest(
+            batch_id="cancel-batch",
+            session_id="s",
+            flush_after=False,
+            turns=[
+                {
+                    "sender_id": "reporter",
+                    "content": "Committed tool result",
+                    "tool_calls": [{"tool_name": "search", "call_id": "cancel-call", "text_output": "data"}],
+                },
+                {"sender_id": "reporter", "content": "Never started"},
+            ],
+        )
+        ctx = context(request)
+        with pytest.raises(asyncio.CancelledError):
+            await MemoryAgent.batch_submit.__wfn__(agent, ctx, native)
+        assert not ctx.errors and len(ctx.sent) == 3
+        current, unstarted, summary = ctx.sent
+        assert current.message_id == "batch-cancel-batch:0"
+        assert current.stored is None and current.error == "operation_outcome_unknown"
+        assert current.operation == "commit_memory_unit" and current.operation_id == current.message_id
+        assert unstarted.message_id == "batch-cancel-batch:1"
+        assert unstarted.stored is False and unstarted.error == "cancelled"
+        assert unstarted.operation_id is None
+        assert summary.outcomes == [current, unstarted]
+        assert summary.submitted_count == 0 and summary.uncertain_count == 1
+        assert summary.error == "operation_outcome_unknown" and not summary.flushed
+        assert await native.data.message(current.message_id) is not None
+        assert await native.data.message(unstarted.message_id) is None
+        assert len(await native.query("MATCH (a:Action {action_id:'cancel-call'}) RETURN id(a) AS nid")) == 1
+        receipts = runtime_info(native)["runtime"].receipts
+        assert receipts.get("reporter", current.operation, current.operation_id)["state"] == "outcome_unknown"
+        monkeypatch.setattr(agent, "_perform", real_perform)
+        retry = context(request)
+        await MemoryAgent.batch_submit.__wfn__(agent, retry, native)
+        assert retry.sent[0].stored is None and retry.sent[0].operation_id == current.operation_id
+        assert retry.sent[-1].uncertain_count == 1 and retry.sent[-1].submitted_count == 1
+        assert len(await native.query("MATCH (a:Action {action_id:'cancel-call'}) RETURN id(a) AS nid")) == 1
+    finally:
+        await resolver.shutdown_async()

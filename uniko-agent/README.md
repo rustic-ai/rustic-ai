@@ -485,7 +485,10 @@ record type; a dimension that cannot authorize a record fails closed.
 through `Session.commit_unit`. It prepares inputs before dispatch, with at most
 128 turns, 32 aggregate attachments and 32 MiB of prepared data by default.
 The existing streaming batch retains per-item success and failure outcomes;
-items containing tool calls use individual atomic units and receipts.
+items containing tool calls use individual atomic units and receipts. An uncertain
+item retains its message ID, operation and operation ID with `stored: null`,
+while cancelled items that never started use `stored: false`. The summary counts
+known stored items in `submitted_count` and uncertain items in `uncertain_count`.
 
 `MatchProceduresRequest` exposes native learned procedures in the private store.
 `RecordProcedureUseRequest` records success/failure feedback.
@@ -514,6 +517,8 @@ native IDs without a matching receipt are rejected rather than merged again.
 
 A command is durably claimed before its native effect and completed before its
 reply is published. Native graph writes and SQLite cannot commit atomically.
+If journal completion and uncertainty persistence both fail, the pending claim
+still prevents redispatch and the original cancellation or error is preserved.
 A crash, cancellation or ambiguous failure after dispatch yields
 `operation_outcome_unknown`, and retrying cannot repeat the effect.
 `MemoryOperationStatusRequest` reports the actor's receipt state. Resolving an

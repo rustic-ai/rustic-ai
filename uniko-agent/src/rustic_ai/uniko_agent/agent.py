@@ -93,6 +93,14 @@ _ERROR_MESSAGES = {
 }
 
 
+class _BatchItemCancelled(asyncio.CancelledError):
+    """Carry the current item's terminal outcome through batch cancellation."""
+
+    def __init__(self, outcome: BatchItemOutcome):
+        super().__init__()
+        self.outcome = outcome
+
+
 class MemoryAgent(Agent[MemoryAgentConfig], MemoryTools, StructuredMemoryTools):
     """Private Uniko memory with shared input documents from the guild filesystem."""
 
@@ -736,6 +744,24 @@ class MemoryAgent(Agent[MemoryAgentConfig], MemoryTools, StructuredMemoryTools):
             logger.exception("Guild document ingestion failed")
             self._send_failure(ctx, "document_ingest_failed")
 
+    @staticmethod
+    def _batch_message_id(ctx, req, spec, index):
+        return spec.get("message_id") or f"batch-{req.batch_id or ctx.message.id}:{index}"
+
+    @staticmethod
+    def _batch_command_failure(index, message_id, error):
+        uncertain = error.error == "operation_outcome_unknown"
+        details = error.details or {}
+        return BatchItemOutcome(
+            index=index,
+            message_id=message_id,
+            success=False,
+            stored=None if uncertain else False,
+            error=error.error,
+            operation=details.get("operation"),
+            operation_id=details.get("operation_id"),
+        )
+
     async def _batch_item(self, ctx, session, spec, index, session_id, req, guild_fs, handle) -> BatchItemOutcome:
         try:
             turn_req = ObserveTurnRequest.model_validate(spec)
@@ -744,8 +770,7 @@ class MemoryAgent(Agent[MemoryAgentConfig], MemoryTools, StructuredMemoryTools):
             if turn_req.session_id is not None and turn_req.session_id != session_id:
                 raise ValueError("Batch item session differs from batch scope")
             if turn_req.message_id is None:
-                batch_id = req.batch_id or str(ctx.message.id)
-                turn_req = turn_req.model_copy(update={"message_id": f"batch-{batch_id}:{index}"})
+                turn_req = turn_req.model_copy(update={"message_id": self._batch_message_id(ctx, req, spec, index)})
             if turn_req.tool_calls:
                 from .structured_models import CommitMemoryUnitRequest
 
@@ -763,11 +788,19 @@ class MemoryAgent(Agent[MemoryAgentConfig], MemoryTools, StructuredMemoryTools):
                     turns=[turn_req],
                     unit_id=turn_req.message_id,
                 )
-                await self._command(item_ctx, handle, "commit_memory_unit", guild_fs, request=command)
-                if errors:
-                    return BatchItemOutcome(
-                        index=index, message_id=turn_req.message_id, success=False, error=errors[0].error
+                try:
+                    await self._command(item_ctx, handle, "commit_memory_unit", guild_fs, request=command)
+                except asyncio.CancelledError:
+                    outcome = (
+                        self._batch_command_failure(index, turn_req.message_id, errors[0])
+                        if errors and errors[0].error == "operation_outcome_unknown"
+                        else BatchItemOutcome(
+                            index=index, message_id=turn_req.message_id, success=False, error="cancelled"
+                        )
                     )
+                    raise _BatchItemCancelled(outcome) from None
+                if errors:
+                    return self._batch_command_failure(index, turn_req.message_id, errors[0])
                 observed = sent[0].turns[0]
                 attachments = observed.attachments
                 calls = observed.tool_calls
@@ -830,30 +863,37 @@ class MemoryAgent(Agent[MemoryAgentConfig], MemoryTools, StructuredMemoryTools):
                     logger.exception("Memory batch flush failed")
                     flush_error = "flush_failed"
             response = BatchSubmitResponse(
-                submitted_count=sum(x.stored for x in outcomes),
+                submitted_count=sum(x.stored is True for x in outcomes),
+                uncertain_count=sum(x.stored is None for x in outcomes),
                 flushed=flushed,
                 session_id=session_id,
                 outcomes=outcomes,
-                error=flush_error,
+                error=flush_error or ("operation_outcome_unknown" if any(x.stored is None for x in outcomes) else None),
             )
             for outcome in outcomes:
                 ctx.send(outcome)
             ctx.send(response)
-        except asyncio.CancelledError:
+        except asyncio.CancelledError as exc:
+            if isinstance(exc, _BatchItemCancelled):
+                outcomes.append(exc.outcome)
             for index in range(len(outcomes), len(req.turns)):
                 outcome = BatchItemOutcome(
-                    index=index, message_id=req.turns[index].get("message_id"), success=False, error="cancelled"
+                    index=index,
+                    message_id=self._batch_message_id(ctx, req, req.turns[index], index),
+                    success=False,
+                    error="cancelled",
                 )
                 outcomes.append(outcome)
             for outcome in outcomes:
                 ctx.send(outcome)
             ctx.send(
                 BatchSubmitResponse(
-                    submitted_count=sum(x.stored for x in outcomes),
+                    submitted_count=sum(x.stored is True for x in outcomes),
+                    uncertain_count=sum(x.stored is None for x in outcomes),
                     flushed=False,
                     session_id=session_id,
                     outcomes=outcomes,
-                    error="cancelled",
+                    error="operation_outcome_unknown" if any(x.stored is None for x in outcomes) else "cancelled",
                 )
             )
             raise
@@ -863,7 +903,8 @@ class MemoryAgent(Agent[MemoryAgentConfig], MemoryTools, StructuredMemoryTools):
                 ctx.send(outcome)
             ctx.send(
                 BatchSubmitResponse(
-                    submitted_count=sum(x.stored for x in outcomes),
+                    submitted_count=sum(x.stored is True for x in outcomes),
+                    uncertain_count=sum(x.stored is None for x in outcomes),
                     flushed=False,
                     session_id=session_id,
                     outcomes=outcomes,

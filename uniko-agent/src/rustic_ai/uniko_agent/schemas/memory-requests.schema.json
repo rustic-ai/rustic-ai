@@ -580,12 +580,19 @@
           "title": "Description"
         },
         "priority": {
-          "default": 3,
-          "description": "Task priority (1-5)",
-          "maximum": 5,
-          "minimum": 1,
-          "title": "Priority",
-          "type": "integer"
+          "anyOf": [
+            {
+              "maximum": 5,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Legacy priority (1-5); defaults to 3 when native_priority is absent",
+          "title": "Priority"
         },
         "depends_on": {
           "anyOf": [

@@ -113,8 +113,8 @@ def test_routed_reporting_workflow(uniko_dependency_spec, filesystem_dependency_
 
         goal = submit(CreateGoalRequest(title="Check evidence", goal_id="objective"))
         assert goal["actor_id"] == "reporter"
-        task = submit(CreateTaskRequest(goal_id="objective", title="Search", task_id="search"))
-        assert task["task_id"] == "search"
+        task = submit(CreateTaskRequest(goal_id="objective", title="Search", task_id="search", native_priority=0.7))
+        assert task["task_id"] == "search" and task["priority"] == 0.7
         unit = CommitMemoryUnitRequest(
             unit_id="work",
             session_id="evidence",

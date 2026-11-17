@@ -3,6 +3,7 @@
 import asyncio
 import base64
 from hashlib import sha256
+import logging
 from typing import AsyncContextManager
 
 import uniko
@@ -601,7 +602,12 @@ class StructuredMemoryTools:
                 ctx.send(response)
         except BaseException as exc:
             if dispatched and receipts:
-                receipts.uncertain(actor, kind, key)
+                try:
+                    receipts.uncertain(actor, kind, key)
+                except Exception:
+                    # A durable pending claim already prevents redispatch. Journal
+                    # unavailability must not mask the original error/cancellation.
+                    logging.getLogger(__name__).warning("Could not persist structured operation uncertainty")
             error = (
                 "operation_reply_failed"
                 if completed
@@ -643,7 +649,11 @@ class StructuredMemoryTools:
                     if ctx.payload.phase == "all"
                     else await handle.goals.in_phase(ctx.payload.phase)
                 )
-                views = [await self._goal_view(handle, g) for g in goals]
+                views = []
+                for goal in goals:
+                    record = await self._record(handle, "goal", goal.goal_id)
+                    if record and set(record["owners"]) == {owner}:
+                        views.append(await self._goal_view(handle, goal))
                 if ctx.payload.parent_goal_id:
                     views = [g for g in views if g.parent_goal_id == ctx.payload.parent_goal_id]
                 total = len(views)

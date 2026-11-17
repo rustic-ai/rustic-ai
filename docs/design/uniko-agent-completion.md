@@ -352,7 +352,10 @@ both in backups. Receipt retention follows private-store retention.
 Units prepare all sources before dispatch and enforce 128 turns, 32 aggregate
 attachments and a configurable default 32 MiB prepared budget. Streamed batches
 retain per-item terminal outcomes; embedded-tool items use separate atomic units
-and receipts. Store-wide consolidation, invalidation and procedure feedback
+and receipts. An in-flight uncertain item retains its operation identity and
+uses `stored: null`; unstarted cancelled items use `stored: false`. Summaries
+report `uncertain_count` separately from known stored `submitted_count`.
+Store-wide consolidation, invalidation and procedure feedback
 require `control_producers`. Explicit owner selection requires `scope_producers`.
 Scoped/visible evidence is validated before dereferencing; unsupported native
 scope dimensions fail closed rather than broaden access. [U67](https://github.com/rustic-ai/uniko/issues/67)
@@ -369,7 +372,11 @@ store/journal restart, changed-payload conflicts, unknown effects, cancellation,
 prewrite attachment/budget rejection and bounded reads. The real Guild bus test
 routes typed commands/replies between a reporting agent and MemoryAgent with
 production sender filtering, one terminal reply per command, replay, lifecycle
-updates and partial batch outcomes. Existing research/analyst tool producers are
+updates, serialized native task priority and partial batch outcomes. Goal listings
+exclude records with conflicting native owners before reading their views.
+Fault-injection regressions preserve unknown outcomes after native commits and
+original cancellation when both journal completion and uncertainty updates fail;
+the durable pending claim prevents duplicate dispatch. Existing research/analyst tool producers are
 not automatically instrumented; they can adopt these typed contracts separately.
 
 
@@ -384,12 +391,13 @@ message attribution is never rewritten to satisfy tool ownership.
 
 
 Final local acceptance on 2026-11-17 (macOS ARM64, Python 3.13.12):
-`tox -e test -- --workers 4` passed with **2,012 passed, 88 skipped,
+`tox -e test -- --workers 4` passed with **2,020 passed, 88 skipped,
 3 xfailed and 2 xpassed** using Redis and NATS/JetStream. The existing expensive,
 credential-dependent and incomplete tests retain their configured exclusions.
 `tox -e format,lint` passed (701 files checked by mypy), strict MkDocs passed,
 and the final source distribution/wheel built with all five matching schemas.
-All 25 lockfiles remained fresh. Ten focused G2 regressions passed; the expanded
+All 25 lockfiles remained fresh. Eighteen G2 regressions passed, including eight cases added for the selected
+review findings; the expanded
 actual-store restart test separately verified tool IDs, episode causal links,
 facts, goals and receipt replay after close/reopen. These checks do not certify
 G3–G6 or untested platform/provider combinations.

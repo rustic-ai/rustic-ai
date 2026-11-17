@@ -529,13 +529,18 @@ class BatchSubmitResponse(BaseModel):
     outcomes: List["BatchItemOutcome"] = Field(default_factory=list)
     terminal: bool = True
     error: Optional[str] = None
-    submitted_count: int
+    submitted_count: int = Field(description="Items known to have been stored")
+    uncertain_count: int = 0
     flushed: bool
     session_id: str
 
 
 class BatchItemOutcome(BaseModel):
-    stored: bool = False
+    stored: Optional[bool] = Field(
+        default=False, description="True/False for known storage outcomes; null when the effect is uncertain"
+    )
+    operation: Optional[str] = None
+    operation_id: Optional[str] = None
     tool_calls: List[ToolCallOutcome] = Field(default_factory=list)
     attachments: List[IngestOutcome] = Field(default_factory=list)
     index: int
@@ -744,7 +749,9 @@ class CreateTaskRequest(MemoryCommand):
     title: str = Field(description="Task title")
     task_id: Optional[str] = Field(default=None, description="Optional unique task ID")
     description: Optional[str] = Field(default=None, description="Task description")
-    priority: int = Field(default=3, ge=1, le=5, description="Task priority (1-5)")
+    priority: Optional[int] = Field(
+        default=None, ge=1, le=5, description="Legacy priority (1-5); defaults to 3 when native_priority is absent"
+    )
     depends_on: Optional[List[str]] = Field(
         default=None, max_length=1, description="The native SDK supports one dependency"
     )
@@ -753,8 +760,10 @@ class CreateTaskRequest(MemoryCommand):
 
     @model_validator(mode="after")
     def single_priority(self):
-        if self.native_priority is not None and "priority" in self.model_fields_set:
+        if self.native_priority is not None and self.priority is not None:
             raise ValueError("Choose legacy priority or native_priority")
+        if self.native_priority is None and self.priority is None:
+            self.priority = 3
         return self
 
 
