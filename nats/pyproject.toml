@@ -21,7 +21,7 @@ packages = [{ include = "rustic_ai", from = "src" }]
 
 [tool.poetry.dependencies]
 rusticai-core = { path = "../core", develop = true }
-nats-py = "^2.16.0"
+nats-py = "^2.17.0"
 
 [tool.poetry-monorepo.deps]
 

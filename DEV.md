@@ -17,7 +17,7 @@ Ready to contribute? Here's how to set up for local development.
     ```
 5. Install the dependencies:
     ```shell
-    poetry self add poetry-plugin-mono-repo-deps@0.3.2
+    poetry self add poetry-plugin-mono-repo-deps@0.3.3
     poetry install --with dev --all-extras
     ```
 
@@ -120,7 +120,7 @@ individually or altogether from the root folder.
 
 **Prerequisites**
 * Python 3.13
-* [Poetry 1.8](https://python-poetry.org/docs/1.8/)
+* [Poetry 2.5](https://python-poetry.org/docs/)
 
 ```shell
 ./scripts/poetry_install.sh
