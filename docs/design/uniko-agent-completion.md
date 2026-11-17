@@ -6,19 +6,21 @@ The core text and document integration can progress independently of the upstrea
 
 ## Baseline and tracking rules
 
-| Item | Baseline |
+| Item | Status and evidence |
 | --- | --- |
-| Updated | 2026-11-16 |
-| Rustic code baseline | `7bc3cf0`, on the milliondreams fork's `main` branch |
+| Updated | 2026-11-17 |
+| Current implementation | [`b21e144`](https://github.com/milliondreams/rustic-ai/commit/b21e144), signed and pushed to the milliondreams fork's `main` branch |
+| Initial code baseline | `7bc3cf0`; historical source links below retain this pre-implementation snapshot |
 | Change under review | [Rustic PR 480](https://github.com/rustic-ai/rustic-ai/pull/480); dependency baseline merged through [PR 479](https://github.com/rustic-ai/rustic-ai/pull/479) |
 | Native dependency | Uniko `>=0.5.1,<0.6.0`; locks currently select 0.5.1 |
 | Runtime environment validated | Python 3.13.12, macOS ARM64, CPU Uniko wheel |
 | Upstream source snapshots checked | Uniko `28f8a1ae3e343f62392800b7d693c0bac45c7c80`; uni-xervo `fd312158599cb3fe429e93c56f07f7124d216642` |
-| Last full local CI | 2,002 passed, 88 skipped, 3 xfailed, 2 xpassed; exit 0 |
-| Last focused integration run | 113 passed, 2 skipped after the final recall-context bounds change; exit 0 |
-| Other baseline checks | Formatting, lint, mypy, strict docs and Uniko package build passed |
+| Last full local CI | 2026-11-17: 2,020 passed, 88 skipped, 3 xfailed, 2 xpassed; exit 0; Redis and NATS/JetStream enabled |
+| Latest review regressions | Eight new cases passed; all 18 G2 cases passed in full local CI, including routed native priority |
+| Earlier regression baseline | G1: 2,002 passed, 88 skipped, 3 xfailed, 2 xpassed; focused integration: 113 passed, 2 skipped; both exit 0 |
+| Other current checks | Formatting, lint, mypy (701 files), strict docs and Uniko source/wheel build passed; five packaged schemas match sources; all 25 lockfiles fresh |
 
-These results are a regression baseline. They do not close the OCR, BGE-M3, richer retrieval or multimodal gates below. Existing xfails/xpasses and skipped tests must be reviewed for relevance to each release claim.
+The current results validate G1/G2 and the four selected review fixes. Earlier results remain recorded as a regression baseline. They do not close the OCR, BGE-M3, richer retrieval or multimodal gates below. Existing xfails/xpasses and skipped tests must be reviewed for relevance to each release claim.
 
 Task states are **Open**, **In progress**, **Waiting on upstream**, **Verified**, and **Deferred**. P0 means current contract correctness; P1 means required core functionality; P2 means an extended capability or scale improvement. A task becomes Verified only when its acceptance evidence is linked. A deferred feature must disappear from supported-feature claims or have an explicit unavailable result.
 
@@ -37,7 +39,41 @@ The scope includes `MemoryAgent`, `UnikoResolver`, `UnikoMemoriesStore`, `Memory
 | G5 Multimodal memory | Advertised image/audio/video workflows preserve original media and searchable derivations | Open | M02–M05, T07 |
 | G6 Operational scale | Resource sharing, readiness, bounded queues and recovery satisfy the intended deployment | Open | C05–C06, L03–L04, L06, T08 |
 
-G1 is implemented with the evidence and runtime boundaries below. G2 and G3 build on its identity, provenance and retrieval contracts. G4/G5 may use external extraction adapters while upstream packaging and adapters evolve. G6 needs a measured deployment budget; no arbitrary concurrency target is assumed.
+G1 and G2 are implemented and locally verified with the evidence and runtime boundaries below. G2 review fixes are signed and pushed in `b21e144`; PR 480 remains the integration review. G3 builds on their identity, provenance and retrieval contracts. G4/G5 may use external extraction adapters while upstream packaging and adapters evolve. G6 needs a measured deployment budget; no arbitrary concurrency target is assumed.
+
+## Current delivery and review status
+
+G1 and G2 are **Verified locally**. Implementation is on the fork's `main` branch
+and submitted through [PR 480](https://github.com/rustic-ai/rustic-ai/pull/480).
+This records local acceptance; upstream review and merge remain pending.
+G3–G6 are **Open** and require their own implementation and acceptance evidence.
+
+| Delivery | Status | Implementation |
+| --- | --- | --- |
+| G1 core memory | Verified locally; submitted for upstream review | [`38416ab`](https://github.com/milliondreams/rustic-ai/commit/38416ab) |
+| G2 structured experience | Verified locally; submitted for upstream review | [`b67a534`](https://github.com/milliondreams/rustic-ai/commit/b67a534) |
+| Selected G2 review fixes | All four addressed and verified locally; signed and pushed | [`b21e144`](https://github.com/milliondreams/rustic-ai/commit/b21e144) |
+
+| Selected finding | Status | Result and acceptance evidence |
+| --- | --- | --- |
+| Native priority fails after serialization | Verified | Native and legacy priority choices survive JSON round trips, including native zero. A real Guild-routed task returns native priority `0.7`. |
+| Goal listing bypasses exact ownership | Verified | Both all-goal and active-goal listing exclude native records with conflicting owners before serializing their views or counting them. Legitimately owned goals remain visible. |
+| Batch cancellation hides uncertain effects | Verified | Cancellation after native Message/Action writes preserves `operation_outcome_unknown`, `stored: null`, stable message/operation IDs and `uncertain_count`. Unstarted items report `cancelled` with `stored: false`; replay does not duplicate the native action. |
+| Journal failure suppresses terminal error | Verified | Simultaneous receipt completion and uncertainty-update I/O failures still emit one typed unknown-outcome response with its operation identity. Original cancellation survives, the operation gate releases and the pending claim prevents redispatch. |
+
+Regression evidence is in
+[test_g2_structured.py](https://github.com/milliondreams/rustic-ai/blob/b21e144/uniko-agent/tests/test_g2_structured.py)
+and [test_g2_routed.py](https://github.com/milliondreams/rustic-ai/blob/b21e144/uniko-agent/tests/test_g2_routed.py).
+All four fixes and the regenerated request schema are included in PR 480.
+The full local run used `tox -e test -- --workers 4` on Python 3.13.12/macOS ARM64
+with Redis and NATS/JetStream: **2,020 passed, 88 skipped, 3 xfailed, 2 xpassed**.
+Configured expensive/provider tests remain excluded; this does not establish
+Windows, Linux, OCR, BGE-M3 or multimodal acceptance.
+
+Remaining work is G3 hybrid retrieval, G4 OCR, G5 multimodal memory and G6
+operational scale. G2 retains its documented registration and embedded-tool
+performer boundaries tracked by [Uniko #67](https://github.com/rustic-ai/uniko/issues/67)
+and [Uniko #68](https://github.com/rustic-ai/uniko/issues/68).
 
 ## Ownership and message flow
 
@@ -76,7 +112,7 @@ Each accepted operation has one terminal outcome correlated with its request. Bu
 
 ## Historical baseline and defects
 
-The agent has 19 processors covering conversation recording, typed records, session finalization/deletion, participant forgetting, observation, recall, answers, document ingestion, streaming batches and basic goals/tasks. The resolver now accepts native model/configuration inputs. The separate memory wrapper uses native atomic commits for user/assistant pairs.
+At the initial baseline, the agent had 19 processors covering conversation recording, typed records, session finalization/deletion, participant forgetting, observation, recall, answers, document ingestion, streaming batches and basic goals/tasks. The resolver accepted native model/configuration inputs, and the separate memory wrapper used native atomic commits for user/assistant pairs.
 
 | Defect | Impact | Task |
 | --- | --- | --- |
@@ -89,7 +125,7 @@ The agent has 19 processors covering conversation recording, typed records, sess
 | Agent recall/answer limits are declared but unused | Caller expectations differ from native execution | C01 |
 | Source/result serializers omit supported native metadata | Provenance, addressed retrieval and diagnostics are incomplete | I05, R05 |
 
-This table records the pre-G1 findings. G1 resolves the attachment, direct-observe flush, unrestricted session scope, conversation deletion, provenance and recall-control findings. Generated goal/task IDs remain tracked by L05 in G2.
+This table records the pre-G1 findings. G1 resolves the attachment, direct-observe flush, unrestricted session scope, conversation deletion, provenance and recall-control findings. G2 resolves the generated goal/task ID finding through L05 with native identity and restart regressions.
 
 ## G1 implementation and acceptance evidence
 
@@ -396,8 +432,8 @@ Final local acceptance on 2026-11-17 (macOS ARM64, Python 3.13.12):
 credential-dependent and incomplete tests retain their configured exclusions.
 `tox -e format,lint` passed (701 files checked by mypy), strict MkDocs passed,
 and the final source distribution/wheel built with all five matching schemas.
-All 25 lockfiles remained fresh. Eighteen G2 regressions passed, including eight cases added for the selected
-review findings; the expanded
-actual-store restart test separately verified tool IDs, episode causal links,
+All 25 lockfiles remained fresh. Eighteen G2 regressions passed, including eight
+cases added for the selected review findings. The expanded actual-store restart
+test separately verified tool IDs, episode causal links,
 facts, goals and receipt replay after close/reopen. These checks do not certify
 G3–G6 or untested platform/provider combinations.
