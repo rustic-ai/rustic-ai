@@ -112,7 +112,7 @@ def test_recall_serialization_recovers_application_provenance():
     assert serialized.sources[0]["artifact_id"].endswith("profile-1")
 
 
-def test_untyped_uniko_items_are_not_returned_by_bounded_reader():
+def test_untyped_uniko_items_are_explicitly_unknown():
     native = SimpleNamespace(
         node_id=1,
         kind="fact",
@@ -128,7 +128,10 @@ def test_untyped_uniko_items_are_not_returned_by_bounded_reader():
         ],
     )
 
-    assert MemoryAgent._serialize_recall_item(MemoryAgent.__new__(MemoryAgent), native) is None
+    assert (
+        MemoryAgent._serialize_recall_item(MemoryAgent.__new__(MemoryAgent), native).record_kind
+        == MemoryRecordKind.UNKNOWN
+    )
 
 
 def test_source_less_finalized_turn_recovers_category_and_record_id_from_envelope():

@@ -121,9 +121,7 @@ class TestResearchWorkflow:
         assert any(keyword in content_combined for keyword in ["borrow", "ownership", "lifetime"])
 
         # Step 6: Complete task
-        memory_test_harness.send_message(
-            UpdateTaskRequest(task_id="task-1", action="complete", outcome="Documented borrow checker mechanisms")
-        )
+        memory_test_harness.send_message(UpdateTaskRequest(task_id="task-1", action="complete"))
 
         responses = memory_test_harness.get_sent_messages()
         task_complete = responses[0].payload
@@ -186,7 +184,7 @@ Rust ensures memory safety through:
         memory_test_harness.send_message(BatchSubmitRequest(turns=turns, flush_after=True))
 
         responses = memory_test_harness.get_sent_messages()
-        batch_response = responses[0].payload
+        batch_response = responses[-1].payload
 
         assert isinstance(batch_response, BatchSubmitResponse)
         assert batch_response.submitted_count == len(turns)

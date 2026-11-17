@@ -2,9 +2,16 @@
 
 from datetime import datetime
 from enum import StrEnum
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    JsonValue,
+    field_serializer,
+    model_validator,
+)
 
 from rustic_ai.core.agents.commons.media import MediaLink
 
@@ -12,6 +19,7 @@ from rustic_ai.core.agents.commons.media import MediaLink
 class MemoryRecordKind(StrEnum):
     """Application-level provenance assigned before content enters memory."""
 
+    UNKNOWN = "unknown"
     USER_ASSERTION = "user_assertion"
     EXTERNAL_EVIDENCE = "external_evidence"
     DETERMINISTIC_OBSERVATION = "deterministic_observation"
@@ -19,6 +27,123 @@ class MemoryRecordKind(StrEnum):
     EXECUTED_RESULT = "executed_result"
     ASSISTANT_RESPONSE = "assistant_response"
     CONVERSATION_TURN = "conversation_turn"
+
+
+class MemoryViewer(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    participant_id: str = Field(min_length=1, max_length=256)
+    teams: List[str] = Field(default_factory=list, max_length=32)
+    orgs: List[str] = Field(default_factory=list, max_length=32)
+
+
+class MemoryProvenance(BaseModel):
+    """Native metadata; record kind remains assigned by the trusted producer."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    category: Optional[str] = Field(default=None, min_length=1, max_length=256)
+    source_id: Optional[str] = Field(default=None, min_length=1, max_length=256)
+    revision_id: Optional[str] = Field(default=None, min_length=1, max_length=256)
+    visibility: Optional[str] = Field(default=None, min_length=1, max_length=256)
+
+
+class MemoryCommand(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    operation_id: Optional[str] = Field(default=None, min_length=1, max_length=256)
+
+    @field_serializer(
+        "started_at", "ended_at", "timestamp", "temporal_anchor", "observed_at", "deadline", check_fields=False
+    )
+    def wire_timestamp(self, value):
+        return value.isoformat() if value is not None else None
+
+
+class MemoryCommandResult(BaseModel):
+    operation_id: Optional[str] = None
+    actor_id: Optional[str] = None
+    was_replay: bool = False
+
+
+class ToolCallSpec(MemoryProvenance):
+    tool_name: str = Field(min_length=1, max_length=256)
+    call_id: Optional[str] = Field(default=None, min_length=1, max_length=256)
+    arguments: Optional[JsonValue] = None
+    output_kind: Optional[Literal["text", "json", "bytes"]] = None
+    text_output: Optional[str] = None
+    json_output: Optional[JsonValue] = None
+    base64_output: Optional[str] = None
+    mime_type: Optional[str] = None
+    status: Optional[str] = Field(default=None, max_length=256)
+    error: Optional[str] = Field(default=None, max_length=16000)
+    started_at: Optional[datetime] = None
+    ended_at: Optional[datetime] = None
+    triggered_by: Optional[str] = Field(default=None, max_length=256)
+    after: Optional[str] = Field(default=None, max_length=256)
+
+    @field_serializer("started_at", "ended_at")
+    def wire_timestamp(self, value):
+        return value.isoformat() if value is not None else None
+
+    @model_validator(mode="after")
+    def supported_output(self):
+        if self.output_kind is None:
+            if self.text_output is not None:
+                self.output_kind = "text"
+            elif self.base64_output is not None:
+                self.output_kind = "bytes"
+            elif self.json_output is not None or (
+                "json_output" in self.model_fields_set
+                and not {"text_output", "base64_output"}.intersection(self.model_fields_set)
+            ):
+                self.output_kind = "json"
+        selected = sum(value is not None for value in (self.text_output, self.json_output, self.base64_output))
+        if self.output_kind == "json" and self.json_output is None:
+            selected += 1
+        if selected > 1:
+            raise ValueError("Choose one tool output representation")
+        if self.output_kind == "text" and self.text_output is None:
+            raise ValueError("Text output requires text_output")
+        if self.output_kind == "bytes" and self.base64_output is None:
+            raise ValueError("Byte output requires base64_output")
+        if self.base64_output is not None and not self.mime_type:
+            raise ValueError("Byte output requires MIME")
+        if self.started_at and self.ended_at and self.started_at > self.ended_at:
+            raise ValueError("Tool end precedes start")
+        if self.category in set(MemoryRecordKind) and self.category != MemoryRecordKind.EXECUTED_RESULT:
+            raise ValueError("Tool category cannot override executed-result provenance")
+        return self
+
+
+class ToolCallOutcome(BaseModel):
+    call_id: str
+    action_node: int
+    artifact_id: Optional[str] = None
+    artifact_node: Optional[int] = None
+    was_replay: bool = False
+
+
+class MemorySource(MemoryProvenance):
+    """Exactly one bounded source. Files are read only through the guild filesystem."""
+
+    model_config = ConfigDict(extra="forbid")
+    text: Optional[str] = None
+    base64_data: Optional[str] = None
+    media_link: Optional[MediaLink] = None
+    mime_type: Optional[str] = Field(default=None, min_length=1, max_length=128)
+    path_hint: Optional[str] = Field(default=None, max_length=512)
+    id: Optional[str] = Field(default=None, min_length=1, max_length=256)
+
+    @model_validator(mode="after")
+    def single_source(self):
+        if sum(value is not None for value in (self.text, self.base64_data, self.media_link)) != 1:
+            raise ValueError("Choose exactly one of text, base64_data or media_link")
+        if self.media_link is not None and not self.media_link.on_filesystem:
+            raise ValueError("Remote URLs and host paths are not ingestion sources")
+        if self.visibility is not None:
+            raise ValueError("Uniko 0.5.1 does not expose document visibility")
+        if self.category in set(MemoryRecordKind) and self.category != MemoryRecordKind.EXTERNAL_EVIDENCE:
+            raise ValueError("Document category cannot override external-evidence provenance")
+        return self
 
 
 class MemoryScope(BaseModel):
@@ -33,9 +158,21 @@ class MemoryScope(BaseModel):
         description="Explicit sessions, or null to search this agent's private store without a session filter.",
     )
     participants: List[str] = Field(default_factory=list, max_length=32)
+    since: Optional[datetime] = None
+    until: Optional[datetime] = None
+    categories: List[str] = Field(default_factory=list, max_length=32)
+    sources: List[str] = Field(default_factory=list, max_length=32)
+    include_superseded: bool = False
+    viewer: Optional[MemoryViewer] = None
+
+    @model_validator(mode="after")
+    def ordered_time(self):
+        if self.since and self.until and self.since > self.until:
+            raise ValueError("since must precede until")
+        return self
 
 
-class RecordMemoryRequest(BaseModel):
+class RecordMemoryRequest(MemoryProvenance):
     """Write one bounded, idempotently identified memory record."""
 
     model_config = ConfigDict(extra="forbid")
@@ -46,6 +183,12 @@ class RecordMemoryRequest(BaseModel):
     kind: MemoryRecordKind
     content: str = Field(min_length=1, max_length=16000)
     content_type: str = Field(default="text/plain", min_length=1, max_length=128)
+
+    @model_validator(mode="after")
+    def assigned_kind(self):
+        if self.category in set(MemoryRecordKind) and self.category != self.kind:
+            raise ValueError("Category cannot override producer-assigned record kind")
+        return self
 
 
 class RecordMemoryResult(BaseModel):
@@ -101,7 +244,7 @@ class MemoryDeletionResult(BaseModel):
 # ========== Observation Payloads ==========
 
 
-class ObserveTurnRequest(BaseModel):
+class ObserveTurnRequest(MemoryProvenance):
     """Request to observe a conversation turn.
 
     Attributes:
@@ -116,20 +259,36 @@ class ObserveTurnRequest(BaseModel):
         attachments: List of attachments (IngestSource specs)
     """
 
-    session_id: Optional[str] = Field(default=None, description="Session ID (defaults to agent's default_session_id)")
-    sender_id: str = Field(description="ID of the message sender")
-    content: str = Field(description="Message content text")
-    message_id: Optional[str] = Field(default=None, description="Optional unique message ID")
+    session_id: Optional[str] = Field(
+        default=None, min_length=1, max_length=256, description="Session ID (defaults to agent's default_session_id)"
+    )
+    sender_id: str = Field(min_length=1, max_length=256, description="ID of the message sender")
+    content: str = Field(min_length=1, max_length=16000, description="Message content text")
+    message_id: Optional[str] = Field(
+        default=None, min_length=1, max_length=256, description="Optional unique message ID"
+    )
     content_type: Optional[str] = Field(default="text", description="Content type (text, markdown, html, etc.)")
     timestamp: Optional[datetime] = Field(default=None, description="Message timestamp (defaults to current time)")
     addressed_to: Optional[List[str]] = Field(default=None, description="List of recipient IDs")
     metadata: Optional[Dict[str, Any]] = Field(default=None, description="Additional key-value metadata")
-    attachments: Optional[List[Dict[str, Any]]] = Field(
-        default=None, description="List of attachment specs (path, url, mime_type)"
+    attachments: Optional[List[MemorySource]] = Field(
+        default=None, max_length=32, description="Bounded typed attachment sources"
     )
 
+    tool_calls: List[ToolCallSpec] = Field(default_factory=list, max_length=32)
 
-class ObserveResult(BaseModel):
+    @field_serializer("timestamp")
+    def wire_timestamp(self, value):
+        return value.isoformat() if value is not None else None
+
+    @model_validator(mode="after")
+    def assigned_category(self):
+        if self.category not in {None, MemoryRecordKind.CONVERSATION_TURN.value}:
+            raise ValueError("Ordinary observations have conversation_turn category")
+        return self
+
+
+class ObserveResult(MemoryCommandResult):
     """Response from observing a turn.
 
     Attributes:
@@ -143,6 +302,7 @@ class ObserveResult(BaseModel):
         attachment_count: Number of attachments processed
     """
 
+    message_id: Optional[str] = None
     message_node_id: int
     chunk_node_ids: List[int]
     session_node_id: int
@@ -151,6 +311,8 @@ class ObserveResult(BaseModel):
     extracted_entities: List[tuple[int, str]]
     extracted_observations: List[int]
     attachment_count: int
+    attachments: List["IngestOutcome"] = Field(default_factory=list)
+    tool_calls: List[ToolCallOutcome] = Field(default_factory=list)
 
 
 # ========== Recall Payloads ==========
@@ -166,6 +328,10 @@ class RecallRequest(BaseModel):
     allowed_record_kinds: List[MemoryRecordKind] = Field(min_length=1, max_length=len(MemoryRecordKind))
     item_limit: int = Field(default=10, ge=1, le=50)
     max_characters: int = Field(default=6000, ge=1, le=32000)
+    token_budget: Optional[int] = Field(default=None, ge=1, le=10000)
+    min_score: Optional[float] = Field(default=None, ge=0, le=1)
+    reranker: Optional[bool] = None
+    reference_ts: Optional[datetime] = None
 
 
 class RecallUserSessionsRequest(BaseModel):
@@ -179,6 +345,10 @@ class RecallUserSessionsRequest(BaseModel):
     allowed_record_kinds: List[MemoryRecordKind] = Field(min_length=1, max_length=len(MemoryRecordKind))
     item_limit: int = Field(default=10, ge=1, le=50)
     max_characters: int = Field(default=6000, ge=1, le=32000)
+    token_budget: Optional[int] = Field(default=None, ge=1, le=10000)
+    min_score: Optional[float] = Field(default=None, ge=0, le=1)
+    reranker: Optional[bool] = None
+    reference_ts: Optional[datetime] = None
 
 
 class RecallItem(BaseModel):
@@ -199,6 +369,14 @@ class RecallItem(BaseModel):
     content: str
     sources: List[Dict[str, Any]]
     source_ids: List[str] = Field(default_factory=list)
+    category: Optional[str] = None
+    source_id: Optional[str] = None
+    revision_id: Optional[str] = None
+    token_count: int = 0
+    context: Optional[str] = None
+    address: Optional[str] = None
+    token_count_method: str = "native"
+    legacy_metadata: bool = False
 
 
 class RecallResponse(BaseModel):
@@ -218,23 +396,27 @@ class RecallResponse(BaseModel):
     phase2_only: bool
     coverage: float
     truncated: bool = False
+    legacy_compatibility: bool = False
+    legacy_limitations: List[str] = Field(default_factory=list)
+    token_count_method: str = "native_or_cl100k_base"
 
 
 # ========== Answer Payloads ==========
 
 
 class AnswerRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     """Request to answer a question using memory + LLM.
 
     Attributes:
         question: Question to answer
-        max_tokens: Maximum tokens for answer generation (overrides config)
+        max_tokens: Legacy field; non-null values are rejected by Uniko 0.5.1 integration
         scope: Optional scope specification for recall
     """
 
     question: str = Field(description="Question to answer")
     max_tokens: Optional[int] = Field(
-        default=None, description="Maximum tokens for answer generation (overrides config)"
+        default=None, description="Unsupported legacy generation control; use the Guild synthesis LLM limit"
     )
     scope: Optional[Dict[str, Any]] = Field(default=None, description="Scope specification for recall")
 
@@ -264,14 +446,25 @@ class AnswerResponse(BaseModel):
 # ========== Document Ingestion Payloads ==========
 
 
-class IngestDocumentRequest(BaseModel):
+class IngestDocumentRequest(MemoryProvenance):
     """Ingest a document already stored in the injected guild filesystem."""
 
     model_config = ConfigDict(extra="forbid")
 
     record_id: str = Field(min_length=1, max_length=256, pattern=r"^[A-Za-z0-9][A-Za-z0-9._:-]*$")
     session_id: str = Field(min_length=1, max_length=256, pattern=r"^[A-Za-z0-9][A-Za-z0-9._:-]*$")
-    media_link: MediaLink = Field(description="Guild-filesystem MediaLink (on_filesystem=True)")
+    media_link: Optional[MediaLink] = Field(default=None, description="Guild-filesystem MediaLink")
+    source: Optional[MemorySource] = None
+
+    @model_validator(mode="after")
+    def single_document(self):
+        if (self.media_link is None) == (self.source is None):
+            raise ValueError("Choose exactly one of media_link or source")
+        if self.visibility is not None:
+            raise ValueError("Uniko 0.5.1 does not expose document visibility")
+        if self.category in set(MemoryRecordKind) and self.category != MemoryRecordKind.EXTERNAL_EVIDENCE:
+            raise ValueError("Document category cannot override external-evidence provenance")
+        return self
 
 
 class IngestOutcome(BaseModel):
@@ -289,12 +482,23 @@ class IngestOutcome(BaseModel):
     artifact_node_id: Optional[int] = None
     chunk_count: int = 0
     page_count: int = 0
-    extracted_entities: List[int] = []
+    extracted_entities: List[int] = Field(default_factory=list)
+    artifact_id: Optional[str] = None
+    chunk_node_ids: List[int] = Field(default_factory=list)
+    page_node_ids: List[int] = Field(default_factory=list)
+    block_node_ids: List[int] = Field(default_factory=list)
+    was_deduplicated: bool = False
+    extraction_failed: Optional[bool] = None
+    extraction_error: Optional[str] = None
+    stored: bool = False
+    tool_calls: List[ToolCallOutcome] = Field(default_factory=list)
+    searchable: bool = False
     success: bool = True
     record_id: Optional[str] = None
 
 
 class BatchSubmitRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     """Request to submit multiple turns in batch (streaming mode).
 
     Attributes:
@@ -303,8 +507,13 @@ class BatchSubmitRequest(BaseModel):
         flush_after: Whether to flush after all turns
     """
 
-    session_id: Optional[str] = Field(default=None, description="Session ID (defaults to agent's default_session_id)")
-    turns: List[Dict[str, Any]] = Field(description="List of turn specs (sender_id, content, metadata, etc.)")
+    session_id: Optional[str] = Field(
+        default=None, min_length=1, max_length=256, description="Session ID (defaults to agent's default_session_id)"
+    )
+    batch_id: Optional[str] = Field(default=None, min_length=1, max_length=256)
+    turns: List[Dict[str, Any]] = Field(
+        max_length=128, description="List of turn specs (sender_id, content, metadata, etc.)"
+    )
     flush_after: bool = Field(default=True, description="Whether to flush after all turns")
 
 
@@ -317,15 +526,93 @@ class BatchSubmitResponse(BaseModel):
         session_id: Session ID used
     """
 
-    submitted_count: int
+    outcomes: List["BatchItemOutcome"] = Field(default_factory=list)
+    terminal: bool = True
+    error: Optional[str] = None
+    submitted_count: int = Field(description="Items known to have been stored")
+    uncertain_count: int = 0
     flushed: bool
     session_id: str
+
+
+class BatchItemOutcome(BaseModel):
+    stored: Optional[bool] = Field(
+        default=False, description="True/False for known storage outcomes; null when the effect is uncertain"
+    )
+    operation: Optional[str] = None
+    operation_id: Optional[str] = None
+    tool_calls: List[ToolCallOutcome] = Field(default_factory=list)
+    attachments: List[IngestOutcome] = Field(default_factory=list)
+    index: int
+    message_id: Optional[str] = None
+    success: bool
+    error: Optional[str] = None
+
+
+class EffectiveConfigRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+
+class CapabilityRequest(EffectiveConfigRequest):
+    pass
+
+
+class MemoryHealthRequest(EffectiveConfigRequest):
+    pass
+
+
+class MemoryDiagnostics(BaseModel):
+    configured: Dict[str, Any] = Field(default_factory=dict)
+    observed: Dict[str, Any] = Field(default_factory=dict)
+    unknown: List[str] = Field(default_factory=list)
+
+
+class SourceSearchRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    query: str = Field(min_length=1, max_length=4000)
+    scope: MemoryScope
+    limit: int = Field(default=10, ge=1, le=50)
+    max_characters: int = Field(default=6000, ge=1, le=32000)
+
+
+class SourceReadRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    source_kind: Literal["message", "artifact"]
+    source_id: str = Field(min_length=1, max_length=256)
+    scope: MemoryScope
+    operation: Literal["read", "outline", "original"] = "read"
+    address: Optional[str] = Field(default=None, max_length=512)
+    bytes: Optional[tuple[int, int]] = None
+    lines: Optional[tuple[int, int]] = None
+    chunks: Optional[tuple[int, int]] = None
+    max_tokens: int = Field(default=2000, ge=1, le=10000)
+    depth: int = Field(default=2, ge=1, le=8)
+    max_entries: int = Field(default=100, ge=1, le=1000)
+
+    @model_validator(mode="after")
+    def single_address(self):
+        if sum(x is not None for x in (self.address, self.bytes, self.lines, self.chunks)) > 1:
+            raise ValueError("Choose one source address")
+        for bounds in (self.bytes, self.lines, self.chunks):
+            if bounds and (bounds[0] < 0 or bounds[1] <= bounds[0]):
+                raise ValueError("Invalid source range")
+        if self.operation == "original" and self.source_kind != "artifact":
+            raise ValueError("Original bytes require an artifact")
+        return self
+
+
+class SourceResponse(BaseModel):
+    results: List[Dict[str, Any]] = Field(default_factory=list)
+    result: Optional[Dict[str, Any]] = None
+    base64_data: Optional[str] = None
+    available: bool = True
+    truncated: bool = False
 
 
 # ========== Goal Management Payloads ==========
 
 
-class CreateGoalRequest(BaseModel):
+class CreateGoalRequest(MemoryCommand):
     """Request to create a new goal.
 
     Attributes:
@@ -349,7 +636,7 @@ class CreateGoalRequest(BaseModel):
     parent_goal_id: Optional[str] = Field(default=None, description="Parent goal ID for sub-goals")
 
 
-class GoalView(BaseModel):
+class GoalView(MemoryCommandResult):
     """View of a goal.
 
     Attributes:
@@ -370,30 +657,37 @@ class GoalView(BaseModel):
     title: str
     description: Optional[str] = None
     status: str
+    phase: Optional[str] = None
+    completed_at: Optional[datetime] = None
+    parent_goal_id: Optional[str] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     metrics: Optional[Dict[str, Any]] = None
     guardrails: Optional[List[str]] = None
     deadline: Optional[datetime] = None
 
+    @field_serializer("created_at", "updated_at", "completed_at", "deadline")
+    def wire_timestamp(self, value):
+        return value.isoformat() if value is not None else None
 
-class UpdateGoalRequest(BaseModel):
+
+class UpdateGoalRequest(MemoryCommand):
     """Request to update a goal's status.
 
     Attributes:
         goal_id: Goal ID to update
-        action: Action to perform (start, complete, abandon, pause, resume)
+        action: Action to perform (start, complete, abandon)
         outcome: Optional outcome description
         metadata: Optional additional metadata
     """
 
     goal_id: str = Field(description="Goal ID to update")
-    action: str = Field(description="Action: start, complete, abandon, pause, resume")
+    action: Literal["start", "complete", "abandon"]
     outcome: Optional[str] = Field(default=None, description="Outcome description")
     metadata: Optional[Dict[str, Any]] = Field(default=None, description="Additional metadata")
 
 
-class GoalStatusResponse(BaseModel):
+class GoalStatusResponse(MemoryCommandResult):
     """Response from goal update.
 
     Attributes:
@@ -403,7 +697,7 @@ class GoalStatusResponse(BaseModel):
     """
 
     goal_id: str
-    status: str
+    status: Optional[str] = None
     updated: bool
 
 
@@ -416,9 +710,10 @@ class GetGoalsRequest(BaseModel):
         limit: Maximum number of goals to return
     """
 
-    phase: str = Field(default="all", description="Phase filter: all, active, completed, abandoned")
+    owner_id: Optional[str] = Field(default=None, max_length=256)
+    phase: Literal["all", "planned", "active", "completed", "abandoned"] = "all"
     parent_goal_id: Optional[str] = Field(default=None, description="Filter by parent goal ID")
-    limit: Optional[int] = Field(default=None, description="Maximum number of goals")
+    limit: Optional[int] = Field(default=20, ge=1, le=100, description="Maximum number of goals")
 
 
 class GoalsListResponse(BaseModel):
@@ -438,7 +733,7 @@ class GoalsListResponse(BaseModel):
 # ========== Task Management Payloads ==========
 
 
-class CreateTaskRequest(BaseModel):
+class CreateTaskRequest(MemoryCommand):
     """Request to create a task for a goal.
 
     Attributes:
@@ -454,11 +749,25 @@ class CreateTaskRequest(BaseModel):
     title: str = Field(description="Task title")
     task_id: Optional[str] = Field(default=None, description="Optional unique task ID")
     description: Optional[str] = Field(default=None, description="Task description")
-    priority: int = Field(default=3, ge=1, le=5, description="Task priority (1-5)")
-    depends_on: Optional[List[str]] = Field(default=None, description="Task IDs this depends on")
+    priority: Optional[int] = Field(
+        default=None, ge=1, le=5, description="Legacy priority (1-5); defaults to 3 when native_priority is absent"
+    )
+    depends_on: Optional[List[str]] = Field(
+        default=None, max_length=1, description="The native SDK supports one dependency"
+    )
+    subtask_of_task_id: Optional[str] = Field(default=None, max_length=256)
+    native_priority: Optional[float] = Field(default=None, ge=0, le=1)
+
+    @model_validator(mode="after")
+    def single_priority(self):
+        if self.native_priority is not None and self.priority is not None:
+            raise ValueError("Choose legacy priority or native_priority")
+        if self.native_priority is None and self.priority is None:
+            self.priority = 3
+        return self
 
 
-class TaskView(BaseModel):
+class TaskView(MemoryCommandResult):
     """View of a task.
 
     Attributes:
@@ -474,15 +783,21 @@ class TaskView(BaseModel):
 
     task_id: str
     node_id: Optional[int] = None  # Not available in uniko TaskView
-    goal_id: str
+    goal_id: Optional[str] = None
     title: str
     description: Optional[str] = None
     status: str
-    priority: int
+    priority: Optional[float] = None
+    phase: Optional[str] = None
+    completed_at: Optional[datetime] = None
     created_at: Optional[datetime] = None
 
+    @field_serializer("created_at", "completed_at")
+    def wire_timestamp(self, value):
+        return value.isoformat() if value is not None else None
 
-class UpdateTaskRequest(BaseModel):
+
+class UpdateTaskRequest(MemoryCommand):
     """Request to update a task's status.
 
     Attributes:
@@ -492,11 +807,11 @@ class UpdateTaskRequest(BaseModel):
     """
 
     task_id: str = Field(description="Task ID to update")
-    action: str = Field(description="Action: start, complete, abandon, block, unblock")
+    action: Literal["start", "complete", "abandon", "block", "unblock"]
     outcome: Optional[str] = Field(default=None, description="Outcome description")
 
 
-class TaskStatusResponse(BaseModel):
+class TaskStatusResponse(MemoryCommandResult):
     """Response from task update.
 
     Attributes:
@@ -506,7 +821,7 @@ class TaskStatusResponse(BaseModel):
     """
 
     task_id: str
-    status: str
+    status: Optional[str] = None
     updated: bool
 
 
@@ -520,6 +835,7 @@ class GoalContextRequest(BaseModel):
     """
 
     goal_id: str = Field(description="Goal ID")
+    owner_id: Optional[str] = Field(default=None, max_length=256)
     include_tasks: bool = Field(default=True, description="Include related tasks")
     include_episodes: bool = Field(default=True, description="Include related episodes")
 
@@ -538,6 +854,11 @@ class GoalContext(BaseModel):
     tasks: List[TaskView]
     episodes: List[Dict[str, Any]]
     progress: Dict[str, Any]
+    sessions: List[str] = Field(default_factory=list)
+    recent_messages: List[str] = Field(default_factory=list)
+    facts: List[str] = Field(default_factory=list)
+    entities: List[str] = Field(default_factory=list)
+    episodes_available: bool = False
 
 
 # ========== Error Payload ==========
@@ -557,8 +878,6 @@ class MemoryAgentError(BaseModel):
     details: Optional[Dict[str, Any]] = None
     model_config = ConfigDict(extra="forbid")
 
-    model_config = ConfigDict(extra="forbid")
 
-    model_config = ConfigDict(extra="forbid")
-
-    model_config = ConfigDict(extra="forbid")
+ObserveResult.model_rebuild()
+BatchSubmitResponse.model_rebuild()

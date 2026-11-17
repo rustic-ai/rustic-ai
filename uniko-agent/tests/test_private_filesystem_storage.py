@@ -53,7 +53,11 @@ async def test_guild_filesystem_failure_is_sanitized():
         ),
     )
     ctx = SimpleNamespace(payload=request, send=MagicMock(), send_error=MagicMock())
-    memory = SimpleNamespace(_session_lock=lambda _: asyncio.Lock())
+    memory = SimpleNamespace(
+        _session_lock=lambda *args: asyncio.Lock(),
+        _producer_is_allowed=lambda *_: True,
+        config=SimpleNamespace(max_source_bytes=16 * 1024 * 1024),
+    )
     memory._send_failure = lambda ctx, code: MemoryAgent._send_failure(memory, ctx, code)
     guild_fs = SimpleNamespace(asynchronous=False, open=MagicMock(side_effect=OSError("PRIVATE_BACKEND_DETAILS")))
     private_fs = MagicMock()

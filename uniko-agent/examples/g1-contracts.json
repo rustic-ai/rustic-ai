@@ -1,0 +1,48 @@
+{
+  "resolver": {
+    "class_name": "rustic_ai.uniko_agent.UnikoResolver",
+    "properties": {
+      "storage_path": "memory",
+      "readiness_policy": "sdk_default",
+      "embedding": "bge-small",
+      "nlp": "v1",
+      "reranker": false,
+      "config": {
+        "max_chunk_tokens": 256,
+        "chunk_overlap_tokens": 16,
+        "recall_token_budget": 3000,
+        "nlp_srl_enabled": true
+      }
+    }
+  },
+  "document": {
+    "source_id": "harbor-policy",
+    "revision_id": "harbor-policy-rev-1",
+    "record_id": "harbor-policy",
+    "session_id": "harbor-user",
+    "source": {
+      "text": "Harbor budget is CAD 42000.",
+      "mime_type": "text/plain"
+    }
+  },
+  "recall": {
+    "query": "Harbor budget",
+    "scope": {
+      "sessions": [
+        "harbor-user"
+      ],
+      "participants": [],
+      "categories": [],
+      "sources": [
+        "harbor-policy"
+      ],
+      "include_superseded": false
+    },
+    "allowed_record_kinds": [
+      "external_evidence"
+    ],
+    "item_limit": 10,
+    "max_characters": 6000,
+    "token_budget": 2000
+  }
+}

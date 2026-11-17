@@ -1,14 +1,11 @@
-"""Native integration checks against the published Uniko 0.3.0 wheel."""
+"""Native integration checks against the supported Uniko wheel."""
 
 import gc
 
-import pytest
 import uniko
 from uniko import Scope, Turn
 
 from rustic_ai.uniko_agent import MemoryAgent, MemoryRecordKind
-
-pytestmark = pytest.mark.skipif(uniko.__version__ != "0.3.0", reason="requires Uniko 0.3.0 wheel")
 
 
 def test_typed_turn_is_idempotent_scoped_persistent_and_deletable(tmp_path):
@@ -35,7 +32,8 @@ def test_typed_turn_is_idempotent_scoped_persistent_and_deletable(tmp_path):
     serialized = [
         item
         for native in first_bundle.items
-        if (item := MemoryAgent._serialize_recall_item(MemoryAgent.__new__(MemoryAgent), native)) is not None
+        if (item := MemoryAgent._serialize_recall_item(MemoryAgent.__new__(MemoryAgent), native)).record_kind
+        == MemoryRecordKind.USER_ASSERTION
     ]
 
     assert report.transcript_chunks
@@ -56,7 +54,8 @@ def test_typed_turn_is_idempotent_scoped_persistent_and_deletable(tmp_path):
     persisted_items = [
         item
         for native in persisted.items
-        if (item := MemoryAgent._serialize_recall_item(MemoryAgent.__new__(MemoryAgent), native)) is not None
+        if (item := MemoryAgent._serialize_recall_item(MemoryAgent.__new__(MemoryAgent), native)).record_kind
+        == MemoryRecordKind.USER_ASSERTION
     ]
     assert persisted_items
 

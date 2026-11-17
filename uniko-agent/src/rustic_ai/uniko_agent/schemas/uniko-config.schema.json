@@ -1,0 +1,553 @@
+{
+  "$defs": {
+    "EmbeddingConfigModel": {
+      "additionalProperties": false,
+      "description": "The embedding model (``embedding``).",
+      "properties": {
+        "model_id": {
+          "default": "BGESmallENV15",
+          "title": "Model Id",
+          "type": "string"
+        },
+        "dimensions": {
+          "default": 384,
+          "title": "Dimensions",
+          "type": "integer"
+        },
+        "batch_size": {
+          "default": 32,
+          "title": "Batch Size",
+          "type": "integer"
+        },
+        "document_prefix": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Document Prefix"
+        },
+        "query_prefix": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": "Represent this sentence for searching relevant passages: ",
+          "title": "Query Prefix"
+        },
+        "execution_providers": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Execution Providers"
+        },
+        "provider": {
+          "default": "local/onnx",
+          "title": "Provider",
+          "type": "string"
+        },
+        "provider_options": {
+          "anyOf": [
+            {},
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Provider Options"
+        },
+        "sparse_dimensions": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sparse Dimensions"
+        },
+        "multivector_dimensions": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Multivector Dimensions"
+        }
+      },
+      "title": "EmbeddingConfigModel",
+      "type": "object"
+    },
+    "NlpConfigModel": {
+      "additionalProperties": false,
+      "description": "The NLP model behind NER and observation extraction (``nlp``).\n\n``generation`` must match ``model_id``: ``\"v1\"`` for the default\ncascade, ``\"v7\"`` for a ``kniv-v7-*-en`` model. ``artifact`` applies to\nv1 only and ``variant`` (a precision fallback chain such as\n``\"int8,fp16\"``) to v7 only. ``UnikoBuilder.nlp(\"v7-small\")`` and the\nother presets fill these in.",
+      "properties": {
+        "model_id": {
+          "default": "dragonscale-ai/kniv-deberta-nlp-base-en-xsmall",
+          "title": "Model Id",
+          "type": "string"
+        },
+        "generation": {
+          "default": "v1",
+          "enum": [
+            "v1",
+            "v7"
+          ],
+          "title": "Generation",
+          "type": "string"
+        },
+        "artifact": {
+          "default": "onnx/cascade-int8.onnx",
+          "title": "Artifact",
+          "type": "string"
+        },
+        "variant": {
+          "default": "int8",
+          "title": "Variant",
+          "type": "string"
+        },
+        "max_batch_size": {
+          "default": 16,
+          "title": "Max Batch Size",
+          "type": "integer"
+        },
+        "execution_providers": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Execution Providers"
+        }
+      },
+      "title": "NlpConfigModel",
+      "type": "object"
+    },
+    "OcrConfigModel": {
+      "additionalProperties": false,
+      "description": "OCR for tiered PDF extraction (``ocr``), off by default.",
+      "properties": {
+        "enabled": {
+          "default": false,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "model_id": {
+          "default": "monkt/paddleocr-onnx",
+          "title": "Model Id",
+          "type": "string"
+        },
+        "rec_artifact": {
+          "default": "languages/english/rec.onnx",
+          "title": "Rec Artifact",
+          "type": "string"
+        },
+        "char_dict_path": {
+          "default": "languages/english/dict.txt",
+          "title": "Char Dict Path",
+          "type": "string"
+        },
+        "det_artifact": {
+          "default": "detection/v5/det.onnx",
+          "title": "Det Artifact",
+          "type": "string"
+        },
+        "image_height": {
+          "default": 48,
+          "title": "Image Height",
+          "type": "integer"
+        },
+        "image_width": {
+          "default": 320,
+          "title": "Image Width",
+          "type": "integer"
+        },
+        "normalization": {
+          "default": "siglip",
+          "title": "Normalization",
+          "type": "string"
+        },
+        "execution_providers": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Execution Providers"
+        }
+      },
+      "title": "OcrConfigModel",
+      "type": "object"
+    },
+    "RerankerConfigModel": {
+      "additionalProperties": false,
+      "description": "The cross-encoder reranker (``reranker``).",
+      "properties": {
+        "enabled": {
+          "default": true,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "model_id": {
+          "default": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+          "title": "Model Id",
+          "type": "string"
+        },
+        "top_n": {
+          "default": 50,
+          "title": "Top N",
+          "type": "integer"
+        },
+        "apply_sigmoid": {
+          "default": true,
+          "title": "Apply Sigmoid",
+          "type": "boolean"
+        },
+        "execution_providers": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Execution Providers"
+        },
+        "style": {
+          "default": "cross-encoder",
+          "title": "Style",
+          "type": "string"
+        }
+      },
+      "title": "RerankerConfigModel",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "The full engine configuration (Rust ``UnikoConfig``).",
+  "properties": {
+    "catalog_path": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Catalog Path"
+    },
+    "schema_path": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Schema Path"
+    },
+    "observation_rules_path": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Observation Rules Path"
+    },
+    "embedding": {
+      "$ref": "#/$defs/EmbeddingConfigModel"
+    },
+    "reranker": {
+      "$ref": "#/$defs/RerankerConfigModel"
+    },
+    "nlp": {
+      "$ref": "#/$defs/NlpConfigModel"
+    },
+    "ocr": {
+      "$ref": "#/$defs/OcrConfigModel"
+    },
+    "vector_algorithm": {
+      "additionalProperties": true,
+      "title": "Vector Algorithm",
+      "type": "object"
+    },
+    "vector_metric": {
+      "default": "Cosine",
+      "title": "Vector Metric",
+      "type": "string"
+    },
+    "blob_storage": {
+      "additionalProperties": true,
+      "title": "Blob Storage",
+      "type": "object"
+    },
+    "ingest_queue_capacity": {
+      "default": 200,
+      "title": "Ingest Queue Capacity",
+      "type": "integer"
+    },
+    "consolidation_queue_capacity": {
+      "default": 32,
+      "title": "Consolidation Queue Capacity",
+      "type": "integer"
+    },
+    "consolidation_threshold": {
+      "default": 20,
+      "title": "Consolidation Threshold",
+      "type": "integer"
+    },
+    "consolidation_interval_secs": {
+      "default": 900,
+      "title": "Consolidation Interval Secs",
+      "type": "integer"
+    },
+    "circuit_failure_threshold": {
+      "default": 5,
+      "title": "Circuit Failure Threshold",
+      "type": "integer"
+    },
+    "circuit_recovery_ms": {
+      "default": 60000,
+      "title": "Circuit Recovery Ms",
+      "type": "integer"
+    },
+    "message_chunk_threshold": {
+      "default": 1024,
+      "title": "Message Chunk Threshold",
+      "type": "integer"
+    },
+    "action_output_artifact_threshold": {
+      "default": 256,
+      "title": "Action Output Artifact Threshold",
+      "type": "integer"
+    },
+    "max_chunk_tokens": {
+      "default": 256,
+      "title": "Max Chunk Tokens",
+      "type": "integer"
+    },
+    "min_chunk_tokens": {
+      "default": 32,
+      "title": "Min Chunk Tokens",
+      "type": "integer"
+    },
+    "chunk_overlap_tokens": {
+      "default": 0,
+      "title": "Chunk Overlap Tokens",
+      "type": "integer"
+    },
+    "chunk_context_max_tokens": {
+      "default": 64,
+      "title": "Chunk Context Max Tokens",
+      "type": "integer"
+    },
+    "nlp_srl_enabled": {
+      "default": true,
+      "title": "Nlp Srl Enabled",
+      "type": "boolean"
+    },
+    "entity_strict_admission": {
+      "default": true,
+      "title": "Entity Strict Admission",
+      "type": "boolean"
+    },
+    "entity_other_min_confidence": {
+      "default": 0.9,
+      "title": "Entity Other Min Confidence",
+      "type": "number"
+    },
+    "recall_limit": {
+      "default": 15,
+      "title": "Recall Limit",
+      "type": "integer"
+    },
+    "recall_token_budget": {
+      "default": 8192,
+      "title": "Recall Token Budget",
+      "type": "integer"
+    },
+    "recall_min_score": {
+      "default": 0.001,
+      "title": "Recall Min Score",
+      "type": "number"
+    },
+    "recall_vector_weight": {
+      "default": 0.5,
+      "title": "Recall Vector Weight",
+      "type": "number"
+    },
+    "recall_bm25_weight": {
+      "default": 0.5,
+      "title": "Recall Bm25 Weight",
+      "type": "number"
+    },
+    "recall_fact_hybrid": {
+      "default": true,
+      "title": "Recall Fact Hybrid",
+      "type": "boolean"
+    },
+    "recall_lexical_enabled": {
+      "default": true,
+      "title": "Recall Lexical Enabled",
+      "type": "boolean"
+    },
+    "recall_sparse_enabled": {
+      "default": false,
+      "title": "Recall Sparse Enabled",
+      "type": "boolean"
+    },
+    "query_variants": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Query Variants",
+      "type": "array"
+    },
+    "rrf_k": {
+      "default": 60.0,
+      "title": "Rrf K",
+      "type": "number"
+    },
+    "recall_per_variant_limit": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Recall Per Variant Limit"
+    },
+    "phase1_strategy": {
+      "default": "boost",
+      "title": "Phase1 Strategy",
+      "type": "string"
+    },
+    "phase1_boost_alpha": {
+      "default": 0.6,
+      "title": "Phase1 Boost Alpha",
+      "type": "number"
+    },
+    "phase2_coverage_threshold": {
+      "default": 0.65,
+      "title": "Phase2 Coverage Threshold",
+      "type": "number"
+    },
+    "phase2_mmr_lambda": {
+      "default": 0.7,
+      "title": "Phase2 Mmr Lambda",
+      "type": "number"
+    },
+    "phase2_mmr_duplicate_threshold": {
+      "default": 0.85,
+      "title": "Phase2 Mmr Duplicate Threshold",
+      "type": "number"
+    },
+    "phase2_temporal_enabled": {
+      "default": true,
+      "title": "Phase2 Temporal Enabled",
+      "type": "boolean"
+    },
+    "phase2_graph_enabled": {
+      "default": true,
+      "title": "Phase2 Graph Enabled",
+      "type": "boolean"
+    },
+    "phase2_graph_damping": {
+      "default": 0.85,
+      "title": "Phase2 Graph Damping",
+      "type": "number"
+    },
+    "phase2_graph_max_iter": {
+      "default": 30,
+      "title": "Phase2 Graph Max Iter",
+      "type": "integer"
+    },
+    "phase2_graph_edge_weights": {
+      "additionalProperties": {
+        "type": "number"
+      },
+      "title": "Phase2 Graph Edge Weights",
+      "type": "object"
+    },
+    "half_life_days": {
+      "default": 30.0,
+      "title": "Half Life Days",
+      "type": "number"
+    },
+    "prune_below": {
+      "default": 0.05,
+      "title": "Prune Below",
+      "type": "number"
+    },
+    "consolidation_cluster_objects": {
+      "default": true,
+      "title": "Consolidation Cluster Objects",
+      "type": "boolean"
+    },
+    "consolidation_date_augment_embedding": {
+      "default": true,
+      "title": "Consolidation Date Augment Embedding",
+      "type": "boolean"
+    },
+    "session_inactivity_secs": {
+      "default": 3600,
+      "title": "Session Inactivity Secs",
+      "type": "integer"
+    }
+  },
+  "title": "UnikoConfigModel",
+  "type": "object"
+}

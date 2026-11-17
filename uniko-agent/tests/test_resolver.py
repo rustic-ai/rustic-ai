@@ -4,6 +4,7 @@ import os
 from unittest.mock import patch
 
 import pytest
+import uniko
 
 from rustic_ai.uniko_agent.resolver import UnikoResolver
 
@@ -49,15 +50,55 @@ class TestUnikoResolverLLMSpec:
             llm = resolver._build_llm_spec(spec)
             assert llm is not None
 
-    def test_build_llm_spec_mistral(self):
-        """Test building Mistral LLM spec."""
-        resolver = UnikoResolver()
+    @pytest.mark.parametrize("alias", ["mistral", "mistralrs"])
+    def test_removed_embedded_runtime_is_rejected(self, alias):
+        with pytest.raises(ValueError, match="embedded mistralrs runtime is no longer supported"):
+            UnikoResolver()._build_llm_spec({"alias": alias, "model_id": "some-model"})
 
-        spec = {"alias": "mistral", "model_id": "mistral-large", "key_env": "MISTRAL_API_KEY"}
+    @pytest.mark.parametrize(
+        "provider, extras, method, arguments",
+        [
+            ("openai", {}, "openai", ("answer/custom", "custom-model", None)),
+            (
+                "openai_with_key_env",
+                {"key_env": "CUSTOM_KEY", "base_url": "https://example.com/v1"},
+                "openai_with_key_env",
+                ("answer/custom", "custom-model", "CUSTOM_KEY", "https://example.com/v1"),
+            ),
+            (
+                "llamacpp",
+                {"base_url": "http://localhost:8080/v1"},
+                "llamacpp",
+                ("answer/custom", "custom-model", "http://localhost:8080/v1", None),
+            ),
+            (
+                "llamacpp",
+                {"base_url": "http://localhost:8080/v1", "key_env": "SERVER_KEY"},
+                "llamacpp",
+                ("answer/custom", "custom-model", "http://localhost:8080/v1", "SERVER_KEY"),
+            ),
+        ],
+    )
+    def test_native_llm_modes_preserve_alias_and_model(self, provider, extras, method, arguments):
+        with patch("uniko.models.inputs._native") as get_native:
+            native = get_native.return_value.LlmSpec
+            llm = UnikoResolver()._build_llm_spec(
+                {"provider": provider, "alias": "answer/custom", "model_id": "custom-model", **extras}
+            )
+        getattr(native, method).assert_called_once_with(*arguments)
+        assert llm is getattr(native, method).return_value
 
-        with patch.dict(os.environ, {"MISTRAL_API_KEY": "test-key"}):
-            llm = resolver._build_llm_spec(spec)
-            assert llm is not None
+    @pytest.mark.parametrize(
+        "spec, error",
+        [
+            ({"provider": "llamacpp", "alias": "answer/local", "model_id": "qwen"}, "base_url"),
+            ({"provider": "mistralrs", "alias": "answer/local", "model_id": "model"}, "provider"),
+            ({"provider": "openai", "alias": "answer/api", "model_id": "model", "typo": True}, "typo"),
+        ],
+    )
+    def test_invalid_native_llm_configuration(self, spec, error):
+        with pytest.raises(ValueError, match=error):
+            UnikoResolver()._build_llm_spec(spec)
 
     def test_build_llm_spec_unsupported_alias(self):
         """Test that unsupported alias raises ValueError."""
@@ -127,3 +168,34 @@ class TestUnikoResolverIntegration:
 
             # Cleanup
             resolver.shutdown()
+
+
+class TestUnikoResolverModelConfiguration:
+    def test_native_builder_applies_config_and_model_overrides(self):
+        resolver = UnikoResolver(
+            config={"recall_limit": 8, "embedding": {"model_id": "BGESmallENV15"}},
+            embedding="minilm",
+            nlp="v1",
+            reranker=False,
+        )
+        agent = resolver.resolve("org", "guild", "agent")
+        instance = resolver._uniko_instances["org:guild:agent"]
+        config = instance.config()
+        assert config["recall_limit"] == 8
+        assert config["embedding"]["model_id"] == "AllMiniLML6V2"
+        assert config["reranker"]["enabled"] is False
+        del agent
+        resolver.shutdown()
+
+    @pytest.mark.parametrize(
+        "options",
+        [
+            {"config": {"misspelled_option": True}},
+            {"embedding": "unknown-preset"},
+            {"nlp": "unknown-preset"},
+            {"reranker": "unknown-preset"},
+        ],
+    )
+    def test_native_validation_rejects_invalid_configuration(self, options):
+        with pytest.raises(uniko.ConfigError, match="unknown"):
+            UnikoResolver(**options).resolve("org", "guild", "agent")

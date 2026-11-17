@@ -86,6 +86,9 @@ class LLMAgentConfig(BaseAgentProps, LLMPluginMixin):
     If the completion takes longer than this time, the request will be aborted.
     """
 
+    max_tokens: Optional[int] = Field(default=None, ge=1)
+    """Default generation token limit, overridden by an explicit request limit."""
+
     default_system_prompt: Optional[str] = None
     """
     Default system prompt to use if no other mechanism updates the prompt.

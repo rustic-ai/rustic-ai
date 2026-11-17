@@ -1,474 +1,391 @@
-"""
-Comprehensive tests for Uniko Research Guild to verify routing and agent interactions.
-"""
+"""Research Guild contracts and correlated orchestration regression tests."""
 
+from copy import deepcopy
 import json
 from pathlib import Path
-from typing import Any
+from types import SimpleNamespace
 
 import pytest
 
+from rustic_ai.core.agents.commons.media import MediaLink
+from rustic_ai.core.guild.agent_ext.depends.llm.models import (
+    ChatCompletionRequest,
+    ChatCompletionResponse,
+)
 from rustic_ai.core.guild.dsl import GuildSpec
+from rustic_ai.core.utils.basic_class_utils import get_class_from_name
+from rustic_ai.playwright.agent import WebScrapingCompleted
+from rustic_ai.serpapi.agent import SearchError, SERPResults
+from rustic_ai.showcase.uniko_research import UnikoResearchCoordinator
+from rustic_ai.uniko_agent import (
+    FinalizeMemorySessionResult,
+    IngestOutcome,
+    MemoryAgentError,
+    MemoryRecordKind,
+    RecallItem,
+    RecallResponse,
+    RecordMemoryResult,
+)
 
 
 @pytest.fixture
-def guild_spec() -> GuildSpec:
-    """Load the Uniko Research Guild specification."""
-    guild_json_path = Path(__file__).parent.parent / "apps" / "uniko_research_guild.json"
-    with open(guild_json_path) as f:
-        guild_data = json.load(f)
-    return GuildSpec.model_validate(guild_data["spec"])
+def spec():
+    return GuildSpec.model_validate(
+        json.loads((Path(__file__).parent.parent / "apps/uniko_research_guild.json").read_text())["spec"]
+    )
 
 
-class TestUnikoResearchGuildConfiguration:
-    """Test the guild configuration loads and routing is properly defined."""
+class Context:
+    def __init__(self, payload, sender="upa-alice", identity=42, values=None):
+        self.payload = payload
+        self.message = SimpleNamespace(sender=SimpleNamespace(id=sender), id=identity, forward_header=None)
+        self.values = deepcopy(values or {})
+        self.sent = []
 
-    def test_guild_spec_loads_correctly(self, guild_spec: GuildSpec):
-        """Verify the guild spec loads without errors."""
-        assert guild_spec.name == "Uniko Research Guild"
-        assert len(guild_spec.agents) == 9  # Updated: removed markdown_agent
-        assert "memory_agent" in [agent.id for agent in guild_spec.agents]
-        assert "google_agent" in [agent.id for agent in guild_spec.agents]
+    def get_context(self):
+        return deepcopy(self.values)
 
-    def test_all_required_agents_present(self, guild_spec: GuildSpec):
-        """Verify all required agents are defined."""
-        agent_ids = [agent.id for agent in guild_spec.agents]
-        required_agents = [
-            "memory_agent",
+    def update_context(self, updates):
+        self.values.update(updates)
+
+    def send(self, payload):
+        # Every routed payload must retain a valid serialized public contract.
+        payload.__class__.model_validate(payload.model_dump(mode="json"))
+        self.sent.append((payload, deepcopy(self.values)))
+
+    def send_error(self, payload):
+        self.send(payload)
+
+
+def coordinator():
+    value = UnikoResearchCoordinator.__new__(UnikoResearchCoordinator)
+    value.guild_spec = SimpleNamespace(id="research-guild")
+    return value
+
+
+def respond(coord, emission, sender, payload, method):
+    ctx = Context(payload, sender, values=emission[1])
+    getattr(UnikoResearchCoordinator, method).__wfn__(coord, ctx)
+    return ctx
+
+
+def answer(text="Evidence-based answer"):
+    return ChatCompletionResponse(
+        id="response",
+        created=1,
+        model="test",
+        choices=[{"index": 0, "message": {"role": "assistant", "content": text}, "finish_reason": "stop"}],
+    )
+
+
+def bundle(good=True):
+    return RecallResponse(
+        items=(
+            [
+                RecallItem(
+                    node_id=1,
+                    kind="chunk",
+                    record_kind=MemoryRecordKind.EXTERNAL_EVIDENCE,
+                    score=0.8,
+                    content="Harbor budget 42000",
+                    sources=[{"artifact_id": "artifact-1", "session_id": "owner"}],
+                    source_id="source-1",
+                    category="external_evidence",
+                    token_count=6,
+                )
+            ]
+            if good
+            else []
+        ),
+        total_tokens=6 if good else 0,
+        phase1_only=False,
+        phase2_only=True,
+        coverage=0.9 if good else 0,
+    )
+
+
+def record_ack(emission):
+    req = emission[0]
+    return RecordMemoryResult(record_id=req.record_id, session_id=req.session_id, kind=req.kind)
+
+
+def finish(coord, synthesis):
+    llm = respond(coord, synthesis, "synthesis_agent", answer(), "llm_result")
+    assert llm.sent[0][1]["research_stage"] == "assistant_record"
+    recorded = respond(coord, llm.sent[0], "memory_agent", record_ack(llm.sent[0]), "recorded")
+    final = respond(
+        coord,
+        recorded.sent[0],
+        "memory_agent",
+        FinalizeMemorySessionResult(session_id=recorded.sent[0][0].session_id, rebuilt=True),
+        "finalized",
+    )
+    return final
+
+
+def test_blueprint_resolves_all_payloads_and_completion_points(spec):
+    assert spec.dependency_map == {}
+    assert len(spec.agents) == 8
+    for step in spec.routes.steps:
+        get_class_from_name(step.message_format)
+        if step.agent:
+            assert step.agent.id in {agent.id for agent in spec.agents}
+        if step.process_status == "completed":
+            assert step.agent.id == "research_coordinator"
+            assert step.destination.topics in {"user_message_broadcast", "gateway_agent"}
+    memory = next(a for a in spec.agents if a.id == "memory_agent")
+    assert not memory.listen_to_default_topic
+    assert memory.properties.scope_producers == ["research_coordinator"]
+    synth = next(a for a in spec.agents if a.id == "synthesis_agent")
+    assert synth.properties.max_tokens == 800
+    assert not hasattr(memory.properties, "llm")
+    assert "AnswerRequest" not in json.dumps(spec.model_dump(mode="json"))
+
+
+def test_good_recall_passes_exact_context_and_finalizes_once():
+    coord = coordinator()
+    start = Context(ChatCompletionRequest(messages=[{"role": "user", "content": "What is the Harbor budget?"}]))
+    UnikoResearchCoordinator.begin.__wfn__(coord, start)
+    recalled = respond(coord, start.sent[0], "memory_agent", bundle(), "recalled")
+    recorded = respond(coord, recalled.sent[0], "memory_agent", record_ack(recalled.sent[0]), "recorded")
+    synthesis = recorded.sent[0]
+    assert synthesis[1]["next_topic"] == "synthesis_agent"
+    assert bundle().model_dump_json() in synthesis[0].messages[0].content
+    assert "What is the Harbor budget?" in synthesis[0].messages[0].content
+    final = finish(coord, synthesis)
+    assert len(final.sent) == 1 and final.sent[0][1]["terminal"]
+    late = respond(coord, synthesis, "synthesis_agent", answer("late answer"), "llm_result")
+    assert not late.sent and not coord._requests
+    duplicate = Context(start.payload)
+    UnikoResearchCoordinator.begin.__wfn__(coord, duplicate)
+    assert not duplicate.sent
+    # A new request reuses the user's session; another user is isolated.
+    follow = Context(start.payload, identity=43)
+    UnikoResearchCoordinator.begin.__wfn__(coord, follow)
+    other = Context(start.payload, sender="upa-bob", identity=44)
+    UnikoResearchCoordinator.begin.__wfn__(coord, other)
+    assert follow.sent[0][0].scope.sessions == start.sent[0][0].scope.sessions
+    assert other.sent[0][0].scope.sessions != start.sent[0][0].scope.sessions
+
+
+def test_document_barrier_partial_failure_and_late_results():
+    coord = coordinator()
+    files = [
+        MediaLink(url="uploads/one.txt", name="one.txt", on_filesystem=True),
+        MediaLink(url="uploads/two.txt", name="two.txt", on_filesystem=True),
+    ]
+    start = Context(ChatCompletionRequest(messages=[{"role": "user", "content": "Summarize files"}]))
+    coord._begin(start, "Summarize files", files)
+    recorded = respond(coord, start.sent[0], "memory_agent", record_ack(start.sent[0]), "recorded")
+    assert len(recorded.sent) == 2
+    good = respond(
+        coord,
+        recorded.sent[0],
+        "memory_agent",
+        IngestOutcome(stored=True, searchable=True, success=True, record_id=recorded.sent[0][0].record_id),
+        "ingested",
+    )
+    assert not good.sent
+    duplicate = respond(coord, recorded.sent[0], "memory_agent", IngestOutcome(success=True), "ingested")
+    assert not duplicate.sent
+    failed = respond(
+        coord,
+        recorded.sent[1],
+        "memory_agent",
+        MemoryAgentError(error="document_ingest_failed", message="failed"),
+        "memory_failed",
+    )
+    assert len(failed.sent) == 1 and failed.sent[0][1]["research_stage"] == "post_research"
+    assert MemoryRecordKind.USER_ASSERTION not in failed.sent[0][0].allowed_record_kinds
+    synthesis = respond(coord, failed.sent[0], "memory_agent", bundle(), "recalled")
+    final = finish(coord, synthesis.sent[0])
+    assert len(final.sent) == 1
+    late = respond(coord, recorded.sent[1], "memory_agent", IngestOutcome(stored=True, searchable=True), "ingested")
+    assert not late.sent
+
+
+def test_search_enumeration_and_terminal_failure():
+    coord = coordinator()
+    start = Context(ChatCompletionRequest(messages=[{"role": "user", "content": "Research an obscure topic"}]))
+    UnikoResearchCoordinator.begin.__wfn__(coord, start)
+    recalled = respond(coord, start.sent[0], "memory_agent", bundle(False), "recalled")
+    recorded = respond(coord, recalled.sent[0], "memory_agent", record_ack(recalled.sent[0]), "recorded")
+    generated = respond(coord, recorded.sent[0], "query_agent", answer("first####second"), "llm_result")
+    assert len(generated.sent) == 4
+    google = [e for e in generated.sent if e[1]["next_topic"] == "google_agent"]
+    search = [e for e in generated.sent if e[1]["next_topic"] == "serp_agent"]
+    for emission in google:
+        failed = respond(
+            coord,
+            emission,
             "google_agent",
-            "serp_agent",
-            "playwright_agent",
-            # "markdown_agent",  # Removed: non-existent class and redundant routing
-            "synthesis_agent",
-            "query_agent",
-            "splitter_agent",
-            "basic_wiring_agent",
-            "gateway_agent",
-        ]
-        for agent_id in required_agents:
-            assert agent_id in agent_ids, f"Missing required agent: {agent_id}"
+            MemoryAgentError(error="provider_failed", message="failed"),
+            "memory_failed",
+        )
+        assert not failed.sent
+    one = respond(
+        coord,
+        search[0],
+        "serp_agent",
+        SERPResults(
+            engine="google",
+            query="first",
+            count=1,
+            id=search[0][0].id,
+            results=[MediaLink(url="https://example.com", name="example")],
+        ),
+        "searched",
+    )
+    assert one.sent[0][1]["next_topic"] == "playwright_agent"
+    no_search = respond(coord, search[1], "serp_agent", SearchError(id=search[1][0].id, response={}), "search_failed")
+    assert not no_search.sent
+    completed = respond(
+        coord, one.sent[0], "playwright_agent", WebScrapingCompleted(id=one.sent[0][0].id, links=[]), "scraped"
+    )
+    assert completed.sent[0][1]["research_stage"] == "post_research"
+    final = respond(coord, completed.sent[0], "memory_agent", bundle(False), "recalled")
+    assert len(final.sent) == 1 and final.sent[0][1]["terminal"]
+    assert "No relevant evidence" in final.sent[0][0].choices[0].message.content
 
-    def test_routing_steps_defined(self, guild_spec: GuildSpec):
-        """Verify routing steps are defined."""
-        assert guild_spec.routes is not None
-        assert len(guild_spec.routes.steps) > 0
-        print(f"Total routing steps: {len(guild_spec.routes.steps)}")
 
-    def test_dependencies_configured(self, guild_spec: GuildSpec):
-        """Test that dependencies are left for platform-level configuration.
+def test_untrusted_result_cannot_advance_barrier():
+    coord = coordinator()
+    start = Context(ChatCompletionRequest(messages=[{"role": "user", "content": "Question"}]))
+    UnikoResearchCoordinator.begin.__wfn__(coord, start)
+    attacker = respond(coord, start.sent[0], "upa-mallory", bundle(), "recalled")
+    assert not attacker.sent
+    assert len(coord._requests) == 1
 
-        This guild is deployed via Rustic UI (like sibling blueprints
-        llm_council.json, multi_llm_blueprint.json, react_data_analyst.json),
-        which configure filesystem/llm/uniko dependencies through the platform
-        rather than the static blueprint, so dependency_map is intentionally empty.
-        """
-        assert guild_spec.dependency_map == {}
 
-    def test_agent_id_consistency_in_routing(self, guild_spec: GuildSpec):
-        """Test that routing uses agent references consistently."""
-        agent_ids = {agent.id for agent in guild_spec.agents}
-        agent_names = {agent.name for agent in guild_spec.agents}
+def test_dispatch_releases_request_lock_before_sync_callbacks(monkeypatch):
+    from concurrent.futures import ThreadPoolExecutor
 
-        # Check all routing steps that reference agents
-        for idx, step in enumerate(guild_spec.routes.steps):
-            if step.agent:
-                # Agent reference should have either id or name
-                assert step.agent.id or step.agent.name, f"Step {idx}: Agent reference has neither id nor name"
+    coord = coordinator()
+    ctx = Context(ChatCompletionRequest(messages=[{"role": "user", "content": "Question"}]))
+    original_send = ctx.send
 
-                # If referencing by ID, verify it exists
-                if step.agent.id:
-                    assert (
-                        step.agent.id in agent_ids
-                    ), f"Step {idx}: Agent ID '{step.agent.id}' not found in guild agents"
+    def send(payload):
+        def acquire_on_other_thread():
+            lock = coord._storage()
+            acquired = lock.acquire(timeout=0.1)
+            if acquired:
+                lock.release()
+            return acquired
 
-                # If referencing by name, verify it exists
-                if step.agent.name:
-                    assert (
-                        step.agent.name in agent_names
-                    ), f"Step {idx}: Agent name '{step.agent.name}' not found in guild agents"
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            assert executor.submit(acquire_on_other_thread).result(timeout=2)
+        original_send(payload)
 
-    def test_memory_agent_topics(self, guild_spec: GuildSpec):
-        """Test Memory Agent has all required topics."""
-        memory_agent = next(agent for agent in guild_spec.agents if agent.id == "memory_agent")
-        assert "memory_observe" in memory_agent.additional_topics
-        assert "memory_recall" in memory_agent.additional_topics
-        assert "memory_answer" in memory_agent.additional_topics
-        assert "memory_ingest" in memory_agent.additional_topics
-        assert memory_agent.listen_to_default_topic is True
+    monkeypatch.setattr(ctx, "send", send)
+    UnikoResearchCoordinator.begin.__wfn__(coord, ctx)
+    assert len(ctx.sent) == 1
 
-    def test_synthesis_agent_configuration(self, guild_spec: GuildSpec):
-        """Test Synthesis Agent configuration."""
-        synthesis_agent = next(agent for agent in guild_spec.agents if agent.id == "synthesis_agent")
-        assert synthesis_agent.listen_to_default_topic is False
-        assert "synthesis_agent" in synthesis_agent.additional_topics
-        assert synthesis_agent.properties.model == "gpt-4.1"
 
-    def test_query_agent_configuration(self, guild_spec: GuildSpec):
-        """Test Query Agent configuration."""
-        query_agent = next(agent for agent in guild_spec.agents if agent.id == "query_agent")
-        assert query_agent.listen_to_default_topic is False
-        assert "query_agent" in query_agent.additional_topics
-        assert query_agent.properties.model == "gpt-4.1"
+@pytest.mark.asyncio
+async def test_sequential_research_rounds_with_native_memory():
+    """Real memory across document ingestion, follow-up and another user's request."""
+    from collections import deque
 
-    def test_splitter_agent_configuration(self, guild_spec: GuildSpec):
-        """Test Splitter Agent has proper JSONata configuration."""
-        splitter_agent = next(agent for agent in guild_spec.agents if agent.id == "splitter_agent")
-        assert splitter_agent.listen_to_default_topic is False
-        assert splitter_agent.properties.splitter.split_type == "jsonata"
-        assert splitter_agent.properties.splitter.expression is not None
+    import fsspec
+    from uniko import Uniko
 
-    def test_routing_completion_points(self, guild_spec: GuildSpec):
-        """Test that routes have proper completion markers."""
-        completed_routes = [step for step in guild_spec.routes.steps if step.process_status == "completed"]
-        # Should have at least 2 completion points
-        assert len(completed_routes) >= 2, f"Expected at least 2 completion points, found {len(completed_routes)}"
+    from rustic_ai.uniko_agent import (
+        FinalizeMemorySessionRequest,
+        IngestDocumentRequest,
+        MemoryAgent,
+        MemoryAgentConfig,
+        RecallRequest,
+        RecordMemoryRequest,
+    )
 
-    def test_user_query_entry_point(self, guild_spec: GuildSpec):
-        """Test the first routing step handles user queries."""
-        first_route = guild_spec.routes.steps[0]
-        assert first_route.message_format == "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest"
-        assert first_route.transformer is not None
-        assert first_route.transformer.style == "content_based_router"
+    coord = coordinator()
+    native = Uniko.builder().in_memory().build_sync()
+    handles = [native.agent("research-memory")]
+    mem = MemoryAgent.__new__(MemoryAgent)
+    mem.config = MemoryAgentConfig(scope_producers=["research_coordinator"])
+    mem.guild_spec = coord.guild_spec
+    fs = fsspec.filesystem("memory")
+    fs.pipe("g1/research-harbor.txt", b"Harbor Project approved budget is CAD 42000. Coordinator is Mina Patel.")
+    document = MediaLink(url="g1/research-harbor.txt", name="harbor.txt", on_filesystem=True, mimetype="text/plain")
+    memory_requests = {
+        RecallRequest: "recall_knowledge",
+        RecordMemoryRequest: "record_memory",
+        IngestDocumentRequest: "ingest_document",
+        FinalizeMemorySessionRequest: "finalize_memory_session",
+    }
+    memory_responses = {
+        RecallResponse: "recalled",
+        RecordMemoryResult: "recorded",
+        IngestOutcome: "ingested",
+        FinalizeMemorySessionResult: "finalized",
+        MemoryAgentError: "memory_failed",
+    }
 
-    def test_recall_response_routing_exists(self, guild_spec: GuildSpec):
-        """Test that RecallResponse has routing logic."""
-        recall_routes = [
-            step
-            for step in guild_spec.routes.steps
-            if step.message_format == "rustic_ai.uniko_agent.models.RecallResponse"
-        ]
-        assert len(recall_routes) >= 2, "Should have at least 2 RecallResponse routing rules"
-
-    def test_serp_to_playwright_routing(self, guild_spec: GuildSpec):
-        """Test routing from SERP to Playwright."""
-        serp_route = next(
-            (
-                step
-                for step in guild_spec.routes.steps
-                if step.agent
-                and step.agent.name == "Search Agent"
-                and step.message_format == "rustic_ai.serpapi.agent.SERPResults"
+    async def run(user, identity, files):
+        start = Context(
+            ChatCompletionRequest(
+                messages=[{"role": "user", "content": "What is the Harbor Project approved budget?"}]
             ),
-            None,
+            sender=user,
+            identity=identity,
         )
-        assert serp_route is not None, "SERP Agent routing not found"
-        assert serp_route.transformer is not None
-        assert serp_route.transformer.output_format == "rustic_ai.playwright.agent.WebScrapingRequest"
+        coord._begin(start, start.payload.messages[0].content, files)
+        queue = deque((payload, values, "research_coordinator") for payload, values in start.sent)
+        final = []
+        bundles = []
+        for _ in range(100):
+            if not queue:
+                break
+            payload, values, sender = queue.popleft()
+            if values.get("terminal"):
+                final.append(payload)
+                continue
+            ctx = Context(payload, sender=sender, identity=identity, values=values)
+            if type(payload) in memory_requests:
+                method = getattr(MemoryAgent, memory_requests[type(payload)]).__wfn__
+                if isinstance(payload, IngestDocumentRequest):
+                    await method(mem, ctx, handles[0], None, fs)
+                else:
+                    await method(mem, ctx, handles[0])
+                output_sender = "memory_agent"
+            elif type(payload) in memory_responses:
+                if isinstance(payload, RecallResponse):
+                    bundles.append(payload)
+                getattr(UnikoResearchCoordinator, memory_responses[type(payload)]).__wfn__(coord, ctx)
+                output_sender = "research_coordinator"
+            elif isinstance(payload, ChatCompletionResponse):
+                UnikoResearchCoordinator.llm_result.__wfn__(coord, ctx)
+                output_sender = "research_coordinator"
+            elif isinstance(payload, ChatCompletionRequest):
+                if values["next_topic"] == "synthesis_agent":
+                    assert bundles[-1].model_dump_json() in payload.messages[0].content
+                    ctx.send(answer("Harbor Project approved budget is CAD 42000."))
+                    output_sender = "synthesis_agent"
+                else:
+                    ctx.send(answer("Harbor approved budget"))
+                    output_sender = "query_agent"
+            else:
+                assert values["next_topic"] in {"google_agent", "serp_agent"}
+                output_sender = values["next_topic"]
+                if output_sender == "google_agent":
+                    ctx.send(MemoryAgentError(error="provider_failed", message="Unavailable in controlled test"))
+                else:
+                    error = SearchError(id=payload.id, response={})
+                    error_ctx = Context(error, sender="serp_agent", values=values)
+                    UnikoResearchCoordinator.search_failed.__wfn__(coord, error_ctx)
+                    ctx.sent.extend(error_ctx.sent)
+                    output_sender = "research_coordinator"
+            queue.extend((item, state, output_sender) for item, state in ctx.sent)
+        assert not queue
+        assert len(final) == 1
+        assert not coord._requests
+        return final[0]
 
-    def test_playwright_to_memory_routing(self, guild_spec: GuildSpec):
-        """Test routing from Playwright to Memory."""
-        playwright_route = next(
-            (step for step in guild_spec.routes.steps if step.agent and step.agent.name == "Web Scraper Agent"),
-            None,
-        )
-        assert playwright_route is not None, "Playwright Agent routing not found"
-        assert playwright_route.destination.topics == "memory_ingest"
-
-    def test_synthesis_routing_complete(self, guild_spec: GuildSpec):
-        """Test synthesis agent routes exist and are complete."""
-        # Route TO synthesis
-        to_synthesis = any(
-            "synthesis_agent"
-            in (step.transformer.handler if step.transformer and hasattr(step.transformer, "handler") else "")
-            for step in guild_spec.routes.steps
-        )
-        assert to_synthesis, "No route found TO synthesis agent"
-
-        # Route FROM synthesis
-        from_synthesis = next(
-            (step for step in guild_spec.routes.steps if step.agent and step.agent.name == "Synthesis Agent"),
-            None,
-        )
-        assert from_synthesis is not None, "No route found FROM synthesis agent"
-
-    def test_gateway_agent_routing(self, guild_spec: GuildSpec):
-        """Test Gateway Agent for g2g communication."""
-        gateway_routes = [
-            step for step in guild_spec.routes.steps if step.agent and step.agent.name == "Research Gateway"
-        ]
-        assert len(gateway_routes) >= 2, "Should have at least 2 gateway routing rules"
-
-    def test_all_agents_have_routing_or_justification(self, guild_spec: GuildSpec):
-        """Test that all agents either have routing or don't need it."""
-        agent_ids_with_routes = set()
-        agent_names_with_routes = set()
-
-        for step in guild_spec.routes.steps:
-            if step.agent:
-                if step.agent.id:
-                    agent_ids_with_routes.add(step.agent.id)
-                if step.agent.name:
-                    agent_names_with_routes.add(step.agent.name)
-
-        # Agents that don't need explicit routing (utility agents)
-        utility_agents = {"basic_wiring_agent"}
-
-        for agent in guild_spec.agents:
-            if agent.id not in utility_agents:
-                has_route = agent.id in agent_ids_with_routes or agent.name in agent_names_with_routes
-                # Agents listening to default_topic will receive messages even without explicit routing
-                has_default_topic = agent.listen_to_default_topic
-                # Has additional topics
-                has_topics = len(agent.additional_topics) > 0
-
-                assert (
-                    has_route or has_default_topic or has_topics
-                ), f"Agent '{agent.id}' has no routing, default topic, or additional topics"
-
-
-class TestRoutingLogicDeep:
-    """Deep testing of routing logic and message flow patterns."""
-
-    def test_guild_state_initialization_requirements(self, guild_spec: GuildSpec):
-        """Test that guild state fields used in routing are properly handled."""
-        # Check routing steps that reference guild_state
-        state_dependent_routes = []
-        for idx, step in enumerate(guild_spec.routes.steps):
-            if step.transformer and hasattr(step.transformer, "handler"):
-                if "guild_state" in step.transformer.handler:
-                    state_dependent_routes.append((idx, step))
-            if step.guild_state_update:
-                state_dependent_routes.append((idx, step))
-
-        assert len(state_dependent_routes) > 0, "Expected routes that use guild_state"
-
-        # Check that state fields referenced are documented
-        print(f"\nFound {len(state_dependent_routes)} routes that reference guild_state")
-
-        # Key fields that should be tracked:
-        # - answered: list of answered query IDs
-        # - current_id: current query ID counter
-        # - user_queries: list of user queries
-
-    def test_complete_user_query_flow_routing(self, guild_spec: GuildSpec):
-        """Test the complete routing flow for a user query."""
-        # Step 1: User query comes in as ChatCompletionRequest
-        entry_route = guild_spec.routes.steps[0]
-        assert entry_route.message_format == "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest"
-
-        # Step 2: Should route to RecallRequest
-        assert "RecallRequest" in entry_route.transformer.handler
-        assert "memory_recall" in entry_route.transformer.handler
-
-        # Step 3: RecallResponse should exist
-        recall_routes = [
-            step
-            for step in guild_spec.routes.steps
-            if step.message_format == "rustic_ai.uniko_agent.models.RecallResponse"
-        ]
-        assert len(recall_routes) >= 2, "Should have multiple RecallResponse handlers"
-
-    def test_poor_recall_triggers_web_research(self, guild_spec: GuildSpec):
-        """Test that poor recall score triggers web research path."""
-        # Find RecallResponse route that checks recall quality
-        recall_route = next(
-            step
-            for step in guild_spec.routes.steps
-            if step.message_format == "rustic_ai.uniko_agent.models.RecallResponse"
-            and step.agent
-            and step.agent.name == "Memory Agent"
-            and "query_agent" in (step.transformer.handler if step.transformer else "")
-        )
-        assert recall_route is not None
-
-        # Should route to query_agent when recall is poor
-        assert "query_agent" in recall_route.transformer.handler
-        assert "has_good_recall" in recall_route.transformer.handler or "count" in recall_route.transformer.handler
-
-    def test_web_research_pipeline(self, guild_spec: GuildSpec):
-        """Test the complete web research pipeline routing."""
-        # QueryAgent → Splitter
-        query_to_splitter = next(
-            step for step in guild_spec.routes.steps if step.agent and step.agent.name == "Query Agent"
-        )
-        assert query_to_splitter.destination.topics == "splitter_agent"
-
-        # Splitter → Google + SERP (fanned out to two dedicated topics)
-        splitter_routes = [
-            step for step in guild_spec.routes.steps if step.agent and step.agent.name == "Splitter Agent"
-        ]
-        assert len(splitter_routes) == 2
-        for step in splitter_routes:
-            assert step.message_format == "rustic_ai.serpapi.agent.SERPQuery"
-        assert {step.destination.topics for step in splitter_routes} == {"google_agent", "serp_agent"}
-
-        # SERP → Playwright
-        serp_to_playwright = next(
-            step for step in guild_spec.routes.steps if step.message_format == "rustic_ai.serpapi.agent.SERPResults"
-        )
-        assert serp_to_playwright.transformer.output_format == "rustic_ai.playwright.agent.WebScrapingRequest"
-
-        # Playwright → Memory
-        playwright_to_memory = next(
-            step for step in guild_spec.routes.steps if step.agent and step.agent.name == "Web Scraper Agent"
-        )
-        assert playwright_to_memory.destination.topics == "memory_ingest"
-
-    def test_memory_ingestion_flow(self, guild_spec: GuildSpec):
-        """Test memory ingestion and observation flow."""
-        # IngestOutcome → Basic Wiring Agent (intermediate hop from Memory Agent)
-        ingest_to_wiring = next(
-            step
-            for step in guild_spec.routes.steps
-            if step.message_format == "rustic_ai.uniko_agent.models.IngestOutcome"
-            and step.agent
-            and step.agent.name == "Memory Agent"
-        )
-        assert ingest_to_wiring.destination.topics == "basic_wiring"
-
-        # Basic Wiring Agent → ObserveTurnRequest on memory_observe
-        wiring_to_observe = next(
-            step
-            for step in guild_spec.routes.steps
-            if step.message_format == "rustic_ai.uniko_agent.models.IngestOutcome"
-            and step.agent
-            and step.agent.name == "Basic Wiring Agent"
-        )
-        assert wiring_to_observe.destination.topics == "memory_observe"
-        # Content-based router uses handler, not output_format
-        assert "ObserveTurnRequest" in wiring_to_observe.transformer.handler
-
-        # ObserveResult → RecallRequest (to query ingested content)
-        observe_to_recall = next(
-            (
-                step
-                for step in guild_spec.routes.steps
-                if step.message_format == "rustic_ai.uniko_agent.models.ObserveResult"
-                and step.destination
-                and step.destination.topics == "memory_recall"
-            ),
-            None,
-        )
-        assert observe_to_recall is not None
-
-    def test_synthesis_flow(self, guild_spec: GuildSpec):
-        """Test synthesis agent flow."""
-        # RecallResponse → Synthesis (when recall has content)
-        recall_to_synthesis = next(
-            (
-                step
-                for step in guild_spec.routes.steps
-                if step.message_format == "rustic_ai.uniko_agent.models.RecallResponse"
-                and step.transformer
-                and hasattr(step.transformer, "handler")
-                and "synthesis_agent" in step.transformer.handler
-            ),
-            None,
-        )
-        assert recall_to_synthesis is not None
-
-        # Synthesis → user broadcast (completion point)
-        synthesis_to_observe = next(
-            step for step in guild_spec.routes.steps if step.agent and step.agent.name == "Synthesis Agent"
-        )
-        assert synthesis_to_observe.destination.topics == "user_message_broadcast"
-        assert synthesis_to_observe.process_status == "completed"
-
-    def test_completion_points(self, guild_spec: GuildSpec):
-        """Test that completion points properly end the routing chain."""
-        completion_routes = [step for step in guild_spec.routes.steps if step.process_status == "completed"]
-
-        # Each completion should send to user_message_broadcast
-        # either via direct destination or via content_based_router handler
-        for route in completion_routes:
-            has_broadcast = False
-            if route.destination and route.destination.topics == "user_message_broadcast":
-                has_broadcast = True
-            elif route.transformer and hasattr(route.transformer, "handler"):
-                if "user_message_broadcast" in route.transformer.handler:
-                    has_broadcast = True
-
-            assert has_broadcast, f"Completion route does not send to user_message_broadcast: {route}"
-
-    def test_no_infinite_loops_in_routing(self, guild_spec: GuildSpec):
-        """Test that routing doesn't create infinite loops."""
-        # Build a routing graph
-        routing_graph: dict[str, list[dict[str, Any]]] = {}
-        for step in enumerate(guild_spec.routes.steps):
-            source = f"{step[1].agent.name if step[1].agent else 'UserProxy'}:{step[1].message_format}"
-
-            # Get destination from transformer or direct destination
-            dest_topic = None
-            if step[1].destination:
-                dest_topic = step[1].destination.topics
-            elif step[1].transformer and hasattr(step[1].transformer, "handler"):
-                # Extract topic from content_based_router handler
-                if "user_message_broadcast" in step[1].transformer.handler:
-                    dest_topic = "user_message_broadcast"
-                elif '"topics"' in step[1].transformer.handler:
-                    dest_topic = "content_based"
-
-            if source not in routing_graph:
-                routing_graph[source] = []
-
-            routing_graph[source].append(
-                {
-                    "dest_topic": dest_topic,
-                    "has_completion": step[1].process_status == "completed",
-                }
-            )
-
-        # Check that routes with process_status=completed send to user broadcast
-        # (either explicitly or via content_based_router)
-        for source, dests in routing_graph.items():
-            for dest in dests:
-                if dest["has_completion"]:
-                    # Completion routes should go to user_message_broadcast
-                    assert (
-                        dest["dest_topic"] == "user_message_broadcast" or dest["dest_topic"] == "content_based"
-                    ), f"Completion route from {source} doesn't go to user_message_broadcast"
-
-    def test_url_detection_flow(self, guild_spec: GuildSpec):
-        """Test URL detection and direct scraping flow."""
-        # First route should detect URLs in content
-        first_route = guild_spec.routes.steps[0]
-        handler = first_route.transformer.handler
-
-        # Should check for URLs in the content
-        assert "http" in handler or "url" in handler.lower()
-        assert "WebScrapingRequest" in handler
-
-    def test_file_upload_flow(self, guild_spec: GuildSpec):
-        """Test file/image upload detection and ingestion."""
-        first_route = guild_spec.routes.steps[0]
-        handler = first_route.transformer.handler
-
-        # Should check for files/images
-        assert "image_url" in handler or "file_url" in handler
-        assert "IngestDocumentRequest" in handler
-
-    def test_gateway_bidirectional_flow(self, guild_spec: GuildSpec):
-        """Test gateway agent for g2g communication."""
-        gateway_agent = next(agent for agent in guild_spec.agents if agent.id == "gateway_agent")
-
-        # Should have input and output formats defined
-        assert gateway_agent.properties.input_formats is not None
-        assert len(gateway_agent.properties.input_formats) > 0
-        assert "ResearchRequest" in gateway_agent.properties.input_formats[0]
-
-        assert gateway_agent.properties.output_formats is not None
-        assert len(gateway_agent.properties.output_formats) > 0
-        assert "ResearchResults" in gateway_agent.properties.output_formats[0]
-
-    def test_jsonata_expressions_valid_syntax(self, guild_spec: GuildSpec):
-        """Test that JSONata expressions in transformers are syntactically valid."""
-        for idx, step in enumerate(guild_spec.routes.steps):
-            if step.transformer:
-                if hasattr(step.transformer, "handler") and step.transformer.handler:
-                    # Basic validation - should start with valid JSONata constructs
-                    handler = step.transformer.handler
-                    # Should have balanced parentheses
-                    assert handler.count("(") == handler.count(")"), f"Step {idx}: Unbalanced parentheses"
-                    assert handler.count("{") == handler.count("}"), f"Step {idx}: Unbalanced braces"
-                    assert handler.count("[") == handler.count("]"), f"Step {idx}: Unbalanced brackets"
-
-                if hasattr(step.transformer, "expression") and step.transformer.expression:
-                    expr = step.transformer.expression
-                    # Should have balanced delimiters
-                    assert expr.count("(") == expr.count(")"), f"Step {idx}: Unbalanced parentheses in expression"
-                    assert expr.count("{") == expr.count("}"), f"Step {idx}: Unbalanced braces in expression"
-                    assert expr.count("[") == expr.count("]"), f"Step {idx}: Unbalanced brackets in expression"
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])
+    first = await run("upa-alice", 100, [document])
+    assert "CAD 42000" in first.choices[0].message.content
+    follow = await run("upa-alice", 101, [])
+    assert "CAD 42000" in follow.choices[0].message.content
+    other = await run("upa-bob", 102, [])
+    assert "No relevant evidence" in other.choices[0].message.content
+    handles.clear()
+    await native.shutdown()

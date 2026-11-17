@@ -1,0 +1,372 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Xervo Model Catalog",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "alias",
+      "task",
+      "provider_id",
+      "model_id"
+    ],
+    "properties": {
+      "alias": {
+        "type": "string",
+        "pattern": ".+/.+"
+      },
+      "task": {
+        "type": "string",
+        "enum": [
+          "embed",
+          "rerank",
+          "generate",
+          "raw"
+        ]
+      },
+      "provider_id": {
+        "type": "string"
+      },
+      "model_id": {
+        "type": "string"
+      },
+      "revision": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "warmup": {
+        "type": "string",
+        "enum": [
+          "eager",
+          "lazy",
+          "background"
+        ],
+        "default": "lazy"
+      },
+      "required": {
+        "type": "boolean",
+        "default": false
+      },
+      "timeout": {
+        "type": "integer",
+        "minimum": 1
+      },
+      "load_timeout": {
+        "type": "integer",
+        "minimum": 1
+      },
+      "retry": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "max_attempts",
+          "initial_backoff_ms"
+        ],
+        "properties": {
+          "max_attempts": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "initial_backoff_ms": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      },
+      "options": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "default": null
+      }
+    },
+    "allOf": [
+      {
+        "if": {
+          "properties": {
+            "provider_id": {
+              "const": "local/onnx"
+            }
+          },
+          "required": [
+            "provider_id"
+          ]
+        },
+        "then": {
+          "properties": {
+            "options": {
+              "anyOf": [
+                {
+                  "$ref": "./provider-options/onnx.schema.json"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "if": {
+          "properties": {
+            "provider_id": {
+              "const": "remote/openai"
+            }
+          },
+          "required": [
+            "provider_id"
+          ]
+        },
+        "then": {
+          "properties": {
+            "options": {
+              "anyOf": [
+                {
+                  "$ref": "./provider-options/openai.schema.json"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "if": {
+          "properties": {
+            "provider_id": {
+              "const": "remote/llamacpp"
+            }
+          },
+          "required": [
+            "provider_id"
+          ]
+        },
+        "then": {
+          "required": [
+            "options"
+          ],
+          "properties": {
+            "options": {
+              "$ref": "./provider-options/llamacpp.schema.json"
+            }
+          }
+        }
+      },
+      {
+        "if": {
+          "properties": {
+            "provider_id": {
+              "const": "remote/gemini"
+            }
+          },
+          "required": [
+            "provider_id"
+          ]
+        },
+        "then": {
+          "properties": {
+            "options": {
+              "anyOf": [
+                {
+                  "$ref": "./provider-options/gemini.schema.json"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "if": {
+          "properties": {
+            "provider_id": {
+              "const": "remote/vertexai"
+            }
+          },
+          "required": [
+            "provider_id"
+          ]
+        },
+        "then": {
+          "properties": {
+            "options": {
+              "anyOf": [
+                {
+                  "$ref": "./provider-options/vertexai.schema.json"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "if": {
+          "properties": {
+            "provider_id": {
+              "const": "remote/mistral"
+            }
+          },
+          "required": [
+            "provider_id"
+          ]
+        },
+        "then": {
+          "properties": {
+            "options": {
+              "anyOf": [
+                {
+                  "$ref": "./provider-options/mistral.schema.json"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "if": {
+          "properties": {
+            "provider_id": {
+              "const": "remote/anthropic"
+            }
+          },
+          "required": [
+            "provider_id"
+          ]
+        },
+        "then": {
+          "properties": {
+            "options": {
+              "anyOf": [
+                {
+                  "$ref": "./provider-options/anthropic.schema.json"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "if": {
+          "properties": {
+            "provider_id": {
+              "const": "remote/voyageai"
+            }
+          },
+          "required": [
+            "provider_id"
+          ]
+        },
+        "then": {
+          "properties": {
+            "options": {
+              "anyOf": [
+                {
+                  "$ref": "./provider-options/voyageai.schema.json"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "if": {
+          "properties": {
+            "provider_id": {
+              "const": "remote/cohere"
+            }
+          },
+          "required": [
+            "provider_id"
+          ]
+        },
+        "then": {
+          "properties": {
+            "options": {
+              "anyOf": [
+                {
+                  "$ref": "./provider-options/cohere.schema.json"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "if": {
+          "properties": {
+            "provider_id": {
+              "const": "remote/azure-openai"
+            }
+          },
+          "required": [
+            "provider_id"
+          ]
+        },
+        "then": {
+          "properties": {
+            "options": {
+              "anyOf": [
+                {
+                  "$ref": "./provider-options/azure-openai.schema.json"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "if": {
+          "properties": {
+            "provider_id": {
+              "const": "local/candle"
+            }
+          },
+          "required": [
+            "provider_id"
+          ]
+        },
+        "then": {
+          "properties": {
+            "options": {
+              "anyOf": [
+                {
+                  "$ref": "./provider-options/candle.schema.json"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        }
+      }
+    ]
+  }
+}
