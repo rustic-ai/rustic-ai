@@ -33,6 +33,7 @@ types-pyyaml = "^6.0.12.20261113"
 aiohttp = "^3.14.5"
 jsonpatch = "^1.47"
 sympy = "^1.14.0"
+# botocore (used by LiteLLM) requires python-dateutil <3.0.0.
 python-dateutil = "^2.9.0.post0"
 opentelemetry-api = "^1.45.2"
 chevron = "^0.14.0"

@@ -22,6 +22,7 @@ packages = [{ include = "rustic_ai", from = "src" }]
 rusticai-core = { path = "../core", develop = true }
 rusticai-serpapi = {path = "../serpapi", develop = true}
 google-cloud-aiplatform = "^2.9.0"
+# google-cloud-aiplatform 2.9 requires google-genai <3.0.0.
 google-genai = "^2.34.0"
 google-cloud-language = "^2.22.0"
 tabulate = "^0.10.0"

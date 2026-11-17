@@ -11,7 +11,7 @@ Rustic AI is a modular, multi-agent AI framework built around a "guild" architec
 ### Setup
 ```bash
 # Install Poetry plugin for monorepo support
-poetry self add poetry-plugin-mono-repo-deps@0.3.2
+poetry self add poetry-plugin-mono-repo-deps@0.3.3
 
 # Install all dependencies including dev tools
 poetry install --with dev --all-extras

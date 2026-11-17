@@ -26,9 +26,9 @@ jobs:
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       - name: Check out the repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-versions }}
           cache: "pip"
@@ -45,9 +45,9 @@ jobs:
           timeout 30 bash -c 'until nc -z localhost 4222; do sleep 0.5; done'
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
-          node-version: "20"
+          node-version: "26"
 
       - name: Install dependencies
         run: |
@@ -62,7 +62,7 @@ jobs:
           playwright install --with-deps chromium
 
       - name: Restore Cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: ~/.cache/huggingface
           key: huggingface-rustic-ai-${{ hashFiles('poetry.lock') }}
@@ -79,7 +79,7 @@ jobs:
 
       - name: Save Cache
         if: matrix.os == 'ubuntu-24.04' && matrix.python-versions == '3.13.12'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: ~/.cache/huggingface
           key: huggingface-rustic-ai-${{ hashFiles('poetry.lock') }}
