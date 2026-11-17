@@ -1,0 +1,1752 @@
+{
+  "$defs": {
+    "AnswerRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "question": {
+          "description": "Question to answer",
+          "title": "Question",
+          "type": "string"
+        },
+        "max_tokens": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Unsupported legacy generation control; use the Guild synthesis LLM limit",
+          "title": "Max Tokens"
+        },
+        "scope": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Scope specification for recall",
+          "title": "Scope"
+        }
+      },
+      "required": [
+        "question"
+      ],
+      "title": "AnswerRequest",
+      "type": "object"
+    },
+    "BatchSubmitRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "session_id": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Session ID (defaults to agent's default_session_id)",
+          "title": "Session Id"
+        },
+        "batch_id": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Batch Id"
+        },
+        "turns": {
+          "description": "List of turn specs (sender_id, content, metadata, etc.)",
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "maxItems": 128,
+          "title": "Turns",
+          "type": "array"
+        },
+        "flush_after": {
+          "default": true,
+          "description": "Whether to flush after all turns",
+          "title": "Flush After",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "turns"
+      ],
+      "title": "BatchSubmitRequest",
+      "type": "object"
+    },
+    "CapabilityRequest": {
+      "additionalProperties": false,
+      "properties": {},
+      "title": "CapabilityRequest",
+      "type": "object"
+    },
+    "CreateGoalRequest": {
+      "description": "Request to create a new goal.\n\nAttributes:\n    title: Goal title\n    goal_id: Optional unique goal ID\n    description: Optional goal description\n    status: Initial status (default: \"active\")\n    metrics: Optional success metrics\n    guardrails: Optional constraints/rules\n    deadline: Optional deadline\n    parent_goal_id: Optional parent goal ID for sub-goals",
+      "properties": {
+        "title": {
+          "description": "Goal title",
+          "title": "Title",
+          "type": "string"
+        },
+        "goal_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional unique goal ID",
+          "title": "Goal Id"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Goal description",
+          "title": "Description"
+        },
+        "status": {
+          "default": "active",
+          "description": "Initial status (active, completed, abandoned)",
+          "title": "Status",
+          "type": "string"
+        },
+        "metrics": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Success metrics",
+          "title": "Metrics"
+        },
+        "guardrails": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Constraints/rules",
+          "title": "Guardrails"
+        },
+        "deadline": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional deadline",
+          "title": "Deadline"
+        },
+        "parent_goal_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Parent goal ID for sub-goals",
+          "title": "Parent Goal Id"
+        }
+      },
+      "required": [
+        "title"
+      ],
+      "title": "CreateGoalRequest",
+      "type": "object"
+    },
+    "CreateTaskRequest": {
+      "description": "Request to create a task for a goal.\n\nAttributes:\n    goal_id: Parent goal ID\n    title: Task title\n    task_id: Optional unique task ID\n    description: Optional task description\n    priority: Task priority (1-5, default 3)\n    depends_on: Optional list of task IDs this depends on",
+      "properties": {
+        "goal_id": {
+          "description": "Parent goal ID",
+          "title": "Goal Id",
+          "type": "string"
+        },
+        "title": {
+          "description": "Task title",
+          "title": "Title",
+          "type": "string"
+        },
+        "task_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional unique task ID",
+          "title": "Task Id"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Task description",
+          "title": "Description"
+        },
+        "priority": {
+          "default": 3,
+          "description": "Task priority (1-5)",
+          "maximum": 5,
+          "minimum": 1,
+          "title": "Priority",
+          "type": "integer"
+        },
+        "depends_on": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Task IDs this depends on",
+          "title": "Depends On"
+        }
+      },
+      "required": [
+        "goal_id",
+        "title"
+      ],
+      "title": "CreateTaskRequest",
+      "type": "object"
+    },
+    "DeleteMemorySessionRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "session_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+          "title": "Session Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "title": "DeleteMemorySessionRequest",
+      "type": "object"
+    },
+    "EffectiveConfigRequest": {
+      "additionalProperties": false,
+      "properties": {},
+      "title": "EffectiveConfigRequest",
+      "type": "object"
+    },
+    "FinalizeMemorySessionRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "session_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+          "title": "Session Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "title": "FinalizeMemorySessionRequest",
+      "type": "object"
+    },
+    "ForgetMemoryParticipantRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "participant_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Participant Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "participant_id"
+      ],
+      "title": "ForgetMemoryParticipantRequest",
+      "type": "object"
+    },
+    "ForgetMemoryRecordRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "session_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+          "title": "Session Id",
+          "type": "string"
+        },
+        "record_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+          "title": "Record Id",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/MemoryRecordKind"
+        }
+      },
+      "required": [
+        "session_id",
+        "record_id",
+        "kind"
+      ],
+      "title": "ForgetMemoryRecordRequest",
+      "type": "object"
+    },
+    "GetGoalsRequest": {
+      "description": "Request to get goals.\n\nAttributes:\n    phase: Filter by phase (all, active, completed, abandoned)\n    parent_goal_id: Filter by parent goal\n    limit: Maximum number of goals to return",
+      "properties": {
+        "phase": {
+          "default": "all",
+          "description": "Phase filter: all, active, completed, abandoned",
+          "title": "Phase",
+          "type": "string"
+        },
+        "parent_goal_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Filter by parent goal ID",
+          "title": "Parent Goal Id"
+        },
+        "limit": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Maximum number of goals",
+          "title": "Limit"
+        }
+      },
+      "title": "GetGoalsRequest",
+      "type": "object"
+    },
+    "GoalContextRequest": {
+      "description": "Request to get goal working memory context.\n\nAttributes:\n    goal_id: Goal ID\n    include_tasks: Include related tasks\n    include_episodes: Include related episodes",
+      "properties": {
+        "goal_id": {
+          "description": "Goal ID",
+          "title": "Goal Id",
+          "type": "string"
+        },
+        "include_tasks": {
+          "default": true,
+          "description": "Include related tasks",
+          "title": "Include Tasks",
+          "type": "boolean"
+        },
+        "include_episodes": {
+          "default": true,
+          "description": "Include related episodes",
+          "title": "Include Episodes",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "goal_id"
+      ],
+      "title": "GoalContextRequest",
+      "type": "object"
+    },
+    "IngestDocumentRequest": {
+      "additionalProperties": false,
+      "description": "Ingest a document already stored in the injected guild filesystem.",
+      "properties": {
+        "category": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Category"
+        },
+        "source_id": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Id"
+        },
+        "revision_id": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Revision Id"
+        },
+        "visibility": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Visibility"
+        },
+        "record_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+          "title": "Record Id",
+          "type": "string"
+        },
+        "session_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+          "title": "Session Id",
+          "type": "string"
+        },
+        "media_link": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MediaLink"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Guild-filesystem MediaLink"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MemorySource"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "record_id",
+        "session_id"
+      ],
+      "title": "IngestDocumentRequest",
+      "type": "object"
+    },
+    "JsonValue": {},
+    "MediaLink": {
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Name"
+        },
+        "mimetype": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mimetype"
+        },
+        "metadata": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "$ref": "#/$defs/JsonValue"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": {},
+          "title": "Metadata"
+        },
+        "content_hash": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Content Hash"
+        },
+        "size_in_bytes": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Size In Bytes"
+        },
+        "url": {
+          "title": "Url",
+          "type": "string"
+        },
+        "encoding": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Encoding"
+        },
+        "on_filesystem": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": false,
+          "title": "On Filesystem"
+        }
+      },
+      "required": [
+        "url"
+      ],
+      "title": "MediaLink",
+      "type": "object"
+    },
+    "MemoryHealthRequest": {
+      "additionalProperties": false,
+      "properties": {},
+      "title": "MemoryHealthRequest",
+      "type": "object"
+    },
+    "MemoryRecordKind": {
+      "description": "Application-level provenance assigned before content enters memory.",
+      "enum": [
+        "unknown",
+        "user_assertion",
+        "external_evidence",
+        "deterministic_observation",
+        "model_interpretation",
+        "executed_result",
+        "assistant_response",
+        "conversation_turn"
+      ],
+      "title": "MemoryRecordKind",
+      "type": "string"
+    },
+    "MemoryScope": {
+      "additionalProperties": false,
+      "description": "Explicit dimensional scope for a memory operation.",
+      "properties": {
+        "sessions": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 32,
+              "minItems": 1,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Explicit sessions, or null to search this agent's private store without a session filter.",
+          "title": "Sessions"
+        },
+        "participants": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 32,
+          "title": "Participants",
+          "type": "array"
+        },
+        "since": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Since"
+        },
+        "until": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Until"
+        },
+        "categories": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 32,
+          "title": "Categories",
+          "type": "array"
+        },
+        "sources": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 32,
+          "title": "Sources",
+          "type": "array"
+        },
+        "include_superseded": {
+          "default": false,
+          "title": "Include Superseded",
+          "type": "boolean"
+        },
+        "viewer": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MemoryViewer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "sessions"
+      ],
+      "title": "MemoryScope",
+      "type": "object"
+    },
+    "MemorySource": {
+      "additionalProperties": false,
+      "description": "Exactly one bounded source. Files are read only through the guild filesystem.",
+      "properties": {
+        "category": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Category"
+        },
+        "source_id": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Id"
+        },
+        "revision_id": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Revision Id"
+        },
+        "visibility": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Visibility"
+        },
+        "text": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Text"
+        },
+        "base64_data": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Base64 Data"
+        },
+        "media_link": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MediaLink"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "mime_type": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mime Type"
+        },
+        "path_hint": {
+          "anyOf": [
+            {
+              "maxLength": 512,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Path Hint"
+        },
+        "id": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Id"
+        }
+      },
+      "title": "MemorySource",
+      "type": "object"
+    },
+    "MemoryViewer": {
+      "additionalProperties": false,
+      "properties": {
+        "participant_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Participant Id",
+          "type": "string"
+        },
+        "teams": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 32,
+          "title": "Teams",
+          "type": "array"
+        },
+        "orgs": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 32,
+          "title": "Orgs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "participant_id"
+      ],
+      "title": "MemoryViewer",
+      "type": "object"
+    },
+    "ObserveTurnRequest": {
+      "additionalProperties": false,
+      "description": "Request to observe a conversation turn.\n\nAttributes:\n    session_id: Session ID (defaults to agent's default_session_id)\n    sender_id: ID of the message sender (participant)\n    content: Message content text\n    message_id: Optional unique message ID\n    content_type: Content type (default: \"text\")\n    timestamp: Message timestamp (defaults to current time)\n    addressed_to: List of recipient IDs\n    metadata: Additional key-value metadata\n    attachments: List of attachments (IngestSource specs)",
+      "properties": {
+        "category": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Category"
+        },
+        "source_id": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Id"
+        },
+        "revision_id": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Revision Id"
+        },
+        "visibility": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Visibility"
+        },
+        "session_id": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Session ID (defaults to agent's default_session_id)",
+          "title": "Session Id"
+        },
+        "sender_id": {
+          "description": "ID of the message sender",
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Sender Id",
+          "type": "string"
+        },
+        "content": {
+          "description": "Message content text",
+          "maxLength": 16000,
+          "minLength": 1,
+          "title": "Content",
+          "type": "string"
+        },
+        "message_id": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional unique message ID",
+          "title": "Message Id"
+        },
+        "content_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": "text",
+          "description": "Content type (text, markdown, html, etc.)",
+          "title": "Content Type"
+        },
+        "timestamp": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Message timestamp (defaults to current time)",
+          "title": "Timestamp"
+        },
+        "addressed_to": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "List of recipient IDs",
+          "title": "Addressed To"
+        },
+        "metadata": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Additional key-value metadata",
+          "title": "Metadata"
+        },
+        "attachments": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/MemorySource"
+              },
+              "maxItems": 32,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Bounded typed attachment sources",
+          "title": "Attachments"
+        }
+      },
+      "required": [
+        "sender_id",
+        "content"
+      ],
+      "title": "ObserveTurnRequest",
+      "type": "object"
+    },
+    "RecallRequest": {
+      "additionalProperties": false,
+      "description": "Bounded recall request with an explicit session scope.",
+      "properties": {
+        "query": {
+          "description": "Query string for semantic search",
+          "maxLength": 4000,
+          "minLength": 1,
+          "title": "Query",
+          "type": "string"
+        },
+        "scope": {
+          "$ref": "#/$defs/MemoryScope"
+        },
+        "allowed_record_kinds": {
+          "items": {
+            "$ref": "#/$defs/MemoryRecordKind"
+          },
+          "maxItems": 8,
+          "minItems": 1,
+          "title": "Allowed Record Kinds",
+          "type": "array"
+        },
+        "item_limit": {
+          "default": 10,
+          "maximum": 50,
+          "minimum": 1,
+          "title": "Item Limit",
+          "type": "integer"
+        },
+        "max_characters": {
+          "default": 6000,
+          "maximum": 32000,
+          "minimum": 1,
+          "title": "Max Characters",
+          "type": "integer"
+        },
+        "token_budget": {
+          "anyOf": [
+            {
+              "maximum": 10000,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Token Budget"
+        },
+        "min_score": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Min Score"
+        },
+        "reranker": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reranker"
+        },
+        "reference_ts": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reference Ts"
+        }
+      },
+      "required": [
+        "query",
+        "scope",
+        "allowed_record_kinds"
+      ],
+      "title": "RecallRequest",
+      "type": "object"
+    },
+    "RecallUserSessionsRequest": {
+      "additionalProperties": false,
+      "description": "Recall at most 32 finalized request sessions belonging to one user.",
+      "properties": {
+        "query": {
+          "maxLength": 4000,
+          "minLength": 1,
+          "title": "Query",
+          "type": "string"
+        },
+        "user_id": {
+          "maxLength": 256,
+          "pattern": "^upa-.+",
+          "title": "User Id",
+          "type": "string"
+        },
+        "current_session_id": {
+          "pattern": "^analysis-[0-9a-f]{64}$",
+          "title": "Current Session Id",
+          "type": "string"
+        },
+        "allowed_record_kinds": {
+          "items": {
+            "$ref": "#/$defs/MemoryRecordKind"
+          },
+          "maxItems": 8,
+          "minItems": 1,
+          "title": "Allowed Record Kinds",
+          "type": "array"
+        },
+        "item_limit": {
+          "default": 10,
+          "maximum": 50,
+          "minimum": 1,
+          "title": "Item Limit",
+          "type": "integer"
+        },
+        "max_characters": {
+          "default": 6000,
+          "maximum": 32000,
+          "minimum": 1,
+          "title": "Max Characters",
+          "type": "integer"
+        },
+        "token_budget": {
+          "anyOf": [
+            {
+              "maximum": 10000,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Token Budget"
+        },
+        "min_score": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Min Score"
+        },
+        "reranker": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reranker"
+        },
+        "reference_ts": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reference Ts"
+        }
+      },
+      "required": [
+        "query",
+        "user_id",
+        "current_session_id",
+        "allowed_record_kinds"
+      ],
+      "title": "RecallUserSessionsRequest",
+      "type": "object"
+    },
+    "RecordMemoryRequest": {
+      "additionalProperties": false,
+      "description": "Write one bounded, idempotently identified memory record.",
+      "properties": {
+        "category": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Category"
+        },
+        "source_id": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Id"
+        },
+        "revision_id": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Revision Id"
+        },
+        "visibility": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Visibility"
+        },
+        "record_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+          "title": "Record Id",
+          "type": "string"
+        },
+        "session_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+          "title": "Session Id",
+          "type": "string"
+        },
+        "sender_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Sender Id",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/MemoryRecordKind"
+        },
+        "content": {
+          "maxLength": 16000,
+          "minLength": 1,
+          "title": "Content",
+          "type": "string"
+        },
+        "content_type": {
+          "default": "text/plain",
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Content Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "record_id",
+        "session_id",
+        "sender_id",
+        "kind",
+        "content"
+      ],
+      "title": "RecordMemoryRequest",
+      "type": "object"
+    },
+    "SourceReadRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "source_kind": {
+          "enum": [
+            "message",
+            "artifact"
+          ],
+          "title": "Source Kind",
+          "type": "string"
+        },
+        "source_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Source Id",
+          "type": "string"
+        },
+        "scope": {
+          "$ref": "#/$defs/MemoryScope"
+        },
+        "operation": {
+          "default": "read",
+          "enum": [
+            "read",
+            "outline",
+            "original"
+          ],
+          "title": "Operation",
+          "type": "string"
+        },
+        "address": {
+          "anyOf": [
+            {
+              "maxLength": 512,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Address"
+        },
+        "bytes": {
+          "anyOf": [
+            {
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "integer"
+                }
+              ],
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Bytes"
+        },
+        "lines": {
+          "anyOf": [
+            {
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "integer"
+                }
+              ],
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Lines"
+        },
+        "chunks": {
+          "anyOf": [
+            {
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "integer"
+                }
+              ],
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Chunks"
+        },
+        "max_tokens": {
+          "default": 2000,
+          "maximum": 10000,
+          "minimum": 1,
+          "title": "Max Tokens",
+          "type": "integer"
+        },
+        "depth": {
+          "default": 2,
+          "maximum": 8,
+          "minimum": 1,
+          "title": "Depth",
+          "type": "integer"
+        },
+        "max_entries": {
+          "default": 100,
+          "maximum": 1000,
+          "minimum": 1,
+          "title": "Max Entries",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "source_kind",
+        "source_id",
+        "scope"
+      ],
+      "title": "SourceReadRequest",
+      "type": "object"
+    },
+    "SourceSearchRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "query": {
+          "maxLength": 4000,
+          "minLength": 1,
+          "title": "Query",
+          "type": "string"
+        },
+        "scope": {
+          "$ref": "#/$defs/MemoryScope"
+        },
+        "limit": {
+          "default": 10,
+          "maximum": 50,
+          "minimum": 1,
+          "title": "Limit",
+          "type": "integer"
+        },
+        "max_characters": {
+          "default": 6000,
+          "maximum": 32000,
+          "minimum": 1,
+          "title": "Max Characters",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "query",
+        "scope"
+      ],
+      "title": "SourceSearchRequest",
+      "type": "object"
+    },
+    "UpdateGoalRequest": {
+      "description": "Request to update a goal's status.\n\nAttributes:\n    goal_id: Goal ID to update\n    action: Action to perform (start, complete, abandon, pause, resume)\n    outcome: Optional outcome description\n    metadata: Optional additional metadata",
+      "properties": {
+        "goal_id": {
+          "description": "Goal ID to update",
+          "title": "Goal Id",
+          "type": "string"
+        },
+        "action": {
+          "description": "Action: start, complete, abandon, pause, resume",
+          "title": "Action",
+          "type": "string"
+        },
+        "outcome": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Outcome description",
+          "title": "Outcome"
+        },
+        "metadata": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Additional metadata",
+          "title": "Metadata"
+        }
+      },
+      "required": [
+        "goal_id",
+        "action"
+      ],
+      "title": "UpdateGoalRequest",
+      "type": "object"
+    },
+    "UpdateTaskRequest": {
+      "description": "Request to update a task's status.\n\nAttributes:\n    task_id: Task ID to update\n    action: Action to perform (start, complete, abandon, block, unblock)\n    outcome: Optional outcome description",
+      "properties": {
+        "task_id": {
+          "description": "Task ID to update",
+          "title": "Task Id",
+          "type": "string"
+        },
+        "action": {
+          "description": "Action: start, complete, abandon, block, unblock",
+          "title": "Action",
+          "type": "string"
+        },
+        "outcome": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Outcome description",
+          "title": "Outcome"
+        }
+      },
+      "required": [
+        "task_id",
+        "action"
+      ],
+      "title": "UpdateTaskRequest",
+      "type": "object"
+    }
+  },
+  "anyOf": [
+    {
+      "$ref": "#/$defs/RecordMemoryRequest"
+    },
+    {
+      "$ref": "#/$defs/FinalizeMemorySessionRequest"
+    },
+    {
+      "$ref": "#/$defs/ForgetMemoryRecordRequest"
+    },
+    {
+      "$ref": "#/$defs/DeleteMemorySessionRequest"
+    },
+    {
+      "$ref": "#/$defs/ForgetMemoryParticipantRequest"
+    },
+    {
+      "$ref": "#/$defs/ObserveTurnRequest"
+    },
+    {
+      "$ref": "#/$defs/RecallRequest"
+    },
+    {
+      "$ref": "#/$defs/RecallUserSessionsRequest"
+    },
+    {
+      "$ref": "#/$defs/AnswerRequest"
+    },
+    {
+      "$ref": "#/$defs/IngestDocumentRequest"
+    },
+    {
+      "$ref": "#/$defs/BatchSubmitRequest"
+    },
+    {
+      "$ref": "#/$defs/EffectiveConfigRequest"
+    },
+    {
+      "$ref": "#/$defs/CapabilityRequest"
+    },
+    {
+      "$ref": "#/$defs/MemoryHealthRequest"
+    },
+    {
+      "$ref": "#/$defs/SourceSearchRequest"
+    },
+    {
+      "$ref": "#/$defs/SourceReadRequest"
+    },
+    {
+      "$ref": "#/$defs/CreateGoalRequest"
+    },
+    {
+      "$ref": "#/$defs/UpdateGoalRequest"
+    },
+    {
+      "$ref": "#/$defs/GetGoalsRequest"
+    },
+    {
+      "$ref": "#/$defs/CreateTaskRequest"
+    },
+    {
+      "$ref": "#/$defs/UpdateTaskRequest"
+    },
+    {
+      "$ref": "#/$defs/GoalContextRequest"
+    }
+  ]
+}

@@ -1,0 +1,130 @@
+{
+  "description": "Configuration for MemoryAgent.\n\nAttributes:\n    default_session_id: Default session ID for observations (defaults to guild_id if not set)\n    recall_max_tokens: Maximum tokens for recall context bundles (default: 2000)\n    recall_phase1_only: Restrict recall to phase 1 (facts/procedures) only (default: False)\n    answer_max_tokens: Maximum tokens for generated answers (default: 500)\n    auto_flush: Auto-flush observations after each turn (default: True)",
+  "properties": {
+    "default_session_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Default session ID for observations (defaults to guild_id)",
+      "title": "Default Session Id"
+    },
+    "recall_max_tokens": {
+      "anyOf": [
+        {
+          "maximum": 10000,
+          "minimum": 100,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Max tokens for recall context bundles",
+      "title": "Recall Max Tokens"
+    },
+    "recall_phase1_only": {
+      "default": false,
+      "description": "Restrict recall to phase 1 (facts/procedures) only",
+      "title": "Recall Phase1 Only",
+      "type": "boolean"
+    },
+    "answer_max_tokens": {
+      "anyOf": [
+        {
+          "maximum": 5000,
+          "minimum": 50,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Max tokens for generated answers",
+      "title": "Answer Max Tokens"
+    },
+    "auto_flush": {
+      "default": true,
+      "description": "Auto-flush observations after each turn",
+      "title": "Auto Flush",
+      "type": "boolean"
+    },
+    "allowed_record_producers": {
+      "additionalProperties": {
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "description": "Optional record-kind to allowed sender-id map. Configured kinds fail closed for other senders.",
+      "title": "Allowed Record Producers",
+      "type": "object"
+    },
+    "conversation_request_producers": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Conversation Request Producers",
+      "type": "array"
+    },
+    "conversation_response_producers": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Conversation Response Producers",
+      "type": "array"
+    },
+    "scope_producers": {
+      "description": "When configured, only these trusted agents may select memory scopes",
+      "items": {
+        "type": "string"
+      },
+      "title": "Scope Producers",
+      "type": "array"
+    },
+    "viewer_producers": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Viewer Producers",
+      "type": "array"
+    },
+    "max_source_bytes": {
+      "default": 16777216,
+      "maximum": 134217728,
+      "minimum": 1,
+      "title": "Max Source Bytes",
+      "type": "integer"
+    },
+    "max_attachments": {
+      "default": 32,
+      "maximum": 32,
+      "minimum": 1,
+      "title": "Max Attachments",
+      "type": "integer"
+    },
+    "max_batch_items": {
+      "default": 128,
+      "maximum": 128,
+      "minimum": 1,
+      "title": "Max Batch Items",
+      "type": "integer"
+    },
+    "legacy_recall_limit": {
+      "default": 50,
+      "maximum": 100,
+      "minimum": 1,
+      "title": "Legacy Recall Limit",
+      "type": "integer"
+    }
+  },
+  "title": "MemoryAgentConfig",
+  "type": "object"
+}

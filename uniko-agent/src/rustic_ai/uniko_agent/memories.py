@@ -1,5 +1,6 @@
 """Uniko-backed conversational memory for LLM agents."""
 
+from contextlib import nullcontext
 from hashlib import sha256
 from typing import Any, List, Optional
 
@@ -17,6 +18,9 @@ from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     UserMessage,
 )
 from rustic_ai.llm_agent.plugins.llm_call_wrapper import LLMCallWrapper
+
+from .integration import tokenizer
+from .runtime import MemoryHandle
 
 MEMORY_IDENTITY_UNAVAILABLE = "uniko_memory_identity_unavailable"
 MEMORY_RECALL_FAILED = "uniko_memory_recall_failed"
@@ -37,6 +41,7 @@ class UnikoMemoriesStore(LLMCallWrapper):
     """Recall and record user-isolated conversational memory with Uniko."""
 
     query_message_count: int = Field(default=3, ge=1)
+    recall_token_budget: int = Field(default=2000, ge=1, le=10000)
     recall_item_limit: int = Field(default=10, ge=1)
     recall_max_characters: int = Field(default=6000, ge=1)
     observed_message_max_characters: int = Field(default=16000, ge=1)
@@ -117,6 +122,8 @@ class UnikoMemoriesStore(LLMCallWrapper):
                 if identifier
             ]
             record_kind, content = self._record_envelope(content)
+            if record_kind is None and getattr(item, "category", None) in {"user_assertion", "assistant_response"}:
+                record_kind = item.category.replace("_", " ")
             for source_id in source_ids:
                 if source_id.startswith(_USER_RECORD_PREFIX):
                     record_kind = "user assertion"
@@ -130,7 +137,7 @@ class UnikoMemoriesStore(LLMCallWrapper):
             if not content or key in seen:
                 continue
             native_kind = str(getattr(item, "kind", "memory"))
-            label = f"Category: {record_kind}; Uniko kind: {native_kind}\n"
+            label = f"Category: {record_kind}; Uniko kind: {native_kind}\nSource IDs: {', '.join(source_ids)}\n"
             separator = 2 if retained else 0
             remaining = self.recall_max_characters - used - separator - len(label)
             if remaining <= 0:
@@ -145,7 +152,10 @@ class UnikoMemoriesStore(LLMCallWrapper):
         if not retained:
             return None
         body = "\n\n".join(f"Memory {index + 1}:\n{content}" for index, content in enumerate(retained))
-        return SystemMessage(content=_UNTRUSTED_MEMORY_HEADER + body, name="uniko_memory")
+        rendered = _UNTRUSTED_MEMORY_HEADER + body
+        encoded = tokenizer().encode(rendered, disallowed_special=())[: self.recall_token_budget]
+        rendered = tokenizer().decode_bytes(encoded).decode("utf-8", errors="ignore")
+        return SystemMessage(content=rendered, name="uniko_memory")
 
     def preprocess(
         self,
@@ -160,8 +170,18 @@ class UnikoMemoriesStore(LLMCallWrapper):
             return request
 
         try:
-            bundle = self._uniko(agent).recall_in_sync(query, Scope().sessions([session_id]))
-            memory = self._memory_block(list(getattr(bundle, "items", [])))
+            native = self._uniko(agent)
+            bundle = native.recall_with_sync(
+                query,
+                Scope().sessions([session_id]).categories(["user_assertion", "assistant_response"]),
+                limit=self.recall_item_limit,
+                token_budget=self.recall_token_budget,
+            )
+            legacy = native.recall_with_sync(
+                query, Scope().sessions([session_id]), limit=50, token_budget=self.recall_token_budget
+            )
+            merged = {item.node_id: item for item in [*bundle.items, *legacy.items]}
+            memory = self._memory_block(list(merged.values()))
         except Exception as exc:
             raise RuntimeError(MEMORY_RECALL_FAILED) from exc
 
@@ -193,28 +213,36 @@ class UnikoMemoriesStore(LLMCallWrapper):
         user_content = user_content[: self.observed_message_max_characters]
         assistant_content = assistant_content[: self.observed_message_max_characters]
 
-        try:
-            session = self._uniko(agent).session(session_id)
-            user_record_id = f"{request_id}:user"
-            assistant_record_id = f"{request_id}:assistant"
-            session.commit_unit_sync(
-                [
-                    Turn(
-                        user_id,
-                        self._record_text("user_assertion", user_record_id, user_id, user_content),
-                    ).id(f"{_USER_RECORD_PREFIX}{user_record_id}"),
-                    Turn(
-                        agent.id,
-                        self._record_text("assistant_response", assistant_record_id, agent.id, assistant_content),
-                    ).id(f"{_ASSISTANT_RECORD_PREFIX}{assistant_record_id}"),
-                ]
-            )
-        except Exception as exc:
-            raise RuntimeError(MEMORY_RECORD_FAILED) from exc
+        native = self._uniko(agent)
+        with native._runtime.operation() if isinstance(native, MemoryHandle) else nullcontext():
+            try:
+                session = native.session(session_id)
+                user_record_id = f"{request_id}:user"
+                assistant_record_id = f"{request_id}:assistant"
+                session.commit_unit_sync(
+                    [
+                        Turn(
+                            user_id,
+                            self._record_text("user_assertion", user_record_id, user_id, user_content),
+                        )
+                        .id(f"{_USER_RECORD_PREFIX}{user_record_id}")
+                        .category("user_assertion")
+                        .source(user_record_id),
+                        Turn(
+                            agent.id,
+                            self._record_text("assistant_response", assistant_record_id, agent.id, assistant_content),
+                        )
+                        .id(f"{_ASSISTANT_RECORD_PREFIX}{assistant_record_id}")
+                        .category("assistant_response")
+                        .source(assistant_record_id),
+                    ]
+                )
+            except Exception as exc:
+                raise RuntimeError(MEMORY_RECORD_FAILED) from exc
 
-        try:
-            session.finalize_sync()
-        except Exception as exc:
-            raise RuntimeError(MEMORY_FINALIZE_FAILED) from exc
+            try:
+                session.finalize_sync()
+            except Exception as exc:
+                raise RuntimeError(MEMORY_FINALIZE_FAILED) from exc
 
         return None

@@ -6,6 +6,7 @@ from uniko import IngestSource, Uniko
 
 from rustic_ai.uniko_agent import (
     MemoryAgent,
+    MemoryAgentConfig,
     MemoryScope,
     RecallRequest,
     RecallResponse,
@@ -33,6 +34,7 @@ async def test_real_ingested_document_recall_preserves_category_and_private_stor
     )
     assert outcome.chunk_node_ids
     memory = MemoryAgent.__new__(MemoryAgent)
+    memory.config = MemoryAgentConfig()
 
     async def recall(handle, sessions, kinds):
         sent: list[RecallResponse] = []
@@ -45,6 +47,7 @@ async def test_real_ingested_document_recall_preserves_category_and_private_stor
                 max_characters=6000,
             ),
             send=sent.append,
+            get_context=lambda: {},
         )
         await MemoryAgent.recall_knowledge.__wfn__(memory, ctx, handle)
         assert len(sent) == 1

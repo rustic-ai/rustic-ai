@@ -296,13 +296,10 @@ class TestErrorHandling:
     @pytest.mark.asyncio
     async def test_observe_with_invalid_data(self, memory_test_harness):
         """Test observation with invalid data handles errors gracefully."""
-        # Send observation with empty content (edge case)
-        memory_test_harness.send_message(ObserveTurnRequest(sender_id="user", content=""))  # Empty content
+        from pydantic import ValidationError
 
-        responses = memory_test_harness.get_sent_messages()
-        # Should either succeed with empty content or return error
-        assert len(responses) == 1
-        # Result type depends on uniko's handling of empty content
+        with pytest.raises(ValidationError):
+            ObserveTurnRequest(sender_id="user", content="")
 
 
 class TestIngestDocument:

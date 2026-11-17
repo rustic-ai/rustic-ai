@@ -75,7 +75,6 @@ def memory_agent_config():
     return MemoryAgentConfig(
         default_session_id="test-session",
         recall_max_tokens=2000,
-        answer_max_tokens=500,
         auto_flush=True,
     )
 

@@ -1,0 +1,114 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "storage_path": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Storage Path"
+    },
+    "llm_spec": {
+      "anyOf": [
+        {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Llm Spec"
+    },
+    "streaming": {
+      "default": false,
+      "title": "Streaming",
+      "type": "boolean"
+    },
+    "scope_to_agent": {
+      "default": false,
+      "title": "Scope To Agent",
+      "type": "boolean"
+    },
+    "config": {
+      "anyOf": [
+        {
+          "$ref": "uniko-config.schema.json"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Config"
+    },
+    "embedding": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Embedding"
+    },
+    "nlp": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Nlp"
+    },
+    "reranker": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Reranker"
+    },
+    "readiness_policy": {
+      "default": "sdk_default",
+      "enum": [
+        "sdk_default"
+      ],
+      "title": "Readiness Policy",
+      "type": "string",
+      "description": "Native best-effort warmup. Verified readiness is unavailable in Uniko 0.5.1."
+    }
+  },
+  "title": "UnikoResolverProperties",
+  "type": "object"
+}

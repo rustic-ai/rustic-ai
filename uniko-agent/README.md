@@ -1,6 +1,6 @@
 # Uniko Memory Agent
 
-Comprehensive memory agent for Rustic AI that integrates [uniko](https://github.com/uniko-ai/uniko)'s cognitive memory system.
+Comprehensive memory agent for Rustic AI that integrates [uniko](https://github.com/rustic-ai/uniko)'s cognitive memory system.
 
 ## Overview
 
@@ -8,8 +8,7 @@ The Uniko Memory Agent integrates uniko's memory system into the Rustic AI guild
 
 - **Zero-cost knowledge ingestion** (local ONNX embeddings, no LLM API calls)
 - **Multi-phase recall** (3-phase cascade: Facts/Procedures → Episodes/Observations → Chunks)
-- **Full provenance tracking** (every fact traces back to source messages)
-- **Goal and task management** (research workflows with working memory)
+- **Attributed recall and source navigation** (native provenance and explicit legacy limitations)
 - **Agent-scoped storage** (each resolver instance uses the agent’s private filesystem)
 
 Uniko stores raw messages, actions and source artifacts, then derives observations,
@@ -29,6 +28,9 @@ configurations are rejected; they are not migrated to the hosted Mistral API.
 The base `uniko` wheel runs local ONNX memory models on CPU. Uniko also
 publishes mutually exclusive `uniko-metal` (macOS ARM64) and `uniko-cuda`
 (Linux x86-64) distributions; install one runtime distribution per environment.
+Rustic's published dependency profile selects the CPU `uniko` distribution.
+Rustic Metal/CUDA dependency profiles are unavailable in this release; the
+upstream wheels are documented for future platform validation.
 
 ```bash
 cd rustic-ai/uniko-agent
@@ -42,7 +44,7 @@ poetry install --with dev
 ```python
 from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder
 from rustic_ai.core.guild.dsl import DependencySpec
-from rustic_ai.uniko_agent import MemoryAgent, MemoryAgentConfig, ObserveTurnRequest, RecallRequest
+from rustic_ai.uniko_agent import MemoryAgent, MemoryAgentConfig, MemoryScope, MemoryRecordKind, ObserveTurnRequest, RecallRequest
 
 # Configure uniko dependency (agent-scoped, in-memory)
 uniko_dep = DependencySpec(
@@ -61,7 +63,7 @@ guild = (
     .add_agent(
         AgentBuilder(MemoryAgent)
         .set_id("memory_agent")
-        .set_config(MemoryAgentConfig(auto_flush=True))
+        .set_properties(MemoryAgentConfig())
         .build_spec()
     )
     .build_guild(organization_id="org123")
@@ -79,7 +81,7 @@ guild.send_message(
 
 # Recall knowledge
 guild.send_message(
-    RecallRequest(query="user programming preferences"),
+    RecallRequest(query="user programming preferences", scope=MemoryScope(sessions=None), allowed_record_kinds=[MemoryRecordKind.CONVERSATION_TURN]),
     agent_id="memory_agent"
 )
 ```
@@ -128,14 +130,14 @@ The MemoryAgent exposes 12 processors across Phase 1 and Phase 2:
 - **`observe_turn`** (`ObserveTurnRequest` → `ObserveResult`)
   - Ingest conversation turns with NLP extraction (entities, observations)
   - Supports attachments (PDFs, documents)
-  - Auto-flushes by default
+  - Direct observations complete extraction without an unnecessary streaming flush
 
 ### Recall
 
 - **`recall_knowledge`** (`RecallRequest` → `RecallResponse`)
   - 3-phase cascade recall (facts → episodes → chunks)
-  - Configurable max tokens, phase restrictions
-  - Optional scope filtering (sessions, participants, time range)
+  - Native token budget, minimum score, reranker and reference-time overrides
+  - Required scope; optional participant, time, category, source, revision and trusted viewer filters
 
 ### Answer
 
@@ -149,7 +151,7 @@ The MemoryAgent exposes 12 processors across Phase 1 and Phase 2:
 - **`ingest_document`** (`IngestDocumentRequest` → `IngestOutcome`)
   - Ingest PDFs, markdown, HTML documents
   - Automatic chunking and entity extraction
-  - Supports local paths, URLs, and byte content
+  - Accepts inline text, base64 bytes or an injected guild-filesystem MediaLink; remote URLs must first be fetched by a Guild agent
 
 - **`batch_submit`** (`BatchSubmitRequest` → `BatchSubmitResponse`)
   - Submit multiple turns in batch (streaming mode)
@@ -200,9 +202,11 @@ from rustic_ai.uniko_agent import MemoryAgentConfig
 config = MemoryAgentConfig(
     default_session_id=None,        # Defaults to guild_id
     recall_max_tokens=2000,          # Max tokens in recall bundle
-    recall_phase1_only=False,        # Restrict to facts/procedures
-    answer_max_tokens=500,           # Max tokens for answers
-    auto_flush=True,                 # Auto-flush observations
+    recall_phase1_only=False,        # True is unsupported and rejected
+    auto_flush=True,                 # Legacy compatibility setting; direct observe needs no flush
+    max_source_bytes=16 * 1024 * 1024,
+    max_attachments=32,
+    max_batch_items=128,
 )
 ```
 
@@ -268,26 +272,13 @@ generation entry to a catalog does not select it for `Agent.answer`.
 
 ## Integration with Research Guild
 
-Memory agent is designed for research workflows:
-
-```python
-from rustic_ai.core.guild.dsl import RoutingSlip, RouteBuilder
-
-# Route search results to memory
-guild_builder.add_routing_rule(
-    RouteBuilder(AgentTag(id="serp_agent"))
-    .on_message_format(SERPResults)
-    .set_payload_transformer(
-        output_type=ObserveTurnRequest,
-        payload_xform=JxScript({
-            "sender_id": "serp_agent",
-            "content": JExpr("$.results | [*].snippet | join('\n')")
-        })
-    )
-    .set_destination(agent_id="memory_agent")
-    .build()
-)
-```
+Use the [research blueprint](../showcase/apps/uniko_research_guild.json) and
+`UnikoResearchCoordinator`. Search and scrape results return to the coordinator;
+successfully enumerated files become typed `IngestDocumentRequest` messages
+with external-evidence provenance. The coordinator waits for every ingestion
+outcome before requesting scoped recall and dispatching the exact returned
+bundle to the synthesis LLM agent. User and assistant writes are acknowledged,
+and finalization precedes the single final response.
 
 ## Payload Models
 
@@ -303,13 +294,15 @@ All request/response models are Pydantic BaseModels:
 
 ### RecallRequest
 - `query`: Search query
-- `max_tokens`: Optional token limit
-- `phase1_only`: Restrict to facts/procedures
-- `scope`: Optional filters (sessions, participants, time)
+- `token_budget`: Optional native token budget (1–10000)
+- `min_score`, `reranker`, `reference_ts`: Optional native recall overrides
+- `scope`: Required; `sessions=null` searches the private store without session filtering
+- `allowed_record_kinds`: Required, including `unknown` only when explicitly desired
+- `item_limit`, `max_characters`: Hard response bounds
 
 ### AnswerRequest
 - `question`: Question to answer
-- `max_tokens`: Optional answer length
+- `max_tokens`: Unsupported in Uniko 0.5.1; non-null values are rejected. Set generation limits on the Guild synthesis LLM agent.
 - `scope`: Optional recall scope
 
 ### Error Handling
@@ -318,8 +311,7 @@ Errors return `MemoryAgentError`:
 ```python
 {
     "error": "llm_not_configured",
-    "message": "LLM not configured...",
-    "details": {"question": "..."}
+    "message": "Memory answer generation is unavailable."
 }
 ```
 
@@ -338,7 +330,7 @@ poetry run pytest --cov=rustic_ai.uniko_agent
 
 ## Architecture
 
-### Guild-Scoped Memory
+### Private Agent Memory
 
 - One private `uniko.Uniko` store per organization, guild, and agent
 - Persistent storage is resolved from the injected agent filesystem, never cwd
@@ -350,7 +342,7 @@ poetry run pytest --cov=rustic_ai.uniko_agent
 ```
 GuildSpec
   └─ dependency_map["uniko"] = UnikoResolver  (agent-scoped)
-       └─ resolve(org_id, guild_id, agent_id) → uniko.Agent
+       └─ resolve(org_id, guild_id, agent_id) → lifecycle-managed native Agent handle
             └─ Injects dependency_map["filesystem"] at agent scope for storage
 ```
 
@@ -364,31 +356,89 @@ User/Agent
 
 User/Agent
   └─ RecallRequest → MemoryAgent
-       └─ uniko_agent.recall(query, config)
+       └─ uniko_agent.recall_with(query, scope, supported overrides)
        └─ RecallResponse (ranked items with provenance)
 ```
 
-## Phase 2 Example
+## Core integration contracts
 
-See `examples/research_workflow_example.py` for a complete demonstration of:
-- Creating goals with metrics and guardrails
-- Managing tasks with priorities
-- Batch submission of findings
-- Document ingestion
-- Goal context retrieval
+`IngestDocumentRequest` preserves `record_id`, `session_id` and `media_link`.
+Alternatively supply `source=MemorySource(text=..., mime_type="text/markdown")`
+or `MemorySource(base64_data=..., mime_type=...)`. Choose exactly one source.
+Attachments use the same source model. MIME types and path hints reach native
+extractors. Limits apply before writes, including bounded sync/async filesystem
+reads. Host paths and remote URLs are rejected as ingestion sources.
 
-```bash
-cd examples
-python research_workflow_example.py
-```
+New writes carry native category, logical `source_id` and store-unique
+`revision_id`. Visibility is supported on turns; Uniko 0.5.1 does not expose
+visibility on document inputs, so explicit document visibility is rejected.
+Record kinds remain assigned by authorized producers. Unknown classification
+is a read-only result kind. The legacy envelope/prefix reader remains available
+through a bounded compatibility pass and reports missing native metadata.
+Native categories and sources filter candidates before ranking. Existing
+records cannot acquire missing logical-source or revision metadata on read.
+
+`IngestOutcome` reports native artifact/chunk/page/block identities,
+deduplication and extraction errors. `stored` and `searchable` are separate:
+retained bytes or an empty PDF do not imply evidence was extracted. Streaming
+batches use durable per-item observations and emit correlated `BatchItemOutcome` messages and one terminal
+`BatchSubmitResponse`; failed items do not undo earlier accepted items.
+Direct instances reject streaming submit/flush controls before writes.
+
+`RecallItem` preserves native sources, category, source/revision identity,
+context, address and token count. Intact native text retains its native count;
+stripped legacy envelopes and truncated text use `cl100k_base`. Cache the
+Python tiktoken encoding during deployment for offline token-bounded retrieval.
+Precedence is explicit request overrides, explicit legacy agent overrides,
+then native effective settings. Unset legacy token fields are `None`, allowing
+config serialization to preserve this precedence.
+
+`SourceSearchRequest` and `SourceReadRequest` expose lexical search, outline,
+addressed text and available original artifact bytes. Reads apply scope allow
+predicates before dereferencing and return `available=false` for absent or
+unauthorized sources. Limits bound source responses. `scope_producers` can
+restrict scope selection to trusted Guild agents; `viewer_producers` accepts
+viewer membership only from trusted routing context, never unchecked requests.
+
+`EffectiveConfigRequest`, `CapabilityRequest` and `MemoryHealthRequest` return
+`MemoryDiagnostics`, separating configured values, observed SDK information
+and Unknown readiness/provider capabilities. They never imply OCR, multimodal,
+BGE-M3 or hardware acceleration merely because configuration was accepted.
+Deployment catalog/schema/rule files require readable absolute local paths and
+are validated before persistent store opening. The resolver uses
+`readiness_policy="sdk_default"` (native best-effort warmup); requesting
+`require_verified` fails explicitly because the SDK cannot verify model readiness.
+Native storage compatibility
+checks remain authoritative; incompatible stores require explicit migration.
+
+The [research blueprint](../showcase/apps/uniko_research_guild.json) uses a Guild
+coordinator to preserve authenticated user identity and stable request IDs,
+enumerate successful scrape outputs, wait for per-document ingestion outcomes,
+and ignore duplicate/late results. Recall sufficiency remains `score > 0.05`.
+The existing synthesis LLM agent receives the original question and the exact
+returned bounded context, including attribution. Its `max_tokens` controls
+answer length. MemoryAgent does not own Guild prompt orchestration. Native
+`AnswerRequest` remains supported for configured SDK-native generation and
+returns its complete generation context and citations.
+
+Resolver handles track accepted native operations. `shutdown()` stops new
+work, drains accepted work, clears cached handles and shuts down the instance;
+use `await shutdown_async()` from an event loop with active work. Cleanup is
+idempotent and failures from externally retained raw native handles remain
+visible. Synchronization is bounded per agent and independent of session count
+or event-loop lifetime. The LLM memory wrapper retains native atomic user/
+assistant commits and finalization under the same lifecycle reservation.
+
+## Later release gates
+
+Goals/tasks, BGE-M3 dense/sparse/ColBERT certification, scanned-PDF OCR and
+multimodal adapters remain separate milestones in the completion plan.
 
 ## Future Enhancements (Phase 3+)
 
 Planned features:
 
 - **Advanced queries** (`query_graph` for Cypher queries)
-- **Data access** (`get_message`, `get_artifact`)
-- **Deletion** (`delete_session`, `forget_participant`)
 - **Logic rules** (Locy rule definition and execution)
 - **Procedure learning** (auto-promote successful patterns)
 
@@ -396,8 +446,19 @@ Planned features:
 
 - [Uniko Documentation](https://uniko.ai/docs)
 - [Rustic AI Core](https://github.com/dragonscale-ai/rustic-ai)
-- [Uniko GitHub](https://github.com/uniko-ai/uniko)
+- [Uniko GitHub](https://github.com/rustic-ai/uniko)
 
 ## License
 
 Apache 2.0 - see LICENSE file
+
+### Machine-readable configuration and examples
+
+The package includes [native configuration schema](src/rustic_ai/uniko_agent/schemas/uniko-config.schema.json),
+[request schemas](src/rustic_ai/uniko_agent/schemas/memory-requests.schema.json),
+[agent policy schema](src/rustic_ai/uniko_agent/schemas/memory-agent-config.schema.json),
+[resolver schema](src/rustic_ai/uniko_agent/schemas/resolver.schema.json),
+and a [G1 configuration/ingestion/recall example](examples/g1-contracts.json).
+Native section overrides retain SDK whole-section replacement semantics.
+Schema validation describes accepted settings; `MemoryDiagnostics.unknown`
+records stages/providers whose availability cannot be verified by the SDK.

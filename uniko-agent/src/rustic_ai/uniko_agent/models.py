@@ -2,9 +2,9 @@
 
 from datetime import datetime
 from enum import StrEnum
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from rustic_ai.core.agents.commons.media import MediaLink
 
@@ -12,6 +12,7 @@ from rustic_ai.core.agents.commons.media import MediaLink
 class MemoryRecordKind(StrEnum):
     """Application-level provenance assigned before content enters memory."""
 
+    UNKNOWN = "unknown"
     USER_ASSERTION = "user_assertion"
     EXTERNAL_EVIDENCE = "external_evidence"
     DETERMINISTIC_OBSERVATION = "deterministic_observation"
@@ -19,6 +20,48 @@ class MemoryRecordKind(StrEnum):
     EXECUTED_RESULT = "executed_result"
     ASSISTANT_RESPONSE = "assistant_response"
     CONVERSATION_TURN = "conversation_turn"
+
+
+class MemoryViewer(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    participant_id: str = Field(min_length=1, max_length=256)
+    teams: List[str] = Field(default_factory=list, max_length=32)
+    orgs: List[str] = Field(default_factory=list, max_length=32)
+
+
+class MemoryProvenance(BaseModel):
+    """Native metadata; record kind remains assigned by the trusted producer."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    category: Optional[str] = Field(default=None, min_length=1, max_length=256)
+    source_id: Optional[str] = Field(default=None, min_length=1, max_length=256)
+    revision_id: Optional[str] = Field(default=None, min_length=1, max_length=256)
+    visibility: Optional[str] = Field(default=None, min_length=1, max_length=256)
+
+
+class MemorySource(MemoryProvenance):
+    """Exactly one bounded source. Files are read only through the guild filesystem."""
+
+    model_config = ConfigDict(extra="forbid")
+    text: Optional[str] = None
+    base64_data: Optional[str] = None
+    media_link: Optional[MediaLink] = None
+    mime_type: Optional[str] = Field(default=None, min_length=1, max_length=128)
+    path_hint: Optional[str] = Field(default=None, max_length=512)
+    id: Optional[str] = Field(default=None, min_length=1, max_length=256)
+
+    @model_validator(mode="after")
+    def single_source(self):
+        if sum(value is not None for value in (self.text, self.base64_data, self.media_link)) != 1:
+            raise ValueError("Choose exactly one of text, base64_data or media_link")
+        if self.media_link is not None and not self.media_link.on_filesystem:
+            raise ValueError("Remote URLs and host paths are not ingestion sources")
+        if self.visibility is not None:
+            raise ValueError("Uniko 0.5.1 does not expose document visibility")
+        if self.category in set(MemoryRecordKind) and self.category != MemoryRecordKind.EXTERNAL_EVIDENCE:
+            raise ValueError("Document category cannot override external-evidence provenance")
+        return self
 
 
 class MemoryScope(BaseModel):
@@ -33,9 +76,21 @@ class MemoryScope(BaseModel):
         description="Explicit sessions, or null to search this agent's private store without a session filter.",
     )
     participants: List[str] = Field(default_factory=list, max_length=32)
+    since: Optional[datetime] = None
+    until: Optional[datetime] = None
+    categories: List[str] = Field(default_factory=list, max_length=32)
+    sources: List[str] = Field(default_factory=list, max_length=32)
+    include_superseded: bool = False
+    viewer: Optional[MemoryViewer] = None
+
+    @model_validator(mode="after")
+    def ordered_time(self):
+        if self.since and self.until and self.since > self.until:
+            raise ValueError("since must precede until")
+        return self
 
 
-class RecordMemoryRequest(BaseModel):
+class RecordMemoryRequest(MemoryProvenance):
     """Write one bounded, idempotently identified memory record."""
 
     model_config = ConfigDict(extra="forbid")
@@ -46,6 +101,12 @@ class RecordMemoryRequest(BaseModel):
     kind: MemoryRecordKind
     content: str = Field(min_length=1, max_length=16000)
     content_type: str = Field(default="text/plain", min_length=1, max_length=128)
+
+    @model_validator(mode="after")
+    def assigned_kind(self):
+        if self.category in set(MemoryRecordKind) and self.category != self.kind:
+            raise ValueError("Category cannot override producer-assigned record kind")
+        return self
 
 
 class RecordMemoryResult(BaseModel):
@@ -101,7 +162,7 @@ class MemoryDeletionResult(BaseModel):
 # ========== Observation Payloads ==========
 
 
-class ObserveTurnRequest(BaseModel):
+class ObserveTurnRequest(MemoryProvenance):
     """Request to observe a conversation turn.
 
     Attributes:
@@ -116,17 +177,27 @@ class ObserveTurnRequest(BaseModel):
         attachments: List of attachments (IngestSource specs)
     """
 
-    session_id: Optional[str] = Field(default=None, description="Session ID (defaults to agent's default_session_id)")
-    sender_id: str = Field(description="ID of the message sender")
-    content: str = Field(description="Message content text")
-    message_id: Optional[str] = Field(default=None, description="Optional unique message ID")
+    session_id: Optional[str] = Field(
+        default=None, min_length=1, max_length=256, description="Session ID (defaults to agent's default_session_id)"
+    )
+    sender_id: str = Field(min_length=1, max_length=256, description="ID of the message sender")
+    content: str = Field(min_length=1, max_length=16000, description="Message content text")
+    message_id: Optional[str] = Field(
+        default=None, min_length=1, max_length=256, description="Optional unique message ID"
+    )
     content_type: Optional[str] = Field(default="text", description="Content type (text, markdown, html, etc.)")
     timestamp: Optional[datetime] = Field(default=None, description="Message timestamp (defaults to current time)")
     addressed_to: Optional[List[str]] = Field(default=None, description="List of recipient IDs")
     metadata: Optional[Dict[str, Any]] = Field(default=None, description="Additional key-value metadata")
-    attachments: Optional[List[Dict[str, Any]]] = Field(
-        default=None, description="List of attachment specs (path, url, mime_type)"
+    attachments: Optional[List[MemorySource]] = Field(
+        default=None, max_length=32, description="Bounded typed attachment sources"
     )
+
+    @model_validator(mode="after")
+    def assigned_category(self):
+        if self.category not in {None, MemoryRecordKind.CONVERSATION_TURN.value}:
+            raise ValueError("Ordinary observations have conversation_turn category")
+        return self
 
 
 class ObserveResult(BaseModel):
@@ -151,6 +222,7 @@ class ObserveResult(BaseModel):
     extracted_entities: List[tuple[int, str]]
     extracted_observations: List[int]
     attachment_count: int
+    attachments: List["IngestOutcome"] = Field(default_factory=list)
 
 
 # ========== Recall Payloads ==========
@@ -166,6 +238,10 @@ class RecallRequest(BaseModel):
     allowed_record_kinds: List[MemoryRecordKind] = Field(min_length=1, max_length=len(MemoryRecordKind))
     item_limit: int = Field(default=10, ge=1, le=50)
     max_characters: int = Field(default=6000, ge=1, le=32000)
+    token_budget: Optional[int] = Field(default=None, ge=1, le=10000)
+    min_score: Optional[float] = Field(default=None, ge=0, le=1)
+    reranker: Optional[bool] = None
+    reference_ts: Optional[datetime] = None
 
 
 class RecallUserSessionsRequest(BaseModel):
@@ -179,6 +255,10 @@ class RecallUserSessionsRequest(BaseModel):
     allowed_record_kinds: List[MemoryRecordKind] = Field(min_length=1, max_length=len(MemoryRecordKind))
     item_limit: int = Field(default=10, ge=1, le=50)
     max_characters: int = Field(default=6000, ge=1, le=32000)
+    token_budget: Optional[int] = Field(default=None, ge=1, le=10000)
+    min_score: Optional[float] = Field(default=None, ge=0, le=1)
+    reranker: Optional[bool] = None
+    reference_ts: Optional[datetime] = None
 
 
 class RecallItem(BaseModel):
@@ -199,6 +279,14 @@ class RecallItem(BaseModel):
     content: str
     sources: List[Dict[str, Any]]
     source_ids: List[str] = Field(default_factory=list)
+    category: Optional[str] = None
+    source_id: Optional[str] = None
+    revision_id: Optional[str] = None
+    token_count: int = 0
+    context: Optional[str] = None
+    address: Optional[str] = None
+    token_count_method: str = "native"
+    legacy_metadata: bool = False
 
 
 class RecallResponse(BaseModel):
@@ -218,23 +306,27 @@ class RecallResponse(BaseModel):
     phase2_only: bool
     coverage: float
     truncated: bool = False
+    legacy_compatibility: bool = False
+    legacy_limitations: List[str] = Field(default_factory=list)
+    token_count_method: str = "native_or_cl100k_base"
 
 
 # ========== Answer Payloads ==========
 
 
 class AnswerRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     """Request to answer a question using memory + LLM.
 
     Attributes:
         question: Question to answer
-        max_tokens: Maximum tokens for answer generation (overrides config)
+        max_tokens: Legacy field; non-null values are rejected by Uniko 0.5.1 integration
         scope: Optional scope specification for recall
     """
 
     question: str = Field(description="Question to answer")
     max_tokens: Optional[int] = Field(
-        default=None, description="Maximum tokens for answer generation (overrides config)"
+        default=None, description="Unsupported legacy generation control; use the Guild synthesis LLM limit"
     )
     scope: Optional[Dict[str, Any]] = Field(default=None, description="Scope specification for recall")
 
@@ -264,14 +356,25 @@ class AnswerResponse(BaseModel):
 # ========== Document Ingestion Payloads ==========
 
 
-class IngestDocumentRequest(BaseModel):
+class IngestDocumentRequest(MemoryProvenance):
     """Ingest a document already stored in the injected guild filesystem."""
 
     model_config = ConfigDict(extra="forbid")
 
     record_id: str = Field(min_length=1, max_length=256, pattern=r"^[A-Za-z0-9][A-Za-z0-9._:-]*$")
     session_id: str = Field(min_length=1, max_length=256, pattern=r"^[A-Za-z0-9][A-Za-z0-9._:-]*$")
-    media_link: MediaLink = Field(description="Guild-filesystem MediaLink (on_filesystem=True)")
+    media_link: Optional[MediaLink] = Field(default=None, description="Guild-filesystem MediaLink")
+    source: Optional[MemorySource] = None
+
+    @model_validator(mode="after")
+    def single_document(self):
+        if (self.media_link is None) == (self.source is None):
+            raise ValueError("Choose exactly one of media_link or source")
+        if self.visibility is not None:
+            raise ValueError("Uniko 0.5.1 does not expose document visibility")
+        if self.category in set(MemoryRecordKind) and self.category != MemoryRecordKind.EXTERNAL_EVIDENCE:
+            raise ValueError("Document category cannot override external-evidence provenance")
+        return self
 
 
 class IngestOutcome(BaseModel):
@@ -289,12 +392,22 @@ class IngestOutcome(BaseModel):
     artifact_node_id: Optional[int] = None
     chunk_count: int = 0
     page_count: int = 0
-    extracted_entities: List[int] = []
+    extracted_entities: List[int] = Field(default_factory=list)
+    artifact_id: Optional[str] = None
+    chunk_node_ids: List[int] = Field(default_factory=list)
+    page_node_ids: List[int] = Field(default_factory=list)
+    block_node_ids: List[int] = Field(default_factory=list)
+    was_deduplicated: bool = False
+    extraction_failed: Optional[bool] = None
+    extraction_error: Optional[str] = None
+    stored: bool = False
+    searchable: bool = False
     success: bool = True
     record_id: Optional[str] = None
 
 
 class BatchSubmitRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     """Request to submit multiple turns in batch (streaming mode).
 
     Attributes:
@@ -303,8 +416,13 @@ class BatchSubmitRequest(BaseModel):
         flush_after: Whether to flush after all turns
     """
 
-    session_id: Optional[str] = Field(default=None, description="Session ID (defaults to agent's default_session_id)")
-    turns: List[Dict[str, Any]] = Field(description="List of turn specs (sender_id, content, metadata, etc.)")
+    session_id: Optional[str] = Field(
+        default=None, min_length=1, max_length=256, description="Session ID (defaults to agent's default_session_id)"
+    )
+    batch_id: Optional[str] = Field(default=None, min_length=1, max_length=256)
+    turns: List[Dict[str, Any]] = Field(
+        max_length=128, description="List of turn specs (sender_id, content, metadata, etc.)"
+    )
     flush_after: bool = Field(default=True, description="Whether to flush after all turns")
 
 
@@ -317,9 +435,81 @@ class BatchSubmitResponse(BaseModel):
         session_id: Session ID used
     """
 
+    outcomes: List["BatchItemOutcome"] = Field(default_factory=list)
+    terminal: bool = True
+    error: Optional[str] = None
     submitted_count: int
     flushed: bool
     session_id: str
+
+
+class BatchItemOutcome(BaseModel):
+    stored: bool = False
+    attachments: List[IngestOutcome] = Field(default_factory=list)
+    index: int
+    message_id: Optional[str] = None
+    success: bool
+    error: Optional[str] = None
+
+
+class EffectiveConfigRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+
+class CapabilityRequest(EffectiveConfigRequest):
+    pass
+
+
+class MemoryHealthRequest(EffectiveConfigRequest):
+    pass
+
+
+class MemoryDiagnostics(BaseModel):
+    configured: Dict[str, Any] = Field(default_factory=dict)
+    observed: Dict[str, Any] = Field(default_factory=dict)
+    unknown: List[str] = Field(default_factory=list)
+
+
+class SourceSearchRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    query: str = Field(min_length=1, max_length=4000)
+    scope: MemoryScope
+    limit: int = Field(default=10, ge=1, le=50)
+    max_characters: int = Field(default=6000, ge=1, le=32000)
+
+
+class SourceReadRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    source_kind: Literal["message", "artifact"]
+    source_id: str = Field(min_length=1, max_length=256)
+    scope: MemoryScope
+    operation: Literal["read", "outline", "original"] = "read"
+    address: Optional[str] = Field(default=None, max_length=512)
+    bytes: Optional[tuple[int, int]] = None
+    lines: Optional[tuple[int, int]] = None
+    chunks: Optional[tuple[int, int]] = None
+    max_tokens: int = Field(default=2000, ge=1, le=10000)
+    depth: int = Field(default=2, ge=1, le=8)
+    max_entries: int = Field(default=100, ge=1, le=1000)
+
+    @model_validator(mode="after")
+    def single_address(self):
+        if sum(x is not None for x in (self.address, self.bytes, self.lines, self.chunks)) > 1:
+            raise ValueError("Choose one source address")
+        for bounds in (self.bytes, self.lines, self.chunks):
+            if bounds and (bounds[0] < 0 or bounds[1] <= bounds[0]):
+                raise ValueError("Invalid source range")
+        if self.operation == "original" and self.source_kind != "artifact":
+            raise ValueError("Original bytes require an artifact")
+        return self
+
+
+class SourceResponse(BaseModel):
+    results: List[Dict[str, Any]] = Field(default_factory=list)
+    result: Optional[Dict[str, Any]] = None
+    base64_data: Optional[str] = None
+    available: bool = True
+    truncated: bool = False
 
 
 # ========== Goal Management Payloads ==========
@@ -557,8 +747,6 @@ class MemoryAgentError(BaseModel):
     details: Optional[Dict[str, Any]] = None
     model_config = ConfigDict(extra="forbid")
 
-    model_config = ConfigDict(extra="forbid")
 
-    model_config = ConfigDict(extra="forbid")
-
-    model_config = ConfigDict(extra="forbid")
+ObserveResult.model_rebuild()
+BatchSubmitResponse.model_rebuild()

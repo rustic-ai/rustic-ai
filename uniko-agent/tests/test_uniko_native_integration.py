@@ -32,7 +32,8 @@ def test_typed_turn_is_idempotent_scoped_persistent_and_deletable(tmp_path):
     serialized = [
         item
         for native in first_bundle.items
-        if (item := MemoryAgent._serialize_recall_item(MemoryAgent.__new__(MemoryAgent), native)) is not None
+        if (item := MemoryAgent._serialize_recall_item(MemoryAgent.__new__(MemoryAgent), native)).record_kind
+        == MemoryRecordKind.USER_ASSERTION
     ]
 
     assert report.transcript_chunks
@@ -53,7 +54,8 @@ def test_typed_turn_is_idempotent_scoped_persistent_and_deletable(tmp_path):
     persisted_items = [
         item
         for native in persisted.items
-        if (item := MemoryAgent._serialize_recall_item(MemoryAgent.__new__(MemoryAgent), native)) is not None
+        if (item := MemoryAgent._serialize_recall_item(MemoryAgent.__new__(MemoryAgent), native)).record_kind
+        == MemoryRecordKind.USER_ASSERTION
     ]
     assert persisted_items
 

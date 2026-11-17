@@ -69,7 +69,7 @@ class FakeUniko:
         self.recalls = []
         self.sessions = []
 
-    def recall_in_sync(self, query, scope):
+    def recall_with_sync(self, query, scope, **options):
         if self.recall_error:
             raise self.recall_error
         self.recalls.append((query, scope))
@@ -88,6 +88,14 @@ class FakeTurn:
 
     def id(self, message_id):
         self.message_id = message_id
+        return self
+
+    def category(self, value):
+        self.native_category = value
+        return self
+
+    def source(self, value):
+        self.source_id = value
         return self
 
 
@@ -407,6 +415,7 @@ def test_configuration_serializes_public_contract():
         "kind": "rustic_ai.uniko_agent.memories.UnikoMemoriesStore",
         "depends_on": ["uniko"],
         "query_message_count": 3,
+        "recall_token_budget": 2000,
         "recall_item_limit": 10,
         "recall_max_characters": 6000,
         "observed_message_max_characters": 16000,
