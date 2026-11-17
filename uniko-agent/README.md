@@ -166,12 +166,12 @@ The MemoryAgent exposes 12 processors across Phase 1 and Phase 2:
   - Optional deadlines and success criteria
 
 - **`update_goal`** (`UpdateGoalRequest` → `GoalStatusResponse`)
-  - Update goal status: start, complete, abandon, pause, resume
-  - Track outcomes and metadata
-  - Full lifecycle management
+  - Update goal status: start, complete, abandon
+  - Completion accepts an outcome; unsupported metadata controls are rejected
+  - Return the native transition result and status
 
 - **`get_goals`** (`GetGoalsRequest` → `GoalsListResponse`)
-  - List goals by phase (all, active, completed, abandoned)
+  - List goals by phase (all, planned, active, completed, abandoned)
   - Filter by parent goal
   - Limit results
 
@@ -179,17 +179,19 @@ The MemoryAgent exposes 12 processors across Phase 1 and Phase 2:
 
 - **`create_task`** (`CreateTaskRequest` → `TaskView`)
   - Create tasks for goals
-  - Set priority (1-5) and dependencies
+  - Accept legacy priority (1-5), or exclusive native_priority (0-1); return the native float
+  - Support one dependency and a subtask parent
   - Track task hierarchy
 
 - **`update_task`** (`UpdateTaskRequest` → `TaskStatusResponse`)
   - Update task status: start, complete, abandon, block, unblock
-  - Record outcomes
+  - Record task outcomes through an explicit episode request
   - Manage task lifecycle
 
 - **`get_goal_context`** (`GoalContextRequest` → `GoalContext`)
   - Get goal working memory
-  - Includes tasks, episodes, and progress metrics
+  - Includes native tasks, sessions, recent message text, facts and entities
+  - Episode context is unavailable in Uniko 0.5.1 and is reported explicitly
   - Full context for research workflows
 
 ## Configuration
@@ -462,3 +464,68 @@ and a [G1 configuration/ingestion/recall example](examples/g1-contracts.json).
 Native section overrides retain SDK whole-section replacement semantics.
 Schema validation describes accepted settings; `MemoryDiagnostics.unknown`
 records stages/providers whose availability cannot be verified by the SDK.
+
+
+## Structured experience (G2)
+
+Typed messages expose native tool calls, actions, episodes, observations and facts.
+`RecordToolCallRequest` accepts arguments, one text/JSON/byte output, status,
+error, timing, message trigger and prior-call references. `output_kind: json`
+preserves an explicit JSON null through serialization. Turn `tool_calls` use the
+same contract. `RecordActionRequest` and `RecordEpisodeRequest` preserve native
+causal edges. Outputs stay bounded; tool failures are retained as data.
+
+`AddObservationRequest` anchors a claim to an authorized message and returns its
+actual observation ID. `AssertFactRequest` validates supporting observation IDs;
+`InvalidateFactRequest` validates the fact and optional replacement. These
+operations require explicit dimensional scope. Native scope support varies by
+record type; a dimension that cannot authorize a record fails closed.
+
+`CommitMemoryUnitRequest` commits all turns, attachments and embedded tool calls
+through `Session.commit_unit`. It prepares inputs before dispatch, with at most
+128 turns, 32 aggregate attachments and 32 MiB of prepared data by default.
+The existing streaming batch retains per-item success and failure outcomes;
+items containing tool calls use individual atomic units and receipts.
+
+`MatchProceduresRequest` exposes native learned procedures in the private store.
+`RecordProcedureUseRequest` records success/failure feedback.
+`ListMemoryRulesRequest`, `ExplainMemoryRuleRequest` and `ReadExperienceRequest`
+provide bounded reads without arbitrary graph mutation. Store-wide consolidation,
+fact invalidation and procedure feedback require a sender explicitly listed in
+`control_producers`; the default list is empty. Consolidation is deterministic
+and does not enable optional LLM consolidation.
+
+Structured ownership comes from the authenticated reporting message sender,
+not a caller-provided agent identity. Goal/task reads default to that owner;
+selecting another or legacy owner requires `scope_producers` authorization.
+Records are not migrated. Until [Uniko #67](https://github.com/rustic-ai/uniko/issues/67)
+adds dedicated registration, membership in the resolver's actual organization
+idempotently creates the native participant, whose native kind remains unknown.
+No synthetic messages or actions are created to bootstrap it.
+
+Each structured mutation accepts `operation_id`. When omitted, object creation
+uses a supplied object ID or the message ID; missing object IDs are generated
+from the reporting actor and operation identity. Receipts live beside the private
+native store in `.rustic-operations.sqlite3` (in-memory stores use an in-memory
+journal). Keep the journal with the store during backup and restore. A completed
+receipt replays its compact response; goal/task creation returns the current
+native view after later transitions. A changed payload conflicts. Existing
+native IDs without a matching receipt are rejected rather than merged again.
+
+A command is durably claimed before its native effect and completed before its
+reply is published. Native graph writes and SQLite cannot commit atomically.
+A crash, cancellation or ambiguous failure after dispatch yields
+`operation_outcome_unknown`, and retrying cannot repeat the effect.
+`MemoryOperationStatusRequest` reports the actor's receipt state. Resolving an
+unknown effect requires inspecting the native store; there is no automatic
+retry or receipt-reset API. Receipt retention follows the private store lifecycle.
+
+
+Uniko 0.5.1 attributes embedded tool calls to their turn sender. Until
+[U68](https://github.com/rustic-ai/uniko/issues/68) adds an independent performer
+override, turns containing tools must use the authenticated reporting agent as
+`sender_id`. A unit can include a separate user turn and a reporting-agent turn
+whose tool call references that user's message with `triggered_by`. Standalone
+`RecordToolCallRequest` can also reference a user's previously stored message.
+Mismatched embedded-tool senders are rejected before any native write; user
+message attribution is never rewritten to satisfy tool ownership.

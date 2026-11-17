@@ -78,7 +78,7 @@ def native_scope(spec: MemoryScope) -> Scope:
 
 
 def apply_provenance(builder: Any, spec: Any, kind: MemoryRecordKind) -> Any:
-    is_turn = isinstance(builder, Turn)
+    is_turn = isinstance(builder, Turn) or type(builder).__name__ == "ToolCall"
     for field, method, default in (
         ("category", "category" if is_turn else "with_category", kind.value),
         ("source_id", "source" if is_turn else "with_source", None),
@@ -94,7 +94,9 @@ def apply_provenance(builder: Any, spec: Any, kind: MemoryRecordKind) -> Any:
     return builder
 
 
-async def build_source(spec: MemorySource | dict, guild_fs: Any, max_bytes: int) -> IngestSource:
+async def build_source(
+    spec: MemorySource | dict, guild_fs: Any, max_bytes: int, byte_counts: list[int] | None = None
+) -> IngestSource:
     spec = MemorySource.model_validate(spec)
     if spec.text is not None:
         data = spec.text.encode("utf-8")
@@ -121,6 +123,8 @@ async def build_source(spec: MemorySource | dict, guild_fs: Any, max_bytes: int)
             data = await asyncio.to_thread(read)
     if len(data) > max_bytes:
         raise ValueError("Source exceeds byte limit")
+    if byte_counts is not None:
+        byte_counts.append(len(data))
     hint = spec.path_hint or (
         (spec.media_link.metadata.get("source_uri") or spec.media_link.name or spec.media_link.url)
         if spec.media_link

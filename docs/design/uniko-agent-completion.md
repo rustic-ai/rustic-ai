@@ -31,7 +31,7 @@ The scope includes `MemoryAgent`, `UnikoResolver`, `UnikoMemoriesStore`, `Memory
 | Gate | User outcome | Current state | Required tasks |
 | --- | --- | --- | --- |
 | G1 Core memory | Text and supported documents can be recorded, recalled, attributed and deleted across restart with user isolation | Verified | C01–C08, I01–I05, R01–R06, L01–L04, T01–T03 |
-| G2 Structured experience | Tools, actions, facts and goals use native relationships and stable identities | Open | I06–I08, R07, L05, T04 |
+| G2 Structured experience | Tools, actions, facts and goals use native relationships and stable identities | Verified | I06–I08, R07, L05, T04 |
 | G3 Hybrid retrieval | A BGE-M3 store demonstrably uses dense, sparse and ColBERT paths with correct persistence | Open | C07, R08, T05 |
 | G4 OCR documents | Scanned PDFs become searchable, traceable text with explicit extraction outcomes | Open | M01, M04, T06 |
 | G5 Multimodal memory | Advertised image/audio/video workflows preserve original media and searchable derivations | Open | M02–M05, T07 |
@@ -144,9 +144,9 @@ Minimum documented engine settings include embedding model/provider/dimensions/b
 | I03 | P1 | Verified | Carry native category, logical source, revision and visibility fields in supported requests. Preserve producer-assigned record kind without inserting provenance prose into every embedding where native metadata can represent it. Test existing record compatibility. [G1 evidence](#g1-implementation-and-acceptance-evidence). |
 | I04 | P1 | Verified | Add byte/attachment/item limits, bounded file reads or spooling, and complete typed bulk outcomes. Page and OCR processing budgets belong to G4. Decide inline text/bytes versus filesystem references explicitly. A failed item cannot deadlock an ingestion barrier. [G1 evidence](#g1-implementation-and-acceptance-evidence). |
 | I05 | P1 | Verified | Return artifact identity, chunk IDs, deduplication, extraction outcome/error and available page/block references. An artifact stored without extracted text is not a searchable-success result. [G1 evidence](#g1-implementation-and-acceptance-evidence). |
-| I06 | P1 | Open | Add native tool-call/action/episode recording with stable IDs, arguments/output/status/timing and causal references. Avoid replacing these relationships with an executed-result text blob. Preserve bounded outputs and original tool failures. |
-| I07 | P1 | Open | Expose appropriate explicit observation/fact assertion/invalidation and consolidation requests. Keep deterministic extraction as the default; optional LLM consolidation remains explicit and depends on U63. |
-| I08 | P1 | Open | Expose atomic multi-turn units where needed. Typed batches must preserve selected timestamps, recipients, attachments and provenance; document that streamed submit has different session/context semantics. |
+| I06 | P1 | Verified | Add native tool-call/action/episode recording with stable IDs, arguments/output/status/timing and causal references. Avoid replacing these relationships with an executed-result text blob. Preserve bounded outputs and original tool failures. [G2 evidence](#g2-implementation-and-acceptance-evidence). |
+| I07 | P1 | Verified | Expose appropriate explicit observation/fact assertion/invalidation and consolidation requests. Keep deterministic extraction as the default; optional LLM consolidation remains explicit and depends on U63. [G2 evidence](#g2-implementation-and-acceptance-evidence). |
+| I08 | P1 | Verified | Expose atomic multi-turn units where needed. Typed batches must preserve selected timestamps, recipients, attachments and provenance; document that streamed submit has different session/context semantics. [G2 evidence](#g2-implementation-and-acceptance-evidence). |
 
 Extraction acceptance must demonstrate SRL toggles, model generation/precision selection, custom observation-rule application, entity admission thresholds and code/document chunking on meaningful fixtures. Loading a rule file or selecting an NLP preset is insufficient. A missing model or invalid rule file must produce the selected failure/fallback outcome.
 
@@ -160,7 +160,7 @@ Extraction acceptance must demonstrate SRL toggles, model generation/precision s
 | R04 | P1 | Verified | Expose time/category/source/revision and viewer scopes as typed fields. Apply available native filters before ranking; test rejected cross-user/team/org access and superseded-source behavior. Post-filtering alone cannot satisfy candidate-budget semantics. [G1 evidence](#g1-implementation-and-acceptance-evidence). |
 | R05 | P1 | Verified | Preserve source session/tool/call IDs and item category/source/revision/context/address. Add source search, outline, bounded read and original artifact access contracts. Test the native addresses available for G1 documents and bounded line/byte reads. OCR page/block and media-segment certification belong to G4/G5. [G1 evidence](#g1-implementation-and-acceptance-evidence). |
 | R06 | P1 | Verified | Make answer generation obey the same authorized retrieval policy as its returned context. Prefer bounded recall followed by Rustic LLM generation if native answer cannot enforce the contract. Do not filter the displayed context only after the LLM has consumed a broader bundle. [G1 evidence](#g1-implementation-and-acceptance-evidence). |
-| R07 | P2 | Open | Add procedure matching/success feedback and selected rule/query interfaces. Keep arbitrary graph mutation outside ordinary retrieval. Distinguish application authorization from native read/query capability. |
+| R07 | P2 | Verified | Add procedure matching/success feedback and selected rule/query interfaces. Keep arbitrary graph mutation outside ordinary retrieval. Distinguish application authorization from native read/query capability. [G2 evidence](#g2-implementation-and-acceptance-evidence). |
 | R08 | P1 | Open | Verify BGE-M3 dense, sparse and ColBERT indexing/query paths, including diagnostics and persistence. Track X60/X63; memory optimization is not a prerequisite for correctness testing. |
 
 ### BGE-M3 acceptance profile
@@ -204,14 +204,14 @@ A multimodal source outcome must link original media, extracted text and locatio
 | L02 | P0 | Verified | Route turn/document forgetting by the actual stored record representation, including routed conversation turns. Coordinate deletion with writes/finalization. Test idempotent deletion, redacted/invalidation outcomes and recall after deletion. [G1 evidence](#g1-implementation-and-acceptance-evidence). |
 | L03 | P1 | Verified | Make resolver lifecycle release cached Agent/Session handles before native shutdown. Bound session locks/cache growth, prevent new work during shutdown and prove queued work has an explicit terminal disposition. [G1 evidence](#g1-implementation-and-acceptance-evidence). |
 | L04 | P1 | Verified | Expose pipeline health, queue/failure diagnostics, recovery policy and resource counts available upstream. Track U65 for dead-letter replay; unavailable replay must remain explicit. [G1 evidence](#g1-implementation-and-acceptance-evidence). |
-| L05 | P0 | Open | Assign stable external goal/task IDs before creation or consume an upstream creation view when U64 lands. Remove unsupported pause/resume claims and preserve native transition results rather than reporting unconditional success. |
+| L05 | P0 | Verified | Assign stable external goal/task IDs before creation or consume an upstream creation view when U64 lands. Remove unsupported pause/resume claims and preserve native transition results rather than reporting unconditional success. [G2 evidence](#g2-implementation-and-acceptance-evidence). |
 | L06 | P2 | Open | Measure multiple private stores, CPU/GPU capacity and concurrency; adopt shared runtime APIs when available. One store's shutdown cannot invalidate another store's inference or leak memory between users. Track U57/X60. |
 
 Identity comes from authenticated transport context, not user-provided Cypher or untrusted memory. Every asynchronous branch carries request correlation. Stable record IDs and persisted source identities support retries and restart; process-local lock maps are not durable identity or retrieval scope.
 
 ## Public contract changes
 
-G1 contracts below are implemented and exported; structured experience and media retry remain proposed APIs for later gates. Source outline and original access use the operation field on SourceReadRequest.
+G1 and G2 contracts below are implemented and exported; media retry remains proposed for later gates. Source outline and original access use the operation field on SourceReadRequest.
 
 | Existing contract | Proposed work |
 | --- | --- |
@@ -222,7 +222,7 @@ G1 contracts below are implemented and exported; structured experience and media
 | AnswerRequest | Authorized bounded context shared with generation; supported generation controls only |
 | No inspection requests | CapabilityRequest, EffectiveConfigRequest and MemoryHealthRequest or equivalent narrow APIs |
 | No source navigation requests | SourceSearchRequest, SourceOutlineRequest and SourceReadRequest with bounded read options |
-| No structured experience requests | RecordToolCallRequest, RecordActionRequest, RecordEpisodeRequest and selected fact/consolidation requests |
+| Structured experience requests | RecordToolCallRequest, RecordActionRequest, RecordEpisodeRequest and selected fact/consolidation requests |
 | No media retry request | ReextractSourceRequest with source/revision identity and extraction profile |
 
 Use existing named memory topics for their established contracts; add dedicated control/source topics only when needed. Update producer and consumer routes together. Schema and route tests must prove each emitted format has a subscriber and one terminal result.
@@ -245,6 +245,8 @@ Issues were open when filed on 2026-11-16. Update status and selected release du
 | [U64](https://github.com/rustic-ai/uniko/issues/64) | Generated creation IDs/views | Assign IDs locally now; adopt upstream result later |
 | [U65](https://github.com/rustic-ai/uniko/issues/65) | Dead-letter recovery | Do not imply retry scheduling is available |
 | [U66](https://github.com/rustic-ai/uniko/issues/66) | Store compatibility/reindex | Reuse current checks; choose fresh stores for unsupported migrations |
+| [U67](https://github.com/rustic-ai/uniko/issues/67) | Dedicated idempotent Python agent registration | Temporarily ensure real organization membership; report native participant kind as unknown |
+| [U68](https://github.com/rustic-ai/uniko/issues/68) | Independent embedded-tool performer | Require a reporting-agent tool turn; separate user/reporter turns retain atomicity |
 | [X60](https://github.com/rustic-ai/uni-xervo/issues/60) | BGE-M3 resource sharing | Optimization; measure current resource requirements |
 | [X61](https://github.com/rustic-ai/uni-xervo/issues/61) | Runtime inspection | Supplies data for C05/L04 |
 | [X62](https://github.com/rustic-ai/uni-xervo/issues/62) | Provider schemas | Consume authoritative schemas rather than duplicating option validation |
@@ -259,7 +261,7 @@ The documented uni-db issue 130 is closed. Do not treat the Blackbook's older hy
 | T01 | Verified | Native text/document lifecycle: record, duplicate replay, recall, finalize, close/reopen, forget and recall absence; verify source links and per-user/store isolation [G1 evidence](#g1-implementation-and-acceptance-evidence). |
 | T02 | Verified | Committed regressions for attachment helper, flush-after-commit, null session scope, conversation deletion and unmarked recall records; generated goal/task IDs are covered by T04 in G2 [G1 evidence](#g1-implementation-and-acceptance-evidence). |
 | T03 | Verified | Sequential Guild rounds: direct question, remembered follow-up, document-based follow-up, irrelevant document, partial failure and terminal failure; exactly one final response and no late mutation [G1 evidence](#g1-implementation-and-acceptance-evidence). |
-| T04 | Open | Native tool/action/episode/fact/goal relationships and atomic units; actual IDs survive restart and transitions reflect native success/failure |
+| T04 | Verified | Native tool/action/episode/fact/goal relationships and atomic units; actual IDs survive restart and transitions reflect native success/failure [G2 evidence](#g2-implementation-and-acceptance-evidence). |
 | T05 | Open | Real BGE-M3 vector population, sparse contribution, ColBERT ordering, persistence/reopen and memory measurement; mock-only runs cannot close G3 |
 | T06 | Open | Scanned, native-text, mixed and malformed PDFs; searchable OCR text and page/block provenance on the selected supported build/profile |
 | T07 | Open | Image/audio and selected video flows; original media retention, addressed derivations, extraction failure/retry, duplicate delivery and user scope |
@@ -323,3 +325,71 @@ Full CI requires the configured Redis/NATS services and installed Playwright bro
 - [uni-xervo runtime](https://github.com/rustic-ai/uni-xervo/blob/fd312158599cb3fe429e93c56f07f7124d216642/crates/uni-xervo/src/runtime.rs)
 
 Update this plan in the same PR as a task's implementation. Change its state, link acceptance evidence and refresh affected feature claims. Preserve the evidence baseline when adding a newer run; do not replace an unverified capability with a broad statement that all CI is green.
+
+
+## G2 implementation and acceptance evidence
+
+G2 uses Uniko 0.5.1 native APIs for tool calls, actions, episodes, explicit
+observations/facts, deterministic consolidation, atomic multi-turn units,
+procedure matching/feedback and bounded rule/experience reads. Reporting actor
+identity is the authenticated message sender. Goal/task creation assigns stable
+external IDs before writing; native transitions retain their actual boolean,
+status, phase and timestamps. Native `done` status is not relabelled.
+Unsupported goal metadata, pause/resume, multiple task dependencies and task
+outcome controls are rejected. Goal context exposes recent message text and
+native sessions/facts/entities; episode context remains explicitly unavailable.
+
+The private runtime owns a SQLite operation journal beside persistent graph
+storage. In-memory storage uses an in-memory journal. It claims commands before
+native dispatch, saves compact results before publishing replies, rejects
+changed payloads and unmanaged existing native IDs, and replays completed
+commands without repeating effects. Goal/task creation replay returns current
+native state. Interrupted or ambiguous effects remain `operation_outcome_unknown`
+after restart; no automatic retry is attempted. Journal and native graph commits
+cannot be atomic, so an unknown outcome requires native inspection. Preserve
+both in backups. Receipt retention follows private-store retention.
+
+Units prepare all sources before dispatch and enforce 128 turns, 32 aggregate
+attachments and a configurable default 32 MiB prepared budget. Streamed batches
+retain per-item terminal outcomes; embedded-tool items use separate atomic units
+and receipts. Store-wide consolidation, invalidation and procedure feedback
+require `control_producers`. Explicit owner selection requires `scope_producers`.
+Scoped/visible evidence is validated before dereferencing; unsupported native
+scope dimensions fail closed rather than broaden access. [U67](https://github.com/rustic-ai/uniko/issues/67)
+tracks dedicated registration; the interim path uses the resolver's actual
+organization, creates no synthetic messages/actions, and reports unknown native
+participant kind honestly. U63's optional LLM consolidation remains deferred.
+
+Evidence is committed in
+[test_g2_structured.py](https://github.com/milliondreams/rustic-ai/blob/main/uniko-agent/tests/test_g2_structured.py)
+and [test_g2_routed.py](https://github.com/milliondreams/rustic-ai/blob/main/uniko-agent/tests/test_g2_routed.py).
+Native tests cover fresh-store registration, ownership rejection, real IDs,
+causal and fact-support edges, learned procedures, feedback replay, actual
+store/journal restart, changed-payload conflicts, unknown effects, cancellation,
+prewrite attachment/budget rejection and bounded reads. The real Guild bus test
+routes typed commands/replies between a reporting agent and MemoryAgent with
+production sender filtering, one terminal reply per command, replay, lifecycle
+updates and partial batch outcomes. Existing research/analyst tool producers are
+not automatically instrumented; they can adopt these typed contracts separately.
+
+
+Uniko 0.5.1 attributes embedded tool calls to their turn sender. Until
+[U68](https://github.com/rustic-ai/uniko/issues/68) adds an independent performer
+override, turns containing tools must use the authenticated reporting agent as
+`sender_id`. A unit can include a separate user turn and a reporting-agent turn
+whose tool call references that user's message with `triggered_by`. Standalone
+`RecordToolCallRequest` can also reference a user's previously stored message.
+Mismatched embedded-tool senders are rejected before any native write; user
+message attribution is never rewritten to satisfy tool ownership.
+
+
+Final local acceptance on 2026-11-17 (macOS ARM64, Python 3.13.12):
+`tox -e test -- --workers 4` passed with **2,012 passed, 88 skipped,
+3 xfailed and 2 xpassed** using Redis and NATS/JetStream. The existing expensive,
+credential-dependent and incomplete tests retain their configured exclusions.
+`tox -e format,lint` passed (701 files checked by mypy), strict MkDocs passed,
+and the final source distribution/wheel built with all five matching schemas.
+All 25 lockfiles remained fresh. Ten focused G2 regressions passed; the expanded
+actual-store restart test separately verified tool IDs, episode causal links,
+facts, goals and receipt replay after close/reopen. These checks do not certify
+G3–G6 or untested platform/provider combinations.

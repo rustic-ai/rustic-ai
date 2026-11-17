@@ -6,7 +6,7 @@ import uniko
 
 from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder
 from rustic_ai.core.guild.dsl import DependencySpec
-from rustic_ai.uniko_agent import MemoryAgent, MemoryAgentConfig, ObserveTurnRequest
+from rustic_ai.uniko_agent import MemoryAgent, MemoryAgentConfig
 
 from rustic_ai.testing.helpers import wrap_agent_for_testing
 
@@ -149,7 +149,7 @@ class _MemoryTestHarness:
         id_obj = id_gen.get_id(Priority.NORMAL)
         msg = Message(
             id_obj=id_obj,
-            sender=AgentTag(name="test", agent_id="test"),
+            sender=AgentTag(name="test", id="test"),
             topics=["default"],
             format=get_qualified_class_name(payload.__class__),
             payload=payload.model_dump(mode="json"),
@@ -195,16 +195,6 @@ def _build_memory_test_harness(memory_agent_spec, uniko_dependency_spec, filesys
     )
 
     harness = _MemoryTestHarness(agent, messages)
-
-    # Initialize participant by observing an initial turn
-    # This is required for goal/task management in uniko
-    harness.send_message(
-        ObserveTurnRequest(
-            sender_id="memory_agent_test_guild", content="System initialized", metadata={"type": "system_init"}
-        )
-    )
-    # Clear the initialization message
-    harness.get_sent_messages()
 
     return harness
 

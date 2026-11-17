@@ -85,6 +85,10 @@ class MemoryTools:
                     "document_visibility": False,
                     "answer_max_tokens": False,
                     "phase1_only_control": False,
+                    "structured_experience": True,
+                    "atomic_units": True,
+                    "structured_owner": "authenticated_reporting_sender",
+                    "native_registration": "organization_membership_kind_unknown",
                 },
                 unknown=["effective_execution_provider", "ocr", "multimodal_adapters", "sparse_and_colbert_readiness"],
             )
@@ -98,6 +102,7 @@ class MemoryTools:
         if runtime is not None:
             observed["active_operations"] = runtime["runtime"].active
             observed["managed_handles"] = len(runtime["runtime"].handles)
+            observed["structured_receipts"] = "at_most_once_with_unknown_outcome"
         if health is not None:
             observed.update(snapshot(health, ("uptime_secs", "llm_circuit")))
             for name in ("ingest", "consolidation"):
@@ -105,9 +110,7 @@ class MemoryTools:
                     getattr(health, name),
                     ("status", "queue_depth", "queue_capacity", "items_processed", "items_failed", "avg_latency_ms"),
                 )
-        ctx.send(
-            MemoryDiagnostics(observed=observed, unknown=["model_readiness", "durable_replay", "dead_letter_queue"])
-        )
+        ctx.send(MemoryDiagnostics(observed=observed, unknown=["model_readiness", "dead_letter_queue"]))
 
     async def _source_allowed(self, uniko: uniko.Agent, kind: str, identifier: str, spec: MemoryScope) -> bool:
         # query_in supplies $allow but does not insert predicates: explicitly

@@ -50,6 +50,12 @@ class MemoryAgentConfig(BaseAgentProps):
     max_source_bytes: int = Field(default=16 * 1024 * 1024, ge=1, le=128 * 1024 * 1024)
     max_attachments: int = Field(default=32, ge=1, le=32)
     max_batch_items: int = Field(default=128, ge=1, le=128)
+    control_producers: List[str] = Field(
+        default_factory=list, description="Trusted store-wide consolidation, invalidation and procedure-feedback agents"
+    )
+    max_unit_bytes: int = Field(default=32 * 1024 * 1024, ge=1, le=128 * 1024 * 1024)
+    max_structured_output_bytes: int = Field(default=16 * 1024 * 1024, ge=1, le=128 * 1024 * 1024)
+
     legacy_recall_limit: int = Field(default=50, ge=1, le=100)
 
     @model_validator(mode="after")

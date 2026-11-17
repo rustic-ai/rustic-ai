@@ -2,9 +2,11 @@
 
 import asyncio
 from contextlib import asynccontextmanager, nullcontext
+from copy import copy
 from hashlib import sha256
 import logging
 import threading
+from types import SimpleNamespace
 from typing import Any, Dict, Optional
 from uuid import uuid4
 
@@ -41,19 +43,11 @@ from .models import (
     BatchItemOutcome,
     BatchSubmitRequest,
     BatchSubmitResponse,
-    CreateGoalRequest,
-    CreateTaskRequest,
     DeleteMemorySessionRequest,
     FinalizeMemorySessionRequest,
     FinalizeMemorySessionResult,
     ForgetMemoryParticipantRequest,
     ForgetMemoryRecordRequest,
-    GetGoalsRequest,
-    GoalContext,
-    GoalContextRequest,
-    GoalsListResponse,
-    GoalStatusResponse,
-    GoalView,
     IngestDocumentRequest,
     MemoryAgentError,
     MemoryDeletionResult,
@@ -69,11 +63,8 @@ from .models import (
     RecallUserSessionsRequest,
     RecordMemoryRequest,
     RecordMemoryResult,
-    TaskStatusResponse,
-    TaskView,
-    UpdateGoalRequest,
-    UpdateTaskRequest,
 )
+from .structured import StructuredMemoryTools
 from .tools import MemoryTools
 
 logger = logging.getLogger(__name__)
@@ -102,7 +93,7 @@ _ERROR_MESSAGES = {
 }
 
 
-class MemoryAgent(Agent[MemoryAgentConfig], MemoryTools):
+class MemoryAgent(Agent[MemoryAgentConfig], MemoryTools, StructuredMemoryTools):
     """Private Uniko memory with shared input documents from the guild filesystem."""
 
     @asynccontextmanager
@@ -352,11 +343,18 @@ class MemoryAgent(Agent[MemoryAgentConfig], MemoryTools):
 
     # ========== Observation Processors ==========
 
-    async def _turn(self, req: ObserveTurnRequest, guild_fs: Any = None) -> Turn:
+    async def _turn(self, req: ObserveTurnRequest, guild_fs: Any = None, byte_counts=None) -> Turn:
         if len(req.attachments or []) > self.config.max_attachments:
             raise ValueError("Attachment count exceeds limit")
         # Translate every source before any native write, including bounded FS reads.
-        sources = [await build_source(spec, guild_fs, self.config.max_source_bytes) for spec in req.attachments or []]
+        sources = []
+        for spec in req.attachments or []:
+            available = self.config.max_source_bytes
+            if byte_counts is not None:
+                available = min(available, self.config.max_unit_bytes - sum(byte_counts))
+                if available < 0:
+                    raise ValueError("Atomic unit exceeds byte limit")
+            sources.append(await build_source(spec, guild_fs, available, byte_counts))
         turn = (
             Turn(req.sender_id, req.content)
             .id(req.message_id or str(uuid4()))
@@ -371,6 +369,8 @@ class MemoryAgent(Agent[MemoryAgentConfig], MemoryTools):
         turn = apply_provenance(turn, req, MemoryRecordKind.CONVERSATION_TURN)
         for source in sources:
             turn = turn.attach(source)
+        for call in req.tool_calls:
+            turn = turn.tool_call(self._tool(call))
         return turn
 
     @agent.processor(ObserveTurnRequest, depends_on=["uniko", "filesystem:guild_fs:guild"])
@@ -378,6 +378,13 @@ class MemoryAgent(Agent[MemoryAgentConfig], MemoryTools):
         self, ctx: ProcessContext[ObserveTurnRequest], uniko: uniko.Agent, guild_fs: FileSystem = None
     ):
         req = ctx.payload
+        if req.tool_calls:
+            from .structured_models import CommitMemoryUnitRequest
+
+            session_id = req.session_id or self.config.default_session_id or ctx.agent.guild_id
+            command = CommitMemoryUnitRequest(session_id=session_id, turns=[req], operation_id=str(ctx.message.id))
+            await self._command(ctx, uniko, "commit_memory_unit", guild_fs, request=command, observe_response=True)
+            return
         if not self._producer_is_allowed(ctx, MemoryRecordKind.CONVERSATION_TURN):
             self._send_failure(ctx, "record_rejected")
             return
@@ -729,7 +736,7 @@ class MemoryAgent(Agent[MemoryAgentConfig], MemoryTools):
             logger.exception("Guild document ingestion failed")
             self._send_failure(ctx, "document_ingest_failed")
 
-    async def _batch_item(self, ctx, session, spec, index, session_id, req, guild_fs) -> BatchItemOutcome:
+    async def _batch_item(self, ctx, session, spec, index, session_id, req, guild_fs, handle) -> BatchItemOutcome:
         try:
             turn_req = ObserveTurnRequest.model_validate(spec)
             if not self._producer_is_allowed(ctx, MemoryRecordKind.CONVERSATION_TURN):
@@ -739,15 +746,44 @@ class MemoryAgent(Agent[MemoryAgentConfig], MemoryTools):
             if turn_req.message_id is None:
                 batch_id = req.batch_id or str(ctx.message.id)
                 turn_req = turn_req.model_copy(update={"message_id": f"batch-{batch_id}:{index}"})
-            turn = await self._turn(turn_req, guild_fs)
-            result = await session.observe(turn)
-            attachments = [ingest_outcome(item) for item in getattr(result, "attachments", [])]
+            if turn_req.tool_calls:
+                from .structured_models import CommitMemoryUnitRequest
+
+                sent: list[Any] = []
+                errors: list[MemoryAgentError] = []
+                item_ctx = SimpleNamespace(
+                    payload=turn_req,
+                    message=copy(ctx.message),
+                    get_context=ctx.get_context,
+                    send=sent.append,
+                    send_error=errors.append,
+                )
+                command = CommitMemoryUnitRequest(
+                    session_id=session_id,
+                    turns=[turn_req],
+                    unit_id=turn_req.message_id,
+                )
+                await self._command(item_ctx, handle, "commit_memory_unit", guild_fs, request=command)
+                if errors:
+                    return BatchItemOutcome(
+                        index=index, message_id=turn_req.message_id, success=False, error=errors[0].error
+                    )
+                observed = sent[0].turns[0]
+                attachments = observed.attachments
+                calls = observed.tool_calls
+            else:
+                turn = await self._turn(turn_req, guild_fs)
+                async with self._session_lock(session_id, handle):
+                    result = await session.observe(turn)
+                attachments = [ingest_outcome(item) for item in getattr(result, "attachments", [])]
+                calls = []
             success = not any(item.extraction_failed for item in attachments)
             return BatchItemOutcome(
                 index=index,
                 message_id=turn_req.message_id,
                 success=success,
                 stored=True,
+                tool_calls=calls,
                 attachments=attachments,
                 error=None if success else "attachment_extraction_failed",
             )
@@ -780,26 +816,26 @@ class MemoryAgent(Agent[MemoryAgentConfig], MemoryTools):
             )
             return
         try:
-            async with self._session_lock(session_id, uniko):
-                session = uniko.session(session_id)
-                for index, spec in enumerate(req.turns):
-                    outcomes.append(await self._batch_item(ctx, session, spec, index, session_id, req, guild_fs))
-                flushed = False
-                flush_error = None
-                if req.flush_after:
-                    try:
+            session = uniko.session(session_id)
+            for index, spec in enumerate(req.turns):
+                outcomes.append(await self._batch_item(ctx, session, spec, index, session_id, req, guild_fs, uniko))
+            flushed = False
+            flush_error = None
+            if req.flush_after:
+                try:
+                    async with self._session_lock(session_id, uniko):
                         await session.flush()
-                        flushed = True
-                    except Exception:
-                        logger.exception("Memory batch flush failed")
-                        flush_error = "flush_failed"
-                response = BatchSubmitResponse(
-                    submitted_count=sum(x.stored for x in outcomes),
-                    flushed=flushed,
-                    session_id=session_id,
-                    outcomes=outcomes,
-                    error=flush_error,
-                )
+                    flushed = True
+                except Exception:
+                    logger.exception("Memory batch flush failed")
+                    flush_error = "flush_failed"
+            response = BatchSubmitResponse(
+                submitted_count=sum(x.stored for x in outcomes),
+                flushed=flushed,
+                session_id=session_id,
+                outcomes=outcomes,
+                error=flush_error,
+            )
             for outcome in outcomes:
                 ctx.send(outcome)
             ctx.send(response)
@@ -834,324 +870,3 @@ class MemoryAgent(Agent[MemoryAgentConfig], MemoryTools):
                     error="batch_failed",
                 )
             )
-
-    # ========== Goal Management Processors (Phase 2) ==========
-
-    @agent.processor(CreateGoalRequest, depends_on=["uniko"])
-    async def create_goal(self, ctx: ProcessContext[CreateGoalRequest], uniko: uniko.Agent):
-        """Create a new goal and track it in memory.
-
-        Goals provide high-level objectives for research workflows.
-
-        Args:
-            ctx: Process context with CreateGoalRequest payload
-            uniko: Guild-scoped uniko agent (injected dependency)
-        """
-        req = ctx.payload
-
-        try:
-            goals = uniko.goals
-
-            # Create the goal
-            node_id = await goals.create(
-                req.title,
-                goal_id=req.goal_id,
-                description=req.description,
-                status=req.status,
-                metrics=req.metrics,
-                guardrails=req.guardrails,
-                deadline=req.deadline,
-                parent_goal_id=req.parent_goal_id,
-            )
-
-            # Fetch created goal to return full view
-            goal_id = req.goal_id or f"goal-{node_id}"
-            goal = await goals.get(goal_id)
-
-            if goal:
-                ctx.send(self._serialize_goal_view(goal))
-            else:
-                # Fallback response
-                ctx.send(
-                    GoalView(
-                        goal_id=goal_id,
-                        node_id=node_id,
-                        title=req.title,
-                        description=req.description,
-                        status=req.status,
-                    )
-                )
-
-        except Exception:
-            logger.exception("Memory goal creation failed")
-            self._send_failure(ctx, "create_goal_failed")
-
-    @agent.processor(UpdateGoalRequest, depends_on=["uniko"])
-    async def update_goal(self, ctx: ProcessContext[UpdateGoalRequest], uniko: uniko.Agent):
-        """Update a goal's status.
-
-        Actions: start, complete, abandon, pause, resume
-
-        Args:
-            ctx: Process context with UpdateGoalRequest payload
-            uniko: Guild-scoped uniko agent (injected dependency)
-        """
-        req = ctx.payload
-
-        try:
-            goals = uniko.goals
-
-            # Execute action based on type
-            if req.action == "start":
-                await goals.start(req.goal_id)
-            elif req.action == "complete":
-                await goals.complete(req.goal_id, result=req.outcome)
-            elif req.action == "abandon":
-                await goals.abandon(req.goal_id)
-            elif req.action == "pause":
-                # Check if pause method exists
-                if hasattr(goals, "pause"):
-                    await goals.pause(req.goal_id)
-                else:
-                    raise ValueError("pause action not supported by current uniko version")
-            elif req.action == "resume":
-                # Check if resume method exists
-                if hasattr(goals, "resume"):
-                    await goals.resume(req.goal_id)
-                else:
-                    raise ValueError("resume action not supported by current uniko version")
-            else:
-                raise ValueError(f"Unknown action: {req.action}")
-
-            # Get updated goal to return status
-            goal = await goals.get(req.goal_id)
-            status = goal.status if goal else req.action
-
-            ctx.send(
-                GoalStatusResponse(
-                    goal_id=req.goal_id,
-                    status=status,
-                    updated=True,
-                )
-            )
-
-        except Exception:
-            logger.exception("Memory goal update failed")
-            self._send_failure(ctx, "update_goal_failed")
-
-    @agent.processor(GetGoalsRequest, depends_on=["uniko"])
-    async def get_goals(self, ctx: ProcessContext[GetGoalsRequest], uniko: uniko.Agent):
-        """Get goals by phase.
-
-        Phases: all, active, completed, abandoned
-
-        Args:
-            ctx: Process context with GetGoalsRequest payload
-            uniko: Guild-scoped uniko agent (injected dependency)
-        """
-        req = ctx.payload
-
-        try:
-            goals_handle = uniko.goals
-
-            # Fetch goals based on phase
-            if req.phase == "active":
-                goal_list = await goals_handle.active()
-            elif req.phase == "completed":
-                goal_list = await goals_handle.completed()
-            elif req.phase == "abandoned":
-                goal_list = await goals_handle.in_phase("abandoned")
-            else:  # "all"
-                goal_list = await goals_handle.all()
-
-            # Filter by parent if specified
-            if req.parent_goal_id:
-                goal_list = [g for g in goal_list if getattr(g, "parent_goal_id", None) == req.parent_goal_id]
-
-            # Apply limit
-            if req.limit:
-                goal_list = goal_list[: req.limit]
-
-            # Serialize goals
-            goals = [self._serialize_goal_view(g) for g in goal_list]
-
-            ctx.send(
-                GoalsListResponse(
-                    goals=goals,
-                    total_count=len(goals),
-                    phase=req.phase,
-                )
-            )
-
-        except Exception:
-            logger.exception("Memory goal retrieval failed")
-            self._send_failure(ctx, "get_goals_failed")
-
-    # ========== Task Management Processors (Phase 2) ==========
-
-    @agent.processor(CreateTaskRequest, depends_on=["uniko"])
-    async def create_task(self, ctx: ProcessContext[CreateTaskRequest], uniko: uniko.Agent):
-        """Create a task for a goal.
-
-        Tasks are concrete steps toward achieving a goal.
-
-        Args:
-            ctx: Process context with CreateTaskRequest payload
-            uniko: Guild-scoped uniko agent (injected dependency)
-        """
-        req = ctx.payload
-
-        try:
-            goals = uniko.goals
-
-            # Create the task - new API: title is first positional, goal_id is keyword
-            node_id = await goals.create_task(
-                req.title,
-                task_id=req.task_id,
-                description=req.description,
-                priority=req.priority,
-                goal_id=req.goal_id,
-                depends_on_task_id=req.depends_on[0] if req.depends_on else None,  # API only supports single dependency
-            )
-
-            # Return task view (uniko doesn't have get_task, so we construct from request)
-            task_id = req.task_id or f"task-{node_id}"
-            ctx.send(
-                TaskView(
-                    task_id=task_id,
-                    node_id=node_id,
-                    goal_id=req.goal_id,
-                    title=req.title,
-                    description=req.description,
-                    status="pending",
-                    priority=req.priority or 3,
-                )
-            )
-
-        except Exception:
-            logger.exception("Memory task creation failed")
-            self._send_failure(ctx, "create_task_failed")
-
-    @agent.processor(UpdateTaskRequest, depends_on=["uniko"])
-    async def update_task(self, ctx: ProcessContext[UpdateTaskRequest], uniko: uniko.Agent):
-        """Update a task's status.
-
-        Actions: start, complete, abandon, block, unblock
-
-        Args:
-            ctx: Process context with UpdateTaskRequest payload
-            uniko: Guild-scoped uniko agent (injected dependency)
-        """
-        req = ctx.payload
-
-        try:
-            goals = uniko.goals
-
-            # Execute action
-            if req.action == "start":
-                await goals.start_task(req.task_id)
-            elif req.action == "complete":
-                await goals.complete_task(req.task_id)
-            elif req.action == "abandon":
-                # Use set_task_status for abandon
-                await goals.set_task_status(req.task_id, "abandoned")
-            elif req.action == "block":
-                await goals.block_task(req.task_id)
-            elif req.action == "unblock":
-                # Use set_task_status to unblock
-                await goals.set_task_status(req.task_id, "pending")
-            else:
-                raise ValueError(f"Unknown action: {req.action}")
-
-            # Return status (uniko doesn't have get_task)
-            status_map = {
-                "start": "in_progress",
-                "complete": "completed",
-                "abandon": "abandoned",
-                "block": "blocked",
-                "unblock": "pending",
-            }
-            status = status_map.get(req.action, req.action)
-
-            ctx.send(
-                TaskStatusResponse(
-                    task_id=req.task_id,
-                    status=status,
-                    updated=True,
-                )
-            )
-
-        except Exception:
-            logger.exception("Memory task update failed")
-            self._send_failure(ctx, "update_task_failed")
-
-    @agent.processor(GoalContextRequest, depends_on=["uniko"])
-    async def get_goal_context(self, ctx: ProcessContext[GoalContextRequest], uniko: uniko.Agent):
-        """Get goal working memory context.
-
-        Includes goal, tasks, episodes, and progress metrics.
-
-        Args:
-            ctx: Process context with GoalContextRequest payload
-            uniko: Guild-scoped uniko agent (injected dependency)
-        """
-        req = ctx.payload
-
-        try:
-            goals = uniko.goals
-
-            # Get goal context (native API keys context on goal_id only)
-            context = await goals.context(req.goal_id)
-
-            if context is None:
-                raise ValueError(f"Goal context not found: {req.goal_id}")
-
-            # Serialize context
-            goal_view = self._serialize_goal_view(context.goal)
-            tasks = [self._serialize_task_view(t) for t in context.tasks] if req.include_tasks else []
-            episodes = (
-                [{"message_id": message_id} for message_id in context.recent_messages] if req.include_episodes else []
-            )
-
-            ctx.send(
-                GoalContext(
-                    goal=goal_view,
-                    tasks=tasks,
-                    episodes=episodes,
-                    progress={"facts": context.facts, "entities": context.entities, "sessions": context.sessions},
-                )
-            )
-
-        except Exception:
-            logger.exception("Memory goal context retrieval failed")
-            self._send_failure(ctx, "get_goal_context_failed")
-
-    # ========== Additional Helper Methods ==========
-
-    def _serialize_goal_view(self, goal) -> GoalView:
-        """Serialize native goal to GoalView model."""
-        return GoalView(
-            goal_id=goal.goal_id,
-            node_id=None,  # uniko GoalView doesn't have node_id
-            title=goal.title,
-            description=getattr(goal, "description", None),
-            status=goal.status,
-            created_at=getattr(goal, "created_at", None),
-            updated_at=getattr(goal, "completed_at", None),  # uniko uses completed_at, not updated_at
-            metrics=getattr(goal, "metrics", None),
-            guardrails=None,  # Not available in uniko GoalView
-            deadline=getattr(goal, "deadline", None),
-        )
-
-    def _serialize_task_view(self, task) -> TaskView:
-        """Serialize native task to TaskView model."""
-        return TaskView(
-            task_id=task.task_id,
-            node_id=None,  # uniko TaskView doesn't have node_id
-            goal_id=task.goal_id,
-            title=task.title,
-            description=getattr(task, "description", None),
-            status=task.status,
-            priority=getattr(task, "priority", 3),
-            created_at=getattr(task, "created_at", None),
-        )

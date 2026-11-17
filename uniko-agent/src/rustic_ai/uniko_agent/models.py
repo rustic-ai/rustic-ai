@@ -4,7 +4,14 @@ from datetime import datetime
 from enum import StrEnum
 from typing import Any, Dict, List, Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    JsonValue,
+    field_serializer,
+    model_validator,
+)
 
 from rustic_ai.core.agents.commons.media import MediaLink
 
@@ -38,6 +45,81 @@ class MemoryProvenance(BaseModel):
     source_id: Optional[str] = Field(default=None, min_length=1, max_length=256)
     revision_id: Optional[str] = Field(default=None, min_length=1, max_length=256)
     visibility: Optional[str] = Field(default=None, min_length=1, max_length=256)
+
+
+class MemoryCommand(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    operation_id: Optional[str] = Field(default=None, min_length=1, max_length=256)
+
+    @field_serializer(
+        "started_at", "ended_at", "timestamp", "temporal_anchor", "observed_at", "deadline", check_fields=False
+    )
+    def wire_timestamp(self, value):
+        return value.isoformat() if value is not None else None
+
+
+class MemoryCommandResult(BaseModel):
+    operation_id: Optional[str] = None
+    actor_id: Optional[str] = None
+    was_replay: bool = False
+
+
+class ToolCallSpec(MemoryProvenance):
+    tool_name: str = Field(min_length=1, max_length=256)
+    call_id: Optional[str] = Field(default=None, min_length=1, max_length=256)
+    arguments: Optional[JsonValue] = None
+    output_kind: Optional[Literal["text", "json", "bytes"]] = None
+    text_output: Optional[str] = None
+    json_output: Optional[JsonValue] = None
+    base64_output: Optional[str] = None
+    mime_type: Optional[str] = None
+    status: Optional[str] = Field(default=None, max_length=256)
+    error: Optional[str] = Field(default=None, max_length=16000)
+    started_at: Optional[datetime] = None
+    ended_at: Optional[datetime] = None
+    triggered_by: Optional[str] = Field(default=None, max_length=256)
+    after: Optional[str] = Field(default=None, max_length=256)
+
+    @field_serializer("started_at", "ended_at")
+    def wire_timestamp(self, value):
+        return value.isoformat() if value is not None else None
+
+    @model_validator(mode="after")
+    def supported_output(self):
+        if self.output_kind is None:
+            if self.text_output is not None:
+                self.output_kind = "text"
+            elif self.base64_output is not None:
+                self.output_kind = "bytes"
+            elif self.json_output is not None or (
+                "json_output" in self.model_fields_set
+                and not {"text_output", "base64_output"}.intersection(self.model_fields_set)
+            ):
+                self.output_kind = "json"
+        selected = sum(value is not None for value in (self.text_output, self.json_output, self.base64_output))
+        if self.output_kind == "json" and self.json_output is None:
+            selected += 1
+        if selected > 1:
+            raise ValueError("Choose one tool output representation")
+        if self.output_kind == "text" and self.text_output is None:
+            raise ValueError("Text output requires text_output")
+        if self.output_kind == "bytes" and self.base64_output is None:
+            raise ValueError("Byte output requires base64_output")
+        if self.base64_output is not None and not self.mime_type:
+            raise ValueError("Byte output requires MIME")
+        if self.started_at and self.ended_at and self.started_at > self.ended_at:
+            raise ValueError("Tool end precedes start")
+        if self.category in set(MemoryRecordKind) and self.category != MemoryRecordKind.EXECUTED_RESULT:
+            raise ValueError("Tool category cannot override executed-result provenance")
+        return self
+
+
+class ToolCallOutcome(BaseModel):
+    call_id: str
+    action_node: int
+    artifact_id: Optional[str] = None
+    artifact_node: Optional[int] = None
+    was_replay: bool = False
 
 
 class MemorySource(MemoryProvenance):
@@ -193,6 +275,12 @@ class ObserveTurnRequest(MemoryProvenance):
         default=None, max_length=32, description="Bounded typed attachment sources"
     )
 
+    tool_calls: List[ToolCallSpec] = Field(default_factory=list, max_length=32)
+
+    @field_serializer("timestamp")
+    def wire_timestamp(self, value):
+        return value.isoformat() if value is not None else None
+
     @model_validator(mode="after")
     def assigned_category(self):
         if self.category not in {None, MemoryRecordKind.CONVERSATION_TURN.value}:
@@ -200,7 +288,7 @@ class ObserveTurnRequest(MemoryProvenance):
         return self
 
 
-class ObserveResult(BaseModel):
+class ObserveResult(MemoryCommandResult):
     """Response from observing a turn.
 
     Attributes:
@@ -214,6 +302,7 @@ class ObserveResult(BaseModel):
         attachment_count: Number of attachments processed
     """
 
+    message_id: Optional[str] = None
     message_node_id: int
     chunk_node_ids: List[int]
     session_node_id: int
@@ -223,6 +312,7 @@ class ObserveResult(BaseModel):
     extracted_observations: List[int]
     attachment_count: int
     attachments: List["IngestOutcome"] = Field(default_factory=list)
+    tool_calls: List[ToolCallOutcome] = Field(default_factory=list)
 
 
 # ========== Recall Payloads ==========
@@ -401,6 +491,7 @@ class IngestOutcome(BaseModel):
     extraction_failed: Optional[bool] = None
     extraction_error: Optional[str] = None
     stored: bool = False
+    tool_calls: List[ToolCallOutcome] = Field(default_factory=list)
     searchable: bool = False
     success: bool = True
     record_id: Optional[str] = None
@@ -445,6 +536,7 @@ class BatchSubmitResponse(BaseModel):
 
 class BatchItemOutcome(BaseModel):
     stored: bool = False
+    tool_calls: List[ToolCallOutcome] = Field(default_factory=list)
     attachments: List[IngestOutcome] = Field(default_factory=list)
     index: int
     message_id: Optional[str] = None
@@ -515,7 +607,7 @@ class SourceResponse(BaseModel):
 # ========== Goal Management Payloads ==========
 
 
-class CreateGoalRequest(BaseModel):
+class CreateGoalRequest(MemoryCommand):
     """Request to create a new goal.
 
     Attributes:
@@ -539,7 +631,7 @@ class CreateGoalRequest(BaseModel):
     parent_goal_id: Optional[str] = Field(default=None, description="Parent goal ID for sub-goals")
 
 
-class GoalView(BaseModel):
+class GoalView(MemoryCommandResult):
     """View of a goal.
 
     Attributes:
@@ -560,30 +652,37 @@ class GoalView(BaseModel):
     title: str
     description: Optional[str] = None
     status: str
+    phase: Optional[str] = None
+    completed_at: Optional[datetime] = None
+    parent_goal_id: Optional[str] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     metrics: Optional[Dict[str, Any]] = None
     guardrails: Optional[List[str]] = None
     deadline: Optional[datetime] = None
 
+    @field_serializer("created_at", "updated_at", "completed_at", "deadline")
+    def wire_timestamp(self, value):
+        return value.isoformat() if value is not None else None
 
-class UpdateGoalRequest(BaseModel):
+
+class UpdateGoalRequest(MemoryCommand):
     """Request to update a goal's status.
 
     Attributes:
         goal_id: Goal ID to update
-        action: Action to perform (start, complete, abandon, pause, resume)
+        action: Action to perform (start, complete, abandon)
         outcome: Optional outcome description
         metadata: Optional additional metadata
     """
 
     goal_id: str = Field(description="Goal ID to update")
-    action: str = Field(description="Action: start, complete, abandon, pause, resume")
+    action: Literal["start", "complete", "abandon"]
     outcome: Optional[str] = Field(default=None, description="Outcome description")
     metadata: Optional[Dict[str, Any]] = Field(default=None, description="Additional metadata")
 
 
-class GoalStatusResponse(BaseModel):
+class GoalStatusResponse(MemoryCommandResult):
     """Response from goal update.
 
     Attributes:
@@ -593,7 +692,7 @@ class GoalStatusResponse(BaseModel):
     """
 
     goal_id: str
-    status: str
+    status: Optional[str] = None
     updated: bool
 
 
@@ -606,9 +705,10 @@ class GetGoalsRequest(BaseModel):
         limit: Maximum number of goals to return
     """
 
-    phase: str = Field(default="all", description="Phase filter: all, active, completed, abandoned")
+    owner_id: Optional[str] = Field(default=None, max_length=256)
+    phase: Literal["all", "planned", "active", "completed", "abandoned"] = "all"
     parent_goal_id: Optional[str] = Field(default=None, description="Filter by parent goal ID")
-    limit: Optional[int] = Field(default=None, description="Maximum number of goals")
+    limit: Optional[int] = Field(default=20, ge=1, le=100, description="Maximum number of goals")
 
 
 class GoalsListResponse(BaseModel):
@@ -628,7 +728,7 @@ class GoalsListResponse(BaseModel):
 # ========== Task Management Payloads ==========
 
 
-class CreateTaskRequest(BaseModel):
+class CreateTaskRequest(MemoryCommand):
     """Request to create a task for a goal.
 
     Attributes:
@@ -645,10 +745,20 @@ class CreateTaskRequest(BaseModel):
     task_id: Optional[str] = Field(default=None, description="Optional unique task ID")
     description: Optional[str] = Field(default=None, description="Task description")
     priority: int = Field(default=3, ge=1, le=5, description="Task priority (1-5)")
-    depends_on: Optional[List[str]] = Field(default=None, description="Task IDs this depends on")
+    depends_on: Optional[List[str]] = Field(
+        default=None, max_length=1, description="The native SDK supports one dependency"
+    )
+    subtask_of_task_id: Optional[str] = Field(default=None, max_length=256)
+    native_priority: Optional[float] = Field(default=None, ge=0, le=1)
+
+    @model_validator(mode="after")
+    def single_priority(self):
+        if self.native_priority is not None and "priority" in self.model_fields_set:
+            raise ValueError("Choose legacy priority or native_priority")
+        return self
 
 
-class TaskView(BaseModel):
+class TaskView(MemoryCommandResult):
     """View of a task.
 
     Attributes:
@@ -664,15 +774,21 @@ class TaskView(BaseModel):
 
     task_id: str
     node_id: Optional[int] = None  # Not available in uniko TaskView
-    goal_id: str
+    goal_id: Optional[str] = None
     title: str
     description: Optional[str] = None
     status: str
-    priority: int
+    priority: Optional[float] = None
+    phase: Optional[str] = None
+    completed_at: Optional[datetime] = None
     created_at: Optional[datetime] = None
 
+    @field_serializer("created_at", "completed_at")
+    def wire_timestamp(self, value):
+        return value.isoformat() if value is not None else None
 
-class UpdateTaskRequest(BaseModel):
+
+class UpdateTaskRequest(MemoryCommand):
     """Request to update a task's status.
 
     Attributes:
@@ -682,11 +798,11 @@ class UpdateTaskRequest(BaseModel):
     """
 
     task_id: str = Field(description="Task ID to update")
-    action: str = Field(description="Action: start, complete, abandon, block, unblock")
+    action: Literal["start", "complete", "abandon", "block", "unblock"]
     outcome: Optional[str] = Field(default=None, description="Outcome description")
 
 
-class TaskStatusResponse(BaseModel):
+class TaskStatusResponse(MemoryCommandResult):
     """Response from task update.
 
     Attributes:
@@ -696,7 +812,7 @@ class TaskStatusResponse(BaseModel):
     """
 
     task_id: str
-    status: str
+    status: Optional[str] = None
     updated: bool
 
 
@@ -710,6 +826,7 @@ class GoalContextRequest(BaseModel):
     """
 
     goal_id: str = Field(description="Goal ID")
+    owner_id: Optional[str] = Field(default=None, max_length=256)
     include_tasks: bool = Field(default=True, description="Include related tasks")
     include_episodes: bool = Field(default=True, description="Include related episodes")
 
@@ -728,6 +845,11 @@ class GoalContext(BaseModel):
     tasks: List[TaskView]
     episodes: List[Dict[str, Any]]
     progress: Dict[str, Any]
+    sessions: List[str] = Field(default_factory=list)
+    recent_messages: List[str] = Field(default_factory=list)
+    facts: List[str] = Field(default_factory=list)
+    entities: List[str] = Field(default_factory=list)
+    episodes_available: bool = False
 
 
 # ========== Error Payload ==========

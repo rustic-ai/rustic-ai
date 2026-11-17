@@ -4,15 +4,22 @@ import asyncio
 from contextlib import contextmanager
 from contextvars import ContextVar
 import inspect
+from pathlib import Path
 import threading
 from typing import Any
 import weakref
+
+from .receipts import ReceiptStore
 
 _accepted_runtime: ContextVar = ContextVar("uniko_accepted_runtime", default=None)
 
 
 class MemoryRuntime:
-    def __init__(self, instance: Any, streaming: bool):
+    def __init__(
+        self, instance: Any, streaming: bool, storage_path: str | None = None, organization_id: str | None = None
+    ):
+        self.organization_id = organization_id
+        self.receipts = ReceiptStore(str(Path(storage_path) / ".rustic-operations.sqlite3") if storage_path else None)
         self.instance = instance
         self.streaming = streaming
         self.closing = False
@@ -72,6 +79,7 @@ class MemoryRuntime:
         if self.instance is not None:
             self.instance.shutdown_sync()
             self.instance = None
+            self.receipts.close()
 
     async def close_async(self):
         with self.condition:
@@ -82,6 +90,7 @@ class MemoryRuntime:
         if self.instance is not None:
             await self.instance.shutdown()
             self.instance = None
+            self.receipts.close()
 
 
 class MemoryHandle:

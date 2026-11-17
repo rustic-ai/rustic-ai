@@ -133,11 +133,13 @@ class UnikoResolver(DependencyResolver[uniko.Agent]):
                 builder = builder.reranker(None if self.reranker is False else self.reranker)
 
             # Configure storage
+            native_path = None
             if self.storage_path:
                 agent_fs = self.inject(FileSystem, "filesystem", org_id, guild_id, agent_id)
                 backing_fs, path = url_to_fs(get_uri(agent_fs, "/" + self.storage_path.lstrip("/")))
                 if not isinstance(backing_fs, LocalFileSystem):
                     raise ValueError("Uniko persistent storage requires a local agent filesystem")
+                native_path = path
                 builder = builder.path(path)
             else:
                 builder = builder.in_memory()
@@ -158,7 +160,7 @@ class UnikoResolver(DependencyResolver[uniko.Agent]):
             # Build synchronously (async version needs different pattern)
             uni = builder.build_sync()
             self._uniko_instances[cache_key] = uni
-            self._runtimes[cache_key] = MemoryRuntime(uni, self.streaming)
+            self._runtimes[cache_key] = MemoryRuntime(uni, self.streaming, native_path, org_id)
 
         # Get the uniko instance and return agent handle
         uni = self._uniko_instances[cache_key]

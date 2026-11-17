@@ -117,6 +117,28 @@
       "title": "Max Batch Items",
       "type": "integer"
     },
+    "control_producers": {
+      "description": "Trusted store-wide consolidation, invalidation and procedure-feedback agents",
+      "items": {
+        "type": "string"
+      },
+      "title": "Control Producers",
+      "type": "array"
+    },
+    "max_unit_bytes": {
+      "default": 33554432,
+      "maximum": 134217728,
+      "minimum": 1,
+      "title": "Max Unit Bytes",
+      "type": "integer"
+    },
+    "max_structured_output_bytes": {
+      "default": 16777216,
+      "maximum": 134217728,
+      "minimum": 1,
+      "title": "Max Structured Output Bytes",
+      "type": "integer"
+    },
     "legacy_recall_limit": {
       "default": 50,
       "maximum": 100,
