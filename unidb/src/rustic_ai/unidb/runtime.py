@@ -225,6 +225,8 @@ class UniDBRuntime:
                     raise RuntimeFailure("unknown_operation", "validate", "Operation is not configured")
                 expected = {
                     m.DBQueryRequest: "query",
+                    m.DBQueryPlanRequest: "query",
+                    m.DBQueryProfileRequest: "query",
                     m.DBEvaluateRequest: "evaluate",
                     m.DBExplainRequest: "explain",
                     m.DBMutateRequest: "mutation",
@@ -235,7 +237,9 @@ class UniDBRuntime:
                 errors = list(Draft202012Validator(op.parameters_schema).iter_errors(request.params))
                 if errors:
                     raise RuntimeFailure("invalid_parameters", "validate", errors[0].message)
-                if op.kind == "mutation":
+                if isinstance(request, (m.DBQueryPlanRequest, m.DBQueryProfileRequest)):
+                    result = self._diagnostic(session, request, op, limits)
+                elif op.kind == "mutation":
                     result = self._mutate(session, request, caller, op, limits)
                 elif op.kind == "scenario":
                     result = self._scenario(session, request, op, limits)
@@ -258,18 +262,59 @@ class UniDBRuntime:
         for key, value in params.items():
             builder.param(key, value)
         native = builder.fetch_all()
-        if expected and native.columns != expected:
-            raise RuntimeFailure("result_contract", "query", "Unexpected result columns")
+        return self._query_result(native, limits, expected)
+
+    def _query_result(self, native, limits, expected=None, profile=False):
+        columns = native.columns
+        source = "native"
+        if profile and not native and not columns and expected:
+            columns, source = expected, "catalog"
+        if expected and columns != expected:
+            raise RuntimeFailure("result_contract", "profile" if profile else "query", "Unexpected result columns")
         rows = [encode(row) for row in native[: limits["max_rows"]]]
         truncated = len(native) > limits["max_rows"]
         return {
-            "columns": native.columns,
+            "columns": columns,
+            **({"columns_source": source} if profile else {}),
             "rows": rows,
             "returned_count": len(rows),
             "truncated": truncated,
             "complete": not truncated,
             "warnings": [{"source": "native", "code": w.code, "message": w.message} for w in native.warnings],
         }
+
+    def _diagnostic(self, session, request, op, limits):
+        planning = isinstance(request, m.DBQueryPlanRequest)
+        stage = "plan" if planning else "profile"
+        if planning and set(request.limits or {}) - {"max_input_bytes", "max_output_bytes"}:
+            raise RuntimeFailure("unsupported_limit", "validate", "Planning supports only input/output byte limits")
+        builder = session.query_with(op.query).params(request.params)
+        try:
+            if planning:
+                native = builder.explain()
+            else:
+                rows, native = (
+                    builder.timeout(limits["timeout_ms"] / 1000).max_memory(limits["max_query_memory_bytes"]).profile()
+                )
+        except Exception as exc:
+            raise RuntimeFailure("native_error", stage, str(exc)) from exc
+        try:
+            if planning:
+                return {
+                    "executed": False,
+                    "plan": encode(native),
+                    "parameter_values_applied": False,
+                    "planning_timeout_enforced": False,
+                    "planning_memory_enforced": False,
+                    "enforced_limits": {key: limits[key] for key in ("max_input_bytes", "max_output_bytes")},
+                }
+            return {
+                "executed": True,
+                "query": self._query_result(rows, limits, op.columns, profile=True),
+                "profile": dict(encode(native), query_metrics=encode(rows.metrics)),
+            }
+        except (ValueError, TypeError) as exc:
+            raise RuntimeFailure("serialization_failure", "serialize", str(exc)) from exc
 
     def _logic(self, scope, program, params, limits, explain=False, expected=None):
         if explain:
@@ -532,6 +577,26 @@ class UniDBRuntime:
                 "raw_operations_enabled": self.config.raw_operations_enabled,
                 "views": ["live", "scratch"],
                 "ordinary_receipts": "same_transaction",
+                "diagnostics": {
+                    "query_plan": {
+                        "executed": False,
+                        "parameter_values_applied": False,
+                        "planning_timeout_enforced": False,
+                        "planning_memory_enforced": False,
+                        "supported_limits": ["max_input_bytes", "max_output_bytes"],
+                    },
+                    "query_profile": {
+                        "executed": True,
+                        "read_only": True,
+                        "supported_limits": [
+                            "timeout_ms",
+                            "max_query_memory_bytes",
+                            "max_rows",
+                            "max_input_bytes",
+                            "max_output_bytes",
+                        ],
+                    },
+                },
             }
         if isinstance(request, m.DBOperationStatusRequest):
             key = (

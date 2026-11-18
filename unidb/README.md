@@ -48,6 +48,24 @@ DDL/index/flush and native bulk loads use separate bookkeeping and do not promis
 
 Timeout, memory, input/output bytes, row count, and mutation statement count are bounded. Requests can only reduce configured limits. There are no automatic conflict retries. Native values use explicit serializers, including tagged identifiers and integers beyond JSON's exact number range. Explanations retain native evidence; oversized proofs fail rather than being silently trimmed.
 
+## Query diagnostics
+
+`DBQueryPlanRequest` and `DBQueryProfileRequest` select existing catalog operations of kind `query`. They use the same request IDs, parameters, provenance, and live-view validation as named reads. Neither requires an operation ID or creates an execution receipt.
+
+Planning returns `executed: false` and native plan text, warnings, cost estimates, index usage, and suggestions. Uni-DB 5.2.1 plans the query template: parameter values do not specialize its estimates. The response explicitly reports `parameter_values_applied: false`, `planning_timeout_enforced: false`, and `planning_memory_enforced: false`. Only input/output byte-limit reductions are accepted for planning; other requested limits produce `unsupported_limit`.
+
+Profiling executes the named read exactly once, enforcing native timeout and memory bounds. Its response contains `executed: true`, a bounded `query` result, and a `profile` with native operators, timing, memory, and query metrics. Empty native results can omit column names; configured catalog columns are then returned with `columns_source: catalog`. Otherwise their source is `native`. Row truncation does not erase the measurements of the complete native execution. Memory measurements are native operator figures, not process RSS.
+
+The [query diagnostics guild](../showcase/apps/unidb_query_diagnostics.json) composes a deterministic driver with UniDB. It seeds 50 products, captures a plan/profile, adds a BTREE index, then captures both again. The lookup rows stay identical while the measured scan count changes from 50 to one. Timings are reported as observed; the example does not promise lower latency.
+
+Run the complete guild without an LLM:
+
+```bash
+PYTHONPATH=unidb/src:showcase/src python unidb/examples/run_query_diagnostics.py
+```
+
+The runner owns a disposable temporary binding and explicitly closes the resolver before guild shutdown. Success and failure are typed terminal results; guild routes set completion/error status and produce the user presentation. Optional tool schemas are `DBQueryPlanArguments` and `DBQueryProfileArguments`; configure them in the embedding guild's toolset and routes. The existing assistant's 15 default tools remain unchanged.
+
 ## Optional LLM tools
 
 Install the module's `tools` extra to use `UniDBToolsManagerPlugin` and `UniDBToolAdapter`. These are guild adapters; the database agent itself does not depend on an LLM. Argument schemas omit protocol identities, the adapter supplies them, and results retain the provider's actual tool-call ID and `ToolMessage` history. The [showcase](../showcase/apps/unidb_assistant.json) demonstrates one tool call per reasoning turn. Unknown or committed failure outcomes go to reconciliation without an automatic model retry.

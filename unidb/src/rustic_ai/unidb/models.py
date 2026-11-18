@@ -127,6 +127,14 @@ class DBQueryRequest(NamedRequest):
     pass
 
 
+class DBQueryPlanRequest(NamedRequest):
+    pass
+
+
+class DBQueryProfileRequest(NamedRequest):
+    pass
+
+
 class DBEvaluateRequest(NamedRequest):
     pass
 
@@ -385,4 +393,12 @@ class InsertVerticesResponse(Response):
 
 
 class InsertEdgesResponse(Response):
+    pass
+
+
+class DBQueryPlanResponse(Response):
+    pass
+
+
+class DBQueryProfileResponse(Response):
     pass

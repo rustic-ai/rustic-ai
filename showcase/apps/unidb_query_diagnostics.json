@@ -1,0 +1,316 @@
+{
+  "name": "UniDB Query Diagnostics",
+  "description": "Deterministic plan/profile comparison around a BTREE index",
+  "version": "v1",
+  "exposure": "private",
+  "author_id": "dummyuserid",
+  "intro_msg": "Run the deterministic index comparison using the accompanying example runner.",
+  "spec": {
+    "name": "UniDB Query Diagnostics",
+    "description": "Deterministic plan/profile comparison around a BTREE index",
+    "agents": [
+      {
+        "id": "diagnostics-db",
+        "name": "Diagnostics database",
+        "description": "Native typed database capability",
+        "class_name": "rustic_ai.unidb.agent.UniDBAgent",
+        "listen_to_default_topic": false,
+        "additional_topics": [
+          "diagnostics.db.requests"
+        ],
+        "properties": {
+          "binding_id": "diagnostics",
+          "operation_catalog": {
+            "revision": "diagnostics-v1",
+            "operations": [
+              {
+                "name": "seed_products",
+                "kind": "mutation",
+                "parameters_schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "products"
+                  ],
+                  "properties": {
+                    "products": {
+                      "type": "array",
+                      "minItems": 50,
+                      "maxItems": 50,
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "ext_id",
+                          "name"
+                        ],
+                        "properties": {
+                          "ext_id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "statements": [
+                  {
+                    "kind": "cypher",
+                    "text": "UNWIND $products AS p CREATE (:Product {ext_id:p.ext_id,name:p.name})"
+                  }
+                ]
+              },
+              {
+                "name": "find_product",
+                "kind": "query",
+                "parameters_schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "name"
+                  ],
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "query": "MATCH (p:Product) WHERE p.name=$name RETURN p.name AS name",
+                "columns": [
+                  "name"
+                ]
+              }
+            ]
+          }
+        },
+        "dependency_map": {
+          "unidb": {
+            "class_name": "rustic_ai.unidb.resolver.UniDBResolver",
+            "properties": {
+              "binding_id": "diagnostics",
+              "open_mode": "temporary",
+              "native_config": {
+                "wal_enabled": true,
+                "strict_schema": true
+              },
+              "bootstrap": {
+                "policy": "apply_to_new",
+                "revision": "diagnostics-v1",
+                "schema": {
+                  "labels": [
+                    {
+                      "name": "Product",
+                      "properties": [
+                        {
+                          "name": "name",
+                          "type": "string"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "diagnostics-driver",
+        "name": "Diagnostics driver",
+        "description": "Sequential disposable index-comparison workflow",
+        "class_name": "rustic_ai.showcase.unidb_query_diagnostics.IndexComparisonDriver",
+        "listen_to_default_topic": false,
+        "additional_topics": [
+          "diagnostics.start",
+          "diagnostics.observations"
+        ]
+      }
+    ],
+    "routes": {
+      "steps": [
+        {
+          "agent": {
+            "id": "diagnostics-driver",
+            "name": "Diagnostics driver"
+          },
+          "message_format": "rustic_ai.unidb.models.DBMutateRequest",
+          "destination": {
+            "topics": "diagnostics.db.requests"
+          },
+          "route_times": -1
+        },
+        {
+          "agent": {
+            "id": "diagnostics-db",
+            "name": "Diagnostics database"
+          },
+          "message_format": "rustic_ai.unidb.models.DBMutateResponse",
+          "destination": {
+            "topics": "diagnostics.observations"
+          },
+          "route_times": -1
+        },
+        {
+          "agent": {
+            "id": "diagnostics-driver",
+            "name": "Diagnostics driver"
+          },
+          "message_format": "rustic_ai.unidb.models.FlushRequest",
+          "destination": {
+            "topics": "diagnostics.db.requests"
+          },
+          "route_times": -1
+        },
+        {
+          "agent": {
+            "id": "diagnostics-db",
+            "name": "Diagnostics database"
+          },
+          "message_format": "rustic_ai.unidb.models.FlushResponse",
+          "destination": {
+            "topics": "diagnostics.observations"
+          },
+          "route_times": -1
+        },
+        {
+          "agent": {
+            "id": "diagnostics-driver",
+            "name": "Diagnostics driver"
+          },
+          "message_format": "rustic_ai.unidb.models.CreateScalarIndexRequest",
+          "destination": {
+            "topics": "diagnostics.db.requests"
+          },
+          "route_times": -1
+        },
+        {
+          "agent": {
+            "id": "diagnostics-db",
+            "name": "Diagnostics database"
+          },
+          "message_format": "rustic_ai.unidb.models.CreateScalarIndexResponse",
+          "destination": {
+            "topics": "diagnostics.observations"
+          },
+          "route_times": -1
+        },
+        {
+          "agent": {
+            "id": "diagnostics-driver",
+            "name": "Diagnostics driver"
+          },
+          "message_format": "rustic_ai.unidb.models.DBQueryPlanRequest",
+          "destination": {
+            "topics": "diagnostics.db.requests"
+          },
+          "route_times": -1
+        },
+        {
+          "agent": {
+            "id": "diagnostics-db",
+            "name": "Diagnostics database"
+          },
+          "message_format": "rustic_ai.unidb.models.DBQueryPlanResponse",
+          "destination": {
+            "topics": "diagnostics.observations"
+          },
+          "route_times": -1
+        },
+        {
+          "agent": {
+            "id": "diagnostics-driver",
+            "name": "Diagnostics driver"
+          },
+          "message_format": "rustic_ai.unidb.models.DBQueryProfileRequest",
+          "destination": {
+            "topics": "diagnostics.db.requests"
+          },
+          "route_times": -1
+        },
+        {
+          "agent": {
+            "id": "diagnostics-db",
+            "name": "Diagnostics database"
+          },
+          "message_format": "rustic_ai.unidb.models.DBQueryProfileResponse",
+          "destination": {
+            "topics": "diagnostics.observations"
+          },
+          "route_times": -1
+        },
+        {
+          "agent": {
+            "id": "diagnostics-db",
+            "name": "Diagnostics database"
+          },
+          "message_format": "rustic_ai.unidb.models.DBFailure",
+          "destination": {
+            "topics": "diagnostics.observations"
+          },
+          "route_times": -1
+        },
+        {
+          "agent": {
+            "id": "diagnostics-driver",
+            "name": "Diagnostics driver"
+          },
+          "message_format": "rustic_ai.showcase.unidb_query_diagnostics.IndexComparisonResult",
+          "route_times": -1,
+          "process_status": "completed",
+          "destination": {
+            "topics": "diagnostics.results"
+          }
+        },
+        {
+          "agent": {
+            "id": "diagnostics-driver",
+            "name": "Diagnostics driver"
+          },
+          "message_format": "rustic_ai.showcase.unidb_query_diagnostics.IndexComparisonResult",
+          "route_times": -1,
+          "process_status": "completed",
+          "destination": {
+            "topics": "user_message_broadcast"
+          },
+          "transformer": {
+            "style": "simple",
+            "output_format": "rustic_ai.core.ui_protocol.types.TextFormat",
+            "expression": "{\"text\": $string($)}"
+          }
+        },
+        {
+          "agent": {
+            "id": "diagnostics-driver",
+            "name": "Diagnostics driver"
+          },
+          "message_format": "rustic_ai.showcase.unidb_query_diagnostics.IndexComparisonFailed",
+          "route_times": -1,
+          "process_status": "error",
+          "destination": {
+            "topics": "diagnostics.results"
+          }
+        },
+        {
+          "agent": {
+            "id": "diagnostics-driver",
+            "name": "Diagnostics driver"
+          },
+          "message_format": "rustic_ai.showcase.unidb_query_diagnostics.IndexComparisonFailed",
+          "route_times": -1,
+          "process_status": "error",
+          "destination": {
+            "topics": "user_message_broadcast"
+          },
+          "transformer": {
+            "style": "simple",
+            "output_format": "rustic_ai.core.ui_protocol.types.TextFormat",
+            "expression": "{\"text\": $string($)}"
+          }
+        }
+      ]
+    }
+  }
+}

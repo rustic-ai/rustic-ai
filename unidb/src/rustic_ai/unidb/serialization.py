@@ -8,6 +8,33 @@ from typing import Any
 
 import uni_db
 
+QUERY_METRIC_FIELDS = (
+    "parse_time_ms",
+    "plan_time_ms",
+    "exec_time_ms",
+    "total_time_ms",
+    "rows_returned",
+    "rows_scanned",
+    "bytes_read",
+    "plan_cache_hit",
+    "storage_reads",
+    "cache_hits",
+    "branch_scans",
+    "snapshot_reads",
+    "index_scans",
+    "index_comparisons",
+    "scans_reported",
+    "vector_index_scans",
+    "fts_index_scans",
+    "searches_reported",
+    "lance_iops",
+    "subquery_executions",
+    "physical_plans",
+    "physical_plan_time_ms",
+    "shortest_path_searches",
+    "shortest_path_adjacency_reads",
+)
+
 
 def encode(value: Any) -> Any:
     if value is None or isinstance(value, (str, bool)):
@@ -36,6 +63,26 @@ def encode(value: Any) -> Any:
 
 
 def _encode_native(value: Any) -> Any:
+    if isinstance(value, uni_db.ExplainOutput):
+        return {
+            "plan_text": value.plan_text,
+            "warnings": encode(value.warnings),
+            "cost_estimates": encode(value.cost_estimates),
+            "index_usage": encode(value.index_usage),
+            "suggestions": encode(value.suggestions),
+        }
+    if isinstance(value, uni_db.ProfileOutput):
+        return {
+            "total_time_ms": value.total_time_ms,
+            "peak_memory_bytes": encode(value.peak_memory_bytes),
+            "plan_text": value.plan_text,
+            "operators": encode(value.operators),
+            "logical_planning_ms": value.logical_planning_ms,
+            "physical_planning_ms": value.physical_planning_ms,
+            "physical_plans": value.physical_plans,
+        }
+    if isinstance(value, uni_db.QueryMetrics):
+        return {key: encode(getattr(value, key)) for key in QUERY_METRIC_FIELDS}
     if isinstance(value, uni_db.Node):
         return {"$type": "node", "id": encode(value.id), "labels": value.labels, "properties": encode(value.properties)}
     if isinstance(value, uni_db.Edge):

@@ -19,7 +19,7 @@ from rustic_ai.core.guild.agent_ext.depends.llm.models import (
 )
 from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder
 from rustic_ai.core.guild.dsl import AgentSpec, GuildSpec
-from rustic_ai.unidb.tools import PR_OPERATIONS, QueryArguments
+from rustic_ai.unidb.tools import NAMED_OPERATIONS, PR_OPERATIONS, QueryArguments
 
 
 class ScriptedLLM(LLM):
@@ -104,6 +104,45 @@ class ReconcileLLM(ScriptedLLM):
         )
 
 
+class DiagnosticPlanLLM(ScriptedLLM):
+    family = "DBQueryPlan"
+    tool = "query_plan"
+
+    def completion(self, prompt, model=None):
+        self.prompts.append(prompt)
+        if len(self.prompts) == 1:
+            message = AssistantMessage(
+                tool_calls=[
+                    {
+                        "id": "diagnostic-call",
+                        "type": "function",
+                        "function": {"name": self.tool, "arguments": '{"operation":"constant","params":{"value":1}}'},
+                    }
+                ]
+            )
+            finish = "tool_calls"
+        else:
+            observation = prompt.messages[-1]
+            assert isinstance(observation, ToolMessage)
+            assert observation.tool_call_id == "diagnostic-call"
+            result = json.loads(observation.content)["result"]
+            assert result["executed"] == (self.family == "DBQueryProfile")
+            if result["executed"]:
+                assert result["query"]["rows"] == [{"value": 1}]
+            else:
+                assert not result["planning_timeout_enforced"]
+            message = AssistantMessage(content="Database inspected.")
+            finish = "stop"
+        return ChatCompletionResponse(
+            id="diagnostic", created=0, model="fake", choices=[Choice(index=0, message=message, finish_reason=finish)]
+        )
+
+
+class DiagnosticProfileLLM(DiagnosticPlanLLM):
+    family = "DBQueryProfile"
+    tool = "query_profile"
+
+
 class ScriptedResolver(DependencyResolver[LLM]):
     llm_class = ScriptedLLM
 
@@ -114,7 +153,7 @@ class ScriptedResolver(DependencyResolver[LLM]):
 def test_tool_schemas_hide_framework_identifiers():
     from rustic_ai.unidb import tools
 
-    for name in PR_OPERATIONS:
+    for name in PR_OPERATIONS + NAMED_OPERATIONS:
         schema = getattr(tools, name + "Arguments").model_json_schema()
         assert not set(schema["properties"]) & {
             "request_id",
@@ -128,12 +167,52 @@ def test_tool_schemas_hide_framework_identifiers():
         QueryArguments(query="RETURN 1", principal="administrator")
 
 
-@pytest.mark.parametrize("llm_class,turns", [(ScriptedLLM, 2), (MultiStepLLM, 3), (ReconcileLLM, 1)])
+@pytest.mark.parametrize(
+    "llm_class,turns",
+    [(ScriptedLLM, 2), (MultiStepLLM, 3), (ReconcileLLM, 1), (DiagnosticPlanLLM, 2), (DiagnosticProfileLLM, 2)],
+)
 def test_complete_showcase_tool_loop_with_deterministic_llm(tmp_path, llm_class, turns, monkeypatch):
     path = Path(__file__).resolve().parents[2] / "showcase/apps/unidb_assistant.json"
     spec = json.loads(path.read_text())["spec"]
     spec["dependency_map"]["filesystem"]["properties"]["path_base"] = str(tmp_path)
     spec["dependency_map"]["llm"] = {"class_name": __name__ + ".ScriptedResolver", "properties": {}}
+    if issubclass(llm_class, DiagnosticPlanLLM):
+        spec["agents"][1]["properties"]["operation_catalog"] = {
+            "operations": [
+                {
+                    "name": "constant",
+                    "kind": "query",
+                    "query": "RETURN $value AS value",
+                    "columns": ["value"],
+                    "parameters_schema": {
+                        "type": "object",
+                        "additionalProperties": False,
+                        "required": ["value"],
+                        "properties": {"value": {"type": "integer"}},
+                    },
+                }
+            ]
+        }
+        spec["agents"][0]["properties"]["llm_request_wrappers"][0]["toolset"]["tools"].append(
+            {
+                "name": llm_class.tool,
+                "description": "Inspect a named query",
+                "parameter_class": "rustic_ai.unidb.tools." + llm_class.family + "Arguments",
+            }
+        )
+        for producer, format, topic in [
+            ("query-processor", "rustic_ai.unidb.tools." + llm_class.family + "Arguments", "unidb.tool.requests"),
+            ("unidb-tool-adapter", "rustic_ai.unidb.models." + llm_class.family + "Request", "unidb"),
+            ("unidb", "rustic_ai.unidb.models." + llm_class.family + "Response", "unidb.observations"),
+        ]:
+            spec["routes"]["steps"].append(
+                {
+                    "agent": {"id": producer},
+                    "message_format": format,
+                    "destination": {"topics": topic},
+                    "route_times": -1,
+                }
+            )
     agents = [AgentSpec.model_validate(a, context={"require_agent_class": True}) for a in spec["agents"]]
     spec["agents"] = []
     guild = GuildBuilder.from_spec(GuildSpec.model_validate(spec)).launch("demo")

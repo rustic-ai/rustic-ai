@@ -79,6 +79,8 @@ class UniDBAgent(Agent[m.UniDBAgentConfig]):
     dbcapabilities = _handler(m.DBCapabilitiesRequest, m.DBCapabilitiesResponse)
     dbhealth = _handler(m.DBHealthRequest, m.DBHealthResponse)
     dbquery = _handler(m.DBQueryRequest, m.DBQueryResponse)
+    dbqueryplan = _handler(m.DBQueryPlanRequest, m.DBQueryPlanResponse)
+    dbqueryprofile = _handler(m.DBQueryProfileRequest, m.DBQueryProfileResponse)
     dbevaluate = _handler(m.DBEvaluateRequest, m.DBEvaluateResponse)
     dbexplain = _handler(m.DBExplainRequest, m.DBExplainResponse)
     dbmutate = _handler(m.DBMutateRequest, m.DBMutateResponse)

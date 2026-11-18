@@ -43,7 +43,7 @@ PR_OPERATIONS = (
     "InsertVertices",
     "InsertEdges",
 )
-NAMED_OPERATIONS = ("DBQuery", "DBEvaluate", "DBExplain", "DBMutate", "DBScenario")
+NAMED_OPERATIONS = ("DBQuery", "DBEvaluate", "DBExplain", "DBMutate", "DBScenario", "DBQueryPlan", "DBQueryProfile")
 
 
 class ToolArguments(m.StrictModel):

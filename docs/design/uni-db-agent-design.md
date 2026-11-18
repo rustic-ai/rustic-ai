@@ -1,6 +1,6 @@
 # Uni-DB agent: core design, initialization, and message protocol
 
-**Status:** implemented for draft review, 2026-11-17. The v1 models and native runtime are in `unidb/`, pinned to Uni-DB 5.2.1 on Python 3.13. The three JSON cases now contain captured native result payloads. Internal IDs and commit versions are run-specific. The guild-denied exchange remains an application fixture, with its actual `send_error` delivery tested separately.
+**Status:** implemented for review, updated 2026-11-18. The v1 models and native runtime are in `unidb/`, pinned to Uni-DB 5.2.1 on Python 3.13. The three JSON cases now contain captured native result payloads. Internal IDs and commit versions are run-specific. The guild-denied exchange remains an application fixture, with its actual `send_error` delivery tested separately.
 
 This evolves [Nihal’s PR 236](https://github.com/rustic-ai/rustic-ai/pull/236), retaining all 15 operation names while replacing its older `Database` API and wire shapes. No legacy adapters are provided. The [Agentic ERP book](https://github.com/milliondreams/erp_book) informs the business examples; its Uni-DB 3.4.0 observations are not compatibility guarantees.
 
@@ -127,6 +127,8 @@ For v1 scenarios and mutations, the examples use the primary live binding. Snaps
 | `DBCapabilitiesRequest` | `DBCapabilitiesResponse` | Protocol version, observed native features, configured operation surface; guild controls discovery access |
 | `DBHealthRequest` | `DBHealthResponse` | Database lifecycle and readiness, configured durability, outstanding work |
 | `DBQueryRequest` | `DBQueryResponse` | Named parameterized Cypher read |
+| `DBQueryPlanRequest` | `DBQueryPlanResponse` | Native template plan; does not execute the query |
+| `DBQueryProfileRequest` | `DBQueryProfileResponse` | One bounded native read with execution profiling |
 | `DBEvaluateRequest` | `DBEvaluateResponse` | Named Locy evaluation; explicit command results, no durable materialization |
 | `DBExplainRequest` | `DBExplainResponse` | Named native derivation explanation; no invented proof |
 | `DBMutateRequest` | `DBMutateResponse` | Named bounded mutation sequence and checks in one transaction |
@@ -134,7 +136,7 @@ For v1 scenarios and mutations, the examples use the primary live binding. Snaps
 | `DBOperationStatusRequest` | `DBOperationStatusResponse` | Read operation bookkeeping without redispatch; guild controls access |
 | Any rejected execution request | `DBFailure` | Correlated terminal failure or explicit uncertain-effect outcome |
 
-Cypher plan explanation/profile is distinct from a Locy proof. Add a dedicated `DBQueryPlanRequest` when shipping that surface. Bulk loading, rule/schema changes, snapshots, fork promotion, indexes, and maintenance get dedicated administrative/load protocols; they are not hidden inside a generic execution request.
+Cypher plan explanation/profile is distinct from a Locy proof. Dedicated `DBQueryPlanRequest` and `DBQueryProfileRequest` now expose those diagnostics for existing named Cypher query operations. Bulk loading, rule/schema changes, snapshots, fork promotion, indexes, and maintenance get dedicated administrative/load protocols; they are not hidden inside a generic execution request.
 
 Raw Cypher interfaces are optional trusted developer surfaces with separate models. Locy programs are supplied in the catalog. V1 examples disable them. Native `Session.query()` is not a sufficient universal authorization classifier for every statement/procedure. Read-only catalog validation and native access controls must cover the actual supported language, including administrative or side-effectful commands. Do not implement this by checking whether a string starts with `MATCH`.
 
@@ -458,6 +460,38 @@ def price_second_source(ctx, human_terms):
 ```
 
 **Acceptance:** the supplied rule works inside scratch; baseline/after reads have the documented view semantics; scratch commit is refused; cleanup occurs on success/error/cancellation; no primary change after simulation; unauthorized writes fail before native dispatch; approved arguments remain exact; checks/mutation/receipt are atomic; fresh verification reads primary state. Approval authentication and correctness require domain-workflow tests beyond database-agent tests.
+
+### 6.5 Query diagnostics guild
+
+The [composed diagnostic guild](../../showcase/apps/unidb_query_diagnostics.json) contains a deterministic workflow driver and the same reusable UniDB agent. Its [runner](../../unidb/examples/run_query_diagnostics.py) adds a caller, starts the workflow, waits for a terminal result, and explicitly releases the native resolver.
+
+The workflow performs: seed 50 products → flush → query plan → query profile → create a BTREE name index → flush → query plan → query profile → typed comparison. Requests and observations have correlated IDs; duplicates, unexpected observations, and observations after termination are ignored. A database failure produces a typed comparison failure through `send_error`, and guild routes own its `error` status and presentation.
+
+The named query is `MATCH (p:Product) WHERE p.name=$name RETURN p.name AS name`, with `name: widget:12`. The captured lookup returns the same row before and after indexing. Native diagnostics report 50 scanned rows before and one after, along with actual index usage, costs, operators, and timings. Cost estimates and latency need not improve; no synthetic speedup is asserted.
+
+`DBQueryPlanRequest` uses the ordinary named-query catalog, parameters, request/correlation IDs, and supported live view. `result` contains `executed: false`, `plan` (native text, warnings, cost estimates, index usage, suggestions), the enforced input/output byte limits, and three explicit flags: `parameter_values_applied`, `planning_timeout_enforced`, and `planning_memory_enforced`, all false on Uni-DB 5.2.1. Parameters are validated but not interpolated into query text. Explicit unsupported limit requests are refused with `unsupported_limit`; native planning bounds are not advertised.
+
+`DBQueryProfileRequest` executes the named read exactly once using native read-only guards, timeout, and memory bounds. `result` contains `executed: true`, `query` with the existing bounded rows/count/truncation/warnings contract, and `profile` with native plan text, operator statistics, total time, peak memory, logical/physical planning time, physical-plan count, and explicit query metrics. For empty native results with absent column names, declared catalog columns are returned with `columns_source: catalog`; otherwise it is `native`. Metrics describe native execution, even when returned rows are truncated. Native memory figures are not process RSS.
+
+A caller uses the same typed contracts for both diagnostics:
+
+```python
+from rustic_ai.unidb.models import DBQueryPlanRequest, DBQueryProfileRequest
+
+plan = DBQueryPlanRequest(
+    request_id="diagnostics:plan:1", correlation_id="diagnostics:workflow:1",
+    operation="find_product", params={"name": "widget:12"},
+)
+profile = DBQueryProfileRequest(
+    request_id="diagnostics:profile:1", correlation_id="diagnostics:workflow:1",
+    operation="find_product", params={"name": "widget:12"}, limits={"max_rows": 1},
+)
+# Route ctx.send(plan) and ctx.send(profile) to the UniDB request topic.
+```
+
+The corresponding `DBQueryPlanResponse` and `DBQueryProfileResponse` preserve these invocation/correlation IDs, return the configured binding, and include native/catalog provenance. The plan's `result.plan.index_usage` describes planned index use; the profile's `result.profile.query_metrics.index_scans` and `rows_scanned` describe the observed execution. The composed guild exposes a typed final comparison plus a JSON text presentation; the runner prints that captured terminal payload.
+
+Neither diagnostic creates an operation receipt. Their failures use `ctx.send_error(DBFailure)`, with diagnostic execution stages `plan`/`profile` and persistent effect `not_started`. Oversized diagnostic output fails serialization rather than silently trimming evidence. The optional tool bridge supports both diagnostic families with framework-assigned identities and actual provider ToolMessages. Locy planning/profiling and artifact/stream delivery remain future extensions.
 
 ## 7. Implementation plan and acceptance evidence
 
