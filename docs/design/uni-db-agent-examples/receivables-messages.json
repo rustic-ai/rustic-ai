@@ -1,0 +1,341 @@
+{
+  "status": "native_5.2.1_reference_results",
+  "title": "Derived receivables and explanation",
+  "initialization_file": "receivables-init.json",
+  "notes": [
+    "Request/response projections, not complete Rustic Message envelopes.",
+    "Database payloads captured from Uni-DB 5.2.1; versions and internal IDs vary between runs.",
+    "The capability_denied exchange is a guild-owned application fixture, exercised by test_guild_flow.py.",
+    "Runtime sender attribution scopes receipts; authentication belongs to the embedding guild."
+  ],
+  "exchanges": [
+    {
+      "step_id": "record-facts",
+      "request": {
+        "sender": {
+          "id": "demo-ingester",
+          "name": "demo-ingester"
+        },
+        "topics": "db.requests",
+        "format": "rustic_ai.unidb.models.DBMutateRequest",
+        "payload": {
+          "protocol_version": 1,
+          "request_id": "req:invoice-record:1001",
+          "correlation_id": "workflow:receivable:1001",
+          "operation": "record_invoice_payment",
+          "params": {
+            "invoice_id": "invoice:1001",
+            "invoice_amount_cents": 25000,
+            "payment_id": "payment:1001",
+            "payment_amount_cents": 10000
+          },
+          "operation_id": "op:invoice-record:1001"
+        }
+      },
+      "response": {
+        "topics": "db.results",
+        "format": "rustic_ai.unidb.models.DBMutateResponse",
+        "payload": {
+          "protocol_version": 1,
+          "request_id": "req:invoice-record:1001",
+          "correlation_id": "workflow:receivable:1001",
+          "binding_id": "receivables",
+          "outcome": "succeeded",
+          "result": {
+            "operation_id": "op:invoice-record:1001",
+            "effect": "committed",
+            "replayed": false,
+            "statistics": {
+              "nodes_created": 2,
+              "nodes_deleted": 0,
+              "relationships_created": 1,
+              "relationships_deleted": 0,
+              "properties_set": 4,
+              "properties_removed": 0,
+              "labels_added": 2,
+              "labels_removed": 0
+            },
+            "commit": {
+              "version": "6",
+              "rules_promoted": 0,
+              "rule_promotion_errors": []
+            }
+          },
+          "metadata": {
+            "native_version": "5.2.1",
+            "catalog_revision": "receivables-v1",
+            "catalog_digest": "51e0a1b41c01a4557c9fd76db233dbe24b3a4ef4c78f41a9f92d8e070b005030",
+            "rule_program_ids": [
+              "receivables-rules-v1"
+            ],
+            "rule_digest": "63158214fc516028069b5a5f38401efb2bfb8af56cf16f7615142e33dfd84fc2",
+            "view": {
+              "kind": "live",
+              "snapshot_id": null
+            }
+          }
+        }
+      },
+      "expected_invariants": [],
+      "evidence": "native_runtime"
+    },
+    {
+      "step_id": "derive-balance",
+      "request": {
+        "sender": {
+          "id": "demo-reasoner",
+          "name": "demo-reasoner"
+        },
+        "topics": "db.requests",
+        "format": "rustic_ai.unidb.models.DBEvaluateRequest",
+        "payload": {
+          "protocol_version": 1,
+          "request_id": "req:invoice-balance:1001",
+          "correlation_id": "workflow:receivable:1001",
+          "operation": "invoice_balance",
+          "params": {
+            "invoice_id": "invoice:1001"
+          }
+        }
+      },
+      "response": {
+        "topics": "db.results",
+        "format": "rustic_ai.unidb.models.DBEvaluateResponse",
+        "payload": {
+          "protocol_version": 1,
+          "request_id": "req:invoice-balance:1001",
+          "correlation_id": "workflow:receivable:1001",
+          "binding_id": "receivables",
+          "outcome": "succeeded",
+          "result": {
+            "commands": [
+              {
+                "kind": "query",
+                "columns": [
+                  "invoice_id",
+                  "balance_cents"
+                ],
+                "rows": [
+                  {
+                    "invoice_id": "invoice:1001",
+                    "balance_cents": 15000
+                  }
+                ],
+                "returned_count": 1,
+                "truncated": false,
+                "complete": true
+              }
+            ],
+            "materialized": false,
+            "rule_program_ids": [
+              "receivables-rules-v1"
+            ],
+            "warnings": [],
+            "compile_warnings": []
+          },
+          "metadata": {
+            "native_version": "5.2.1",
+            "catalog_revision": "receivables-v1",
+            "catalog_digest": "51e0a1b41c01a4557c9fd76db233dbe24b3a4ef4c78f41a9f92d8e070b005030",
+            "rule_program_ids": [
+              "receivables-rules-v1"
+            ],
+            "rule_digest": "63158214fc516028069b5a5f38401efb2bfb8af56cf16f7615142e33dfd84fc2",
+            "view": {
+              "kind": "live",
+              "snapshot_id": null
+            }
+          }
+        }
+      },
+      "expected_invariants": [
+        "The balance is 25000 - 10000 = 15000 cents.",
+        "No stored balance or status property is updated."
+      ],
+      "evidence": "native_runtime"
+    },
+    {
+      "step_id": "explain-balance",
+      "request": {
+        "sender": {
+          "id": "demo-reasoner",
+          "name": "demo-reasoner"
+        },
+        "topics": "db.requests",
+        "format": "rustic_ai.unidb.models.DBExplainRequest",
+        "payload": {
+          "protocol_version": 1,
+          "request_id": "req:invoice-proof:1001",
+          "correlation_id": "workflow:receivable:1001",
+          "operation": "explain_invoice_balance",
+          "params": {
+            "invoice_id": "invoice:1001"
+          }
+        }
+      },
+      "response": {
+        "topics": "db.results",
+        "format": "rustic_ai.unidb.models.DBExplainResponse",
+        "payload": {
+          "protocol_version": 1,
+          "request_id": "req:invoice-proof:1001",
+          "correlation_id": "workflow:receivable:1001",
+          "binding_id": "receivables",
+          "outcome": "succeeded",
+          "result": {
+            "derivation_found": true,
+            "proof": {
+              "media_type": "application/json",
+              "value": {
+                "type": "explain",
+                "tree": {
+                  "rule": "invoice_balance",
+                  "clause_index": 0,
+                  "priority": null,
+                  "bindings": {},
+                  "along_values": {},
+                  "children": [
+                    {
+                      "rule": "invoice_balance",
+                      "clause_index": 0,
+                      "priority": null,
+                      "bindings": {
+                        "invoice": {
+                          "$type": "node",
+                          "id": {
+                            "$type": "vid",
+                            "value": "32"
+                          },
+                          "labels": [
+                            "Invoice"
+                          ],
+                          "properties": {
+                            "amount_cents": 25000,
+                            "ext_id": "invoice:1001"
+                          }
+                        },
+                        "balance_cents": 15000
+                      },
+                      "along_values": {},
+                      "children": [
+                        {
+                          "rule": "payment_total",
+                          "clause_index": 0,
+                          "priority": null,
+                          "bindings": {
+                            "invoice": {
+                              "$type": "node",
+                              "id": {
+                                "$type": "vid",
+                                "value": "32"
+                              },
+                              "labels": [
+                                "Invoice"
+                              ],
+                              "properties": {
+                                "amount_cents": 25000,
+                                "ext_id": "invoice:1001"
+                              }
+                            },
+                            "paid_cents": 10000
+                          },
+                          "along_values": {},
+                          "children": [],
+                          "graph_fact": "[iter=0] {invoice: Node(32), paid_cents: 10000}",
+                          "proof_probability": 1.0,
+                          "neural_calls": []
+                        }
+                      ],
+                      "graph_fact": "[iter=0] {balance_cents: 15000, invoice: Node(32)}",
+                      "proof_probability": 1.0,
+                      "neural_calls": []
+                    }
+                  ],
+                  "graph_fact": null,
+                  "proof_probability": null,
+                  "neural_calls": []
+                }
+              }
+            },
+            "truncated": false,
+            "warnings": [],
+            "compile_warnings": []
+          },
+          "metadata": {
+            "native_version": "5.2.1",
+            "catalog_revision": "receivables-v1",
+            "catalog_digest": "51e0a1b41c01a4557c9fd76db233dbe24b3a4ef4c78f41a9f92d8e070b005030",
+            "rule_program_ids": [
+              "receivables-rules-v1"
+            ],
+            "rule_digest": "63158214fc516028069b5a5f38401efb2bfb8af56cf16f7615142e33dfd84fc2",
+            "view": {
+              "kind": "live",
+              "snapshot_id": null
+            }
+          }
+        }
+      },
+      "expected_invariants": [
+        "Proof contents must come from the native engine, not a generated narrative.",
+        "The shown native tree is an illustrative projection, not an assertion of exact engine output."
+      ],
+      "evidence": "native_runtime"
+    },
+    {
+      "step_id": "missing-derivation",
+      "request": {
+        "sender": {
+          "id": "demo-reasoner",
+          "name": "demo-reasoner"
+        },
+        "topics": "db.requests",
+        "format": "rustic_ai.unidb.models.DBExplainRequest",
+        "payload": {
+          "protocol_version": 1,
+          "request_id": "req:invoice-proof:missing",
+          "correlation_id": "workflow:receivable:1001",
+          "operation": "explain_invoice_balance",
+          "params": {
+            "invoice_id": "invoice:missing"
+          }
+        }
+      },
+      "response": {
+        "topics": "error_topic",
+        "format": "rustic_ai.unidb.models.DBFailure",
+        "payload": {
+          "protocol_version": 1,
+          "request_id": "req:invoice-proof:missing",
+          "correlation_id": "workflow:receivable:1001",
+          "binding_id": "receivables",
+          "outcome": "failed",
+          "error": {
+            "code": "no_derivation",
+            "stage": "explain",
+            "retryable": false,
+            "effect": "not_started",
+            "message": "No derivation exists for this key",
+            "details": {}
+          },
+          "metadata": {
+            "native_version": "5.2.1",
+            "catalog_revision": "receivables-v1",
+            "catalog_digest": "51e0a1b41c01a4557c9fd76db233dbe24b3a4ef4c78f41a9f92d8e070b005030",
+            "rule_program_ids": [
+              "receivables-rules-v1"
+            ],
+            "rule_digest": "63158214fc516028069b5a5f38401efb2bfb8af56cf16f7615142e33dfd84fc2",
+            "view": {
+              "kind": "live",
+              "snapshot_id": null
+            }
+          }
+        },
+        "emission_api": "ProcessContext.send_error"
+      },
+      "expected_invariants": [],
+      "evidence": "native_runtime"
+    }
+  ]
+}

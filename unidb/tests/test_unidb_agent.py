@@ -1,583 +1,250 @@
-"""Tests for UniDBAgent."""
+"""Native v1 integration: storage, rules, transactions, recovery, and retained operations."""
 
-from unittest.mock import MagicMock, patch
+from copy import deepcopy
+import json
+from pathlib import Path
 
 import pytest
-
-from rustic_ai.core.agents.commons.message_formats import ErrorMessage
-from rustic_ai.core.guild.builders import AgentBuilder
-from rustic_ai.core.messaging.core.message import AgentTag, Message
-from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
-from rustic_ai.core.utils.priority import Priority
-from rustic_ai.unidb.agent import UniDBAgent
-from rustic_ai.unidb.models import (
-    AddPropertyRequest,
-    AddPropertyResponse,
-    CreateEdgeTypeRequest,
-    CreateEdgeTypeResponse,
-    CreateLabelRequest,
-    CreateLabelResponse,
-    CreateScalarIndexRequest,
-    CreateScalarIndexResponse,
-    CreateVectorIndexRequest,
-    CreateVectorIndexResponse,
-    EdgeData,
-    ExecuteRequest,
-    ExecuteResponse,
-    FlushRequest,
-    FlushResponse,
-    GetLabelInfoRequest,
-    GetLabelInfoResponse,
-    GetSchemaRequest,
-    GetSchemaResponse,
-    IndexType,
-    InsertEdgesRequest,
-    InsertEdgesResponse,
-    InsertVerticesRequest,
-    InsertVerticesResponse,
-    ListEdgeTypesRequest,
-    ListEdgeTypesResponse,
-    ListLabelsRequest,
-    ListLabelsResponse,
-    PropertyType,
-    QueryRequest,
-    QueryResponse,
-    UniDBAgentConfig,
-    VectorMetric,
-    VectorSearchRequest,
-    VectorSearchResponse,
-)
-
-from rustic_ai.testing.helpers import wrap_agent_for_testing
-
-
-@pytest.fixture
-def mock_database():
-    """Create a mock Database instance."""
-    mock_db = MagicMock()
-    mock_db.create_label = MagicMock()
-    mock_db.create_edge_type = MagicMock()
-    mock_db.add_property = MagicMock()
-    mock_db.create_scalar_index = MagicMock()
-    mock_db.create_vector_index = MagicMock()
-    mock_db.list_labels = MagicMock(return_value=["Label1", "Label2"])
-    mock_db.list_edge_types = MagicMock(return_value=["KNOWS", "LIKES"])
-    mock_db.get_label_info = MagicMock(return_value={"name": "string", "age": "int64"})
-    mock_db.get_schema = MagicMock(return_value={"labels": ["Label1"], "edges": ["KNOWS"]})
-    mock_db.execute = MagicMock(return_value=5)
-    mock_db.query = MagicMock(return_value=[{"name": "Alice", "age": 30}])
-    mock_db.flush = MagicMock()
-    mock_db.bulk_insert_vertices = MagicMock()
-    mock_db.bulk_insert_edges = MagicMock()
-    return mock_db
-
-
-@pytest.fixture
-def agent_spec(tmp_path):
-    """Create an agent spec for UniDBAgent."""
-    return (
-        AgentBuilder(UniDBAgent)
-        .set_id("unidb_agent")
-        .set_name("UniDB Agent")
-        .set_description("Test UniDB Agent")
-        .set_properties(UniDBAgentConfig(db_path=str(tmp_path / "test.db")))
-        .build_spec()
-    )
-
-
-def _build_message(generator, payload, fmt):
-    """Helper to build a test message."""
-    return Message(
-        id_obj=generator.get_id(Priority.NORMAL),
-        topics="default_topic",
-        sender=AgentTag(id="tester", name="tester"),
-        payload=payload,
-        format=fmt,
-    )
-
-
-class TestUniDBAgent:
-    """Tests for UniDBAgent."""
-
-    def test_create_label_success(self, agent_spec, generator, mock_database):
-        """Test successful label creation."""
-        with patch("rustic_ai.unidb.agent.Database", return_value=mock_database):
-            agent, results = wrap_agent_for_testing(agent_spec)
-
-            msg = _build_message(
-                generator,
-                CreateLabelRequest(label="Person").model_dump(),
-                get_qualified_class_name(CreateLabelRequest),
-            )
-
-            agent._on_message(msg)
-
-            assert len(results) == 1
-            response = CreateLabelResponse.model_validate(results[0].payload)
-            assert response.label == "Person"
-            assert response.success is True
-            mock_database.create_label.assert_called_once_with("Person")
-
-    def test_create_label_error(self, agent_spec, generator, mock_database):
-        """Test label creation with error."""
-        mock_database.create_label.side_effect = Exception("Label already exists")
-
-        with patch("rustic_ai.unidb.agent.Database", return_value=mock_database):
-            agent, results = wrap_agent_for_testing(agent_spec)
-
-            msg = _build_message(
-                generator,
-                CreateLabelRequest(label="Person").model_dump(),
-                get_qualified_class_name(CreateLabelRequest),
-            )
-
-            agent._on_message(msg)
-
-            assert len(results) == 1
-            assert results[0].format == get_qualified_class_name(ErrorMessage)
-            error = ErrorMessage.model_validate(results[0].payload)
-            assert error.error_type == "CreateLabelError"
-            assert "Label already exists" in error.error_message
-
-    def test_create_edge_type_success(self, agent_spec, generator, mock_database):
-        """Test successful edge type creation."""
-        with patch("rustic_ai.unidb.agent.Database", return_value=mock_database):
-            agent, results = wrap_agent_for_testing(agent_spec)
-
-            msg = _build_message(
-                generator,
-                CreateEdgeTypeRequest(
-                    edge_type="KNOWS",
-                    source_labels=["Person"],
-                    target_labels=["Person"],
-                ).model_dump(),
-                get_qualified_class_name(CreateEdgeTypeRequest),
-            )
-
-            agent._on_message(msg)
-
-            assert len(results) == 1
-            response = CreateEdgeTypeResponse.model_validate(results[0].payload)
-            assert response.edge_type == "KNOWS"
-            assert response.success is True
-            mock_database.create_edge_type.assert_called_once_with("KNOWS", ["Person"], ["Person"])
-
-    def test_add_property_success(self, agent_spec, generator, mock_database):
-        """Test successful property addition."""
-        with patch("rustic_ai.unidb.agent.Database", return_value=mock_database):
-            agent, results = wrap_agent_for_testing(agent_spec)
-
-            msg = _build_message(
-                generator,
-                AddPropertyRequest(
-                    label="Person",
-                    property_name="name",
-                    property_type=PropertyType.STRING,
-                    nullable=False,
-                ).model_dump(),
-                get_qualified_class_name(AddPropertyRequest),
-            )
-
-            agent._on_message(msg)
-
-            assert len(results) == 1
-            response = AddPropertyResponse.model_validate(results[0].payload)
-            assert response.label == "Person"
-            assert response.property_name == "name"
-            assert response.success is True
-            mock_database.add_property.assert_called_once_with("Person", "name", "string", False)
-
-    def test_add_vector_property_success(self, agent_spec, generator, mock_database):
-        """Test successful vector property addition."""
-        with patch("rustic_ai.unidb.agent.Database", return_value=mock_database):
-            agent, results = wrap_agent_for_testing(agent_spec)
-
-            msg = _build_message(
-                generator,
-                AddPropertyRequest(
-                    label="Document",
-                    property_name="embedding",
-                    property_type=PropertyType.FLOAT64,
-                    vector_dimension=384,
-                ).model_dump(),
-                get_qualified_class_name(AddPropertyRequest),
-            )
-
-            agent._on_message(msg)
-
-            assert len(results) == 1
-            response = AddPropertyResponse.model_validate(results[0].payload)
-            assert response.label == "Document"
-            assert response.property_name == "embedding"
-            mock_database.add_property.assert_called_once_with("Document", "embedding", "vector[384]", True)
-
-    def test_create_scalar_index_success(self, agent_spec, generator, mock_database):
-        """Test successful scalar index creation."""
-        with patch("rustic_ai.unidb.agent.Database", return_value=mock_database):
-            agent, results = wrap_agent_for_testing(agent_spec)
-
-            msg = _build_message(
-                generator,
-                CreateScalarIndexRequest(
-                    label="Person",
-                    property_name="name",
-                    index_type=IndexType.BTREE,
-                ).model_dump(),
-                get_qualified_class_name(CreateScalarIndexRequest),
-            )
-
-            agent._on_message(msg)
-
-            assert len(results) == 1
-            response = CreateScalarIndexResponse.model_validate(results[0].payload)
-            assert response.label == "Person"
-            assert response.property_name == "name"
-            mock_database.create_scalar_index.assert_called_once_with("Person", "name", "btree")
-
-    def test_create_vector_index_success(self, agent_spec, generator, mock_database):
-        """Test successful vector index creation."""
-        with patch("rustic_ai.unidb.agent.Database", return_value=mock_database):
-            agent, results = wrap_agent_for_testing(agent_spec)
-
-            msg = _build_message(
-                generator,
-                CreateVectorIndexRequest(
-                    label="Document",
-                    property_name="embedding",
-                    metric=VectorMetric.COSINE,
-                ).model_dump(),
-                get_qualified_class_name(CreateVectorIndexRequest),
-            )
-
-            agent._on_message(msg)
-
-            assert len(results) == 1
-            response = CreateVectorIndexResponse.model_validate(results[0].payload)
-            assert response.label == "Document"
-            assert response.property_name == "embedding"
-            assert response.metric == "cosine"
-            mock_database.create_vector_index.assert_called_once_with("Document", "embedding", "cosine")
-
-    def test_list_labels_success(self, agent_spec, generator, mock_database):
-        """Test successful label listing."""
-        with patch("rustic_ai.unidb.agent.Database", return_value=mock_database):
-            agent, results = wrap_agent_for_testing(agent_spec)
-
-            msg = _build_message(
-                generator,
-                ListLabelsRequest().model_dump(),
-                get_qualified_class_name(ListLabelsRequest),
-            )
-
-            agent._on_message(msg)
-
-            assert len(results) == 1
-            response = ListLabelsResponse.model_validate(results[0].payload)
-            assert response.labels == ["Label1", "Label2"]
-            mock_database.list_labels.assert_called_once()
-
-    def test_list_edge_types_success(self, agent_spec, generator, mock_database):
-        """Test successful edge type listing."""
-        with patch("rustic_ai.unidb.agent.Database", return_value=mock_database):
-            agent, results = wrap_agent_for_testing(agent_spec)
-
-            msg = _build_message(
-                generator,
-                ListEdgeTypesRequest().model_dump(),
-                get_qualified_class_name(ListEdgeTypesRequest),
-            )
-
-            agent._on_message(msg)
-
-            assert len(results) == 1
-            response = ListEdgeTypesResponse.model_validate(results[0].payload)
-            assert response.edge_types == ["KNOWS", "LIKES"]
-            mock_database.list_edge_types.assert_called_once()
-
-    def test_get_label_info_success(self, agent_spec, generator, mock_database):
-        """Test successful label info retrieval."""
-        with patch("rustic_ai.unidb.agent.Database", return_value=mock_database):
-            agent, results = wrap_agent_for_testing(agent_spec)
-
-            msg = _build_message(
-                generator,
-                GetLabelInfoRequest(label="Person").model_dump(),
-                get_qualified_class_name(GetLabelInfoRequest),
-            )
-
-            agent._on_message(msg)
-
-            assert len(results) == 1
-            response = GetLabelInfoResponse.model_validate(results[0].payload)
-            assert response.label == "Person"
-            assert response.properties == {"name": "string", "age": "int64"}
-            mock_database.get_label_info.assert_called_once_with("Person")
-
-    def test_get_schema_success(self, agent_spec, generator, mock_database):
-        """Test successful schema retrieval."""
-        with patch("rustic_ai.unidb.agent.Database", return_value=mock_database):
-            agent, results = wrap_agent_for_testing(agent_spec)
-
-            msg = _build_message(
-                generator,
-                GetSchemaRequest().model_dump(),
-                get_qualified_class_name(GetSchemaRequest),
-            )
-
-            agent._on_message(msg)
-
-            assert len(results) == 1
-            response = GetSchemaResponse.model_validate(results[0].payload)
-            assert response.db_schema == {"labels": ["Label1"], "edges": ["KNOWS"]}
-            mock_database.get_schema.assert_called_once()
-
-    def test_execute_success(self, agent_spec, generator, mock_database):
-        """Test successful Cypher execution."""
-        with patch("rustic_ai.unidb.agent.Database", return_value=mock_database):
-            agent, results = wrap_agent_for_testing(agent_spec)
-
-            msg = _build_message(
-                generator,
-                ExecuteRequest(query="CREATE (n:Person {name: 'Alice'})").model_dump(),
-                get_qualified_class_name(ExecuteRequest),
-            )
-
-            agent._on_message(msg)
-
-            assert len(results) == 1
-            response = ExecuteResponse.model_validate(results[0].payload)
-            assert response.success is True
-            assert response.rows_affected == 5
-            mock_database.execute.assert_called_once_with("CREATE (n:Person {name: 'Alice'})")
-
-    def test_query_success(self, agent_spec, generator, mock_database):
-        """Test successful Cypher query."""
-        with patch("rustic_ai.unidb.agent.Database", return_value=mock_database):
-            agent, results = wrap_agent_for_testing(agent_spec)
-
-            msg = _build_message(
-                generator,
-                QueryRequest(query="MATCH (n:Person) RETURN n.name, n.age").model_dump(),
-                get_qualified_class_name(QueryRequest),
-            )
-
-            agent._on_message(msg)
-
-            assert len(results) == 1
-            response = QueryResponse.model_validate(results[0].payload)
-            assert response.count == 1
-            assert response.results == [{"name": "Alice", "age": 30}]
-            mock_database.query.assert_called_once_with("MATCH (n:Person) RETURN n.name, n.age")
-
-    def test_query_with_params(self, agent_spec, generator, mock_database):
-        """Test Cypher query with parameters."""
-        with patch("rustic_ai.unidb.agent.Database", return_value=mock_database):
-            agent, results = wrap_agent_for_testing(agent_spec)
-
-            msg = _build_message(
-                generator,
-                QueryRequest(
-                    query="MATCH (n:Person {name: $name}) RETURN n",
-                    params={"name": "Alice"},
-                ).model_dump(),
-                get_qualified_class_name(QueryRequest),
-            )
-
-            agent._on_message(msg)
-
-            assert len(results) == 1
-            response = QueryResponse.model_validate(results[0].payload)
-            assert response.count == 1
-            mock_database.query.assert_called_once_with(
-                "MATCH (n:Person {name: $name}) RETURN n",
-                {"name": "Alice"},
-            )
-
-    def test_flush_success(self, agent_spec, generator, mock_database):
-        """Test successful flush operation."""
-        with patch("rustic_ai.unidb.agent.Database", return_value=mock_database):
-            agent, results = wrap_agent_for_testing(agent_spec)
-
-            msg = _build_message(
-                generator,
-                FlushRequest().model_dump(),
-                get_qualified_class_name(FlushRequest),
-            )
-
-            agent._on_message(msg)
-
-            assert len(results) == 1
-            response = FlushResponse.model_validate(results[0].payload)
-            assert response.success is True
-            mock_database.flush.assert_called_once()
-
-    def test_vector_search_success(self, agent_spec, generator, mock_database):
-        """Test successful vector search."""
-        mock_database.query.return_value = [
-            {"vid": 1, "distance": 0.1},
-            {"vid": 2, "distance": 0.2},
-        ]
-
-        with patch("rustic_ai.unidb.agent.Database", return_value=mock_database):
-            agent, results = wrap_agent_for_testing(agent_spec)
-
-            msg = _build_message(
-                generator,
-                VectorSearchRequest(
-                    label="Document",
-                    property_name="embedding",
-                    vector=[0.1, 0.2, 0.3],
-                    k=10,
-                ).model_dump(),
-                get_qualified_class_name(VectorSearchRequest),
-            )
-
-            agent._on_message(msg)
-
-            assert len(results) == 1
-            response = VectorSearchResponse.model_validate(results[0].payload)
-            assert response.count == 2
-            assert len(response.results) == 2
-            assert response.results[0].vertex_id == 1
-            assert response.results[0].distance == 0.1
-
-    def test_vector_search_with_filter(self, agent_spec, generator, mock_database):
-        """Test vector search with filter query."""
-        mock_database.query.return_value = [{"vid": 1, "distance": 0.1}]
-
-        with patch("rustic_ai.unidb.agent.Database", return_value=mock_database):
-            agent, results = wrap_agent_for_testing(agent_spec)
-
-            msg = _build_message(
-                generator,
-                VectorSearchRequest(
-                    label="Document",
-                    property_name="embedding",
-                    vector=[0.1, 0.2, 0.3],
-                    k=5,
-                    filter_query="n.category = 'tech'",
-                ).model_dump(),
-                get_qualified_class_name(VectorSearchRequest),
-            )
-
-            agent._on_message(msg)
-
-            assert len(results) == 1
-            response = VectorSearchResponse.model_validate(results[0].payload)
-            assert response.count == 1
-
-    def test_insert_vertices_success(self, agent_spec, generator, mock_database):
-        """Test successful bulk vertex insertion."""
-        with patch("rustic_ai.unidb.agent.Database", return_value=mock_database):
-            agent, results = wrap_agent_for_testing(agent_spec)
-
-            vertices = [
-                {"name": "Alice", "age": 30},
-                {"name": "Bob", "age": 25},
+import uni_db
+
+from rustic_ai.unidb import models as m
+from rustic_ai.unidb.runtime import RuntimeFailure, UniDBRuntime
+from rustic_ai.unidb.serialization import bounded, encode
+
+EXAMPLES = Path(__file__).resolve().parents[2] / "docs/design/uni-db-agent-examples"
+
+
+def runtime(tmp_path, case=None):
+    if case:
+        spec = json.loads((EXAMPLES / (case + "-init.json")).read_text())
+        deployment = spec["agents"][0]["dependency_map"]["unidb"]["properties"]
+        props = spec["agents"][0]["properties"]
+    else:
+        deployment = {"bootstrap": {"policy": "apply_to_new", "revision": "test-v1"}, "receipts": {}}
+        props = {"binding_id": "test", "raw_operations_enabled": True}
+    path = str(tmp_path / "store")
+    rt = UniDBRuntime(uni_db.Uni.create(path), props["binding_id"], deployment["bootstrap"], deployment["receipts"])
+    rt.configure(m.UniDBAgentConfig.model_validate(props))
+    return rt, path, deployment, props
+
+
+@pytest.mark.parametrize("case", ["supply-network", "receivables", "supplier-scenario"])
+def test_complete_examples(tmp_path, case):
+    rt, _, _, _ = runtime(tmp_path, case)
+    results = {}
+    try:
+        for exchange in json.loads((EXAMPLES / (case + "-messages.json")).read_text())["exchanges"]:
+            if exchange["step_id"] == "reasoner-write-refused":
+                continue  # Guild authorization is tested at the composition boundary.
+            envelope = exchange["request"]
+            request = getattr(m, envelope["format"].split(".")[-1]).model_validate(envelope["payload"])
+            if exchange["response"]["format"].endswith(".DBFailure"):
+                with pytest.raises(RuntimeFailure) as error:
+                    rt.execute(request, envelope["sender"]["id"])
+                assert error.value.code == exchange["response"]["payload"]["error"]["code"]
+            else:
+                results[exchange["step_id"]] = rt.execute(request, envelope["sender"]["id"])
+        if case == "supply-network":
+            assert results["atomic-import"]["statistics"]["nodes_created"] == 3
+            assert results["query"]["returned_count"] == 2
+            assert results["safe-retry"]["replayed"] is True
+            assert rt.db.session().query("MATCH (:Product)-[r]-() RETURN count(r) AS n")[0]["n"] == 2
+        elif case == "receivables":
+            assert results["derive-balance"]["commands"][0]["rows"][0]["balance_cents"] == 15000
+            proof = results["explain-balance"]["proof"]["value"]["tree"]
+            assert proof["children"][0]["bindings"]["balance_cents"] == 15000
+        else:
+            assert results["simulate"]["before"][0]["rows"][0]["availability"] == pytest.approx(0.87)
+            assert results["simulate"]["after"][0]["rows"][0]["availability"] == pytest.approx(0.987)
+            assert results["simulate"]["persisted"] is False
+            assert results["fresh-verification"]["commands"][0]["rows"][0]["availability"] == pytest.approx(0.987)
+    finally:
+        rt.close()
+
+
+def request(cls, **args):
+    return cls(request_id="request:" + cls.__name__, correlation_id="test-workflow", **args)
+
+
+def test_retained_admin_raw_bulk_vector_operations(tmp_path):
+    rt, _, _, _ = runtime(tmp_path)
+
+    def call(cls, **args):
+        if "operation_id" in cls.model_fields:
+            args.setdefault("operation_id", "op:" + cls.__name__ + ":" + str(args))
+        return rt.execute(request(cls, **args), "host")
+
+    try:
+        call(m.CreateLabelRequest, label="Person")
+        call(m.AddPropertyRequest, label="Person", property_name="name", property_type="string")
+        call(m.AddPropertyRequest, label="Person", property_name="age", property_type="int64")
+        call(m.CreateScalarIndexRequest, label="Person", property_name="name")
+        call(m.CreateEdgeTypeRequest, edge_type="KNOWS", source_labels=["Person"], target_labels=["Person"])
+        assert "Person" in call(m.ListLabelsRequest)["labels"]
+        assert call(m.ListEdgeTypesRequest)["edge_types"] == ["KNOWS"]
+        assert call(m.GetLabelInfoRequest, label="Person")["properties"]
+        assert call(m.GetSchemaRequest)
+        inserted = call(
+            m.InsertVerticesRequest,
+            label="Person",
+            vertices=[
+                {"ext_id": "person:a", "name": "Alice", "age": 30},
+                {"ext_id": "person:b", "name": "Bob", "age": 25},
+            ],
+        )
+        assert inserted["applied"] is True and inserted["vertices_inserted"] == 2
+        edge = call(
+            m.InsertEdgesRequest, edge_type="KNOWS", edges=[{"source_ext_id": "person:a", "target_ext_id": "person:b"}]
+        )
+        assert edge["applied"] and edge["edges_inserted"] == 1
+        assert call(m.DBBulkStatusRequest, load_id=inserted["load_id"])["applied"]
+        result = call(
+            m.ExecuteRequest, query="MATCH (p:Person {ext_id:$id}) SET p.age=$age", params={"id": "person:a", "age": 31}
+        )
+        assert result["statistics"]["properties_set"] == 1
+        rows = call(
+            m.QueryRequest, query="MATCH (p:Person {ext_id:$id}) RETURN p.age AS age", params={"id": "person:a"}
+        )
+        assert rows["rows"] == [{"age": 31}]
+        call(m.CreateLabelRequest, label="Document")
+        call(
+            m.AddPropertyRequest,
+            label="Document",
+            property_name="embedding",
+            property_type="float64",
+            vector_dimension=3,
+        )
+        call(
+            m.InsertVerticesRequest, label="Document", vertices=[{"ext_id": "document:a", "embedding": [1.0, 0.0, 0.0]}]
+        )
+        call(m.CreateVectorIndexRequest, label="Document", property_name="embedding")
+        assert (
+            call(m.VectorSearchRequest, label="Document", property_name="embedding", vector=[1.0, 0.0, 0.0], k=1)[
+                "returned_count"
             ]
+            == 1
+        )
+        call(m.FlushRequest)
+        assert call(m.DBHealthRequest)["database_ready"]
+        assert call(m.DBCapabilitiesRequest)["native_version"] == "5.2.1"
+    finally:
+        rt.close()
 
-            msg = _build_message(
-                generator,
-                InsertVerticesRequest(label="Person", vertices=vertices).model_dump(),
-                get_qualified_class_name(InsertVerticesRequest),
+
+def test_replay_after_reopen_and_failed_batch_rollback(tmp_path):
+    rt, path, deployment, props = runtime(tmp_path, "supply-network")
+    fixture = json.loads((EXAMPLES / "supply-network-messages.json").read_text())["exchanges"][0]["request"]
+    original = m.DBMutateRequest.model_validate(fixture["payload"])
+    try:
+        rt.execute(original, "demo-ingester")
+        bad = original.model_copy(update={"operation_id": "bad-import", "params": deepcopy(original.params)})
+        bad.params["product"]["ext_id"] = "product:rollback"
+        with pytest.raises(RuntimeFailure) as error:
+            rt.execute(bad, "demo-ingester")
+        assert error.value.effect == "rolled_back"
+        assert not rt.db.session().query("MATCH (p:Product {ext_id:'product:rollback'}) RETURN p")
+    finally:
+        rt.close()
+    bootstrap = dict(deployment["bootstrap"], policy="verify_existing")
+    rt = UniDBRuntime(uni_db.Uni.open_existing(path), props["binding_id"], bootstrap, deployment["receipts"])
+    rt.configure(m.UniDBAgentConfig.model_validate(props))
+    try:
+        assert rt.execute(original.model_copy(update={"request_id": "reopened"}), "demo-ingester")["replayed"]
+    finally:
+        rt.close()
+
+
+def test_limits_serialization_and_safe_explain_binding(tmp_path):
+    rt, _, _, _ = runtime(tmp_path, "receivables")
+    try:
+        with pytest.raises(RuntimeFailure):
+            rt.execute(request(m.DBHealthRequest, limits={"max_rows": 101}), "host")
+        with pytest.raises(RuntimeFailure):
+            rt.execute(
+                request(
+                    m.DBExplainRequest, operation="explain_invoice_balance", params={"invoice_id": 'x" OR true //'}
+                ),
+                "host",
             )
+        assert rt.db.label_exists("Invoice")
+        assert encode(2**63 - 1)["value"] == str(2**63 - 1)
+        assert encode(b"abc")["value"] == "YWJj"
+        with pytest.raises(TypeError):
+            encode(object())
+        with pytest.raises(ValueError):
+            bounded("too large", 3)
+    finally:
+        rt.close()
 
-            agent._on_message(msg)
 
-            assert len(results) == 1
-            response = InsertVerticesResponse.model_validate(results[0].payload)
-            assert response.count == 2
-            assert response.success is True
-            mock_database.bulk_insert_vertices.assert_called_once_with("Person", vertices)
+def test_read_surfaces_do_not_materialize_cypher_or_locy(tmp_path):
+    rt, _, _, _ = runtime(tmp_path)
+    try:
+        rt.execute(request(m.CreateLabelRequest, label="Thing", operation_id="thing"), "host")
+        with pytest.raises(uni_db.UniError):
+            rt.execute(request(m.QueryRequest, query='CREATE (:Thing {ext_id:"cypher:write"})'), "host")
+        config = m.UniDBAgentConfig(
+            binding_id="test",
+            operation_catalog={
+                "operations": [
+                    {
+                        "name": "non_materializing",
+                        "kind": "evaluate",
+                        "parameters_schema": {"type": "object", "additionalProperties": False},
+                        "program": 'CREATE (:Thing {ext_id:"locy:write"})',
+                    }
+                ]
+            },
+        )
+        rt.configure(config)
+        assert rt.execute(request(m.DBEvaluateRequest, operation="non_materializing"), "host")["materialized"] is False
+        assert rt.db.session().query("MATCH (n:Thing) RETURN count(n) AS n")[0]["n"] == 0
+    finally:
+        rt.close()
 
-    def test_insert_edges_success(self, agent_spec, generator, mock_database):
-        """Test successful bulk edge insertion."""
-        with patch("rustic_ai.unidb.agent.Database", return_value=mock_database):
-            agent, results = wrap_agent_for_testing(agent_spec)
 
-            edges = [
-                EdgeData(source_id=1, target_id=2, properties={"since": "2020"}),
-                EdgeData(source_id=2, target_id=3, properties={"since": "2021"}),
-            ]
-
-            msg = _build_message(
-                generator,
-                InsertEdgesRequest(edge_type="KNOWS", edges=edges).model_dump(),
-                get_qualified_class_name(InsertEdgesRequest),
+def test_receivables_no_payment_and_multiple_payments(tmp_path):
+    rt, _, _, _ = runtime(tmp_path, "receivables")
+    try:
+        with rt.db.session().tx() as tx:
+            tx.execute(
+                'CREATE (:Invoice {ext_id:"invoice:empty", amount_cents:9000}), '
+                '(:Invoice {ext_id:"invoice:many", amount_cents:25000}), '
+                '(:Payment {ext_id:"payment:a", amount_cents:10000}), '
+                '(:Payment {ext_id:"payment:b", amount_cents:5000})'
             )
-
-            agent._on_message(msg)
-
-            assert len(results) == 1
-            response = InsertEdgesResponse.model_validate(results[0].payload)
-            assert response.count == 2
-            assert response.success is True
-            # The agent converts EdgeData to tuples before passing to db
-            mock_database.bulk_insert_edges.assert_called_once_with(
-                "KNOWS",
-                [(1, 2, {"since": "2020"}), (2, 3, {"since": "2021"})],
+            tx.execute('MATCH (i:Invoice {ext_id:"invoice:many"}), (p:Payment) CREATE (p)-[:APPLIES_TO]->(i)')
+            tx.commit()
+        for invoice, balance in [("invoice:empty", 9000), ("invoice:many", 10000)]:
+            result = rt.execute(
+                request(m.DBEvaluateRequest, operation="invoice_balance", params={"invoice_id": invoice}), "host"
             )
+            assert result["commands"][0]["rows"][0]["balance_cents"] == balance
+    finally:
+        rt.close()
 
-    def test_insert_vertices_error(self, agent_spec, generator, mock_database):
-        """Test bulk vertex insertion with error."""
-        mock_database.bulk_insert_vertices.side_effect = Exception("Invalid property type")
 
-        with patch("rustic_ai.unidb.agent.Database", return_value=mock_database):
-            agent, results = wrap_agent_for_testing(agent_spec)
+def test_invalid_catalog_is_rejected_before_runtime_construction():
+    invalid = {"name": "q", "kind": "query", "query": "RETURN 1", "parameters_schema": {"type": "object"}}
+    with pytest.raises(ValueError, match="closed objects"):
+        m.UniDBAgentConfig(binding_id="x", operation_catalog={"operations": [invalid]})
+    invalid["parameters_schema"]["additionalProperties"] = False
+    with pytest.raises(ValueError, match="Duplicate"):
+        m.UniDBAgentConfig(binding_id="x", operation_catalog={"operations": [invalid, invalid]})
 
-            msg = _build_message(
-                generator,
-                InsertVerticesRequest(
-                    label="Person",
-                    vertices=[{"name": "Alice"}],
-                ).model_dump(),
-                get_qualified_class_name(InsertVerticesRequest),
-            )
 
-            agent._on_message(msg)
-
-            assert len(results) == 1
-            assert results[0].format == get_qualified_class_name(ErrorMessage)
-            error = ErrorMessage.model_validate(results[0].payload)
-            assert error.error_type == "InsertVerticesError"
-            assert "Invalid property type" in error.error_message
-
-    def test_query_empty_results(self, agent_spec, generator, mock_database):
-        """Test query returning empty results."""
-        mock_database.query.return_value = None
-
-        with patch("rustic_ai.unidb.agent.Database", return_value=mock_database):
-            agent, results = wrap_agent_for_testing(agent_spec)
-
-            msg = _build_message(
-                generator,
-                QueryRequest(query="MATCH (n:NonExistent) RETURN n").model_dump(),
-                get_qualified_class_name(QueryRequest),
-            )
-
-            agent._on_message(msg)
-
-            assert len(results) == 1
-            response = QueryResponse.model_validate(results[0].payload)
-            assert response.count == 0
-            assert response.results == []
-
-    def test_execute_non_integer_result(self, agent_spec, generator, mock_database):
-        """Test execute returning non-integer result."""
-        mock_database.execute.return_value = "OK"
-
-        with patch("rustic_ai.unidb.agent.Database", return_value=mock_database):
-            agent, results = wrap_agent_for_testing(agent_spec)
-
-            msg = _build_message(
-                generator,
-                ExecuteRequest(query="CREATE INDEX idx").model_dump(),
-                get_qualified_class_name(ExecuteRequest),
-            )
-
-            agent._on_message(msg)
-
-            assert len(results) == 1
-            response = ExecuteResponse.model_validate(results[0].payload)
-            assert response.success is True
-            assert response.rows_affected is None
+def test_output_limit_rolls_back_before_commit(tmp_path):
+    rt, _, _, _ = runtime(tmp_path, "supply-network")
+    req = m.DBMutateRequest.model_validate(
+        json.loads((EXAMPLES / "supply-network-messages.json").read_text())["exchanges"][0]["request"]["payload"]
+    )
+    try:
+        with pytest.raises(RuntimeFailure) as error:
+            rt.execute(req.model_copy(update={"limits": {"max_output_bytes": 100}}), "host")
+        assert error.value.effect == "rolled_back"
+        assert not rt.db.session().query("MATCH (p:Product) RETURN p")
+        assert (
+            rt.execute(req.model_copy(update={"request_id": "retry-after-rollback"}), "host")["effect"] == "committed"
+        )
+    finally:
+        rt.close()

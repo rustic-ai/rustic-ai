@@ -22,10 +22,10 @@
         ],
         "properties": {
           "model": "gpt-4.1",
-          "default_system_prompt": "You are a database assistant that helps users interact with a UniDB graph database. You have access to a comprehensive set of tools for all database operations.\n\n## Schema Operations:\n- create_label: Create a new node label in the database\n- create_edge_type: Create a new edge type with source and target label constraints\n- add_property: Add a property to a label (supports string, int64, float64, bool, bytes, and vector types)\n- create_scalar_index: Create a B-tree index on a property for fast lookups\n- create_vector_index: Create a vector index for similarity search (supports cosine and L2 metrics)\n\n## Schema Introspection:\n- list_labels: List all node labels in the database\n- list_edge_types: List all edge types in the database\n- get_label_info: Get detailed information about a specific label including its properties\n- get_schema: Get the complete database schema\n\n## Data Operations:\n- query_database: Run a Cypher query that returns data (MATCH queries)\n- execute_command: Execute a Cypher command that modifies data (CREATE, DELETE, SET)\n- flush_database: Flush pending changes to disk\n\n## Vector Search:\n- vector_search: Perform K-nearest neighbor similarity search on vector embeddings\n\n## Bulk Operations:\n- insert_vertices: Bulk insert multiple vertices with a single operation\n- insert_edges: Bulk insert multiple edges with a single operation\n\n## IMPORTANT - Closed Loop Workflow:\nYou operate in a closed loop. After each tool call, you will receive the result back. Based on the result:\n1. If you need to perform more operations to complete the user's request, call the next appropriate tool.\n2. If you have completed all necessary operations, respond directly to the user with a clear summary of what was done.\n\nFor example, if a user asks to 'create a Person label with name and age properties':\n1. First call create_label to create the Person label\n2. After receiving success, call add_property to add the 'name' property\n3. After receiving success, call add_property to add the 'age' property\n4. After all operations complete, provide a final summary to the user\n\nAlways choose the most appropriate tool for the user's request. Ask for clarification if the request is ambiguous.",
+          "default_system_prompt": "Use configured database tools sequentially and observe every result. Preserve exact values. Bulk edges use source_ext_id and target_ext_id. Never retry uncertain or committed operations. Guild policy owns access and approval. Report reconciliation requirements when an outcome is unknown.",
           "llm_request_wrappers": [
             {
-              "kind": "rustic_ai.llm_agent.tools.tools_manager_plugin.ToolsManagerPlugin",
+              "kind": "rustic_ai.unidb.tools.UniDBToolsManagerPlugin",
               "depends_on": [],
               "toolset": {
                 "kind": "rustic_ai.llm_agent.tools.tools_manager_plugin.ToolspecsListProvider",
@@ -34,77 +34,77 @@
                   {
                     "name": "create_label",
                     "description": "Create a new node label in the database. Labels are used to categorize nodes (e.g., Person, Company, Product).",
-                    "parameter_class": "rustic_ai.unidb.models.CreateLabelRequest"
+                    "parameter_class": "rustic_ai.unidb.tools.CreateLabelArguments"
                   },
                   {
                     "name": "create_edge_type",
                     "description": "Create a new edge type with constraints on which labels can be source and target nodes. Example: WORKS_AT edge from Person to Company.",
-                    "parameter_class": "rustic_ai.unidb.models.CreateEdgeTypeRequest"
+                    "parameter_class": "rustic_ai.unidb.tools.CreateEdgeTypeArguments"
                   },
                   {
                     "name": "add_property",
                     "description": "Add a property to a label. Supported types: string, int64, float64, bool, bytes. For vector properties, specify vector_dimension.",
-                    "parameter_class": "rustic_ai.unidb.models.AddPropertyRequest"
+                    "parameter_class": "rustic_ai.unidb.tools.AddPropertyArguments"
                   },
                   {
                     "name": "create_scalar_index",
                     "description": "Create a B-tree index on a property for fast lookups and range queries.",
-                    "parameter_class": "rustic_ai.unidb.models.CreateScalarIndexRequest"
+                    "parameter_class": "rustic_ai.unidb.tools.CreateScalarIndexArguments"
                   },
                   {
                     "name": "create_vector_index",
                     "description": "Create a vector index for similarity search. Supports cosine and L2 distance metrics.",
-                    "parameter_class": "rustic_ai.unidb.models.CreateVectorIndexRequest"
+                    "parameter_class": "rustic_ai.unidb.tools.CreateVectorIndexArguments"
                   },
                   {
                     "name": "list_labels",
                     "description": "List all node labels currently defined in the database.",
-                    "parameter_class": "rustic_ai.unidb.models.ListLabelsRequest"
+                    "parameter_class": "rustic_ai.unidb.tools.ListLabelsArguments"
                   },
                   {
                     "name": "list_edge_types",
                     "description": "List all edge types currently defined in the database.",
-                    "parameter_class": "rustic_ai.unidb.models.ListEdgeTypesRequest"
+                    "parameter_class": "rustic_ai.unidb.tools.ListEdgeTypesArguments"
                   },
                   {
                     "name": "get_label_info",
                     "description": "Get detailed information about a specific label, including all its properties and their types.",
-                    "parameter_class": "rustic_ai.unidb.models.GetLabelInfoRequest"
+                    "parameter_class": "rustic_ai.unidb.tools.GetLabelInfoArguments"
                   },
                   {
                     "name": "get_schema",
                     "description": "Get the complete database schema including all labels, edge types, properties, and indexes.",
-                    "parameter_class": "rustic_ai.unidb.models.GetSchemaRequest"
+                    "parameter_class": "rustic_ai.unidb.tools.GetSchemaArguments"
                   },
                   {
                     "name": "query_database",
                     "description": "Run a Cypher query that returns data. Use for MATCH queries. Supports parameterized queries.",
-                    "parameter_class": "rustic_ai.unidb.models.QueryRequest"
+                    "parameter_class": "rustic_ai.unidb.tools.QueryArguments"
                   },
                   {
                     "name": "execute_command",
                     "description": "Execute a Cypher command that modifies data (CREATE, DELETE, SET, MERGE). Returns success status and rows affected.",
-                    "parameter_class": "rustic_ai.unidb.models.ExecuteRequest"
+                    "parameter_class": "rustic_ai.unidb.tools.ExecuteArguments"
                   },
                   {
                     "name": "flush_database",
                     "description": "Flush all pending changes to disk. Use after bulk operations or before shutting down.",
-                    "parameter_class": "rustic_ai.unidb.models.FlushRequest"
+                    "parameter_class": "rustic_ai.unidb.tools.FlushArguments"
                   },
                   {
                     "name": "vector_search",
                     "description": "Perform K-nearest neighbor similarity search on vector embeddings. Specify label, vector property, query vector, and k.",
-                    "parameter_class": "rustic_ai.unidb.models.VectorSearchRequest"
+                    "parameter_class": "rustic_ai.unidb.tools.VectorSearchArguments"
                   },
                   {
                     "name": "insert_vertices",
                     "description": "Bulk insert multiple vertices of the same label. More efficient than individual CREATE statements. REQUIRED parameters: 'label' (string - the vertex label name) AND 'vertices' (array of objects - list of vertex property dictionaries, e.g. [{\"name\": \"Alice\", \"age\": 30}, {\"name\": \"Bob\", \"age\": 25}]). Both parameters are mandatory.",
-                    "parameter_class": "rustic_ai.unidb.models.InsertVerticesRequest"
+                    "parameter_class": "rustic_ai.unidb.tools.InsertVerticesArguments"
                   },
                   {
                     "name": "insert_edges",
-                    "description": "Bulk insert multiple edges of the same type. REQUIRED parameters: 'edge_type' (string - the edge type name) AND 'edges' (array of objects - list of edge data with source_id and target_id as integers, e.g. [{\"source_id\": 1, \"target_id\": 2, \"weight\": 0.5}]). Both parameters are mandatory. Note: Use integer vertex IDs (NOT names) - first use query_database to find vertex IDs if you only have names.",
-                    "parameter_class": "rustic_ai.unidb.models.InsertEdgesRequest"
+                    "description": "Bulk insert edges with source_ext_id, target_ext_id and properties. Endpoints must already exist.",
+                    "parameter_class": "rustic_ai.unidb.tools.InsertEdgesArguments"
                   }
                 ]
               }
@@ -114,7 +114,8 @@
         },
         "listen_to_default_topic": false,
         "predicates": {},
-        "dependency_map": {}
+        "dependency_map": {},
+        "id": "query-processor"
       },
       {
         "name": "UniDB Agent",
@@ -124,11 +125,50 @@
           "unidb"
         ],
         "properties": {
-          "db_path": "/tmp/unidb_assistant_test.db"
+          "binding_id": "unidb-assistant",
+          "raw_operations_enabled": true
         },
         "listen_to_default_topic": false,
         "predicates": {},
-        "dependency_map": {}
+        "dependency_map": {
+          "unidb": {
+            "class_name": "rustic_ai.unidb.resolver.UniDBResolver",
+            "properties": {
+              "binding_id": "unidb-assistant",
+              "open_mode": "create",
+              "location": {
+                "kind": "filesystem",
+                "dependency_key": "filesystem",
+                "relative_path": "store"
+              },
+              "native_config": {
+                "wal_enabled": true,
+                "strict_schema": true
+              },
+              "bootstrap": {
+                "policy": "apply_to_new",
+                "revision": "assistant-v1"
+              },
+              "receipts": {
+                "mode": "same_transaction",
+                "namespace": "__rustic_unidb"
+              }
+            }
+          }
+        },
+        "id": "unidb"
+      },
+      {
+        "id": "unidb-tool-adapter",
+        "name": "UniDB Tool Adapter",
+        "description": "Guild-owned argument, identity and structured observation bridge",
+        "class_name": "rustic_ai.unidb.tools.UniDBToolAdapter",
+        "additional_topics": [
+          "unidb.tool.requests",
+          "unidb.observations"
+        ],
+        "listen_to_default_topic": false,
+        "properties": {}
       }
     ],
     "dependency_map": {
@@ -136,6 +176,14 @@
         "class_name": "rustic_ai.litellm.agent_ext.llm.LiteLLMResolver",
         "properties": {
           "model": "gpt-4.1"
+        }
+      },
+      "filesystem": {
+        "class_name": "rustic_ai.core.guild.agent_ext.depends.filesystem.filesystem.FileSystemResolver",
+        "properties": {
+          "path_base": "/tmp/rustic-unidb-assistant",
+          "protocol": "file",
+          "storage_options": {}
         }
       }
     },
@@ -156,6 +204,17 @@
           "agent": {
             "name": "Query Processor"
           },
+          "message_format": "rustic_ai.unidb.tools.CreateLabelArguments",
+          "destination": {
+            "topics": "unidb.tool.requests"
+          },
+          "route_times": -1
+        },
+        {
+          "agent": {
+            "id": "unidb-tool-adapter",
+            "name": "UniDB Tool Adapter"
+          },
           "message_format": "rustic_ai.unidb.models.CreateLabelRequest",
           "destination": {
             "topics": "unidb"
@@ -165,6 +224,17 @@
         {
           "agent": {
             "name": "Query Processor"
+          },
+          "message_format": "rustic_ai.unidb.tools.CreateEdgeTypeArguments",
+          "destination": {
+            "topics": "unidb.tool.requests"
+          },
+          "route_times": -1
+        },
+        {
+          "agent": {
+            "id": "unidb-tool-adapter",
+            "name": "UniDB Tool Adapter"
           },
           "message_format": "rustic_ai.unidb.models.CreateEdgeTypeRequest",
           "destination": {
@@ -176,6 +246,17 @@
           "agent": {
             "name": "Query Processor"
           },
+          "message_format": "rustic_ai.unidb.tools.AddPropertyArguments",
+          "destination": {
+            "topics": "unidb.tool.requests"
+          },
+          "route_times": -1
+        },
+        {
+          "agent": {
+            "id": "unidb-tool-adapter",
+            "name": "UniDB Tool Adapter"
+          },
           "message_format": "rustic_ai.unidb.models.AddPropertyRequest",
           "destination": {
             "topics": "unidb"
@@ -185,6 +266,17 @@
         {
           "agent": {
             "name": "Query Processor"
+          },
+          "message_format": "rustic_ai.unidb.tools.CreateScalarIndexArguments",
+          "destination": {
+            "topics": "unidb.tool.requests"
+          },
+          "route_times": -1
+        },
+        {
+          "agent": {
+            "id": "unidb-tool-adapter",
+            "name": "UniDB Tool Adapter"
           },
           "message_format": "rustic_ai.unidb.models.CreateScalarIndexRequest",
           "destination": {
@@ -196,6 +288,17 @@
           "agent": {
             "name": "Query Processor"
           },
+          "message_format": "rustic_ai.unidb.tools.CreateVectorIndexArguments",
+          "destination": {
+            "topics": "unidb.tool.requests"
+          },
+          "route_times": -1
+        },
+        {
+          "agent": {
+            "id": "unidb-tool-adapter",
+            "name": "UniDB Tool Adapter"
+          },
           "message_format": "rustic_ai.unidb.models.CreateVectorIndexRequest",
           "destination": {
             "topics": "unidb"
@@ -205,6 +308,17 @@
         {
           "agent": {
             "name": "Query Processor"
+          },
+          "message_format": "rustic_ai.unidb.tools.ListLabelsArguments",
+          "destination": {
+            "topics": "unidb.tool.requests"
+          },
+          "route_times": -1
+        },
+        {
+          "agent": {
+            "id": "unidb-tool-adapter",
+            "name": "UniDB Tool Adapter"
           },
           "message_format": "rustic_ai.unidb.models.ListLabelsRequest",
           "destination": {
@@ -216,6 +330,17 @@
           "agent": {
             "name": "Query Processor"
           },
+          "message_format": "rustic_ai.unidb.tools.ListEdgeTypesArguments",
+          "destination": {
+            "topics": "unidb.tool.requests"
+          },
+          "route_times": -1
+        },
+        {
+          "agent": {
+            "id": "unidb-tool-adapter",
+            "name": "UniDB Tool Adapter"
+          },
           "message_format": "rustic_ai.unidb.models.ListEdgeTypesRequest",
           "destination": {
             "topics": "unidb"
@@ -225,6 +350,17 @@
         {
           "agent": {
             "name": "Query Processor"
+          },
+          "message_format": "rustic_ai.unidb.tools.GetLabelInfoArguments",
+          "destination": {
+            "topics": "unidb.tool.requests"
+          },
+          "route_times": -1
+        },
+        {
+          "agent": {
+            "id": "unidb-tool-adapter",
+            "name": "UniDB Tool Adapter"
           },
           "message_format": "rustic_ai.unidb.models.GetLabelInfoRequest",
           "destination": {
@@ -236,6 +372,17 @@
           "agent": {
             "name": "Query Processor"
           },
+          "message_format": "rustic_ai.unidb.tools.GetSchemaArguments",
+          "destination": {
+            "topics": "unidb.tool.requests"
+          },
+          "route_times": -1
+        },
+        {
+          "agent": {
+            "id": "unidb-tool-adapter",
+            "name": "UniDB Tool Adapter"
+          },
           "message_format": "rustic_ai.unidb.models.GetSchemaRequest",
           "destination": {
             "topics": "unidb"
@@ -245,6 +392,17 @@
         {
           "agent": {
             "name": "Query Processor"
+          },
+          "message_format": "rustic_ai.unidb.tools.QueryArguments",
+          "destination": {
+            "topics": "unidb.tool.requests"
+          },
+          "route_times": -1
+        },
+        {
+          "agent": {
+            "id": "unidb-tool-adapter",
+            "name": "UniDB Tool Adapter"
           },
           "message_format": "rustic_ai.unidb.models.QueryRequest",
           "destination": {
@@ -256,6 +414,17 @@
           "agent": {
             "name": "Query Processor"
           },
+          "message_format": "rustic_ai.unidb.tools.ExecuteArguments",
+          "destination": {
+            "topics": "unidb.tool.requests"
+          },
+          "route_times": -1
+        },
+        {
+          "agent": {
+            "id": "unidb-tool-adapter",
+            "name": "UniDB Tool Adapter"
+          },
           "message_format": "rustic_ai.unidb.models.ExecuteRequest",
           "destination": {
             "topics": "unidb"
@@ -265,6 +434,17 @@
         {
           "agent": {
             "name": "Query Processor"
+          },
+          "message_format": "rustic_ai.unidb.tools.FlushArguments",
+          "destination": {
+            "topics": "unidb.tool.requests"
+          },
+          "route_times": -1
+        },
+        {
+          "agent": {
+            "id": "unidb-tool-adapter",
+            "name": "UniDB Tool Adapter"
           },
           "message_format": "rustic_ai.unidb.models.FlushRequest",
           "destination": {
@@ -276,6 +456,17 @@
           "agent": {
             "name": "Query Processor"
           },
+          "message_format": "rustic_ai.unidb.tools.VectorSearchArguments",
+          "destination": {
+            "topics": "unidb.tool.requests"
+          },
+          "route_times": -1
+        },
+        {
+          "agent": {
+            "id": "unidb-tool-adapter",
+            "name": "UniDB Tool Adapter"
+          },
           "message_format": "rustic_ai.unidb.models.VectorSearchRequest",
           "destination": {
             "topics": "unidb"
@@ -286,6 +477,17 @@
           "agent": {
             "name": "Query Processor"
           },
+          "message_format": "rustic_ai.unidb.tools.InsertVerticesArguments",
+          "destination": {
+            "topics": "unidb.tool.requests"
+          },
+          "route_times": -1
+        },
+        {
+          "agent": {
+            "id": "unidb-tool-adapter",
+            "name": "UniDB Tool Adapter"
+          },
           "message_format": "rustic_ai.unidb.models.InsertVerticesRequest",
           "destination": {
             "topics": "unidb"
@@ -295,6 +497,17 @@
         {
           "agent": {
             "name": "Query Processor"
+          },
+          "message_format": "rustic_ai.unidb.tools.InsertEdgesArguments",
+          "destination": {
+            "topics": "unidb.tool.requests"
+          },
+          "route_times": -1
+        },
+        {
+          "agent": {
+            "id": "unidb-tool-adapter",
+            "name": "UniDB Tool Adapter"
           },
           "message_format": "rustic_ai.unidb.models.InsertEdgesRequest",
           "destination": {
@@ -308,13 +521,9 @@
           },
           "message_format": "rustic_ai.unidb.models.CreateLabelResponse",
           "destination": {
-            "topics": "query_processor"
+            "topics": "unidb.observations"
           },
-          "route_times": -1,
-          "transformer": {
-            "style": "content_based_router",
-            "handler": "({\"format\": \"rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest\", \"payload\": {\"messages\": [{\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": '[TOOL RESULT]\\nOriginal user request: ' & $.context.user_query & '\\n\\nTool execution result: ' & ($.payload.success ? 'Successfully created label: ' & $.payload.label : 'Failed to create label: ' & $.payload.label)}]}]}})"
-          }
+          "route_times": -1
         },
         {
           "agent": {
@@ -322,13 +531,9 @@
           },
           "message_format": "rustic_ai.unidb.models.CreateEdgeTypeResponse",
           "destination": {
-            "topics": "query_processor"
+            "topics": "unidb.observations"
           },
-          "route_times": -1,
-          "transformer": {
-            "style": "content_based_router",
-            "handler": "({\"format\": \"rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest\", \"payload\": {\"messages\": [{\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": '[TOOL RESULT]\\nOriginal user request: ' & $.context.user_query & '\\n\\nTool execution result: ' & ($.payload.success ? 'Successfully created edge type: ' & $.payload.edge_type : 'Failed to create edge type: ' & $.payload.edge_type)}]}]}})"
-          }
+          "route_times": -1
         },
         {
           "agent": {
@@ -336,13 +541,9 @@
           },
           "message_format": "rustic_ai.unidb.models.AddPropertyResponse",
           "destination": {
-            "topics": "query_processor"
+            "topics": "unidb.observations"
           },
-          "route_times": -1,
-          "transformer": {
-            "style": "content_based_router",
-            "handler": "({\"format\": \"rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest\", \"payload\": {\"messages\": [{\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": '[TOOL RESULT]\\nOriginal user request: ' & $.context.user_query & '\\n\\nTool execution result: ' & ($.payload.success ? 'Successfully added property \"' & $.payload.property_name & '\" to label \"' & $.payload.label & '\"' : 'Failed to add property \"' & $.payload.property_name & '\" to label \"' & $.payload.label & '\"')}]}]}})"
-          }
+          "route_times": -1
         },
         {
           "agent": {
@@ -350,13 +551,9 @@
           },
           "message_format": "rustic_ai.unidb.models.CreateScalarIndexResponse",
           "destination": {
-            "topics": "query_processor"
+            "topics": "unidb.observations"
           },
-          "route_times": -1,
-          "transformer": {
-            "style": "content_based_router",
-            "handler": "({\"format\": \"rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest\", \"payload\": {\"messages\": [{\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": '[TOOL RESULT]\\nOriginal user request: ' & $.context.user_query & '\\n\\nTool execution result: ' & ($.payload.success ? 'Successfully created scalar index on \"' & $.payload.label & '.' & $.payload.property_name & '\"' : 'Failed to create scalar index on \"' & $.payload.label & '.' & $.payload.property_name & '\"')}]}]}})"
-          }
+          "route_times": -1
         },
         {
           "agent": {
@@ -364,13 +561,9 @@
           },
           "message_format": "rustic_ai.unidb.models.CreateVectorIndexResponse",
           "destination": {
-            "topics": "query_processor"
+            "topics": "unidb.observations"
           },
-          "route_times": -1,
-          "transformer": {
-            "style": "content_based_router",
-            "handler": "({\"format\": \"rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest\", \"payload\": {\"messages\": [{\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": '[TOOL RESULT]\\nOriginal user request: ' & $.context.user_query & '\\n\\nTool execution result: ' & ($.payload.success ? 'Successfully created vector index on \"' & $.payload.label & '.' & $.payload.property_name & '\" with metric: ' & $.payload.metric : 'Failed to create vector index')}]}]}})"
-          }
+          "route_times": -1
         },
         {
           "agent": {
@@ -378,13 +571,9 @@
           },
           "message_format": "rustic_ai.unidb.models.ListLabelsResponse",
           "destination": {
-            "topics": "query_processor"
+            "topics": "unidb.observations"
           },
-          "route_times": -1,
-          "transformer": {
-            "style": "content_based_router",
-            "handler": "({\"format\": \"rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest\", \"payload\": {\"messages\": [{\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": '[TOOL RESULT]\\nOriginal user request: ' & $.context.user_query & '\\n\\nTool execution result: Database labels: ' & $join($.payload.labels, ', ')}]}]}})"
-          }
+          "route_times": -1
         },
         {
           "agent": {
@@ -392,13 +581,9 @@
           },
           "message_format": "rustic_ai.unidb.models.ListEdgeTypesResponse",
           "destination": {
-            "topics": "query_processor"
+            "topics": "unidb.observations"
           },
-          "route_times": -1,
-          "transformer": {
-            "style": "content_based_router",
-            "handler": "({\"format\": \"rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest\", \"payload\": {\"messages\": [{\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": '[TOOL RESULT]\\nOriginal user request: ' & $.context.user_query & '\\n\\nTool execution result: Database edge types: ' & $join($.payload.edge_types, ', ')}]}]}})"
-          }
+          "route_times": -1
         },
         {
           "agent": {
@@ -406,13 +591,9 @@
           },
           "message_format": "rustic_ai.unidb.models.GetLabelInfoResponse",
           "destination": {
-            "topics": "query_processor"
+            "topics": "unidb.observations"
           },
-          "route_times": -1,
-          "transformer": {
-            "style": "content_based_router",
-            "handler": "({\"format\": \"rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest\", \"payload\": {\"messages\": [{\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": '[TOOL RESULT]\\nOriginal user request: ' & $.context.user_query & '\\n\\nTool execution result: Label \"' & $.payload.label & '\" properties: ' & $string($.payload.properties)}]}]}})"
-          }
+          "route_times": -1
         },
         {
           "agent": {
@@ -420,13 +601,9 @@
           },
           "message_format": "rustic_ai.unidb.models.GetSchemaResponse",
           "destination": {
-            "topics": "query_processor"
+            "topics": "unidb.observations"
           },
-          "route_times": -1,
-          "transformer": {
-            "style": "content_based_router",
-            "handler": "({\"format\": \"rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest\", \"payload\": {\"messages\": [{\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": '[TOOL RESULT]\\nOriginal user request: ' & $.context.user_query & '\\n\\nTool execution result: Database schema: ' & $string($.payload.db_schema)}]}]}})"
-          }
+          "route_times": -1
         },
         {
           "agent": {
@@ -434,13 +611,9 @@
           },
           "message_format": "rustic_ai.unidb.models.QueryResponse",
           "destination": {
-            "topics": "query_processor"
+            "topics": "unidb.observations"
           },
-          "route_times": -1,
-          "transformer": {
-            "style": "content_based_router",
-            "handler": "({\"format\": \"rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest\", \"payload\": {\"messages\": [{\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": '[TOOL RESULT]\\nOriginal user request: ' & $.context.user_query & '\\n\\nTool execution result: Query returned ' & $string($.payload.count) & ' results: ' & $string($.payload.results)}]}]}})"
-          }
+          "route_times": -1
         },
         {
           "agent": {
@@ -448,13 +621,9 @@
           },
           "message_format": "rustic_ai.unidb.models.ExecuteResponse",
           "destination": {
-            "topics": "query_processor"
+            "topics": "unidb.observations"
           },
-          "route_times": -1,
-          "transformer": {
-            "style": "content_based_router",
-            "handler": "({\"format\": \"rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest\", \"payload\": {\"messages\": [{\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": '[TOOL RESULT]\\nOriginal user request: ' & $.context.user_query & '\\n\\nTool execution result: ' & ($.payload.success ? 'Command executed successfully.' & ($.payload.rows_affected ? ' Rows affected: ' & $string($.payload.rows_affected) : '') : 'Command failed.')}]}]}})"
-          }
+          "route_times": -1
         },
         {
           "agent": {
@@ -462,13 +631,9 @@
           },
           "message_format": "rustic_ai.unidb.models.FlushResponse",
           "destination": {
-            "topics": "query_processor"
+            "topics": "unidb.observations"
           },
-          "route_times": -1,
-          "transformer": {
-            "style": "content_based_router",
-            "handler": "({\"format\": \"rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest\", \"payload\": {\"messages\": [{\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": '[TOOL RESULT]\\nOriginal user request: ' & $.context.user_query & '\\n\\nTool execution result: ' & ($.payload.success ? 'Database flushed successfully. All changes persisted to disk.' : 'Failed to flush database.')}]}]}})"
-          }
+          "route_times": -1
         },
         {
           "agent": {
@@ -476,13 +641,9 @@
           },
           "message_format": "rustic_ai.unidb.models.VectorSearchResponse",
           "destination": {
-            "topics": "query_processor"
+            "topics": "unidb.observations"
           },
-          "route_times": -1,
-          "transformer": {
-            "style": "content_based_router",
-            "handler": "({\"format\": \"rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest\", \"payload\": {\"messages\": [{\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": '[TOOL RESULT]\\nOriginal user request: ' & $.context.user_query & '\\n\\nTool execution result: Vector search returned ' & $string($.payload.count) & ' results: ' & $string($.payload.results)}]}]}})"
-          }
+          "route_times": -1
         },
         {
           "agent": {
@@ -490,13 +651,9 @@
           },
           "message_format": "rustic_ai.unidb.models.InsertVerticesResponse",
           "destination": {
-            "topics": "query_processor"
+            "topics": "unidb.observations"
           },
-          "route_times": -1,
-          "transformer": {
-            "style": "content_based_router",
-            "handler": "({\"format\": \"rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest\", \"payload\": {\"messages\": [{\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": '[TOOL RESULT]\\nOriginal user request: ' & $.context.user_query & '\\n\\nTool execution result: ' & ($.payload.success ? 'Successfully inserted ' & $string($.payload.count) & ' vertices.' : 'Failed to insert vertices.')}]}]}})"
-          }
+          "route_times": -1
         },
         {
           "agent": {
@@ -504,27 +661,19 @@
           },
           "message_format": "rustic_ai.unidb.models.InsertEdgesResponse",
           "destination": {
-            "topics": "query_processor"
+            "topics": "unidb.observations"
           },
-          "route_times": -1,
-          "transformer": {
-            "style": "content_based_router",
-            "handler": "({\"format\": \"rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest\", \"payload\": {\"messages\": [{\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": '[TOOL RESULT]\\nOriginal user request: ' & $.context.user_query & '\\n\\nTool execution result: ' & ($.payload.success ? 'Successfully inserted ' & $string($.payload.count) & ' edges.' : 'Failed to insert edges.')}]}]}})"
-          }
+          "route_times": -1
         },
         {
           "agent": {
             "name": "UniDB Agent"
           },
-          "message_format": "rustic_ai.core.agents.commons.message_formats.ErrorMessage",
+          "message_format": "rustic_ai.unidb.models.DBFailure",
           "destination": {
-            "topics": "query_processor"
+            "topics": "unidb.observations"
           },
-          "route_times": -1,
-          "transformer": {
-            "style": "content_based_router",
-            "handler": "({\"format\": \"rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest\", \"payload\": {\"messages\": [{\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": '[TOOL ERROR]\\nOriginal user request: ' & $.context.user_query & '\\n\\nError type: ' & $.payload.error_type & '\\nError message: ' & $.payload.error_message & '\\n\\nPlease handle this error appropriately. If an entity already exists, you may skip creating it and proceed with the next step. Adjust your approach based on the error and continue fulfilling the user request.'}]}]}})"
-          }
+          "route_times": -1
         },
         {
           "agent": {
@@ -532,13 +681,14 @@
           },
           "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionError",
           "destination": {
-            "topics": "query_processor"
+            "topics": "user_message_broadcast"
           },
           "route_times": -1,
           "transformer": {
             "style": "content_based_router",
-            "handler": "({\"format\": \"rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest\", \"payload\": {\"messages\": [{\"role\": \"user\", \"content\": [{\"type\": \"text\", \"text\": '[VALIDATION ERROR - PLEASE RETRY WITH CORRECT PARAMETERS]\\nOriginal user request: ' & $.context.user_query & '\\n\\nError occurred: ' & $.payload.message & '\\n\\nPlease analyze this error carefully. The tool call failed because required parameters were missing or invalid. Review the tool schema and retry with ALL required parameters properly formatted.'}]}]}})"
-          }
+            "handler": "({\"format\":\"rustic_ai.core.ui_protocol.types.TextFormat\",\"payload\":{\"text\":$.payload.message}})"
+          },
+          "process_status": "error"
         },
         {
           "agent": {
@@ -554,6 +704,30 @@
             "style": "content_based_router",
             "handler": "($content := $.payload.choices[0].message.content; $content ? {\"format\": \"rustic_ai.core.ui_protocol.types.TextFormat\", \"payload\": {\"text\": $content}} : null)"
           }
+        },
+        {
+          "agent": {
+            "id": "unidb-tool-adapter",
+            "name": "UniDB Tool Adapter"
+          },
+          "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest",
+          "destination": {
+            "topics": "query_processor"
+          },
+          "route_times": -1,
+          "process_status": "running"
+        },
+        {
+          "agent": {
+            "id": "unidb-tool-adapter",
+            "name": "UniDB Tool Adapter"
+          },
+          "message_format": "rustic_ai.core.ui_protocol.types.TextFormat",
+          "destination": {
+            "topics": "user_message_broadcast"
+          },
+          "route_times": -1,
+          "process_status": "error"
         }
       ]
     }

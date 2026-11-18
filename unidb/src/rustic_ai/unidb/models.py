@@ -1,18 +1,186 @@
-from enum import Enum
-from typing import Any, Dict, List, Optional
+"""Version one public messages. Authorization and workflow status belong to the guild."""
 
-from pydantic import BaseModel, Field
+from enum import Enum
+from typing import Any, Literal
+
+from jsonschema import Draft202012Validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from rustic_ai.core.guild.dsl import BaseAgentProps
 
-# ============================================================================
-# Enums
-# ============================================================================
+
+class StrictModel(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+
+class Limits(StrictModel):
+    timeout_ms: int = Field(default=5000, gt=0)
+    max_query_memory_bytes: int = Field(default=67108864, gt=0)
+    max_rows: int = Field(default=100, gt=0)
+    max_output_bytes: int = Field(default=65536, gt=0)
+    max_input_bytes: int = Field(default=65536, gt=0)
+    max_statements: int = Field(default=16, gt=0)
+    max_conflict_retries: Literal[0] = 0
+
+
+class Statement(StrictModel):
+    kind: Literal["cypher", "locy"] = "cypher"
+    text: str = Field(min_length=1)
+
+
+class Assertion(StrictModel):
+    row_count: int = Field(ge=0)
+    column: str | None = None
+    operator: Literal["eq", "approx"] | None = None
+    value: Any = None
+    abs_tolerance: float = Field(default=0, ge=0)
+
+
+class Check(StrictModel):
+    phase: Literal["pre", "post"]
+    statement: Statement
+    expect: Assertion
+
+
+class Operation(StrictModel):
+    name: str = Field(min_length=1)
+    kind: Literal["query", "evaluate", "explain", "mutation", "scenario"]
+    parameters_schema: dict[str, Any]
+    query: str | None = None
+    program: str | None = None
+    columns: list[str] = Field(default_factory=list)
+    statements: list[Statement] = Field(default_factory=list)
+    checks: list[Check] = Field(default_factory=list)
+    statement_expectations: list[dict[str, int]] = Field(default_factory=list)
+    isolation: Literal["scratch"] = "scratch"
+    before: list[Statement] = Field(default_factory=list)
+    mutations: list[Statement] = Field(default_factory=list)
+    after: list[Statement] = Field(default_factory=list)
+    warnings: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class Catalog(StrictModel):
+    revision: str = "v1"
+    operations: list[Operation] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_operations(self):
+        names = set()
+        for op in self.operations:
+            if op.name in names:
+                raise ValueError("Duplicate operation name")
+            names.add(op.name)
+            Draft202012Validator.check_schema(op.parameters_schema)
+            if (
+                op.parameters_schema.get("type") != "object"
+                or op.parameters_schema.get("additionalProperties") is not False
+            ):
+                raise ValueError("Catalog parameters must be closed objects")
+            required = {
+                "query": op.query,
+                "evaluate": op.program,
+                "explain": op.program,
+                "mutation": op.statements,
+                "scenario": op.mutations,
+            }
+            if not required[op.kind]:
+                raise ValueError(f"{op.kind} operation lacks its execution definition")
+            for check in op.checks:
+                if check.expect.operator and not check.expect.column:
+                    raise ValueError("Comparison check needs column")
+                if check.expect.operator == "approx" and check.expect.abs_tolerance <= 0:
+                    raise ValueError("Approximate check needs positive tolerance")
+        return self
+
+
+class UniDBAgentConfig(BaseAgentProps):
+    model_config = ConfigDict(extra="forbid")
+    binding_id: str = Field(min_length=1)
+    admission: Literal["require_database_ready"] = "require_database_ready"
+    limits: Limits = Field(default_factory=Limits)
+    raw_operations_enabled: bool = False
+    operation_catalog: Catalog = Field(default_factory=Catalog)
+
+
+class Request(StrictModel):
+    protocol_version: Literal[1] = 1
+    request_id: str = Field(min_length=1, max_length=256)
+    correlation_id: str = Field(min_length=1, max_length=256)
+    limits: dict[str, int] | None = None
+
+
+class EffectRequest(Request):
+    operation_id: str = Field(min_length=1, max_length=256)
+
+
+class NamedRequest(Request):
+    operation: str = Field(min_length=1)
+    params: dict[str, Any] = Field(default_factory=dict)
+    view: dict[str, Any] | None = None
+
+
+class DBMutateRequest(NamedRequest):
+    operation_id: str = Field(min_length=1, max_length=256)
+
+
+class DBQueryRequest(NamedRequest):
+    pass
+
+
+class DBEvaluateRequest(NamedRequest):
+    pass
+
+
+class DBExplainRequest(NamedRequest):
+    pass
+
+
+class DBScenarioRequest(NamedRequest):
+    pass
+
+
+class DBCapabilitiesRequest(Request):
+    pass
+
+
+class DBHealthRequest(Request):
+    pass
+
+
+class DBOperationStatusRequest(Request):
+    operation_id: str = Field(min_length=1)
+
+
+class Response(StrictModel):
+    protocol_version: Literal[1] = 1
+    request_id: str
+    correlation_id: str
+    binding_id: str
+    outcome: Literal["succeeded"] = "succeeded"
+    result: dict[str, Any]
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class ErrorDetail(StrictModel):
+    code: str
+    stage: str
+    retryable: bool = False
+    effect: Literal["not_started", "rolled_back", "committed", "unknown"]
+    message: str
+    details: dict[str, Any] = Field(default_factory=dict)
+
+
+class DBFailure(StrictModel):
+    protocol_version: Literal[1] = 1
+    request_id: str
+    correlation_id: str
+    binding_id: str
+    outcome: Literal["failed", "unknown"] = "failed"
+    error: ErrorDetail
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class PropertyType(str, Enum):
-    """Supported property types in UniDB."""
-
     STRING = "string"
     INT64 = "int64"
     FLOAT64 = "float64"
@@ -21,283 +189,200 @@ class PropertyType(str, Enum):
 
 
 class IndexType(str, Enum):
-    """Supported scalar index types."""
-
     BTREE = "btree"
 
 
 class VectorMetric(str, Enum):
-    """Supported vector distance metrics."""
-
     COSINE = "cosine"
     L2 = "l2"
 
 
-# ============================================================================
-# Configuration
-# ============================================================================
+class CreateLabelRequest(EffectRequest):
+    label: str = Field(min_length=1)
 
 
-class UniDBAgentConfig(BaseAgentProps):
-    """Configuration for UniDB Agent."""
-
-    db_path: str = Field(description="Path to the UniDB database file")
-
-
-# ============================================================================
-# Schema Operation Models
-# ============================================================================
+class CreateEdgeTypeRequest(EffectRequest):
+    edge_type: str = Field(min_length=1)
+    source_labels: list[str] = Field(min_length=1)
+    target_labels: list[str] = Field(min_length=1)
 
 
-class CreateLabelRequest(BaseModel):
-    """Request to create a new node label."""
-
-    label: str = Field(description="Name of the label to create")
-
-
-class CreateLabelResponse(BaseModel):
-    """Response for label creation."""
-
-    label: str
-    success: bool = True
-
-
-class CreateEdgeTypeRequest(BaseModel):
-    """Request to create a new edge type."""
-
-    edge_type: str = Field(description="Name of the edge type")
-    source_labels: List[str] = Field(description="Allowed source node labels")
-    target_labels: List[str] = Field(description="Allowed target node labels")
-
-
-class CreateEdgeTypeResponse(BaseModel):
-    """Response for edge type creation."""
-
-    edge_type: str
-    success: bool = True
-
-
-class AddPropertyRequest(BaseModel):
-    """Request to add a property to a label."""
-
-    label: str = Field(description="Label to add property to")
-    property_name: str = Field(description="Name of the property")
-    property_type: PropertyType = Field(description="Type of the property")
-    nullable: bool = Field(default=True, description="Whether the property can be null")
-    vector_dimension: Optional[int] = Field(
-        default=None,
-        description="For vector properties, the dimension of the vector",
-    )
-
-
-class AddPropertyResponse(BaseModel):
-    """Response for property addition."""
-
+class AddPropertyRequest(EffectRequest):
     label: str
     property_name: str
-    success: bool = True
+    property_type: PropertyType
+    nullable: bool = True
+    vector_dimension: int | None = Field(default=None, gt=0)
 
 
-class CreateScalarIndexRequest(BaseModel):
-    """Request to create a scalar index."""
-
-    label: str = Field(description="Label to create index on")
-    property_name: str = Field(description="Property to index")
-    index_type: IndexType = Field(default=IndexType.BTREE, description="Type of index")
-
-
-class CreateScalarIndexResponse(BaseModel):
-    """Response for scalar index creation."""
-
+class CreateScalarIndexRequest(EffectRequest):
     label: str
     property_name: str
-    success: bool = True
+    index_type: IndexType = IndexType.BTREE
 
 
-class CreateVectorIndexRequest(BaseModel):
-    """Request to create a vector index."""
-
-    label: str = Field(description="Label to create vector index on")
-    property_name: str = Field(description="Vector property to index")
-    metric: VectorMetric = Field(default=VectorMetric.COSINE, description="Distance metric")
-
-
-class CreateVectorIndexResponse(BaseModel):
-    """Response for vector index creation."""
-
+class CreateVectorIndexRequest(EffectRequest):
     label: str
     property_name: str
-    metric: str
-    success: bool = True
+    metric: VectorMetric = VectorMetric.COSINE
 
 
-# ============================================================================
-# Schema Introspection Models
-# ============================================================================
+class ListLabelsRequest(Request):
+    pass
 
 
-class ListLabelsRequest(BaseModel):
-    """Request to list all labels."""
-
-    request_type: str = Field(default="list_labels", description="Request type identifier")
+class ListEdgeTypesRequest(Request):
+    pass
 
 
-class ListLabelsResponse(BaseModel):
-    """Response containing all labels."""
-
-    labels: List[str]
-
-
-class ListEdgeTypesRequest(BaseModel):
-    """Request to list all edge types."""
-
-    request_type: str = Field(default="list_edge_types", description="Request type identifier")
-
-
-class ListEdgeTypesResponse(BaseModel):
-    """Response containing all edge types."""
-
-    edge_types: List[str]
-
-
-class GetLabelInfoRequest(BaseModel):
-    """Request to get information about a label."""
-
-    label: str = Field(description="Label to get info for")
-
-
-class GetLabelInfoResponse(BaseModel):
-    """Response containing label information."""
-
+class GetLabelInfoRequest(Request):
     label: str
-    properties: Dict[str, Any]
 
 
-class GetSchemaRequest(BaseModel):
-    """Request to get the full database schema."""
-
-    request_type: str = Field(default="get_schema", description="Request type identifier")
+class GetSchemaRequest(Request):
+    pass
 
 
-class GetSchemaResponse(BaseModel):
-    """Response containing the full schema."""
-
-    db_schema: Dict[str, Any]
-
-
-# ============================================================================
-# Data Operation Models
-# ============================================================================
+class QueryRequest(Request):
+    query: str = Field(min_length=1)
+    params: dict[str, Any] = Field(default_factory=dict)
 
 
-class ExecuteRequest(BaseModel):
-    """Request to execute a Cypher command."""
-
-    query: str = Field(description="Cypher query to execute")
-
-
-class ExecuteResponse(BaseModel):
-    """Response for execute operation."""
-
-    success: bool = True
-    rows_affected: Optional[int] = None
+class ExecuteRequest(EffectRequest):
+    query: str = Field(min_length=1)
+    params: dict[str, Any] = Field(default_factory=dict)
 
 
-class QueryRequest(BaseModel):
-    """Request to run a Cypher query with optional parameters."""
-
-    query: str = Field(description="Cypher query to run")
-    params: Dict[str, Any] = Field(default_factory=dict, description="Query parameters")
+class FlushRequest(EffectRequest):
+    pass
 
 
-class QueryResponse(BaseModel):
-    """Response containing query results."""
-
-    results: List[Dict[str, Any]]
-    count: int
-
-
-class FlushRequest(BaseModel):
-    """Request to flush changes to disk."""
-
-    request_type: str = Field(default="flush", description="Request type identifier")
+class VectorSearchRequest(Request):
+    label: str
+    property_name: str
+    vector: list[float] = Field(min_length=1)
+    k: int = Field(default=10, gt=0)
+    filter_query: str | None = None
+    filter_params: dict[str, Any] = Field(default_factory=dict)
 
 
-class FlushResponse(BaseModel):
-    """Response for flush operation."""
-
-    success: bool = True
-
-
-# ============================================================================
-# Vector Search Models
-# ============================================================================
-
-
-class VectorSearchRequest(BaseModel):
-    """Request to perform a vector similarity search."""
-
-    label: str = Field(description="Label to search on")
-    property_name: str = Field(description="Vector property to search")
-    vector: List[float] = Field(description="Query vector")
-    k: int = Field(default=10, description="Number of results to return")
-    filter_query: Optional[str] = Field(
-        default=None,
-        description="Optional Cypher filter expression",
-    )
-
-
-class VectorSearchResult(BaseModel):
-    """A single vector search result."""
-
+class VectorSearchResult(StrictModel):
     vertex_id: Any
     distance: float
-    properties: Dict[str, Any] = Field(default_factory=dict)
+    properties: dict[str, Any] = Field(default_factory=dict)
 
 
-class VectorSearchResponse(BaseModel):
-    """Response containing vector search results."""
-
-    results: List[VectorSearchResult]
-    count: int
+class InsertVerticesRequest(EffectRequest):
+    label: str
+    vertices: list[dict[str, Any]] = Field(min_length=1)
 
 
-# ============================================================================
-# Bulk Operation Models
-# ============================================================================
+class EdgeData(StrictModel):
+    source_ext_id: str = Field(min_length=1)
+    target_ext_id: str = Field(min_length=1)
+    properties: dict[str, Any] = Field(default_factory=dict)
 
 
-class InsertVerticesRequest(BaseModel):
-    """Request to bulk insert vertices."""
-
-    label: str = Field(description="Label for the vertices")
-    vertices: List[Dict[str, Any]] = Field(description="List of vertex property dictionaries")
+class InsertEdgesRequest(EffectRequest):
+    edge_type: str
+    edges: list[EdgeData] = Field(min_length=1)
 
 
-class InsertVerticesResponse(BaseModel):
-    """Response for bulk vertex insertion."""
-
-    count: int
-    success: bool = True
+class DBBulkStatusRequest(Request):
+    load_id: str
 
 
-class EdgeData(BaseModel):
-    """Data for a single edge to insert."""
-
-    source_id: int = Field(description="Source vertex ID (integer). Use query_database to find vertex IDs by name.")
-    target_id: int = Field(description="Target vertex ID (integer). Use query_database to find vertex IDs by name.")
-    properties: Dict[str, Any] = Field(default_factory=dict, description="Edge properties")
+class DBCapabilitiesResponse(Response):
+    pass
 
 
-class InsertEdgesRequest(BaseModel):
-    """Request to bulk insert edges."""
-
-    edge_type: str = Field(description="Type of edges to insert")
-    edges: List[EdgeData] = Field(description="List of edges to insert")
+class DBHealthResponse(Response):
+    pass
 
 
-class InsertEdgesResponse(BaseModel):
-    """Response for bulk edge insertion."""
+class DBQueryResponse(Response):
+    pass
 
-    count: int
-    success: bool = True
+
+class DBEvaluateResponse(Response):
+    pass
+
+
+class DBExplainResponse(Response):
+    pass
+
+
+class DBMutateResponse(Response):
+    pass
+
+
+class DBScenarioResponse(Response):
+    pass
+
+
+class DBOperationStatusResponse(Response):
+    pass
+
+
+class DBBulkStatusResponse(Response):
+    pass
+
+
+class CreateLabelResponse(Response):
+    pass
+
+
+class CreateEdgeTypeResponse(Response):
+    pass
+
+
+class AddPropertyResponse(Response):
+    pass
+
+
+class CreateScalarIndexResponse(Response):
+    pass
+
+
+class CreateVectorIndexResponse(Response):
+    pass
+
+
+class ListLabelsResponse(Response):
+    pass
+
+
+class ListEdgeTypesResponse(Response):
+    pass
+
+
+class GetLabelInfoResponse(Response):
+    pass
+
+
+class GetSchemaResponse(Response):
+    pass
+
+
+class QueryResponse(Response):
+    pass
+
+
+class ExecuteResponse(Response):
+    pass
+
+
+class FlushResponse(Response):
+    pass
+
+
+class VectorSearchResponse(Response):
+    pass
+
+
+class InsertVerticesResponse(Response):
+    pass
+
+
+class InsertEdgesResponse(Response):
+    pass
