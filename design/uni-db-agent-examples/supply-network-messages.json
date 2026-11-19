@@ -1,0 +1,331 @@
+{
+  "status": "native_5.2.1_reference_results",
+  "title": "Atomic supply graph ingestion and query",
+  "initialization_file": "supply-network-init.json",
+  "notes": [
+    "Request/response projections, not complete Rustic Message envelopes.",
+    "Database payloads captured from Uni-DB 5.2.1; versions and internal IDs vary between runs.",
+    "The capability_denied exchange is a guild-owned application fixture, exercised by test_guild_flow.py.",
+    "Runtime sender attribution scopes receipts; authentication belongs to the embedding guild."
+  ],
+  "exchanges": [
+    {
+      "step_id": "atomic-import",
+      "request": {
+        "sender": {
+          "id": "demo-ingester",
+          "name": "demo-ingester"
+        },
+        "topics": "db.requests",
+        "format": "rustic_ai.unidb.models.DBMutateRequest",
+        "payload": {
+          "protocol_version": 1,
+          "request_id": "req:supply-import:001",
+          "correlation_id": "workflow:supply-import:001",
+          "operation": "register_supply_network",
+          "params": {
+            "product": {
+              "ext_id": "product:digitizer",
+              "name": "Digitizer"
+            },
+            "suppliers": [
+              {
+                "ext_id": "supplier:allied",
+                "name": "Allied Circuits",
+                "reliability": 0.9,
+                "unit_cost_cents": 1850,
+                "lead_time_days": 14
+              },
+              {
+                "ext_id": "supplier:shenzhen",
+                "name": "Shenzhen Electronics",
+                "reliability": 0.87,
+                "unit_cost_cents": 1800,
+                "lead_time_days": 7
+              }
+            ]
+          },
+          "operation_id": "op:supply-import:001"
+        }
+      },
+      "response": {
+        "topics": "db.results",
+        "format": "rustic_ai.unidb.models.DBMutateResponse",
+        "payload": {
+          "protocol_version": 1,
+          "request_id": "req:supply-import:001",
+          "correlation_id": "workflow:supply-import:001",
+          "binding_id": "supply-network",
+          "outcome": "succeeded",
+          "result": {
+            "operation_id": "op:supply-import:001",
+            "effect": "committed",
+            "replayed": false,
+            "statistics": {
+              "nodes_created": 3,
+              "nodes_deleted": 0,
+              "relationships_created": 2,
+              "relationships_deleted": 0,
+              "properties_set": 12,
+              "properties_removed": 0,
+              "labels_added": 3,
+              "labels_removed": 0
+            },
+            "commit": {
+              "version": "8",
+              "rules_promoted": 0,
+              "rule_promotion_errors": []
+            }
+          },
+          "metadata": {
+            "native_version": "5.2.1",
+            "catalog_revision": "supply-network-v1",
+            "catalog_digest": "e943723186643bf6d039797548b9d6fc247d570c5a999958c4149af46c1eac72",
+            "rule_program_ids": [],
+            "rule_digest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            "view": {
+              "kind": "live",
+              "snapshot_id": null
+            }
+          }
+        }
+      },
+      "expected_invariants": [
+        "Three nodes and two relationships become visible together.",
+        "No bulk writer is used for this atomic request."
+      ],
+      "evidence": "native_runtime"
+    },
+    {
+      "step_id": "query",
+      "request": {
+        "sender": {
+          "id": "demo-reasoner",
+          "name": "demo-reasoner"
+        },
+        "topics": "db.requests",
+        "format": "rustic_ai.unidb.models.DBQueryRequest",
+        "payload": {
+          "protocol_version": 1,
+          "request_id": "req:suppliers-read:001",
+          "correlation_id": "workflow:supply-import:001",
+          "operation": "suppliers_for_product",
+          "params": {
+            "product_id": "product:digitizer"
+          }
+        }
+      },
+      "response": {
+        "topics": "db.results",
+        "format": "rustic_ai.unidb.models.DBQueryResponse",
+        "payload": {
+          "protocol_version": 1,
+          "request_id": "req:suppliers-read:001",
+          "correlation_id": "workflow:supply-import:001",
+          "binding_id": "supply-network",
+          "outcome": "succeeded",
+          "result": {
+            "columns": [
+              "supplier_id",
+              "supplier_name",
+              "reliability",
+              "unit_cost_cents",
+              "lead_time_days"
+            ],
+            "rows": [
+              {
+                "supplier_id": "supplier:allied",
+                "supplier_name": "Allied Circuits",
+                "reliability": 0.9,
+                "unit_cost_cents": 1850,
+                "lead_time_days": 14
+              },
+              {
+                "supplier_id": "supplier:shenzhen",
+                "supplier_name": "Shenzhen Electronics",
+                "reliability": 0.87,
+                "unit_cost_cents": 1800,
+                "lead_time_days": 7
+              }
+            ],
+            "returned_count": 2,
+            "truncated": false,
+            "complete": true,
+            "warnings": []
+          },
+          "metadata": {
+            "native_version": "5.2.1",
+            "catalog_revision": "supply-network-v1",
+            "catalog_digest": "e943723186643bf6d039797548b9d6fc247d570c5a999958c4149af46c1eac72",
+            "rule_program_ids": [],
+            "rule_digest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            "view": {
+              "kind": "live",
+              "snapshot_id": null
+            }
+          }
+        }
+      },
+      "expected_invariants": [],
+      "evidence": "native_runtime"
+    },
+    {
+      "step_id": "safe-retry",
+      "request": {
+        "sender": {
+          "id": "demo-ingester",
+          "name": "demo-ingester"
+        },
+        "topics": "db.requests",
+        "format": "rustic_ai.unidb.models.DBMutateRequest",
+        "payload": {
+          "protocol_version": 1,
+          "request_id": "req:supply-retry:001",
+          "correlation_id": "workflow:supply-import:001",
+          "operation": "register_supply_network",
+          "params": {
+            "product": {
+              "ext_id": "product:digitizer",
+              "name": "Digitizer"
+            },
+            "suppliers": [
+              {
+                "ext_id": "supplier:allied",
+                "name": "Allied Circuits",
+                "reliability": 0.9,
+                "unit_cost_cents": 1850,
+                "lead_time_days": 14
+              },
+              {
+                "ext_id": "supplier:shenzhen",
+                "name": "Shenzhen Electronics",
+                "reliability": 0.87,
+                "unit_cost_cents": 1800,
+                "lead_time_days": 7
+              }
+            ]
+          },
+          "operation_id": "op:supply-import:001"
+        }
+      },
+      "response": {
+        "topics": "db.results",
+        "format": "rustic_ai.unidb.models.DBMutateResponse",
+        "payload": {
+          "protocol_version": 1,
+          "request_id": "req:supply-retry:001",
+          "correlation_id": "workflow:supply-import:001",
+          "binding_id": "supply-network",
+          "outcome": "succeeded",
+          "result": {
+            "effect": "committed",
+            "operation_id": "op:supply-import:001",
+            "replayed": true,
+            "statistics": {
+              "labels_added": 3,
+              "labels_removed": 0,
+              "nodes_created": 3,
+              "nodes_deleted": 0,
+              "properties_removed": 0,
+              "properties_set": 12,
+              "relationships_created": 2,
+              "relationships_deleted": 0
+            },
+            "commit": {
+              "metadata_available": false
+            }
+          },
+          "metadata": {
+            "native_version": "5.2.1",
+            "catalog_revision": "supply-network-v1",
+            "catalog_digest": "e943723186643bf6d039797548b9d6fc247d570c5a999958c4149af46c1eac72",
+            "rule_program_ids": [],
+            "rule_digest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            "view": {
+              "kind": "live",
+              "snapshot_id": null
+            }
+          }
+        }
+      },
+      "expected_invariants": [
+        "The invocation ID changes; the operation ID and canonical operation fingerprint do not.",
+        "Replay creates no additional nodes or edges."
+      ],
+      "evidence": "native_runtime"
+    },
+    {
+      "step_id": "operation-id-conflict",
+      "request": {
+        "sender": {
+          "id": "demo-ingester",
+          "name": "demo-ingester"
+        },
+        "topics": "db.requests",
+        "format": "rustic_ai.unidb.models.DBMutateRequest",
+        "payload": {
+          "protocol_version": 1,
+          "request_id": "req:supply-conflict:001",
+          "correlation_id": "workflow:supply-import:001",
+          "operation": "register_supply_network",
+          "params": {
+            "product": {
+              "ext_id": "product:digitizer",
+              "name": "Changed after first commit"
+            },
+            "suppliers": [
+              {
+                "ext_id": "supplier:allied",
+                "name": "Allied Circuits",
+                "reliability": 0.9,
+                "unit_cost_cents": 1850,
+                "lead_time_days": 14
+              },
+              {
+                "ext_id": "supplier:shenzhen",
+                "name": "Shenzhen Electronics",
+                "reliability": 0.87,
+                "unit_cost_cents": 1800,
+                "lead_time_days": 7
+              }
+            ]
+          },
+          "operation_id": "op:supply-import:001"
+        }
+      },
+      "response": {
+        "topics": "error_topic",
+        "format": "rustic_ai.unidb.models.DBFailure",
+        "payload": {
+          "protocol_version": 1,
+          "request_id": "req:supply-conflict:001",
+          "correlation_id": "workflow:supply-import:001",
+          "binding_id": "supply-network",
+          "outcome": "failed",
+          "error": {
+            "code": "operation_id_conflict",
+            "stage": "receipt",
+            "retryable": false,
+            "effect": "not_started",
+            "message": "Operation ID identifies different content",
+            "details": {}
+          },
+          "metadata": {
+            "native_version": "5.2.1",
+            "catalog_revision": "supply-network-v1",
+            "catalog_digest": "e943723186643bf6d039797548b9d6fc247d570c5a999958c4149af46c1eac72",
+            "rule_program_ids": [],
+            "rule_digest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+            "view": {
+              "kind": "live",
+              "snapshot_id": null
+            }
+          }
+        },
+        "emission_api": "ProcessContext.send_error"
+      },
+      "expected_invariants": [],
+      "evidence": "native_runtime"
+    }
+  ]
+}
