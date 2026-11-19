@@ -1,0 +1,505 @@
+{
+  "status": "native_5.2.1_reference_results",
+  "title": "Supplier simulation followed by separately authorized execution",
+  "initialization_file": "supplier-scenario-init.json",
+  "notes": [
+    "Request/response projections, not complete Rustic Message envelopes.",
+    "Database payloads captured from Uni-DB 5.2.1; versions and internal IDs vary between runs.",
+    "The capability_denied exchange is a guild-owned application fixture, exercised by test_guild_flow.py.",
+    "Runtime sender attribution scopes receipts; authentication belongs to the embedding guild."
+  ],
+  "exchanges": [
+    {
+      "step_id": "seed-facts",
+      "request": {
+        "sender": {
+          "id": "demo-ingester",
+          "name": "demo-ingester"
+        },
+        "topics": "db.requests",
+        "format": "rustic_ai.unidb.models.DBMutateRequest",
+        "payload": {
+          "protocol_version": 1,
+          "request_id": "req:scenario-seed:001",
+          "correlation_id": "workflow:second-source:001",
+          "operation": "seed_supplier_scenario",
+          "params": {
+            "product_id": "product:digitizer",
+            "primary_supplier_id": "supplier:shenzhen",
+            "primary_supplier_name": "Shenzhen Electronics",
+            "candidate_supplier_id": "supplier:allied",
+            "candidate_supplier_name": "Allied Circuits"
+          },
+          "operation_id": "op:scenario-seed:001"
+        }
+      },
+      "response": {
+        "topics": "db.results",
+        "format": "rustic_ai.unidb.models.DBMutateResponse",
+        "payload": {
+          "protocol_version": 1,
+          "request_id": "req:scenario-seed:001",
+          "correlation_id": "workflow:second-source:001",
+          "binding_id": "supplier-scenario",
+          "outcome": "succeeded",
+          "result": {
+            "operation_id": "op:scenario-seed:001",
+            "effect": "committed",
+            "replayed": false,
+            "statistics": {
+              "nodes_created": 3,
+              "nodes_deleted": 0,
+              "relationships_created": 1,
+              "relationships_deleted": 0,
+              "properties_set": 10,
+              "properties_removed": 0,
+              "labels_added": 3,
+              "labels_removed": 0
+            },
+            "commit": {
+              "version": "7",
+              "rules_promoted": 0,
+              "rule_promotion_errors": []
+            }
+          },
+          "metadata": {
+            "native_version": "5.2.1",
+            "catalog_revision": "supplier-scenario-v1",
+            "catalog_digest": "8a69306c4a199840f9ec51950bfed41a996339e9ea5a18013448b269f35ee29d",
+            "rule_program_ids": [
+              "supplier-scenario-rules-v1"
+            ],
+            "rule_digest": "20a50533969ce585ee214e1c03bbeca2f505b703fc530299117a9606c4d993cb",
+            "view": {
+              "kind": "live",
+              "snapshot_id": null
+            }
+          }
+        }
+      },
+      "expected_invariants": [],
+      "evidence": "native_runtime"
+    },
+    {
+      "step_id": "baseline",
+      "request": {
+        "sender": {
+          "id": "demo-reasoner",
+          "name": "demo-reasoner"
+        },
+        "topics": "db.requests",
+        "format": "rustic_ai.unidb.models.DBEvaluateRequest",
+        "payload": {
+          "protocol_version": 1,
+          "request_id": "req:availability-before:001",
+          "correlation_id": "workflow:second-source:001",
+          "operation": "part_availability",
+          "params": {
+            "product_id": "product:digitizer"
+          }
+        }
+      },
+      "response": {
+        "topics": "db.results",
+        "format": "rustic_ai.unidb.models.DBEvaluateResponse",
+        "payload": {
+          "protocol_version": 1,
+          "request_id": "req:availability-before:001",
+          "correlation_id": "workflow:second-source:001",
+          "binding_id": "supplier-scenario",
+          "outcome": "succeeded",
+          "result": {
+            "commands": [
+              {
+                "kind": "query",
+                "columns": [
+                  "product_id",
+                  "availability"
+                ],
+                "rows": [
+                  {
+                    "product_id": "product:digitizer",
+                    "availability": 0.87
+                  }
+                ],
+                "returned_count": 1,
+                "truncated": false,
+                "complete": true
+              }
+            ],
+            "materialized": false,
+            "rule_program_ids": [
+              "supplier-scenario-rules-v1"
+            ],
+            "warnings": [],
+            "compile_warnings": []
+          },
+          "metadata": {
+            "native_version": "5.2.1",
+            "catalog_revision": "supplier-scenario-v1",
+            "catalog_digest": "8a69306c4a199840f9ec51950bfed41a996339e9ea5a18013448b269f35ee29d",
+            "rule_program_ids": [
+              "supplier-scenario-rules-v1"
+            ],
+            "rule_digest": "20a50533969ce585ee214e1c03bbeca2f505b703fc530299117a9606c4d993cb",
+            "view": {
+              "kind": "live",
+              "snapshot_id": null
+            }
+          }
+        }
+      },
+      "expected_invariants": [],
+      "evidence": "native_runtime"
+    },
+    {
+      "step_id": "simulate",
+      "request": {
+        "sender": {
+          "id": "demo-reasoner",
+          "name": "demo-reasoner"
+        },
+        "topics": "db.requests",
+        "format": "rustic_ai.unidb.models.DBScenarioRequest",
+        "payload": {
+          "protocol_version": 1,
+          "request_id": "req:second-source-scenario:001",
+          "correlation_id": "workflow:second-source:001",
+          "operation": "simulate_second_source",
+          "params": {
+            "product_id": "product:digitizer",
+            "supplier_id": "supplier:allied",
+            "reliability": 0.9,
+            "unit_cost_cents": 1850,
+            "lead_time_days": 14,
+            "min_order_qty": 500
+          }
+        }
+      },
+      "response": {
+        "topics": "db.results",
+        "format": "rustic_ai.unidb.models.DBScenarioResponse",
+        "payload": {
+          "protocol_version": 1,
+          "request_id": "req:second-source-scenario:001",
+          "correlation_id": "workflow:second-source:001",
+          "binding_id": "supplier-scenario",
+          "outcome": "succeeded",
+          "result": {
+            "isolation": "scratch",
+            "persisted": false,
+            "cleanup": "completed",
+            "before": [
+              {
+                "kind": "query",
+                "columns": [
+                  "product_id",
+                  "availability"
+                ],
+                "rows": [
+                  {
+                    "product_id": "product:digitizer",
+                    "availability": 0.87
+                  }
+                ],
+                "returned_count": 1,
+                "truncated": false,
+                "complete": true,
+                "warnings": [],
+                "compile_warnings": []
+              }
+            ],
+            "after": [
+              {
+                "kind": "query",
+                "columns": [
+                  "availability",
+                  "product_id"
+                ],
+                "rows": [
+                  {
+                    "availability": 0.987,
+                    "product_id": "product:digitizer"
+                  }
+                ],
+                "returned_count": 1,
+                "truncated": false,
+                "complete": true,
+                "warnings": [],
+                "compile_warnings": []
+              }
+            ],
+            "warnings": [
+              {
+                "source": "application_catalog",
+                "code": "independent_supplier_assumption",
+                "message": "Availability uses the configured independent-supplier assumption; it is not a calibrated guarantee."
+              }
+            ]
+          },
+          "metadata": {
+            "native_version": "5.2.1",
+            "catalog_revision": "supplier-scenario-v1",
+            "catalog_digest": "8a69306c4a199840f9ec51950bfed41a996339e9ea5a18013448b269f35ee29d",
+            "rule_program_ids": [
+              "supplier-scenario-rules-v1"
+            ],
+            "rule_digest": "20a50533969ce585ee214e1c03bbeca2f505b703fc530299117a9606c4d993cb",
+            "view": {
+              "kind": "scratch",
+              "base_view": {
+                "kind": "live",
+                "snapshot_id": null
+              }
+            }
+          }
+        }
+      },
+      "expected_invariants": [
+        "The primary still has one SUPPLIES relationship.",
+        "The scratch transaction cannot commit and is rolled back before success is reported."
+      ],
+      "evidence": "native_runtime"
+    },
+    {
+      "step_id": "reasoner-write-refused",
+      "request": {
+        "sender": {
+          "id": "demo-reasoner",
+          "name": "demo-reasoner"
+        },
+        "topics": "db.access.requests",
+        "format": "rustic_ai.unidb.models.DBMutateRequest",
+        "payload": {
+          "protocol_version": 1,
+          "request_id": "req:unauthorized-qualification:001",
+          "correlation_id": "workflow:second-source:001",
+          "operation": "qualify_second_source",
+          "params": {
+            "product_id": "product:digitizer",
+            "supplier_id": "supplier:allied",
+            "reliability": 0.9,
+            "unit_cost_cents": 1850,
+            "lead_time_days": 14,
+            "min_order_qty": 500
+          },
+          "operation_id": "op:unauthorized-qualification:001"
+        }
+      },
+      "response": {
+        "topics": "error_topic",
+        "format": "rustic_ai.unidb.models.DBFailure",
+        "payload": {
+          "protocol_version": 1,
+          "request_id": "req:unauthorized-qualification:001",
+          "correlation_id": "workflow:second-source:001",
+          "binding_id": "supplier-scenario",
+          "outcome": "failed",
+          "error": {
+            "code": "capability_denied",
+            "stage": "authorize",
+            "retryable": false,
+            "effect": "not_started",
+            "message": "The reporting caller cannot execute this mutation.",
+            "details": {}
+          },
+          "metadata": {
+            "catalog_revision": "supplier-scenario-v1"
+          }
+        },
+        "emission_api": "ProcessContext.send_error",
+        "sender": {
+          "id": "demo-access-boundary",
+          "name": "demo-access-boundary"
+        }
+      },
+      "expected_invariants": [
+        "The guild access boundary rejects this request before delivery to UniDBAgent."
+      ],
+      "evidence": "guild_boundary_fixture"
+    },
+    {
+      "step_id": "authorized-execution",
+      "request": {
+        "sender": {
+          "id": "demo-approved-executor",
+          "name": "demo-approved-executor"
+        },
+        "topics": "db.requests",
+        "format": "rustic_ai.unidb.models.DBMutateRequest",
+        "payload": {
+          "protocol_version": 1,
+          "request_id": "req:approved-qualification:001",
+          "correlation_id": "workflow:second-source:001",
+          "operation": "qualify_second_source",
+          "params": {
+            "product_id": "product:digitizer",
+            "supplier_id": "supplier:allied",
+            "reliability": 0.9,
+            "unit_cost_cents": 1850,
+            "lead_time_days": 14,
+            "min_order_qty": 500
+          },
+          "operation_id": "op:approved-qualification:001"
+        }
+      },
+      "response": {
+        "topics": "db.results",
+        "format": "rustic_ai.unidb.models.DBMutateResponse",
+        "payload": {
+          "protocol_version": 1,
+          "request_id": "req:approved-qualification:001",
+          "correlation_id": "workflow:second-source:001",
+          "binding_id": "supplier-scenario",
+          "outcome": "succeeded",
+          "result": {
+            "operation_id": "op:approved-qualification:001",
+            "effect": "committed",
+            "replayed": false,
+            "statistics": {
+              "nodes_created": 0,
+              "nodes_deleted": 0,
+              "relationships_created": 1,
+              "relationships_deleted": 0,
+              "properties_set": 4,
+              "properties_removed": 0,
+              "labels_added": 0,
+              "labels_removed": 0
+            },
+            "commit": {
+              "version": "10",
+              "rules_promoted": 0,
+              "rule_promotion_errors": []
+            }
+          },
+          "metadata": {
+            "native_version": "5.2.1",
+            "catalog_revision": "supplier-scenario-v1",
+            "catalog_digest": "8a69306c4a199840f9ec51950bfed41a996339e9ea5a18013448b269f35ee29d",
+            "rule_program_ids": [
+              "supplier-scenario-rules-v1"
+            ],
+            "rule_digest": "20a50533969ce585ee214e1c03bbeca2f505b703fc530299117a9606c4d993cb",
+            "view": {
+              "kind": "live",
+              "snapshot_id": null
+            }
+          }
+        }
+      },
+      "expected_invariants": [
+        "Approval happens outside UniDBAgent.",
+        "Preconditions, mutation, postcondition and receipt share one transaction.",
+        "The exact approved arguments are passed by the trusted executor."
+      ],
+      "evidence": "native_runtime"
+    },
+    {
+      "step_id": "fresh-verification",
+      "request": {
+        "sender": {
+          "id": "demo-approved-executor",
+          "name": "demo-approved-executor"
+        },
+        "topics": "db.requests",
+        "format": "rustic_ai.unidb.models.DBEvaluateRequest",
+        "payload": {
+          "protocol_version": 1,
+          "request_id": "req:availability-after:001",
+          "correlation_id": "workflow:second-source:001",
+          "operation": "part_availability",
+          "params": {
+            "product_id": "product:digitizer"
+          }
+        }
+      },
+      "response": {
+        "topics": "db.results",
+        "format": "rustic_ai.unidb.models.DBEvaluateResponse",
+        "payload": {
+          "protocol_version": 1,
+          "request_id": "req:availability-after:001",
+          "correlation_id": "workflow:second-source:001",
+          "binding_id": "supplier-scenario",
+          "outcome": "succeeded",
+          "result": {
+            "commands": [
+              {
+                "kind": "query",
+                "columns": [
+                  "product_id",
+                  "availability"
+                ],
+                "rows": [
+                  {
+                    "availability": 0.987,
+                    "product_id": "product:digitizer"
+                  }
+                ],
+                "returned_count": 1,
+                "truncated": false,
+                "complete": true
+              }
+            ],
+            "materialized": false,
+            "rule_program_ids": [
+              "supplier-scenario-rules-v1"
+            ],
+            "warnings": [],
+            "compile_warnings": []
+          },
+          "metadata": {
+            "native_version": "5.2.1",
+            "catalog_revision": "supplier-scenario-v1",
+            "catalog_digest": "8a69306c4a199840f9ec51950bfed41a996339e9ea5a18013448b269f35ee29d",
+            "rule_program_ids": [
+              "supplier-scenario-rules-v1"
+            ],
+            "rule_digest": "20a50533969ce585ee214e1c03bbeca2f505b703fc530299117a9606c4d993cb",
+            "view": {
+              "kind": "live",
+              "snapshot_id": null
+            }
+          }
+        }
+      },
+      "expected_invariants": [
+        "This is a fresh read of committed primary data, not the scenario output."
+      ],
+      "evidence": "native_runtime"
+    }
+  ],
+  "external_workflow": {
+    "position": "Between simulate and authorized-execution",
+    "owner": "User-provided approval workflow and authenticated executor",
+    "proposal": {
+      "proposal_id": "proposal:second-source:001",
+      "action": "qualify_second_source",
+      "arguments": {
+        "product_id": "product:digitizer",
+        "supplier_id": "supplier:allied",
+        "reliability": 0.9,
+        "unit_cost_cents": 1850,
+        "lead_time_days": 14,
+        "min_order_qty": 500
+      },
+      "expected_effect": {
+        "product_id": "product:digitizer",
+        "availability": 0.987
+      },
+      "correlation_id": "workflow:second-source:001"
+    },
+    "approval_example": {
+      "proposal_id": "proposal:second-source:001",
+      "decision": "approved",
+      "approved_arguments_digest": "computed-by-domain-workflow",
+      "approver_identity_source": "authenticated host context"
+    },
+    "requirements": [
+      "Approval binds the exact action, arguments and expected effect.",
+      "The host authenticates the approver; the domain workflow checks eligibility and segregation of duties.",
+      "The executor rejects expired or altered approvals and rechecks domain preconditions.",
+      "An approval_id in a model payload does not confer database authority."
+    ]
+  }
+}

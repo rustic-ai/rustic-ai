@@ -9641,6 +9641,7 @@ rusticai-llm-agent = {path = "../llm-agent", develop = true}
 rusticai-pandas-analyst = {path = "../pandas-analyst", develop = true}
 rusticai-playwright = {path = "../playwright", develop = true}
 rusticai-serpapi = {path = "../serpapi", develop = true}
+rusticai-unidb = {path = "../unidb", develop = true, extras = ["tools"]}
 rusticai-uniko-agent = {path = "../uniko-agent", develop = true}
 rusticai-vertexai = {path = "../vertexai", develop = true}
 
@@ -9719,6 +9720,29 @@ rusticai-core = {path = "../core", develop = true}
 [package.source]
 type = "directory"
 url = "testing"
+
+[[package]]
+name = "rusticai-unidb"
+version = "0.0.1"
+description = "Typed Uni-DB database capabilities for Rustic AI"
+optional = false
+python-versions = ">=3.13,<3.14"
+groups = ["main"]
+files = []
+develop = true
+
+[package.dependencies]
+jsonschema = ">=4.26.0,<5.0.0"
+rusticai-core = {path = "../core", develop = true}
+rusticai-llm-agent = {path = "../llm-agent", develop = true, optional = true}
+uni-db = "==5.2.1"
+
+[package.extras]
+tools = ["rusticai-llm-agent @ file:///Users/rohit/Work/rustic-ai/llm-agent"]
+
+[package.source]
+type = "directory"
+url = "unidb"
 
 [[package]]
 name = "rusticai-uniko-agent"
@@ -11483,6 +11507,26 @@ devenv = ["zest.releaser"]
 testing = ["check_manifest", "pyroma", "pytest (>=4.3)", "pytest-cov", "pytest-mock (>=3.3)", "ruff"]
 
 [[package]]
+name = "uni-db"
+version = "5.2.1"
+description = "Python bindings for Uni Graph Database (default — all 11 providers, CPU)"
+optional = false
+python-versions = ">=3.10"
+groups = ["main"]
+files = [
+    {file = "uni_db-5.2.1-cp310-abi3-macosx_11_0_arm64.whl", hash = "sha256:c563d51d8c2bbabbddea8a03352cac44612b6d23c831daaebce9ae02968e7a73"},
+    {file = "uni_db-5.2.1-cp310-abi3-manylinux_2_28_aarch64.whl", hash = "sha256:ceb3f7b51e4b0fc325f021330c502564a02192b9bd3e5c592b0eb1b19c9de4d9"},
+    {file = "uni_db-5.2.1-cp310-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:bc89b525551243a9c85040f54e2320cfbecf5d185bb35e1bc56ae6e31487a696"},
+    {file = "uni_db-5.2.1-cp310-abi3-win_amd64.whl", hash = "sha256:a6a53f1f3177b55802504ce3b104e1ddbfcd1386f0c96d22c02816e16dda376b"},
+    {file = "uni_db-5.2.1.tar.gz", hash = "sha256:979a32e8fca4b9d7d12742d33b6274da91b097822e5fa11aacef26f0722dd4b5"},
+]
+
+[package.extras]
+docs = ["pdoc (>=14.0.0)"]
+notebook-data-prep = ["numpy (>=1.26)", "onnx (>=1.16)", "onnxscript (>=0.1)", "pyarrow (>=16)", "scikit-learn (>=1.4)", "torch (>=2.2)"]
+notebook-runtime = ["numpy (>=1.26)", "onnxruntime (>=1.18)", "pyarrow (>=16)"]
+
+[[package]]
 name = "uniko"
 version = "0.5.1"
 description = "Python bindings for uniko cognitive memory"
@@ -12730,4 +12774,4 @@ google-cloud = ["gcsfs"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.13,<3.14"
-content-hash = "c1228083f62d7dd7ed7ce20d7b82cf17a2929e97297592d0b6a46008da548389"
+content-hash = "74e699a56fd2514b9cc287d6bf28a83c65b18c5cf9a4938234e28e1291200d9f"
