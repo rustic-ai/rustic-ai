@@ -1,5 +1,4 @@
 import os
-import time
 
 import pytest
 
@@ -12,7 +11,7 @@ from rustic_ai.huggingface.agents.llm.phi_agent import LLMPhiAgent
 
 class TestPhiAgent:
     @pytest.mark.skipif(os.getenv("SKIP_EXPENSIVE_TESTS") == "true", reason="Skipping expensive tests")
-    def test_response_is_generated(self, probe_spec, guild: Guild):
+    def test_response_is_generated(self, probe_spec, guild: Guild, wait_for_model_response):
         agent_spec = (
             AgentBuilder(LLMPhiAgent)
             .set_name("Test Agent")
@@ -32,9 +31,7 @@ class TestPhiAgent:
             format=GenerationPromptRequest,
         )
 
-        time.sleep(60)
-
-        messages = probe_agent.get_messages()
+        messages = wait_for_model_response(probe_agent)
 
         assert len(messages) == 1
         assert messages[0].topics == guild.DEFAULT_TOPIC

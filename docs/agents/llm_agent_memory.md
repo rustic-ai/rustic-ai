@@ -308,3 +308,8 @@ The base `MemoriesStore` class automatically handles:
 - [LLM Agent & Plugins](llm_agent.md) - Overview of the LLM Agent
 - [LLM Agent Plugins](llm_agent_plugins.md) - Plugin system architecture
 - [Dependency Injection](../howto/dependency_injection.md) - Configuring dependencies
+
+
+## Uniko cognitive memory
+
+[UnikoMemoriesStore](uniko/index.md#conversational-llm-wrapper) adds user-isolated cognitive memory around LLM calls through `llm_request_wrappers`, with attributed bounded recall and atomic user/assistant recording. Use a separate [MemoryAgent](uniko/index.md) when memory should be an independently addressed guild capability. [UnikoResolver](../dependencies/uniko/index.md) documents private storage and lifecycle ownership.

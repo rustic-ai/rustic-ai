@@ -4,7 +4,7 @@ import uuid
 from datasets import load_dataset
 import soundfile as sf
 import torch
-from transformers import pipeline
+from transformers import SpeechT5HifiGan, pipeline
 
 from rustic_ai.core.agents.commons.media import MediaLink
 from rustic_ai.core.agents.commons.message_formats import (
@@ -19,9 +19,22 @@ from rustic_ai.core.guild.agent_ext.depends.filesystem import FileSystem
 class SpeechT5TTSAgent(Agent):
 
     def __init__(self) -> None:
-        self._synthesiser = pipeline("text-to-speech", "microsoft/speecht5_tts")  # type: ignore[call-overload]
+        # These official checkpoints ship PyTorch weights. Use them directly
+        # rather than starting optional remote safetensors-conversion threads.
+        vocoder = SpeechT5HifiGan.from_pretrained("microsoft/speecht5_hifigan", use_safetensors=False)
+        self._synthesiser = pipeline(  # type: ignore[call-overload]
+            "text-to-speech",
+            "microsoft/speecht5_tts",
+            vocoder=vocoder,
+            model_kwargs={"use_safetensors": False},
+        )
+        vocoder.to(self._synthesiser.device)
 
-        embeddings_dataset = load_dataset("Matthijs/cmu-arctic-xvectors", split="validation")
+        # Datasets no longer executes the repository's legacy loader script.
+        # The Hub conversion preserves the validation rows as plain Parquet.
+        embeddings_dataset = load_dataset(
+            "Matthijs/cmu-arctic-xvectors", revision="refs/convert/parquet", split="validation"
+        )
         self._speaker_embedding = torch.tensor(embeddings_dataset[7306]["xvector"]).unsqueeze(0)
 
     @agent.processor(GenerationPromptRequest, depends_on=["filesystem:guild_fs:True"])

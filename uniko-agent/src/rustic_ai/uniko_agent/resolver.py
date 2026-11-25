@@ -76,7 +76,9 @@ class UnikoResolver(DependencyResolver[uniko.Agent]):
         super().__init__()
         self._resolution_lock = threading.RLock()
         if readiness_policy != "sdk_default":
-            raise ValueError("Uniko 0.5.1 cannot verify model readiness at startup; require_verified is unavailable")
+            raise ValueError(
+                "This integration cannot verify model readiness at startup; require_verified is unavailable"
+            )
         self.readiness_policy = readiness_policy
         self.storage_path = storage_path
         self.llm_spec = llm_spec

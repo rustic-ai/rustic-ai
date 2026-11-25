@@ -5,11 +5,11 @@ from pathlib import Path
 import time
 
 import pytest
-from rustic_ai.showcase.unidb_query_diagnostics import RunIndexComparison
 
 from rustic_ai.core.agents.testutils.probe_agent import ProbeAgent
 from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder
 from rustic_ai.core.guild.dsl import AgentSpec, GuildSpec
+from rustic_ai.showcase.unidb_query_diagnostics import RunIndexComparison
 from rustic_ai.unidb import models as m
 from rustic_ai.unidb.runtime import RuntimeFailure, UniDBRuntime
 
@@ -70,6 +70,7 @@ def test_composed_native_comparison_and_failure(fail, monkeypatch):
             assert result.process_status == "error"
             assert result.payload["outcome"] == "failed"
             assert result.payload["comparison"]["failure"]["error"]["effect"] == "not_started"
+            assert driver._run is not None
             assert driver._run["stage"] == 2
         else:
             assert result.process_status == "completed"

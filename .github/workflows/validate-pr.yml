@@ -52,8 +52,8 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          # tox-gh-actions 3.5.0 imports a private API removed in tox 4.67.15.
-          pip install poetry==2.5.1 tox==4.67.13 tox-gh-actions==3.5.0 tox-uv isort black mypy flake8
+          # Keep tox and its GitHub Actions plugin on the verified compatible releases.
+          pip install poetry==2.5.2 tox==4.67.16 tox-gh-actions==3.5.1 tox-uv isort black mypy flake8
           pip install poetry-plugin-mono-repo-deps==0.3.3
 
       - name: Install Playwright Browser

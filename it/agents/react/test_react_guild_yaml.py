@@ -25,15 +25,15 @@ from rustic_ai.litellm.agent_ext.llm import LiteLLMResolver
 from rustic_ai.llm_agent.react.toolset import CompositeToolset
 from rustic_ai.skills.toolset import MarketplaceSkillToolset, SkillToolset
 
+requires_llm = pytest.mark.skipif(
+    os.getenv("SKIP_EXPENSIVE_TESTS") == "true" or "OPENAI_API_KEY" not in os.environ,
+    reason="Real LLM inference requires OPENAI_API_KEY and SKIP_EXPENSIVE_TESTS=false",
+)
+requires_network = pytest.mark.skipif(
+    os.getenv("SKIP_NETWORK_TESTS") == "true", reason="Skipping public skill repository downloads"
+)
 
-@pytest.mark.skipif(
-    os.getenv("SKIP_EXPENSIVE_TESTS") == "true",
-    reason="Skipping expensive tests (set SKIP_EXPENSIVE_TESTS=false to run)",
-)
-@pytest.mark.skipif(
-    "OPENAI_API_KEY" not in os.environ,
-    reason="OPENAI_API_KEY not set",
-)
+
 class TestReActGuildYAML:
     """Test suite for the test_react_guild.yaml configuration file."""
 
@@ -69,6 +69,7 @@ class TestReActGuildYAML:
         finally:
             os.unlink(temp_yaml_path)
 
+    @requires_network
     @flaky(max_runs=3, min_passes=1)
     def test_yaml_guild_structure(self, org_id, temp_skill_dir):
         """Test that the guild structure from YAML is correct."""
@@ -118,6 +119,7 @@ class TestReActGuildYAML:
         finally:
             os.unlink(temp_yaml_path)
 
+    @requires_network
     @flaky(max_runs=3, min_passes=1)
     def test_yaml_agent_configuration(self, org_id, temp_skill_dir):
         """Test that the ReActAgent configuration from YAML is correct."""
@@ -163,6 +165,7 @@ class TestReActGuildYAML:
         finally:
             os.unlink(temp_yaml_path)
 
+    @requires_network
     @flaky(max_runs=3, min_passes=1)
     def test_yaml_toolset_configuration(self, org_id, temp_skill_dir):
         """Test that the SkillToolset configuration from YAML is properly loaded."""
@@ -244,6 +247,8 @@ class TestReActGuildYAML:
         finally:
             os.unlink(temp_yaml_path)
 
+    @requires_network
+    @requires_llm
     @flaky(max_runs=3, min_passes=1)
     def test_yaml_guild_basic_calculation(self, probe_spec, org_id, temp_skill_dir):
         """Test that the guild loaded from YAML can perform basic calculations."""
@@ -296,6 +301,8 @@ class TestReActGuildYAML:
         finally:
             os.unlink(temp_yaml_path)
 
+    @requires_network
+    @requires_llm
     @flaky(max_runs=3, min_passes=1)
     def test_yaml_guild_complex_calculation(self, probe_spec, org_id, temp_skill_dir):
         """Test that the guild can handle complex multi-step calculations."""
@@ -347,6 +354,8 @@ class TestReActGuildYAML:
         finally:
             os.unlink(temp_yaml_path)
 
+    @requires_network
+    @requires_llm
     @flaky(max_runs=3, min_passes=1)
     def test_yaml_guild_max_iterations_respected(self, probe_spec, org_id, temp_skill_dir):
         """Test that max_iterations configuration from YAML is respected."""
@@ -399,6 +408,8 @@ class TestReActGuildYAML:
         finally:
             os.unlink(temp_yaml_path)
 
+    @requires_network
+    @requires_llm
     @flaky(max_runs=3, min_passes=1)
     def test_yaml_guild_tool_prefix_usage(self, probe_spec, org_id, temp_skill_dir):
         """Test that the tool_prefix from YAML is correctly applied to tool calls."""
@@ -458,6 +469,8 @@ class TestReActGuildYAML:
         finally:
             os.unlink(temp_yaml_path)
 
+    @requires_network
+    @requires_llm
     @flaky(max_runs=3, min_passes=1)
     def test_yaml_guild_error_handling(self, probe_spec, org_id, temp_skill_dir):
         """Test that the guild handles invalid expressions gracefully."""
@@ -509,6 +522,8 @@ class TestReActGuildYAML:
         finally:
             os.unlink(temp_yaml_path)
 
+    @requires_network
+    @requires_llm
     @flaky(max_runs=3, min_passes=1)
     def test_yaml_guild_multiple_operations(self, probe_spec, org_id, temp_skill_dir):
         """Test that the guild can handle multiple sequential operations."""

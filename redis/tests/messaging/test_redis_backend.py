@@ -1,13 +1,17 @@
+import queue
 import socket
+import threading
 from unittest.mock import Mock, patch
 import uuid
 
 import fakeredis
 import pytest
+import redis
 
 from rustic_ai.redis.messaging.backend import RedisMessagingBackend
 from rustic_ai.redis.messaging.connection_manager import RedisBackendConfig
 from rustic_ai.redis.messaging.exceptions import RedisConnectionFailureError
+from rustic_ai.redis.messaging.pubsub_manager import RedisPubSubManager
 
 from rustic_ai.testing.messaging.base_test_backend import BaseTestBackendABC
 from rustic_ai.testing.messaging.base_test_delivery_guarantees import (
@@ -195,6 +199,73 @@ class TestRedisBackendBasicFunctionality:
 
         # Should be safe to call multiple times
         test_backend.cleanup()
+
+
+class TestRedisPubSubCleanup:
+    def test_worker_finishes_message_when_handler_unsubscribes(self):
+        """A worker retains its queue until the current delivery is acknowledged."""
+        manager = RedisPubSubManager(fakeredis.FakeStrictRedis())
+        client_queue: queue.Queue = queue.Queue()
+        manager._client_queues["client"] = client_queue
+        message = Mock(id=123)
+
+        def unsubscribe_during_delivery(received):
+            assert received is message
+            manager._unsubscribe_per_client("topic", "client")
+
+        client_queue.put((None, "topic", unsubscribe_during_delivery, message))
+        manager._client_worker_loop("client")
+
+        assert "client" not in manager._client_queues
+        assert client_queue.unfinished_tasks == 0
+        assert manager._load_position("client", "topic") == 123
+
+    def test_cleanup_allows_inflight_callback_to_finish(self, monkeypatch):
+        """Redis stop() must not join a callback while holding its fanout lock."""
+        manager = RedisPubSubManager(fakeredis.FakeStrictRedis())
+        callback_ready = threading.Event()
+        callback_release = threading.Event()
+        callback_finished = threading.Event()
+        pubsub = Mock()
+
+        def deliver_message(**kwargs):
+            callback_ready.set()
+            if callback_release.wait(timeout=3):
+                manager._fanout_to_clients("topic", Mock())
+                callback_finished.set()
+
+        pubsub.get_message.side_effect = deliver_message
+        worker = redis.client.PubSubWorkerThread(pubsub, sleep_time=0.01, daemon=True)
+        manager.pubsub = pubsub
+        manager.redis_thread = worker
+        original_stop = worker.stop
+        stop_timeouts = []
+        callback_finished_on_stop = []
+
+        def stop_and_release_callback(timeout=None):
+            stop_timeouts.append(timeout)
+            callback_release.set()
+            # Bound the old unbounded call too, so a regression fails without
+            # leaving the test process stuck forever with the fanout lock held.
+            original_stop(timeout=1 if timeout is None else timeout)
+            callback_finished_on_stop.append(callback_finished.is_set())
+
+        monkeypatch.setattr(worker, "stop", stop_and_release_callback)
+        worker.start()
+        try:
+            assert callback_ready.wait(timeout=2)
+            manager._cleanup()
+        finally:
+            callback_release.set()
+            original_stop(timeout=2)
+            worker.join(timeout=2)
+
+        assert stop_timeouts == [1]
+        assert callback_finished_on_stop == [True]
+        assert not worker.is_alive()
+        assert manager.redis_thread is None
+        assert manager.pubsub is None
+        pubsub.unsubscribe.assert_called_once_with()
 
 
 class TestRedisBackendErrorConditions:

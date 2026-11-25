@@ -1,5 +1,4 @@
 import os
-import shutil
 
 import pytest
 
@@ -17,23 +16,13 @@ from rustic_ai.testing.helpers import wrap_agent_for_testing
 
 
 @pytest.fixture
-def cleanup_claude_dir():
-    # Cleanup before test
-    if os.path.exists("./.claude"):
-        shutil.rmtree("./.claude")
-    yield
-    # Cleanup after test
-    if os.path.exists("./.claude"):
-        shutil.rmtree("./.claude")
+def isolated_claude_dir(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
 
 
 @pytest.mark.asyncio
 class TestClaudeDynamicLoading:
-    @pytest.mark.skipif(
-        os.getenv("ANTHROPIC_VERTEX_PROJECT_ID") is None,
-        reason="ANTHROPIC_VERTEX_PROJECT_ID environment variable not set",
-    )
-    async def test_add_agent_via_message(self, cleanup_claude_dir):
+    async def test_add_agent_via_message(self, isolated_claude_dir):
         # Initialize agent
         agent, results = wrap_agent_for_testing(
             AgentBuilder(ClaudeCodeAgent)
@@ -63,11 +52,7 @@ class TestClaudeDynamicLoading:
         with open("./.claude/agents/test_agent_msg.md", "r") as f:
             assert f.read() == "# Agent Config via Msg"
 
-    @pytest.mark.skipif(
-        os.getenv("ANTHROPIC_VERTEX_PROJECT_ID") is None,
-        reason="ANTHROPIC_VERTEX_PROJECT_ID environment variable not set",
-    )
-    async def test_add_skill_via_message(self, cleanup_claude_dir):
+    async def test_add_skill_via_message(self, isolated_claude_dir):
         # Initialize agent
         agent, results = wrap_agent_for_testing(
             AgentBuilder(ClaudeCodeAgent)

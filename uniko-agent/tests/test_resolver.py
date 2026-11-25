@@ -12,6 +12,25 @@ from rustic_ai.uniko_agent.resolver import UnikoResolver
 class TestUnikoResolverLLMSpec:
     """Tests for UnikoResolver LLM specification building."""
 
+    def test_generic_native_provider_preserves_options(self):
+        options = {"temperature": 0.2}
+        with patch("uniko.models.inputs._native") as get_native:
+            native = get_native.return_value.LlmSpec
+            llm = UnikoResolver()._build_llm_spec(
+                {
+                    "provider": "generic",
+                    "provider_id": "remote/anthropic",
+                    "alias": "answer/custom",
+                    "model_id": "claude-sonnet",
+                    "options": options,
+                    "api_key_env": "ANTHROPIC_API_KEY",
+                }
+            )
+        native.new.assert_called_once_with(
+            "answer/custom", "remote/anthropic", "claude-sonnet", options, "ANTHROPIC_API_KEY"
+        )
+        assert llm is native.new.return_value
+
     def test_build_llm_spec_openai_basic(self):
         """Test building OpenAI LLM spec with minimal config."""
         resolver = UnikoResolver()

@@ -61,7 +61,7 @@ class MemoryAgentConfig(BaseAgentProps):
     @model_validator(mode="after")
     def supported_controls(self):
         if self.recall_phase1_only:
-            raise ValueError("Uniko 0.5.1 does not expose phase1-only recall")
+            raise ValueError("Uniko 0.6.0 does not expose phase1-only recall")
         if self.answer_max_tokens is not None:
             raise ValueError("Configure generation limits on the Guild synthesis LLM agent")
         return self

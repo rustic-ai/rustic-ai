@@ -6,7 +6,7 @@ Comprehensive memory agent for Rustic AI that integrates [uniko](https://github.
 
 The Uniko Memory Agent integrates uniko's memory system into the Rustic AI guild framework. Current coverage, known gaps and acceptance gates are tracked in the [implementation and completion plan](../docs/design/uniko-agent-completion.md). It enables:
 
-- **Zero-cost knowledge ingestion** (local ONNX embeddings, no LLM API calls)
+- **Local knowledge ingestion** (local ONNX models, no hosted generation API required)
 - **Multi-phase recall** (3-phase cascade: Facts/Procedures → Episodes/Observations → Chunks)
 - **Attributed recall and source navigation** (native provenance and explicit legacy limitations)
 - **Agent-scoped storage** (each resolver instance uses the agent’s private filesystem)
@@ -22,7 +22,7 @@ observation and explicit consolidation are available without streaming.
 
 ## Installation
 
-This integration supports Uniko 0.5.1 through the 0.5 release series.
+This integration supports Uniko 0.6.0 through the 0.6 release series.
 The embedded `mistralrs` runtime is no longer supported. Old `alias: mistral`
 configurations are rejected; they are not migrated to the hosted Mistral API.
 The base `uniko` wheel runs local ONNX memory models on CPU. Uniko also
@@ -39,160 +39,33 @@ poetry install --with dev
 
 ## Quick Start
 
-### 1. Basic Usage with In-Memory Storage
+Read the [site agent guide](../docs/agents/uniko/index.md) for a complete local guild example using the current builders, typed routes, and explicit resolver shutdown. See the [message protocol](../docs/agents/uniko/protocol.md) and [resolver guide](../docs/dependencies/uniko/index.md) for every supported family and deployment option.
+
+Inside an existing caller processor, observe and recall through configured guild routes:
 
 ```python
-from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder
-from rustic_ai.core.guild.dsl import DependencySpec
-from rustic_ai.uniko_agent import MemoryAgent, MemoryAgentConfig, MemoryScope, MemoryRecordKind, ObserveTurnRequest, RecallRequest
+from rustic_ai.uniko_agent import MemoryRecordKind, MemoryScope, ObserveTurnRequest, RecallRequest
 
-# Configure uniko dependency (agent-scoped, in-memory)
-uniko_dep = DependencySpec(
-    class_name="rustic_ai.uniko_agent.UnikoResolver",
-    properties={
-        "storage_path": None,  # In-memory
-        "llm_spec": None,  # Optional LLM for Q&A
-        "streaming": False,
-    }
+observation = ObserveTurnRequest(
+    session_id="research:1", sender_id="researcher", message_id="turn:1",
+    content="The pilot recovered 90% of its lithium.",
 )
-
-# Build guild with memory agent
-guild = (
-    GuildBuilder(guild_id="research-guild", guild_name="Research Guild", guild_description="...")
-    .set_dependency_map({"uniko": uniko_dep})
-    .add_agent(
-        AgentBuilder(MemoryAgent)
-        .set_id("memory_agent")
-        .set_properties(MemoryAgentConfig())
-        .build_spec()
-    )
-    .build_guild(organization_id="org123")
+recall = RecallRequest(
+    query="Lithium recovery rate", scope=MemoryScope(sessions=["research:1"]),
+    allowed_record_kinds=[MemoryRecordKind.CONVERSATION_TURN],
 )
-
-# Observe conversation turns
-guild.send_message(
-    ObserveTurnRequest(
-        sender_id="user",
-        content="I prefer working in Python over JavaScript",
-        metadata={"topic": "programming"}
-    ),
-    agent_id="memory_agent"
-)
-
-# Recall knowledge
-guild.send_message(
-    RecallRequest(query="user programming preferences", scope=MemoryScope(sessions=None), allowed_record_kinds=[MemoryRecordKind.CONVERSATION_TURN]),
-    agent_id="memory_agent"
-)
+# ctx.send(observation), wait for ObserveResult, then ctx.send(recall).
+# The real caller's routes deliver both formats to the memory agent.
 ```
 
-### 2. Persistent Storage
+## Processor families
 
-```python
-uniko_dep = DependencySpec(
-    class_name="rustic_ai.uniko_agent.UnikoResolver",
-    properties={
-        "storage_path": "memory",  # Within the injected agent filesystem
-        "llm_spec": {
-            "provider": "openai_with_key_env",
-            "alias": "answer/default",
-            "model_id": "gpt-4o-mini",
-            "key_env": "OPENAI_API_KEY"
-        },
-        "streaming": False,
-    }
-)
-```
-
-### 3. Answer Questions with LLM
-
-```python
-from rustic_ai.uniko_agent import AnswerRequest
-
-# Requires LLM configured in UnikoResolver
-guild.send_message(
-    AnswerRequest(question="What programming language does the user prefer?"),
-    agent_id="memory_agent"
-)
-
-# Response includes:
-# - Generated answer text
-# - Recalled context (RecallResponse)
-# - Citations with provenance chain
-```
-
-## Processor API
-
-The MemoryAgent exposes 12 processors across Phase 1 and Phase 2:
-
-### Observation
-
-- **`observe_turn`** (`ObserveTurnRequest` → `ObserveResult`)
-  - Ingest conversation turns with NLP extraction (entities, observations)
-  - Supports attachments (PDFs, documents)
-  - Direct observations complete extraction without an unnecessary streaming flush
-
-### Recall
-
-- **`recall_knowledge`** (`RecallRequest` → `RecallResponse`)
-  - 3-phase cascade recall (facts → episodes → chunks)
-  - Native token budget, minimum score, reranker and reference-time overrides
-  - Required scope; optional participant, time, category, source, revision and trusted viewer filters
-
-### Answer
-
-- **`answer_question`** (`AnswerRequest` → `AnswerResponse`)
-  - Generate LLM answers using recalled context
-  - Requires LLM configured in resolver
-  - Returns answer + context + citations
-
-### Document Ingestion (Phase 2)
-
-- **`ingest_document`** (`IngestDocumentRequest` → `IngestOutcome`)
-  - Ingest PDFs, markdown, HTML documents
-  - Automatic chunking and entity extraction
-  - Accepts inline text, base64 bytes or an injected guild-filesystem MediaLink; remote URLs must first be fetched by a Guild agent
-
-- **`batch_submit`** (`BatchSubmitRequest` → `BatchSubmitResponse`)
-  - Submit multiple turns in batch (streaming mode)
-  - More efficient than individual observations
-  - Optional flush after submission
-
-### Goal Management (Phase 2)
-
-- **`create_goal`** (`CreateGoalRequest` → `GoalView`)
-  - Create research goals with metrics and guardrails
-  - Supports nested goals (parent/child relationships)
-  - Optional deadlines and success criteria
-
-- **`update_goal`** (`UpdateGoalRequest` → `GoalStatusResponse`)
-  - Update goal status: start, complete, abandon
-  - Completion accepts an outcome; unsupported metadata controls are rejected
-  - Return the native transition result and status
-
-- **`get_goals`** (`GetGoalsRequest` → `GoalsListResponse`)
-  - List goals by phase (all, planned, active, completed, abandoned)
-  - Filter by parent goal
-  - Limit results
-
-### Task Management (Phase 2)
-
-- **`create_task`** (`CreateTaskRequest` → `TaskView`)
-  - Create tasks for goals
-  - Accept legacy priority (1-5), or exclusive native_priority (0-1); return the native float
-  - Support one dependency and a subtask parent
-  - Track task hierarchy
-
-- **`update_task`** (`UpdateTaskRequest` → `TaskStatusResponse`)
-  - Update task status: start, complete, abandon, block, unblock
-  - Record task outcomes through an explicit episode request
-  - Manage task lifecycle
-
-- **`get_goal_context`** (`GoalContextRequest` → `GoalContext`)
-  - Get goal working memory
-  - Includes native tasks, sessions, recent message text, facts and entities
-  - Episode context is unavailable in Uniko 0.5.1 and is reported explicitly
-  - Full context for research workflows
+The current integration includes observation/typed records, document ingestion,
+scoped recall, source navigation, native answers, deletion/finalization,
+diagnostics, structured tool/action/episode/fact operations, atomic memory units,
+goals/tasks, procedures, rules, and operation reconciliation. The
+[protocol reference](../docs/agents/uniko/protocol.md) lists their request/response
+formats and failure boundaries; a historical processor count is not the current API.
 
 ## Configuration
 
@@ -203,7 +76,7 @@ from rustic_ai.uniko_agent import MemoryAgentConfig
 
 config = MemoryAgentConfig(
     default_session_id=None,        # Defaults to guild_id
-    recall_max_tokens=2000,          # Max tokens in recall bundle
+    recall_max_tokens=None,          # Preserve native settings unless explicitly overridden
     recall_phase1_only=False,        # True is unsupported and rejected
     auto_flush=True,                 # Legacy compatibility setting; direct observe needs no flush
     max_source_bytes=16 * 1024 * 1024,
@@ -250,8 +123,8 @@ properties = {
 }
 ```
 
-Generation supports the Python SDK's three modes: `openai` (default key env),
-`openai_with_key_env`, and `llamacpp`. `alias` is a runtime model name, separate
+Generation supports the Python SDK's modes: `openai` (default key env),
+`openai_with_key_env`, `llamacpp`, and `generic`. `alias` is a runtime model name, separate
 from `provider`; `model_id` is passed through without a Rustic model whitelist.
 OpenAI modes accept an optional `base_url` for compatible endpoints. llama.cpp
 runs in a separate `llama-server` process, so it works with the CPU wheel too.
@@ -267,10 +140,10 @@ dimensions requires a fresh store; GPU providers require a compatible wheel.
 
 uni-xervo supports additional providers, including `remote/mistral`, Anthropic,
 Gemini, Cohere and others. These can serve supported tasks through the catalog
-when compiled into the runtime. Uniko 0.5.1's Python `LlmSpec` constructors
-expose only OpenAI-compatible and llama.cpp generation, so the resolver does
-not advertise the other providers as direct `llm_spec` modes. Merely adding a
-generation entry to a catalog does not select it for `Agent.answer`.
+when compiled into the runtime. Uniko 0.6.0's Python `LlmSpec` also exposes `provider: generic` with
+`provider_id`, `alias`, `model_id`, optional `options`, and `api_key_env` for
+compiled generation providers. The resolver forwards that SDK contract. A
+catalog generation entry alone still does not select it for `Agent.answer`.
 
 ## Integration with Research Guild
 
@@ -304,7 +177,7 @@ All request/response models are Pydantic BaseModels:
 
 ### AnswerRequest
 - `question`: Question to answer
-- `max_tokens`: Unsupported in Uniko 0.5.1; non-null values are rejected. Set generation limits on the Guild synthesis LLM agent.
+- `max_tokens`: Unsupported in Uniko 0.6.0; non-null values are rejected. Set generation limits on the Guild synthesis LLM agent.
 - `scope`: Optional recall scope
 
 ### Error Handling
@@ -372,7 +245,7 @@ extractors. Limits apply before writes, including bounded sync/async filesystem
 reads. Host paths and remote URLs are rejected as ingestion sources.
 
 New writes carry native category, logical `source_id` and store-unique
-`revision_id`. Visibility is supported on turns; Uniko 0.5.1 does not expose
+`revision_id`. Visibility is supported on turns; Uniko 0.6.0 does not expose
 visibility on document inputs, so explicit document visibility is rejected.
 Record kinds remain assigned by authorized producers. Unknown classification
 is a read-only result kind. The legacy envelope/prefix reader remains available
@@ -409,7 +282,8 @@ BGE-M3 or hardware acceleration merely because configuration was accepted.
 Deployment catalog/schema/rule files require readable absolute local paths and
 are validated before persistent store opening. The resolver uses
 `readiness_policy="sdk_default"` (native best-effort warmup); requesting
-`require_verified` fails explicitly because the SDK cannot verify model readiness.
+`require_verified` remains unavailable in this integration. The native SDK now
+provides readiness APIs, but this release does not expose their policy contract.
 Native storage compatibility
 checks remain authoritative; incompatible stores require explicit migration.
 
@@ -433,16 +307,19 @@ assistant commits and finalization under the same lifecycle reservation.
 
 ## Later release gates
 
-Goals/tasks, BGE-M3 dense/sparse/ColBERT certification, scanned-PDF OCR and
+BGE-M3 dense/sparse/ColBERT certification, scanned-PDF OCR and
 multimodal adapters remain separate milestones in the completion plan.
 
 ## Future Enhancements (Phase 3+)
 
 Planned features:
 
-- **Advanced queries** (`query_graph` for Cypher queries)
-- **Logic rules** (Locy rule definition and execution)
-- **Procedure learning** (auto-promote successful patterns)
+- **BGE-M3 retrieval certification** across dense, sparse and ColBERT paths
+- **Scanned-PDF OCR and multimodal workflows** with extraction evidence
+- **Operational-scale and accelerated deployment validation**
+
+Native rule inspection, procedure matching/feedback, and structured goals/tasks
+are already exposed; arbitrary graph/Locy mutation is not part of this memory contract.
 
 ## References
 
@@ -501,10 +378,9 @@ and does not enable optional LLM consolidation.
 Structured ownership comes from the authenticated reporting message sender,
 not a caller-provided agent identity. Goal/task reads default to that owner;
 selecting another or legacy owner requires `scope_producers` authorization.
-Records are not migrated. Until [Uniko #67](https://github.com/rustic-ai/uniko/issues/67)
-adds dedicated registration, membership in the resolver's actual organization
-idempotently creates the native participant, whose native kind remains unknown.
-No synthetic messages or actions are created to bootstrap it.
+Records are not migrated. Uniko 0.6.0 native agent registration idempotently creates the reporting actor
+before adding membership in the resolver's trusted organization. No synthetic
+messages or actions are created to bootstrap it.
 
 Each structured mutation accepts `operation_id`. When omitted, object creation
 uses a supplied object ID or the message ID; missing object IDs are generated
@@ -526,7 +402,7 @@ unknown effect requires inspecting the native store; there is no automatic
 retry or receipt-reset API. Receipt retention follows the private store lifecycle.
 
 
-Uniko 0.5.1 attributes embedded tool calls to their turn sender. Until
+Uniko 0.6.0 attributes embedded tool calls to their turn sender. Until
 [U68](https://github.com/rustic-ai/uniko/issues/68) adds an independent performer
 override, turns containing tools must use the authenticated reporting agent as
 `sender_id`. A unit can include a separate user turn and a reporting-agent turn

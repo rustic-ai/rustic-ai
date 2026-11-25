@@ -1,11 +1,13 @@
 # Uni-DB agent: core design, initialization, and message protocol
 
-**Status:** implemented for review, updated 2026-11-18. The v1 models and native runtime are in `unidb/`, pinned to Uni-DB 5.2.1 on Python 3.13. The three JSON cases now contain captured native result payloads. Internal IDs and commit versions are run-specific. The guild-denied exchange remains an application fixture, with its actual `send_error` delivery tested separately.
+**Status:** implemented for review; documentation reviewed 2026-11-25. The v1 models and native runtime are in `unidb/`, pinned to Uni-DB 6.0.0 on Python 3.13. The three JSON cases contain native result payloads originally captured on Uni-DB 5.2.1; compatibility tests also run against 6.0.0. Internal IDs and commit versions are run-specific. The guild-denied exchange remains an application fixture, with its actual `send_error` delivery tested separately.
 
 This evolves [Nihal’s PR 236](https://github.com/rustic-ai/rustic-ai/pull/236), retaining all 15 operation names while replacing its older `Database` API and wire shapes. No legacy adapters are provided. The [Agentic ERP book](https://github.com/milliondreams/erp_book) informs the business examples; its Uni-DB 3.4.0 observations are not compatibility guarantees.
 
 Two agreed deferrals remain: scenario applicability checks and a general Rustic resource shutdown hook. Owners must explicitly call `UniDBResolver.close()` before guild shutdown. Message-driven cancellation, pinned/fork reads, remote storage certification, multiple write owners, and receipt retention are outside this initial supported surface.
 
+
+For operational usage, start with the [agent guide](../agents/unidb/index.md), [protocol reference](../agents/unidb/protocol.md), and [resolver configuration](../dependencies/unidb/index.md).
 
 ## 1. Purpose and architectural boundary
 
@@ -49,7 +51,7 @@ The resolver owns:
 
 - `binding_id`: stable logical name returned in responses.
 - `open_mode`: `open_existing`, `create`, or `temporary`.
-- `location`: configured filesystem binding or a separately supported native URI binding.
+- `location`: persistent bindings require an injected filesystem and a relative path; direct native URI bindings are not a separate implemented opening mode.
 - `native_config`: supported engine settings, validated using the chosen native version.
 - `bootstrap`: schema/rule definitions, a revision, and an explicit application policy.
 - `receipts`: operation bookkeeping mode and reserved metadata namespace.
@@ -102,7 +104,7 @@ Native `ext_id` is a reserved globally unique external identifier. The examples 
 
 ## 4. Versioned protocol
 
-All public models use `protocol_version: 1` and reject unexpected fields. The namespace is `rustic_ai.unidb.models`. The native dependency is pinned to `uni-db==5.2.1`; no backward compatibility with PR 236 is provided.
+All public models use `protocol_version: 1` and reject unexpected fields. The namespace is `rustic_ai.unidb.models`. The native dependency is pinned to `uni-db==6.0.0`; no backward compatibility with PR 236 is provided.
 
 ### 4.1 Common request fields
 
@@ -382,7 +384,7 @@ def request_balance(ctx):
 
 The evaluation result contains one query command with columns `invoice_id`, `balance_cents` and row `{"invoice_id": "invoice:1001", "balance_cents": 15000}`. `materialized` is false. It retains the rule-program identity and read-view metadata.
 
-The explanation request selects the configured `explain_invoice_balance` operation with the same key. Its response reports a found derivation and serialized native proof. The fixture contains the engine's captured proof tree, including tagged native identifiers. Uni-DB 5.2.1 does not propagate builder parameters into EXPLAIN filters; the adapter binds only scalar values in fixed catalog programs using JSON literals while leaving quoted strings and comments intact. It does not interpolate arbitrary request programs. A missing key returns `no_derivation`; it is not interpreted as a zero balance.
+The explanation request selects the configured `explain_invoice_balance` operation with the same key. Its response reports a found derivation and serialized native proof. The fixture contains the engine's captured proof tree, including tagged native identifiers. Uni-DB 6.0.0 does not propagate builder parameters into EXPLAIN filters; the adapter binds only scalar values in fixed catalog programs using JSON literals while leaving quoted strings and comments intact. It does not interpolate arbitrary request programs. A missing key returns `no_derivation`; it is not interpreted as a zero balance.
 
 **Acceptance:** exact cents arithmetic; unchanged stored facts after evaluate/explain; no-payment and multiple-payment cases; missing-key distinction; warnings/incompleteness retained; rule revision and read view are correct. Current-state proofs do not establish what was reported in a closed historical period.
 
@@ -463,13 +465,13 @@ def price_second_source(ctx, human_terms):
 
 ### 6.5 Query diagnostics guild
 
-The [composed diagnostic guild](../../showcase/apps/unidb_query_diagnostics.json) contains a deterministic workflow driver and the same reusable UniDB agent. Its [runner](../../unidb/examples/run_query_diagnostics.py) adds a caller, starts the workflow, waits for a terminal result, and explicitly releases the native resolver.
+The [composed diagnostic guild](https://github.com/rustic-ai/rustic-ai/blob/969e69e90b8ed59233dd2a89d73d4ebbcbfdb7e9/showcase/apps/unidb_query_diagnostics.json) contains a deterministic workflow driver and the same reusable UniDB agent. Its [runner](https://github.com/rustic-ai/rustic-ai/blob/969e69e90b8ed59233dd2a89d73d4ebbcbfdb7e9/unidb/examples/run_query_diagnostics.py) adds a caller, starts the workflow, waits for a terminal result, and explicitly releases the native resolver.
 
 The workflow performs: seed 50 products → flush → query plan → query profile → create a BTREE name index → flush → query plan → query profile → typed comparison. Requests and observations have correlated IDs; duplicates, unexpected observations, and observations after termination are ignored. A database failure produces a typed comparison failure through `send_error`, and guild routes own its `error` status and presentation.
 
 The named query is `MATCH (p:Product) WHERE p.name=$name RETURN p.name AS name`, with `name: widget:12`. The captured lookup returns the same row before and after indexing. Native diagnostics report 50 scanned rows before and one after, along with actual index usage, costs, operators, and timings. Cost estimates and latency need not improve; no synthetic speedup is asserted.
 
-`DBQueryPlanRequest` uses the ordinary named-query catalog, parameters, request/correlation IDs, and supported live view. `result` contains `executed: false`, `plan` (native text, warnings, cost estimates, index usage, suggestions), the enforced input/output byte limits, and three explicit flags: `parameter_values_applied`, `planning_timeout_enforced`, and `planning_memory_enforced`, all false on Uni-DB 5.2.1. Parameters are validated but not interpolated into query text. Explicit unsupported limit requests are refused with `unsupported_limit`; native planning bounds are not advertised.
+`DBQueryPlanRequest` uses the ordinary named-query catalog, parameters, request/correlation IDs, and supported live view. `result` contains `executed: false`, `plan` (native text, warnings, cost estimates, index usage, suggestions), the enforced input/output byte limits, and three explicit flags: `parameter_values_applied`, `planning_timeout_enforced`, and `planning_memory_enforced`, all false on Uni-DB 6.0.0. Parameters are validated but not interpolated into query text. Explicit unsupported limit requests are refused with `unsupported_limit`; native planning bounds are not advertised.
 
 `DBQueryProfileRequest` executes the named read exactly once using native read-only guards, timeout, and memory bounds. `result` contains `executed: true`, `query` with the existing bounded rows/count/truncation/warnings contract, and `profile` with native plan text, operator statistics, total time, peak memory, logical/physical planning time, physical-plan count, and explicit query metrics. For empty native results with absent column names, declared catalog columns are returned with `columns_source: catalog`; otherwise it is `native`. Metrics describe native execution, even when returned rows are truncated. Native memory figures are not process RSS.
 
@@ -517,7 +519,7 @@ Scenario applicability checks and the general shutdown lifecycle hook remain exp
 
 ## 8. Sources and validation boundary
 
-Rustic contracts: [`Agent` and `ProcessContext`](../../core/src/rustic_ai/core/guild/agent.py), [`AgentSpec`/`GuildSpec`](../../core/src/rustic_ai/core/guild/dsl.py), [builders](../../core/src/rustic_ai/core/guild/builders.py), [dependency resolver](../../core/src/rustic_ai/core/guild/agent_ext/depends/dependency_resolver.py), [current Uniko integration](../../uniko-agent/README.md), and [ReAct design](react-agent-design.md).
+Rustic contracts: [`Agent` and `ProcessContext`](https://github.com/rustic-ai/rustic-ai/blob/969e69e90b8ed59233dd2a89d73d4ebbcbfdb7e9/core/src/rustic_ai/core/guild/agent.py), [`AgentSpec`/`GuildSpec`](https://github.com/rustic-ai/rustic-ai/blob/969e69e90b8ed59233dd2a89d73d4ebbcbfdb7e9/core/src/rustic_ai/core/guild/dsl.py), [builders](https://github.com/rustic-ai/rustic-ai/blob/969e69e90b8ed59233dd2a89d73d4ebbcbfdb7e9/core/src/rustic_ai/core/guild/builders.py), [dependency resolver](https://github.com/rustic-ai/rustic-ai/blob/969e69e90b8ed59233dd2a89d73d4ebbcbfdb7e9/core/src/rustic_ai/core/guild/agent_ext/depends/dependency_resolver.py), [current Uniko integration](https://github.com/rustic-ai/rustic-ai/blob/969e69e90b8ed59233dd2a89d73d4ebbcbfdb7e9/uniko-agent/README.md), and [ReAct design](react-agent-design.md).
 
 Native contracts: [Uni-DB](https://github.com/rustic-ai/uni-db), especially `bindings/uni-db/uni_db/__init__.pyi`, session/transaction/builders, and `test_bulk_commit_outcome.py`. Native APIs and all three example Locy/Cypher flows are exercised against the supported wheel.
 
