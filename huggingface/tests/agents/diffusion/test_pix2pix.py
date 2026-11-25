@@ -1,6 +1,5 @@
 import importlib
 import os
-import time
 
 from fsspec import filesystem
 import pytest
@@ -19,7 +18,7 @@ from rustic_ai.huggingface.agents.diffusion.pix2pix import Image2ImageAgent, Ima
 
 class TestPix2PixAgent:
     @pytest.mark.skipif(os.getenv("SKIP_EXPENSIVE_TESTS") == "true", reason="Skipping expensive tests")
-    def test_response_is_generated(self, probe_spec, org_id):
+    def test_response_is_generated(self, probe_spec, org_id, wait_for_model_response):
         """
         Test that the agent responds to a message with a message containing the filepath of the generated image.
         """
@@ -80,8 +79,7 @@ class TestPix2PixAgent:
             format=ImageQuery,
         )
 
-        time.sleep(120)
-        messages = probe_agent.get_messages()
+        messages = wait_for_model_response(probe_agent)
 
         assert len(messages) == 1
         assert messages[0].format == get_qualified_class_name(ImageGenerationResponse)

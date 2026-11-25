@@ -22,7 +22,7 @@ observation and explicit consolidation are available without streaming.
 
 ## Installation
 
-This integration supports Uniko 0.5.1 through the 0.5 release series.
+This integration supports Uniko 0.6.0 through the 0.6 release series.
 The embedded `mistralrs` runtime is no longer supported. Old `alias: mistral`
 configurations are rejected; they are not migrated to the hosted Mistral API.
 The base `uniko` wheel runs local ONNX memory models on CPU. Uniko also
@@ -123,8 +123,8 @@ properties = {
 }
 ```
 
-Generation supports the Python SDK's three modes: `openai` (default key env),
-`openai_with_key_env`, and `llamacpp`. `alias` is a runtime model name, separate
+Generation supports the Python SDK's modes: `openai` (default key env),
+`openai_with_key_env`, `llamacpp`, and `generic`. `alias` is a runtime model name, separate
 from `provider`; `model_id` is passed through without a Rustic model whitelist.
 OpenAI modes accept an optional `base_url` for compatible endpoints. llama.cpp
 runs in a separate `llama-server` process, so it works with the CPU wheel too.
@@ -140,10 +140,10 @@ dimensions requires a fresh store; GPU providers require a compatible wheel.
 
 uni-xervo supports additional providers, including `remote/mistral`, Anthropic,
 Gemini, Cohere and others. These can serve supported tasks through the catalog
-when compiled into the runtime. Uniko 0.5.1's Python `LlmSpec` constructors
-expose only OpenAI-compatible and llama.cpp generation, so the resolver does
-not advertise the other providers as direct `llm_spec` modes. Merely adding a
-generation entry to a catalog does not select it for `Agent.answer`.
+when compiled into the runtime. Uniko 0.6.0's Python `LlmSpec` also exposes `provider: generic` with
+`provider_id`, `alias`, `model_id`, optional `options`, and `api_key_env` for
+compiled generation providers. The resolver forwards that SDK contract. A
+catalog generation entry alone still does not select it for `Agent.answer`.
 
 ## Integration with Research Guild
 
@@ -177,7 +177,7 @@ All request/response models are Pydantic BaseModels:
 
 ### AnswerRequest
 - `question`: Question to answer
-- `max_tokens`: Unsupported in Uniko 0.5.1; non-null values are rejected. Set generation limits on the Guild synthesis LLM agent.
+- `max_tokens`: Unsupported in Uniko 0.6.0; non-null values are rejected. Set generation limits on the Guild synthesis LLM agent.
 - `scope`: Optional recall scope
 
 ### Error Handling
@@ -245,7 +245,7 @@ extractors. Limits apply before writes, including bounded sync/async filesystem
 reads. Host paths and remote URLs are rejected as ingestion sources.
 
 New writes carry native category, logical `source_id` and store-unique
-`revision_id`. Visibility is supported on turns; Uniko 0.5.1 does not expose
+`revision_id`. Visibility is supported on turns; Uniko 0.6.0 does not expose
 visibility on document inputs, so explicit document visibility is rejected.
 Record kinds remain assigned by authorized producers. Unknown classification
 is a read-only result kind. The legacy envelope/prefix reader remains available
@@ -282,7 +282,8 @@ BGE-M3 or hardware acceleration merely because configuration was accepted.
 Deployment catalog/schema/rule files require readable absolute local paths and
 are validated before persistent store opening. The resolver uses
 `readiness_policy="sdk_default"` (native best-effort warmup); requesting
-`require_verified` fails explicitly because the SDK cannot verify model readiness.
+`require_verified` remains unavailable in this integration. The native SDK now
+provides readiness APIs, but this release does not expose their policy contract.
 Native storage compatibility
 checks remain authoritative; incompatible stores require explicit migration.
 
@@ -377,10 +378,9 @@ and does not enable optional LLM consolidation.
 Structured ownership comes from the authenticated reporting message sender,
 not a caller-provided agent identity. Goal/task reads default to that owner;
 selecting another or legacy owner requires `scope_producers` authorization.
-Records are not migrated. Until [Uniko #67](https://github.com/rustic-ai/uniko/issues/67)
-adds dedicated registration, membership in the resolver's actual organization
-idempotently creates the native participant, whose native kind remains unknown.
-No synthetic messages or actions are created to bootstrap it.
+Records are not migrated. Uniko 0.6.0 native agent registration idempotently creates the reporting actor
+before adding membership in the resolver's trusted organization. No synthetic
+messages or actions are created to bootstrap it.
 
 Each structured mutation accepts `operation_id`. When omitted, object creation
 uses a supplied object ID or the message ID; missing object IDs are generated
@@ -402,7 +402,7 @@ unknown effect requires inspecting the native store; there is no automatic
 retry or receipt-reset API. Receipt retention follows the private store lifecycle.
 
 
-Uniko 0.5.1 attributes embedded tool calls to their turn sender. Until
+Uniko 0.6.0 attributes embedded tool calls to their turn sender. Until
 [U68](https://github.com/rustic-ai/uniko/issues/68) adds an independent performer
 override, turns containing tools must use the authenticated reporting agent as
 `sender_id`. A unit can include a separate user turn and a reporting-agent turn

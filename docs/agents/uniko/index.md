@@ -2,7 +2,7 @@
 
 `rustic_ai.uniko_agent.agent.MemoryAgent` exposes cognitive memory through typed messages. Uniko retains messages, source artifacts, actions, and episodes, then derives observations, bitemporal facts, and reusable procedures with provenance. Recall combines compact facts/procedures, episodic expansion, and chunk search. A reasoning agent and a deterministic workflow can use the same memory capability.
 
-This guide describes `rusticai-uniko-agent` **0.0.6**, with **Uniko >=0.5.1,<0.6.0** and **Python 3.13**. The current acceptance evidence uses Uniko 0.5.1 on macOS ARM64 with the CPU wheel. Model configuration alone does not establish that an extraction or retrieval stage ran.
+This guide describes `rusticai-uniko-agent` **0.0.6**, with **Uniko >=0.6.0,<0.7.0** and **Python 3.13**. The refreshed integration is tested with Uniko 0.6.0; the completion plan preserves earlier 0.5.1 evidence on macOS ARM64 with the CPU wheel. Model configuration alone does not establish that an extraction or retrieval stage ran.
 
 ## Choose the right integration
 
@@ -175,7 +175,7 @@ unit = CommitMemoryUnitRequest(
 
 ### Track goals, tasks, and experience
 
-Create a goal, use its returned `goal_id` in `CreateTaskRequest`, and update it through explicit task transitions. Record action/episode outcomes with `RecordActionRequest` and `RecordEpisodeRequest`. Add scoped observations and assert facts only with authorized supporting identities. `GoalContextRequest` returns tasks, sessions, recent messages, facts, and entities; its `episodes_available: false` explicitly discloses the 0.5.1 context limitation.
+Create a goal, use its returned `goal_id` in `CreateTaskRequest`, and update it through explicit task transitions. Record action/episode outcomes with `RecordActionRequest` and `RecordEpisodeRequest`. Add scoped observations and assert facts only with authorized supporting identities. `GoalContextRequest` returns tasks, sessions, recent messages, facts, and entities; its `episodes_available: false` explicitly discloses the 0.6.0 context limitation.
 
 Use `MatchProceduresRequest` for learned procedures and `RecordProcedureUseRequest` for feedback. Store-wide consolidation, fact invalidation, and procedure feedback require an explicitly allowed `control_producers` sender; the default list is empty.
 
@@ -209,6 +209,6 @@ The coordinator waits for expected enumeration and per-document outcomes, ignore
 
 ## Supported boundaries
 
-Core memory and structured experience have executable acceptance evidence in the [completion plan](../../design/uniko-agent-completion.md). BGE-M3 dense/sparse/ColBERT certification, scanned-PDF OCR, richer multimodal memory, accelerated deployment profiles, and operational-scale certification remain separate open gates. Default model warmup is best effort; `require_verified` readiness is rejected. Source visibility is supported on turns, while explicit document visibility is unavailable in 0.5.1 and rejected.
+Core memory and structured experience have executable acceptance evidence in the [completion plan](../../design/uniko-agent-completion.md). BGE-M3 dense/sparse/ColBERT certification, scanned-PDF OCR, richer multimodal memory, accelerated deployment profiles, and operational-scale certification remain separate open gates. Default model warmup is best effort; `require_verified` readiness is rejected. Source visibility is supported on turns, while explicit document visibility is unavailable in 0.6.0 and rejected.
 
 Keep the structured operation journal alongside persistent native storage during backup/restore. Shut down the resolver explicitly: `shutdown()` outside active event-loop work or `await shutdown_async()` when draining on an event loop. External raw native handles can prevent clean shutdown and their errors remain visible.

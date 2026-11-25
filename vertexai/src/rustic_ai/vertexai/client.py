@@ -2,7 +2,6 @@ import os
 from typing import Optional
 
 from google import genai
-from google.cloud import aiplatform
 from google.genai import types
 from pydantic import BaseModel, ConfigDict
 
@@ -29,9 +28,9 @@ class VertexAIConf(BaseModel):
 class VertexAIBase:
     """Base class for Google Cloud Vertex AI services.
 
-    This class handles the common initialization pattern for the Vertex AI SDK,
-    ensuring that it's only initialized once per runtime. Other Vertex AI
-    service implementations can inherit from this class to reuse this logic.
+    This class constructs an explicitly configured Google GenAI client for
+    Vertex AI. Each instance keeps its own project and location; no legacy
+    AI Platform global initialization is required.
     """
 
     _is_vertexai_initialized = False
@@ -41,7 +40,7 @@ class VertexAIBase:
         project_id: Optional[str] = None,
         location: Optional[str] = None,
     ):
-        """Initialize Vertex AI SDK if not already initialized.
+        """Initialize this instance's Google GenAI client.
 
         Args:
             project_id (Optional[str]): The Google Cloud project ID. If None,
@@ -61,7 +60,6 @@ class VertexAIBase:
             if location is None:
                 location = os.environ.get("VERTEXAI_LOCATION")
 
-            aiplatform.init(project=project_id, location=location)
             self._is_vertexai_initialized = True
             self.genai_client = genai.Client(
                 vertexai=True, project=project_id, location=location, http_options=types.HttpOptions(api_version="v1")

@@ -61,9 +61,9 @@ Results retain record kind separately from native memory item kind, plus native 
 | `ReadExperienceRequest` | `ExperienceResponse` | Bounded authorized action/episode/observation/fact/goal/task read |
 | `MemoryOperationStatusRequest` | `MemoryOperationStatus` | Reconcile a structured operation identity |
 
-Structured ownership comes from the reporting transport sender. Alternate/legacy ownership requires scope-producer authorization. Native registration uses the resolver's organization membership; in 0.5.1 the participant kind remains unknown. Embedded tool-call performer ownership remains with that turn's participant.
+Structured ownership comes from the reporting transport sender. Alternate/legacy ownership requires scope-producer authorization. Native registration calls Uniko 0.6.0's idempotent agent registration and then ensures membership in the resolver's trusted organization. Diagnostics report the registered agent participant kind. Embedded tool-call performer ownership remains with that turn's participant.
 
-Goal/task identities are native IDs, not reconstructed node IDs. Task priority accepts exclusive legacy `priority` (1–5) or `native_priority` (0–1); responses return a native float. Goal context explicitly reports `episodes_available: false` in 0.5.1. Unsupported controls fail rather than being silently ignored.
+Goal/task identities are native IDs, not reconstructed node IDs. Task priority accepts exclusive legacy `priority` (1–5) or `native_priority` (0–1); responses return a native float. Goal context explicitly reports `episodes_available: false` in 0.6.0. Unsupported controls fail rather than being silently ignored.
 
 ## Replay and failure behavior
 

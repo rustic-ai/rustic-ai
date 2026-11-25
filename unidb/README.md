@@ -1,6 +1,6 @@
 # Uni-DB agent
 
-`rustic_ai.unidb.agent.UniDBAgent` provides typed database capabilities for Rustic guilds. It uses Uni-DB **5.2.1** and Python **3.13**. Domain schema, Locy rules, named operations, and transaction assertions are supplied by the application. Guild composition owns authentication, permissions, approvals, and result visibility.
+`rustic_ai.unidb.agent.UniDBAgent` provides typed database capabilities for Rustic guilds. It uses Uni-DB **6.0.0** and Python **3.13**. Domain schema, Locy rules, named operations, and transaction assertions are supplied by the application. Guild composition owns authentication, permissions, approvals, and result visibility.
 
 This evolves Nihal's [PR 236](https://github.com/rustic-ai/rustic-ai/pull/236). All 15 original operation names remain, with a new v1 wire contract and no legacy adapters.
 
@@ -54,7 +54,7 @@ Timeout, memory, input/output bytes, row count, and mutation statement count are
 
 `DBQueryPlanRequest` and `DBQueryProfileRequest` select existing catalog operations of kind `query`. They use the same request IDs, parameters, provenance, and live-view validation as named reads. Neither requires an operation ID or creates an execution receipt.
 
-Planning returns `executed: false` and native plan text, warnings, cost estimates, index usage, and suggestions. Uni-DB 5.2.1 plans the query template: parameter values do not specialize its estimates. The response explicitly reports `parameter_values_applied: false`, `planning_timeout_enforced: false`, and `planning_memory_enforced: false`. Only input/output byte-limit reductions are accepted for planning; other requested limits produce `unsupported_limit`.
+Planning returns `executed: false` and native plan text, warnings, cost estimates, index usage, and suggestions. Uni-DB 6.0.0 plans the query template: parameter values do not specialize its estimates. The response explicitly reports `parameter_values_applied: false`, `planning_timeout_enforced: false`, and `planning_memory_enforced: false`. Only input/output byte-limit reductions are accepted for planning; other requested limits produce `unsupported_limit`.
 
 Profiling executes the named read exactly once, enforcing native timeout and memory bounds. Its response contains `executed: true`, a bounded `query` result, and a `profile` with native operators, timing, memory, and query metrics. Empty native results can omit column names; configured catalog columns are then returned with `columns_source: catalog`. Otherwise their source is `native`. Row truncation does not erase the measurements of the complete native execution. Memory measurements are native operator figures, not process RSS.
 

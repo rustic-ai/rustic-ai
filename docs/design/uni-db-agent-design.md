@@ -1,6 +1,6 @@
 # Uni-DB agent: core design, initialization, and message protocol
 
-**Status:** implemented for review; documentation reviewed 2026-11-25. The v1 models and native runtime are in `unidb/`, pinned to Uni-DB 5.2.1 on Python 3.13. The three JSON cases now contain captured native result payloads. Internal IDs and commit versions are run-specific. The guild-denied exchange remains an application fixture, with its actual `send_error` delivery tested separately.
+**Status:** implemented for review; documentation reviewed 2026-11-25. The v1 models and native runtime are in `unidb/`, pinned to Uni-DB 6.0.0 on Python 3.13. The three JSON cases contain native result payloads originally captured on Uni-DB 5.2.1; compatibility tests also run against 6.0.0. Internal IDs and commit versions are run-specific. The guild-denied exchange remains an application fixture, with its actual `send_error` delivery tested separately.
 
 This evolves [Nihal’s PR 236](https://github.com/rustic-ai/rustic-ai/pull/236), retaining all 15 operation names while replacing its older `Database` API and wire shapes. No legacy adapters are provided. The [Agentic ERP book](https://github.com/milliondreams/erp_book) informs the business examples; its Uni-DB 3.4.0 observations are not compatibility guarantees.
 
@@ -104,7 +104,7 @@ Native `ext_id` is a reserved globally unique external identifier. The examples 
 
 ## 4. Versioned protocol
 
-All public models use `protocol_version: 1` and reject unexpected fields. The namespace is `rustic_ai.unidb.models`. The native dependency is pinned to `uni-db==5.2.1`; no backward compatibility with PR 236 is provided.
+All public models use `protocol_version: 1` and reject unexpected fields. The namespace is `rustic_ai.unidb.models`. The native dependency is pinned to `uni-db==6.0.0`; no backward compatibility with PR 236 is provided.
 
 ### 4.1 Common request fields
 
@@ -384,7 +384,7 @@ def request_balance(ctx):
 
 The evaluation result contains one query command with columns `invoice_id`, `balance_cents` and row `{"invoice_id": "invoice:1001", "balance_cents": 15000}`. `materialized` is false. It retains the rule-program identity and read-view metadata.
 
-The explanation request selects the configured `explain_invoice_balance` operation with the same key. Its response reports a found derivation and serialized native proof. The fixture contains the engine's captured proof tree, including tagged native identifiers. Uni-DB 5.2.1 does not propagate builder parameters into EXPLAIN filters; the adapter binds only scalar values in fixed catalog programs using JSON literals while leaving quoted strings and comments intact. It does not interpolate arbitrary request programs. A missing key returns `no_derivation`; it is not interpreted as a zero balance.
+The explanation request selects the configured `explain_invoice_balance` operation with the same key. Its response reports a found derivation and serialized native proof. The fixture contains the engine's captured proof tree, including tagged native identifiers. Uni-DB 6.0.0 does not propagate builder parameters into EXPLAIN filters; the adapter binds only scalar values in fixed catalog programs using JSON literals while leaving quoted strings and comments intact. It does not interpolate arbitrary request programs. A missing key returns `no_derivation`; it is not interpreted as a zero balance.
 
 **Acceptance:** exact cents arithmetic; unchanged stored facts after evaluate/explain; no-payment and multiple-payment cases; missing-key distinction; warnings/incompleteness retained; rule revision and read view are correct. Current-state proofs do not establish what was reported in a closed historical period.
 
@@ -471,7 +471,7 @@ The workflow performs: seed 50 products → flush → query plan → query profi
 
 The named query is `MATCH (p:Product) WHERE p.name=$name RETURN p.name AS name`, with `name: widget:12`. The captured lookup returns the same row before and after indexing. Native diagnostics report 50 scanned rows before and one after, along with actual index usage, costs, operators, and timings. Cost estimates and latency need not improve; no synthetic speedup is asserted.
 
-`DBQueryPlanRequest` uses the ordinary named-query catalog, parameters, request/correlation IDs, and supported live view. `result` contains `executed: false`, `plan` (native text, warnings, cost estimates, index usage, suggestions), the enforced input/output byte limits, and three explicit flags: `parameter_values_applied`, `planning_timeout_enforced`, and `planning_memory_enforced`, all false on Uni-DB 5.2.1. Parameters are validated but not interpolated into query text. Explicit unsupported limit requests are refused with `unsupported_limit`; native planning bounds are not advertised.
+`DBQueryPlanRequest` uses the ordinary named-query catalog, parameters, request/correlation IDs, and supported live view. `result` contains `executed: false`, `plan` (native text, warnings, cost estimates, index usage, suggestions), the enforced input/output byte limits, and three explicit flags: `parameter_values_applied`, `planning_timeout_enforced`, and `planning_memory_enforced`, all false on Uni-DB 6.0.0. Parameters are validated but not interpolated into query text. Explicit unsupported limit requests are refused with `unsupported_limit`; native planning bounds are not advertised.
 
 `DBQueryProfileRequest` executes the named read exactly once using native read-only guards, timeout, and memory bounds. `result` contains `executed: true`, `query` with the existing bounded rows/count/truncation/warnings contract, and `profile` with native plan text, operator statistics, total time, peak memory, logical/physical planning time, physical-plan count, and explicit query metrics. For empty native results with absent column names, declared catalog columns are returned with `columns_source: catalog`; otherwise it is `native`. Metrics describe native execution, even when returned rows are truncated. Native memory figures are not process RSS.
 

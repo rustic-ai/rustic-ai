@@ -72,7 +72,7 @@ profile = DBQueryProfileRequest(
 )
 ```
 
-Plan results have `executed: false` and `plan` containing native `plan_text`, `warnings`, `cost_estimates`, `index_usage`, and `suggestions`. In Uni-DB **5.2.1**, estimates use the query template: `parameter_values_applied`, `planning_timeout_enforced`, and `planning_memory_enforced` are all false. Only input/output byte-limit reductions are accepted for plan requests; requesting other valid bounds returns `unsupported_limit`. Do not infer planning limits from ordinary query limits.
+Plan results have `executed: false` and `plan` containing native `plan_text`, `warnings`, `cost_estimates`, `index_usage`, and `suggestions`. In Uni-DB **6.0.0**, estimates use the query template: `parameter_values_applied`, `planning_timeout_enforced`, and `planning_memory_enforced` are all false. Only input/output byte-limit reductions are accepted for plan requests; requesting other valid bounds returns `unsupported_limit`. Do not infer planning limits from ordinary query limits.
 
 Profile results have `executed: true`, a bounded `query`, and a `profile` containing operators, timings, memory, and `query_metrics`. The native read runs exactly once and rejects writes. Empty native results can omit columns; catalog columns are then returned with `columns_source: catalog`, otherwise `native`. Returned row truncation leaves complete-execution metrics intact.
 

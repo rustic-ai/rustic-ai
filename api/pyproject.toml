@@ -1,5 +1,5 @@
 [build-system]
-requires = ["poetry-core"]
+requires = ["poetry-core>=2.5.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 
@@ -21,7 +21,7 @@ packages = [{ include = "rustic_ai", from = "src" }]
 [tool.poetry.dependencies]
 rusticai-core = { path = "../core", develop = true }
 rusticai-ray = { path = "../ray", develop = true }
-fastapi = "^0.163.1"
+fastapi = "^0.165.0"
 starlette = "^1.10.0"
 uvicorn = "^0.54.0"
 ptvsd = "^4.3.2"
@@ -31,7 +31,19 @@ websockets = "^17.4"
 griffe = "^2.4.1"
 psycopg = "^3.3.9"
 python-json-logger = "^4.2.0"
+rusticai-testing = { path = "../testing", develop = true, optional = true}
 
+[tool.poetry.dependencies.pytest]
+version = "^9.2.0"
+optional = true
+
+[tool.poetry.dependencies.pytest-asyncio]
+version = "^1.5.0"
+optional = true
+
+[tool.poetry.dependencies.httpx]
+version = "^0.28.1"
+optional = true
 [tool.poetry-monorepo.deps]
 
 
@@ -42,7 +54,7 @@ optional = true
 pytest = "^9.2.0"
 black = { version = "^26.10.1", extras = ["jupyter"] }
 flake8 = "^7.5.0"
-tox = "^4.67.13"
+tox = "^4.67.16"
 isort = "^9.0.2"
 mypy = "^2.4.1"
 pytest-asyncio = "^1.5.0"

@@ -116,6 +116,7 @@ nav:
       - ReAct Agent Design: design/react-agent-design.md
       - Uniko Agent Completion Plan: design/uniko-agent-completion.md
       - Uni-DB Agent Design: design/uni-db-agent-design.md
+      - Dependency Refresh (2026-11-25): design/dependency-refresh-2026-11-25.md
 theme:
   icon:
     repo: fontawesome/brands/github

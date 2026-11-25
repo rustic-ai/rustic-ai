@@ -20,7 +20,7 @@ class LLMPhiAgent(Agent[PhiAgentProps]):
         self._device = self.config.torch_device
         model_id = self.config.model_id
         self.model = AutoModelForCausalLM.from_pretrained(model_id, trust_remote_code=True).to(self._device).eval()
-        self.tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True, torch_dtype="auto")
+        self.tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
 
     @agent.processor(GenerationPromptRequest)
     def generate_prompt(self, ctx: agent.ProcessContext[GenerationPromptRequest]) -> None:

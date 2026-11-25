@@ -192,6 +192,18 @@
           "title": "Image Width",
           "type": "integer"
         },
+        "max_image_width": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Image Width"
+        },
         "normalization": {
           "default": "siglip",
           "title": "Normalization",
@@ -331,6 +343,19 @@
       "title": "Blob Storage",
       "type": "object"
     },
+    "remote_storage": {
+      "anyOf": [
+        {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Remote Storage"
+    },
     "ingest_queue_capacity": {
       "default": 200,
       "title": "Ingest Queue Capacity",
@@ -359,6 +384,26 @@
     "circuit_recovery_ms": {
       "default": 60000,
       "title": "Circuit Recovery Ms",
+      "type": "integer"
+    },
+    "dead_letter_max_retries": {
+      "default": 3,
+      "title": "Dead Letter Max Retries",
+      "type": "integer"
+    },
+    "dead_letter_auto_retry": {
+      "default": false,
+      "title": "Dead Letter Auto Retry",
+      "type": "boolean"
+    },
+    "dead_letter_retry_backoff_ms": {
+      "default": 30000,
+      "title": "Dead Letter Retry Backoff Ms",
+      "type": "integer"
+    },
+    "dead_letter_retry_max_backoff_ms": {
+      "default": 3600000,
+      "title": "Dead Letter Retry Max Backoff Ms",
       "type": "integer"
     },
     "message_chunk_threshold": {

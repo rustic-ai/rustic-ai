@@ -5,8 +5,8 @@ These drive the locally installed Chrome (or bundled Chromium) and hit live sear
 
     RUSTIC_LOCAL_SERP_LIVE=1 pytest serpapi/tests/agent/test_local_serp_agent_live.py -v
 
-They use the real browser profile (the one `python -m rustic_ai.serpapi.local_setup` prepares), which only one browser
-can open at a time, so they run one at a time even under pytest-xdist. Stop any running LocalSERPAgent guild first.
+They use an isolated persistent browser profile per test worker. A lock serializes searches sharing that profile.
+The user's normal LocalSERPAgent profile is left untouched.
 The headed test opens a minimized Chrome window; if Google shows a CAPTCHA the window pops up for you to solve.
 """
 
@@ -22,7 +22,6 @@ from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 from rustic_ai.core.utils.priority import Priority
 from rustic_ai.serpapi.agent import SERPQuery, SERPResults
 from rustic_ai.serpapi.local_agent import LocalSERPAgent
-from rustic_ai.serpapi.local_browser import default_profile_root
 
 from rustic_ai.testing.helpers import wrap_agent_for_testing
 
@@ -39,15 +38,20 @@ QUERY = "python programming language"
 
 
 @pytest.fixture(autouse=True)
-def one_browser_at_a_time() -> Iterator[None]:
+def one_browser_at_a_time(live_profile_root) -> Iterator[None]:
     """Hold a lock for the whole test so parallel workers do not compete for the shared browser profile."""
     if fcntl is None:
         yield
         return
-    os.makedirs(default_profile_root(), exist_ok=True)
-    with open(os.path.join(default_profile_root(), ".live-tests.lock"), "w") as lock_file:
+    with open(os.path.join(live_profile_root, ".live-tests.lock"), "w") as lock_file:
         fcntl.flock(lock_file, fcntl.LOCK_EX)  # released when the file is closed
         yield
+
+
+@pytest.fixture(scope="session")
+def live_profile_root(tmp_path_factory):
+    """Keep live test browser state separate from the user's search profile."""
+    return str(tmp_path_factory.mktemp("local-serp-profile"))
 
 
 @pytest.fixture
@@ -104,15 +108,19 @@ def assert_found_results(reply: Message, engine: str, num: int) -> SERPResults:
 
 
 @pytest.mark.parametrize("engine", ["duckduckgo", "bing"])
-def test_headless_search_finds_results(generator, agent_id, engine):
-    assert_found_results(run_search(generator, agent_id, engine), engine, num=5)
+def test_headless_search_finds_results(generator, agent_id, engine, live_profile_root):
+    assert_found_results(run_search(generator, agent_id, engine, user_data_dir=live_profile_root), engine, num=5)
 
 
-def test_pagination_collects_more_than_one_page(generator, agent_id):
-    result = assert_found_results(run_search(generator, agent_id, "bing", num=15), "bing", num=15)
+def test_pagination_collects_more_than_one_page(generator, agent_id, live_profile_root):
+    result = assert_found_results(
+        run_search(generator, agent_id, "bing", num=15, user_data_dir=live_profile_root), "bing", num=15
+    )
     assert result.count > 10, f"expected results from a second page, got {result.count}"
 
 
-def test_headed_google_search_finds_results(generator, agent_id):
-    reply = run_search(generator, agent_id, "google", headless=False, captcha_wait_s=60)
+def test_headed_google_search_finds_results(generator, agent_id, live_profile_root):
+    reply = run_search(
+        generator, agent_id, "google", headless=False, captcha_wait_s=60, user_data_dir=live_profile_root
+    )
     assert_found_results(reply, "google", num=5)

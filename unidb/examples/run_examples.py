@@ -27,10 +27,11 @@ def run_case(case, root):
     runtime = UniDBRuntime(db, config.binding_id, deployment["bootstrap"], deployment["receipts"])
     runtime.configure(config)
     document = json.loads((EXAMPLES / f"{case}-messages.json").read_text())
-    document["status"] = "native_5.2.1_reference_results"
+    native_version = runtime.native_version
+    document["status"] = f"native_{native_version}_reference_results"
     document["notes"] = [
         "Request/response projections, not complete Rustic Message envelopes.",
-        "Database payloads captured from Uni-DB 5.2.1; versions and internal IDs vary between runs.",
+        f"Database payloads captured from Uni-DB {native_version}; versions and internal IDs vary between runs.",
         "The capability_denied exchange is a guild-owned application fixture, exercised by test_guild_flow.py.",
         "Runtime sender attribution scopes receipts; authentication belongs to the embedding guild.",
     ]

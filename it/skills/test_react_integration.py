@@ -42,7 +42,7 @@ from rustic_ai.llm_agent.react import (
     ReActToolset,
 )
 from rustic_ai.skills.executor import ExecutionConfig
-from rustic_ai.skills.marketplace import MarketplaceError, SkillMarketplace
+from rustic_ai.skills.marketplace import SkillMarketplace
 from rustic_ai.skills.toolset import (
     MarketplaceSkillToolset,
     ScriptToolParams,
@@ -1482,291 +1482,80 @@ Use the appropriate tools to help the user.
 
 
 @pytest.mark.skipif(
-    os.getenv("SKIP_EXPENSIVE_TESTS") == "true",
-    reason="Skipping expensive tests",
-)
-@pytest.mark.skipif(
     os.getenv("SKIP_NETWORK_TESTS") == "true",
-    reason="Skipping network tests",
+    reason="Skipping public skill repository downloads",
 )
 class TestAnthropicSkillsRepository:
-    """
-    Integration tests that interact with the real Anthropic skills repository.
+    """Discover, install, and expose real public skills without LLM calls."""
 
-    These tests focus on the MOST COMPLEX skills from Anthropic:
-    - xlsx: Excel formula recalculation with recalc.py (6KB+)
-    - pdf: PDF processing with 8+ scripts (form filling, image conversion, etc.)
-    - webapp-testing: Playwright server lifecycle with with_server.py
-
-    These tests verify:
-    1. Ability to discover skills from anthropics/skills GitHub repo
-    2. Skill format compatibility including complex scripts directories
-    3. Integration with SkillToolset and ReActAgent
-
-    Note: These tests require network access and may be slow.
-    """
-
-    # The most complex skills from Anthropic's repository
-    COMPLEX_SKILLS = [
-        "xlsx",  # Has recalc.py for Excel formula recalculation with LibreOffice
-        "pdf",  # Has 8+ scripts for PDF processing (form fields, images, etc.)
-        "webapp-testing",  # Has with_server.py for Playwright server lifecycle
-    ]
+    COMPLEX_SKILLS = ["xlsx", "pdf", "webapp-testing"]
 
     @pytest.fixture
     def marketplace(self, temp_install_dir, temp_cache_dir):
-        """Create a marketplace configured for Anthropic skills."""
         return SkillMarketplace(
             install_path=temp_install_dir / "installed",
             cache_path=temp_cache_dir,
         )
 
     def test_discover_anthropic_skills(self, marketplace):
-        """Test discovering skills from the Anthropic repository."""
         discovered = marketplace.discover("anthropic")
-
-        # Should find at least some skills (repository may change over time)
-        assert len(discovered) >= 0  # Allow for empty repo
-
-        # If skills found, verify they have required fields
-        for skill in discovered:
-            assert skill.name
-            assert skill.description
-
-        # Verify we can find the complex skills
-        discovered_names = [s.name for s in discovered]
-        for complex_skill in self.COMPLEX_SKILLS:
-            if complex_skill in discovered_names:
-                # Found a complex skill - good
-                pass
+        assert set(self.COMPLEX_SKILLS).issubset({skill.name for skill in discovered})
+        assert all(skill.name and skill.description for skill in discovered)
 
     def test_install_complex_xlsx_skill(self, marketplace):
-        """
-        Test installing the xlsx skill from Anthropic repository.
-
-        The xlsx skill is one of the most complex, containing:
-        - SKILL.md with comprehensive Excel processing documentation
-        - scripts/recalc.py: 6KB+ script for Excel formula recalculation using LibreOffice
-
-        This tests that we can handle skills with substantial Python scripts.
-        """
-        discovered = marketplace.discover("anthropic")
-        xlsx_skills = [s for s in discovered if s.name == "xlsx"]
-
-        if not xlsx_skills:
-            pytest.skip("xlsx skill not found in Anthropic repository")
-
-        xlsx_skill = xlsx_skills[0]
-        try:
-            installed_path = marketplace.install(xlsx_skill.name)
-            assert installed_path.exists()
-            assert (installed_path / "SKILL.md").exists()
-
-            # Verify recalc.py is present (the main script for xlsx skill)
-            recalc_script = installed_path / "scripts" / "recalc.py"
-            assert recalc_script.exists(), "recalc.py should be present in xlsx skill"
-
-            # Verify it's substantial (the real script is 6KB+)
-            content = recalc_script.read_text()
-            assert len(content) > 1000, "recalc.py should be substantial"
-            assert "LibreOffice" in content or "openpyxl" in content
-
-        except MarketplaceError as e:
-            pytest.skip(f"Could not install xlsx skill: {e}")
+        installed_path = marketplace.install("xlsx", source_name="anthropic")
+        assert (installed_path / "SKILL.md").is_file()
+        recalc_script = installed_path / "scripts" / "recalc.py"
+        assert recalc_script.is_file()
+        content = recalc_script.read_text()
+        assert len(content) > 1000
+        assert "LibreOffice" in content or "openpyxl" in content
 
     def test_install_complex_pdf_skill(self, marketplace):
-        """
-        Test installing the pdf skill from Anthropic repository.
-
-        The pdf skill has the most scripts:
-        - check_bounding_boxes.py (3KB+)
-        - check_fillable_fields.py
-        - convert_pdf_to_images.py (1KB+)
-        - create_validation_image.py (1.6KB+)
-        - extract_form_field_info.py (6KB+)
-        - fill_fillable_fields.py (4.8KB+)
-        - fill_pdf_form_with_annotations.py (3.5KB+)
-        - Plus reference.md and forms.md documentation
-        """
-        discovered = marketplace.discover("anthropic")
-        pdf_skills = [s for s in discovered if s.name == "pdf"]
-
-        if not pdf_skills:
-            pytest.skip("pdf skill not found in Anthropic repository")
-
-        pdf_skill = pdf_skills[0]
-        try:
-            installed_path = marketplace.install(pdf_skill.name)
-            assert installed_path.exists()
-            assert (installed_path / "SKILL.md").exists()
-
-            # Verify scripts directory exists with multiple scripts
-            scripts_dir = installed_path / "scripts"
-            assert scripts_dir.exists(), "pdf skill should have scripts/ directory"
-
-            # Check for key scripts
-            expected_scripts = [
-                "check_fillable_fields.py",
-                "convert_pdf_to_images.py",
-                "extract_form_field_info.py",
-            ]
-
-            found_scripts = list(scripts_dir.glob("*.py"))
-            assert len(found_scripts) >= 3, f"pdf skill should have multiple scripts, found: {found_scripts}"
-
-            script_names = [s.name for s in found_scripts]
-            for expected in expected_scripts:
-                assert expected in script_names, f"Expected {expected} in pdf scripts"
-
-        except MarketplaceError as e:
-            pytest.skip(f"Could not install pdf skill: {e}")
+        installed_path = marketplace.install("pdf", source_name="anthropic")
+        assert (installed_path / "SKILL.md").is_file()
+        script_names = {script.name for script in (installed_path / "scripts").glob("*.py")}
+        assert {"check_fillable_fields.py", "convert_pdf_to_images.py", "extract_form_field_info.py"}.issubset(
+            script_names
+        )
 
     def test_install_webapp_testing_skill(self, marketplace):
-        """
-        Test installing the webapp-testing skill from Anthropic repository.
-
-        The webapp-testing skill contains:
-        - SKILL.md with Playwright testing documentation
-        - scripts/with_server.py: Server lifecycle management (3.6KB+)
-        - examples/ directory with usage patterns
-        """
-        discovered = marketplace.discover("anthropic")
-        webapp_skills = [s for s in discovered if s.name == "webapp-testing"]
-
-        if not webapp_skills:
-            pytest.skip("webapp-testing skill not found in Anthropic repository")
-
-        webapp_skill = webapp_skills[0]
-        try:
-            installed_path = marketplace.install(webapp_skill.name)
-            assert installed_path.exists()
-            assert (installed_path / "SKILL.md").exists()
-
-            # Verify scripts directory with with_server.py
-            scripts_dir = installed_path / "scripts"
-            assert scripts_dir.exists(), "webapp-testing skill should have scripts/ directory"
-
-            with_server = scripts_dir / "with_server.py"
-            assert with_server.exists(), "with_server.py should be present"
-
-            # Verify the script is substantial
-            content = with_server.read_text()
-            assert len(content) > 1000, "with_server.py should be substantial"
-            assert "playwright" in content.lower() or "server" in content.lower()
-
-            # Verify examples directory exists
-            examples_dir = installed_path / "examples"
-            assert examples_dir.exists(), "webapp-testing skill should have examples/ directory"
-
-        except MarketplaceError as e:
-            pytest.skip(f"Could not install webapp-testing skill: {e}")
+        installed_path = marketplace.install("webapp-testing", source_name="anthropic")
+        assert (installed_path / "SKILL.md").is_file()
+        with_server = installed_path / "scripts" / "with_server.py"
+        assert with_server.is_file()
+        content = with_server.read_text()
+        assert len(content) > 1000
+        assert "playwright" in content.lower() or "server" in content.lower()
+        assert (installed_path / "examples").is_dir()
 
     def test_create_toolset_from_pdf_skill(self, marketplace):
-        """
-        Test creating a SkillToolset from the pdf skill.
-
-        This tests the most complex skill with multiple scripts to ensure
-        our SkillToolset can properly parse and expose all the tools.
-        """
-        discovered = marketplace.discover("anthropic")
-        pdf_skills = [s for s in discovered if s.name == "pdf"]
-
-        if not pdf_skills:
-            pytest.skip("pdf skill not found in Anthropic repository")
-
-        pdf_skill = pdf_skills[0]
-        try:
-            installed_path = marketplace.install(pdf_skill.name)
-            toolset = SkillToolset.from_path(installed_path)
-
-            # Verify toolset is valid
-            assert toolset.skill.name == pdf_skill.name
-
-            # pdf skill should have multiple scripts as tools
-            assert toolset.tool_count >= 3, f"pdf skill should have multiple tools, found: {toolset.tool_count}"
-
-            # Verify it can generate chat tools
-            chat_tools = toolset.chat_tools
-            assert isinstance(chat_tools, list)
-            assert len(chat_tools) >= 3
-
-            # Verify tool names follow our convention (skill_name_script_name)
-            # ChatCompletionTool has .function.name attribute
-            tool_names = [t.function.name for t in chat_tools]
-            for name in tool_names:
-                assert name.startswith("pdf_"), f"Tool name should start with 'pdf_': {name}"
-
-        except (MarketplaceError, Exception) as e:
-            pytest.skip(f"Could not process pdf skill: {e}")
+        installed_path = marketplace.install("pdf", source_name="anthropic")
+        toolset = SkillToolset.from_path(installed_path)
+        assert [skill.name for skill in toolset.skills] == ["pdf"]
+        assert toolset.tool_count >= 3
+        tool_names = {tool.function.name for tool in toolset.chat_tools}
+        assert tool_names == set(toolset.tool_names)
+        assert any("convert_pdf_to_images" in name for name in tool_names)
 
     def test_create_toolset_from_xlsx_skill(self, marketplace):
-        """
-        Test creating a SkillToolset from the xlsx skill.
-
-        The xlsx skill has recalc.py at the root level (not in scripts/).
-        This tests that we handle different skill structures correctly.
-        """
-        discovered = marketplace.discover("anthropic")
-        xlsx_skills = [s for s in discovered if s.name == "xlsx"]
-
-        if not xlsx_skills:
-            pytest.skip("xlsx skill not found in Anthropic repository")
-
-        xlsx_skill = xlsx_skills[0]
-        try:
-            installed_path = marketplace.install(xlsx_skill.name)
-            toolset = SkillToolset.from_path(installed_path)
-
-            # Verify toolset is valid
-            assert toolset.skill.name == xlsx_skill.name
-
-            # Verify it can generate chat tools
-            chat_tools = toolset.chat_tools
-            assert isinstance(chat_tools, list)
-
-            # xlsx skill may have recalc.py as a tool
-            if toolset.tool_count > 0:
-                # ChatCompletionTool has .function.name attribute
-                tool_names = [t.function.name for t in chat_tools]
-                # Check if recalc is exposed as a tool
-                recalc_tools = [n for n in tool_names if "recalc" in n.lower()]
-                if recalc_tools:
-                    assert len(recalc_tools) >= 1
-
-        except (MarketplaceError, Exception) as e:
-            pytest.skip(f"Could not process xlsx skill: {e}")
+        installed_path = marketplace.install("xlsx", source_name="anthropic")
+        toolset = SkillToolset.from_path(installed_path)
+        assert [skill.name for skill in toolset.skills] == ["xlsx"]
+        tool_names = {tool.function.name for tool in toolset.chat_tools}
+        assert tool_names == set(toolset.tool_names)
+        assert any("recalc" in name for name in tool_names)
 
     def test_multi_skill_toolset_with_anthropic_skills(self, marketplace):
-        """
-        Test creating a SkillToolset with multiple complex Anthropic skills.
-
-        This tests that we can compose multiple real-world skills together.
-        """
-        discovered = marketplace.discover("anthropic")
-
-        # Try to install multiple skills
-        installed_paths = []
-        for skill_name in ["pdf", "xlsx"]:
-            matching = [s for s in discovered if s.name == skill_name]
-            if matching:
-                try:
-                    path = marketplace.install(matching[0].name)
-                    installed_paths.append(path)
-                except MarketplaceError:
-                    pass
-
-        if len(installed_paths) < 2:
-            pytest.skip("Could not install enough skills for multi-skill test")
-
-        # Create multi-skill toolset
-        multi_toolset = SkillToolset.from_paths(installed_paths)
-
-        # Should have tools from both skills
-        assert multi_toolset.tool_count >= 2
-
-        # Should generate a combined system prompt
-        system_prompt = multi_toolset.get_combined_system_prompt()
-        assert "pdf" in system_prompt.lower() or "xlsx" in system_prompt.lower()
+        installed_paths = [marketplace.install(name, source_name="anthropic") for name in ["pdf", "xlsx"]]
+        toolset = SkillToolset.from_paths(installed_paths)
+        assert {skill.name for skill in toolset.skills} == {"pdf", "xlsx"}
+        assert toolset.tool_count >= 2
+        tool_names = toolset.tool_names
+        assert any(name.startswith("pdf_") for name in tool_names)
+        assert any(name.startswith("xlsx_") for name in tool_names)
+        system_prompt = toolset.get_system_prompt_addition().lower()
+        assert "pdf" in system_prompt and "xlsx" in system_prompt
 
 
 # ---------------------------------------------------------------------------

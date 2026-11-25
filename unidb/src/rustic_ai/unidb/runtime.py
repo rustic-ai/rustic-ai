@@ -318,7 +318,7 @@ class UniDBRuntime:
 
     def _logic(self, scope, program, params, limits, explain=False, expected=None):
         if explain:
-            # 5.2.1 does not propagate builder parameters into EXPLAIN filters.
+            # The Locy EXPLAIN command path does not propagate builder parameters into its filters.
             # Bind scalar VALUES only; quoted strings/comments are never rewritten.
             token = re.compile(
                 r"('(?:\\.|[^'\\])*'|\"(?:\\.|[^\"\\])*\"|`[^`]*`|//[^\n]*|/\*.*?\*/)|\$([A-Za-z_][A-Za-z0-9_]*)", re.S

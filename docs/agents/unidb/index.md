@@ -2,7 +2,7 @@
 
 `rustic_ai.unidb.agent.UniDBAgent` makes Uni-DB a reusable database capability in a Rustic AI guild. Callers send typed messages to query application data, evaluate Locy rules, explain derivations, execute checked mutations, or compare hypothetical changes. The database agent works with deterministic callers and reasoning agents through the same contract.
 
-This guide describes the v1 integration in `rusticai-unidb` 0.0.1, pinned to **Uni-DB 5.2.1 and Python 3.13**. It describes the integration's supported surface, rather than every feature in newer native Uni-DB releases.
+This guide describes the v1 integration in `rusticai-unidb` 0.0.1, pinned to **Uni-DB 6.0.0 and Python 3.13**. It describes the integration's supported surface, rather than every feature in newer native Uni-DB releases.
 
 ## Choose the capability boundary
 

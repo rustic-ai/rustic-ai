@@ -89,7 +89,7 @@ def apply_provenance(builder: Any, spec: Any, kind: MemoryRecordKind) -> Any:
             builder = getattr(builder, method)(value)
     if getattr(spec, "visibility", None):
         if not is_turn:
-            raise ValueError("Document visibility is unavailable in Uniko 0.5.1")
+            raise ValueError("Document visibility is unavailable in Uniko 0.6.0")
         builder = builder.visibility(spec.visibility)
     return builder
 

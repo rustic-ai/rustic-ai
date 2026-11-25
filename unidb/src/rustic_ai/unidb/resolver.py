@@ -41,7 +41,7 @@ class UniDBResolver(DependencyResolver[UniDBRuntime]):
             fs = self.inject(FileSystem, self.location.get("dependency_key", "filesystem"), org_id, guild_id, agent_id)
             uri = get_uri(fs, relative)
             backing, native_path = url_to_fs(uri)
-            # 5.2.1's local opener expects a path, not a file:// URL.
+            # The native local opener expects a path, not a file:// URL.
             location = native_path if isinstance(backing, LocalFileSystem) else uri
             builder = getattr(uni_db.Uni.builder(), self.open_mode)(location)
         db = builder.config(self.native_config).build()

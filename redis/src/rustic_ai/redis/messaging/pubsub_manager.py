@@ -271,7 +271,7 @@ class RedisPubSubManager:
                 raw_messages = self.client.zrangebyscore(topic, timestamp_since, "+inf")
 
             if raw_messages:
-                messages = [Message.from_json(m) for m in raw_messages]  # type: ignore[union-attr]
+                messages = [Message.from_json(m) for m in raw_messages]  # type: ignore[union-attr, arg-type]
                 messages = sorted(messages, key=lambda m: m.id)
                 # Filter: only messages AFTER last_id (not including it)
                 backlog = [m for m in messages if m.id > last_id]
@@ -308,12 +308,14 @@ class RedisPubSubManager:
     def _client_worker_loop(self, client_id: str) -> None:
         """Worker thread for a single client — processes messages sequentially."""
         while not self.shutdown_event.is_set():
+            with self.lock:
+                client_queue = self._client_queues.get(client_id)
+            if client_queue is None:
+                break  # Queue removed (client unsubscribed all topics)
             try:
-                item = self._client_queues[client_id].get(timeout=0.5)
+                item = client_queue.get(timeout=0.5)
             except queue.Empty:
                 continue
-            except KeyError:
-                break  # Queue removed (client unsubscribed all topics)
 
             namespace, topic, handler, message = item
             try:
@@ -323,7 +325,7 @@ class RedisPubSubManager:
             except Exception as exc:
                 self._handle_delivery_failure(client_id, namespace, topic, message, exc)
             finally:
-                self._client_queues[client_id].task_done()
+                client_queue.task_done()
 
     def _load_position(self, client_id: str, topic: str) -> int:
         """Load last processed message ID for a client+topic from Redis."""
@@ -611,26 +613,27 @@ class RedisPubSubManager:
     def _cleanup(self) -> None:
         """Clean up pub/sub connection."""
         with self.lock:
-            try:
-                if self.redis_thread and self.redis_thread.is_alive():
-                    # Redis pub/sub threads have a stop() method
-                    if hasattr(self.redis_thread, "stop"):
-                        self.redis_thread.stop()  # type: ignore
-                    # Wait briefly for thread to stop
-                    self.redis_thread.join(timeout=1)
-                if self.pubsub:
-                    # Unsubscribe from all topics first to prevent event handler leaks
-                    try:
-                        self.pubsub.unsubscribe()
-                    except Exception as e:
-                        logging.debug(f"Error during unsubscribe in cleanup: {e}")
-                    # Now close the pubsub connection
-                    self.pubsub.close()
-            except Exception as e:
-                logging.warning(f"Error during pub/sub cleanup: {e}")
-            finally:
-                self.redis_thread = None
-                self.pubsub = None
+            redis_thread, pubsub = self.redis_thread, self.pubsub
+            self.redis_thread = None
+            self.pubsub = None
+
+        # A pub/sub callback can need this lock to fan out messages. Redis 8.2
+        # stop() joins the worker itself, so never stop or join while holding it.
+        try:
+            if redis_thread and redis_thread.is_alive():
+                if hasattr(redis_thread, "stop"):
+                    redis_thread.stop(timeout=1)  # type: ignore
+                if redis_thread is not threading.current_thread():
+                    redis_thread.join(timeout=1)
+            if pubsub:
+                # Unsubscribe from all topics first to prevent event handler leaks
+                try:
+                    pubsub.unsubscribe()
+                except Exception as e:
+                    logging.debug(f"Error during unsubscribe in cleanup: {e}")
+                pubsub.close()
+        except Exception as e:
+            logging.warning(f"Error during pub/sub cleanup: {e}")
 
     def cleanup(self) -> None:
         """Clean up all resources."""

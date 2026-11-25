@@ -14,7 +14,7 @@
 | `embedding` | `None` | Native preset/section overriding `config.embedding` |
 | `nlp` | `None` | Native preset/section overriding `config.nlp` |
 | `reranker` | `None` | Preserve defaults; use a preset/section, or `False` to disable; `True` is rejected |
-| `readiness_policy` | `sdk_default` | Best-effort SDK warmup; `require_verified` is unavailable |
+| `readiness_policy` | `sdk_default` | Best-effort SDK warmup; this integration does not expose `require_verified` |
 
 ## Persistent local storage
 
@@ -55,9 +55,9 @@ model_properties = {
 }
 ```
 
-`llm_spec` is optional and needed only for `AnswerRequest` SDK-native generation. The exposed generation modes are `openai`, `openai_with_key_env`, and `llamacpp`. An alias names the runtime model; it is separate from provider and `model_id`. OpenAI-compatible endpoints can supply `base_url`; llama.cpp runs in an external OpenAI-compatible `llama-server`. Old `alias: openai` inputs remain supported. `alias: mistral`/`mistralrs` embedded-runtime inputs are rejected, not migrated to hosted Mistral.
+`llm_spec` is optional and needed only for `AnswerRequest` SDK-native generation. The exposed generation modes are `openai`, `openai_with_key_env`, `llamacpp`, and `generic`. An alias names the runtime model; it is separate from provider and `model_id`. OpenAI-compatible endpoints can supply `base_url`; llama.cpp runs in an external OpenAI-compatible `llama-server`. Old `alias: openai` inputs remain supported. `alias: mistral`/`mistralrs` embedded-runtime inputs are rejected, not migrated to hosted Mistral.
 
-Custom uni-xervo catalogs can select supported native tasks/providers compiled into the runtime. A catalog generation entry alone does not select the model used by `Agent.answer`. The direct Python `llm_spec` modes are narrower than the full native provider catalog.
+Custom uni-xervo catalogs can select supported native tasks/providers compiled into the runtime. A catalog generation entry alone does not select the model used by `Agent.answer`. Uniko 0.6.0's `generic` mode forwards `provider_id`, `alias`, `model_id`, optional `options`, and `api_key_env` for a generation provider compiled into the runtime. The integration retains best-effort startup; native readiness APIs are not yet exposed as a verified Rustic startup policy.
 
 `catalog_path`, `schema_path`, and `observation_rules_path` in native `config` require readable absolute local files and are validated before persistent store opening. Custom catalogs replace defaults and must include required embedding/NLP/reranker aliases for enabled pipelines. Embedding dimension changes require a fresh store. Metal/CUDA wheels remain outside the validated Rustic dependency profile; BGE-M3 dense/sparse/ColBERT certification is a separate acceptance gate.
 

@@ -1,6 +1,6 @@
 # UniDBResolver
 
-`rustic_ai.unidb.resolver.UniDBResolver` provides an agent-scoped `UniDBRuntime` to [UniDBAgent](../../agents/unidb/index.md). It opens native Uni-DB 5.2.1, applies or verifies bootstrap definitions, and caches the runtime for that agent. Guild- and organization-scoped resolution is rejected.
+`rustic_ai.unidb.resolver.UniDBResolver` provides an agent-scoped `UniDBRuntime` to [UniDBAgent](../../agents/unidb/index.md). It opens native Uni-DB 6.0.0, applies or verifies bootstrap definitions, and caches the runtime for that agent. Guild- and organization-scoped resolution is rejected.
 
 ## Configuration
 

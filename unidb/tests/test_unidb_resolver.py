@@ -33,6 +33,8 @@ def test_existing_schema_mismatch_fails_readiness_and_releases_handle(tmp_path):
         UniDBRuntime(uni_db.Uni.open_existing(path), "test", bootstrap, {})
     reopened = uni_db.Uni.open_existing(path)
     try:
-        assert reopened.get_label_info("Thing").properties[0].data_type == "string"
+        label = reopened.get_label_info("Thing")
+        assert label is not None
+        assert label.properties[0].data_type == "string"
     finally:
         reopened.shutdown()

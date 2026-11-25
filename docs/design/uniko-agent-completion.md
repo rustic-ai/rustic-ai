@@ -6,6 +6,10 @@ The core text and document integration can progress independently of the upstrea
 
 The current usage documentation is the [agent guide](../agents/uniko/index.md), [message protocol](../agents/uniko/protocol.md), and [resolver guide](../dependencies/uniko/index.md). The implementation evidence below retains its recorded dates and platforms.
 
+## Dependency refresh: 2026-11-25
+
+The current integration selects Uniko `>=0.6.0,<0.7.0`. It uses native idempotent agent registration plus trusted organization membership, forwards the SDK generic generation-provider contract, and publishes the refreshed native configuration schemas. Best-effort startup remains the supported policy; the integration does not yet expose the new native readiness APIs as `require_verified`. This refresh does not close the open extraction, retrieval or deployment gates. The dated G1/G2 evidence below remains the original 0.5.1 baseline. The [dependency refresh report](dependency-refresh-2026-11-25.md) records the 0.6.0 native suite and current full monorepo validation.
+
 ## Baseline and tracking rules
 
 | Item | Status and evidence |
@@ -14,7 +18,7 @@ The current usage documentation is the [agent guide](../agents/uniko/index.md), 
 | Current implementation | [`b21e144`](https://github.com/milliondreams/rustic-ai/commit/b21e144), signed and pushed to the milliondreams fork's `main` branch |
 | Initial code baseline | `7bc3cf0`; historical source links below retain this pre-implementation snapshot |
 | Change under review | [Rustic PR 480](https://github.com/rustic-ai/rustic-ai/pull/480); dependency baseline merged through [PR 479](https://github.com/rustic-ai/rustic-ai/pull/479) |
-| Native dependency | Uniko `>=0.5.1,<0.6.0`; locks currently select 0.5.1 |
+| Historical native dependency | Uniko `>=0.5.1,<0.6.0`; the 2026-11-17 evidence below used 0.5.1 |
 | Runtime environment validated | Python 3.13.12, macOS ARM64, CPU Uniko wheel |
 | Upstream source snapshots checked | Uniko `28f8a1ae3e343f62392800b7d693c0bac45c7c80`; uni-xervo `fd312158599cb3fe429e93c56f07f7124d216642` |
 | Last full local CI | 2026-11-17: 2,020 passed, 88 skipped, 3 xfailed, 2 xpassed; exit 0; Redis and NATS/JetStream enabled |
