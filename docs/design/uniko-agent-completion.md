@@ -4,6 +4,8 @@ This plan tracks completion of Rustic's Uniko memory integration: reliable confi
 
 The core text and document integration can progress independently of the upstream feature requests. OCR, multimodal processing and larger deployments have separate release gates and explicit dependencies.
 
+The current usage documentation is the [agent guide](../agents/uniko/index.md), [message protocol](../agents/uniko/protocol.md), and [resolver guide](../dependencies/uniko/index.md). The implementation evidence below retains its recorded dates and platforms.
+
 ## Baseline and tracking rules
 
 | Item | Status and evidence |

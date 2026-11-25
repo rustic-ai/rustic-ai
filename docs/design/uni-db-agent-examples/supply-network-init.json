@@ -1,7 +1,7 @@
 {
   "id": "unidb-example-supply-network",
   "name": "Supply Network Example",
-  "description": "Proposed Uni-DB agent initialization for the supply-network design example.",
+  "description": "Uni-DB agent initialization for the supply-network design example.",
   "agents": [
     {
       "id": "unidb-supply-network",

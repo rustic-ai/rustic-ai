@@ -1,7 +1,7 @@
 {
   "id": "unidb-example-receivables",
   "name": "Receivables Example",
-  "description": "Proposed Uni-DB agent initialization for the receivables design example.",
+  "description": "Uni-DB agent initialization for the receivables design example.",
   "agents": [
     {
       "id": "unidb-receivables",

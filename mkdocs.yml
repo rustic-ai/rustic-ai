@@ -38,6 +38,12 @@ nav:
       - LLM Agent Memory: agents/llm_agent_memory.md
       - LLM Agent Plugins: agents/llm_agent_plugins.md
       - ReAct Agent: agents/react_agent.md
+      - Uniko Memory:
+          - Agent Guide: agents/uniko/index.md
+          - Message Protocol: agents/uniko/protocol.md
+      - Uni-DB:
+          - Agent Guide: agents/unidb/index.md
+          - Message Protocol: agents/unidb/protocol.md
       - Core:
           - Overview: agents/core/index.md
           - Guild Manager Agent: agents/core/guild_manager_agent.md
@@ -77,6 +83,8 @@ nav:
           - In-Memory KV Store: dependencies/core/in_memory_kvstore.md
           - In-Process Interpreter: dependencies/core/in_process_interpreter.md
           - Python Exec Executor: dependencies/core/python_exec_executor.md
+      - Uniko Resolver: dependencies/uniko/index.md
+      - Uni-DB Resolver: dependencies/unidb/index.md
       - Redis:
           - Overview: dependencies/redis/index.md
           - Redis KV Store: dependencies/redis/redis_kvstore.md
@@ -107,6 +115,7 @@ nav:
   - Design:
       - ReAct Agent Design: design/react-agent-design.md
       - Uniko Agent Completion Plan: design/uniko-agent-completion.md
+      - Uni-DB Agent Design: design/uni-db-agent-design.md
 theme:
   icon:
     repo: fontawesome/brands/github

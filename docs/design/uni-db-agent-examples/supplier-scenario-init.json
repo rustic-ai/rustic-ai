@@ -1,7 +1,7 @@
 {
   "id": "unidb-example-supplier-scenario",
   "name": "Supplier Scenario Example",
-  "description": "Proposed Uni-DB agent initialization for the supplier-scenario design example.",
+  "description": "Uni-DB agent initialization for the supplier-scenario design example.",
   "agents": [
     {
       "id": "unidb-supplier-scenario",

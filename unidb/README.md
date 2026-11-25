@@ -4,6 +4,8 @@
 
 This evolves Nihal's [PR 236](https://github.com/rustic-ai/rustic-ai/pull/236). All 15 original operation names remain, with a new v1 wire contract and no legacy adapters.
 
+Read the [site agent guide](../docs/agents/unidb/index.md), [protocol reference](../docs/agents/unidb/protocol.md), and [resolver guide](../docs/dependencies/unidb/index.md) for the supported v1 contract.
+
 ## Initialize
 
 Configure an agent-scoped `unidb` dependency using `rustic_ai.unidb.resolver.UniDBResolver`. Persistent locations resolve relative paths through an injected Rustic filesystem. Opening modes are explicit: `open_existing` (default), `create`, or `temporary`. No opening failure substitutes an empty database.
@@ -25,7 +27,7 @@ PYTHONPATH=unidb/src python unidb/examples/run_examples.py
 
 ## Messages and execution
 
-Named requests are `DBQueryRequest`, `DBEvaluateRequest`, `DBExplainRequest`, `DBMutateRequest`, and `DBScenarioRequest`. Discovery and reconciliation use `DBHealthRequest`, `DBCapabilitiesRequest`, `DBOperationStatusRequest`, and `DBBulkStatusRequest`.
+Named requests are `DBQueryRequest`, `DBQueryPlanRequest`, `DBQueryProfileRequest`, `DBEvaluateRequest`, `DBExplainRequest`, `DBMutateRequest`, and `DBScenarioRequest`. Discovery and reconciliation use `DBHealthRequest`, `DBCapabilitiesRequest`, `DBOperationStatusRequest`, and `DBBulkStatusRequest`.
 
 Every request carries `protocol_version: 1`, `request_id`, and `correlation_id`. Named execution also carries `operation` and `params`. Persistent effects require an `operation_id`, stable across retries; caller payloads do not supply principals or credentials.
 
@@ -75,7 +77,7 @@ Install the module's `tools` extra to use `UniDBToolsManagerPlugin` and `UniDBTo
 The native suite tests all three cases, all retained operations, rollback/reopen/replay, commit and publication faults, interrupted bulk/admin outcomes, bounds, proof serialization, readiness failure, and scratch isolation. Guild tests exercise actual processor selection, routes, typed errors, and an illustrative guild-owned access boundary. The showcase tool loop uses a scripted LLM; production model quality and authorization need application validation.
 
 ```bash
-PYTHONPATH=unidb/src:unidb/tests pytest unidb/tests showcase/tests/unidb
+PYTHONPATH=unidb/src:showcase/src:unidb/tests pytest unidb/tests showcase/tests/unidb
 ```
 
 Scenario applicability checks and a general Rustic resource shutdown hook are deliberately deferred. The embedding owner must call `UniDBResolver.close()` before guild shutdown. Native deadlines are supported; message-driven cancellation is not advertised. Remote storage certification, multiple writers, receipt retention, pinned/fork reads, and artifact transport are outside this version's supported surface. Existing-rule verification checks the connector's bootstrap digest, not out-of-band registry mutations.

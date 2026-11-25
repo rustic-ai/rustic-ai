@@ -13,6 +13,14 @@ Create agent systems that can search, summarize, and synthesize information from
 ### Content Generation
 Implement agent systems for generating various forms of content, from written articles and reports to images and multimedia.
 
+### Uniko Research Guild
+
+The [Uniko memory guide](../agents/uniko/index.md#research-guild-composition) explains the research guild: authenticated request initialization, attributed recall, search/scrape, bounded ingestion, a completion barrier, and synthesis using the original question. The coordinator owns workflow state and suppresses duplicate/late results. External research providers require their own configuration.
+
+### Uni-DB Query Diagnostics
+
+The [Uni-DB agent examples](../agents/unidb/index.md#run-complete-examples) include a complete deterministic guild that seeds products, captures native query plans/profiles, creates a BTREE index, and compares the observed execution. It runs without an LLM and demonstrates typed success/error completion. The same guide links three application cases for graph ingestion, Locy receivables, and scratch supplier scenarios.
+
 ### Data Analysis Pipelines
 Design multi-agent systems that can extract, process, analyze, and visualize data from diverse sources.
 

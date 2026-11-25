@@ -1,11 +1,13 @@
 # Uni-DB agent: core design, initialization, and message protocol
 
-**Status:** implemented for review, updated 2026-11-18. The v1 models and native runtime are in `unidb/`, pinned to Uni-DB 5.2.1 on Python 3.13. The three JSON cases now contain captured native result payloads. Internal IDs and commit versions are run-specific. The guild-denied exchange remains an application fixture, with its actual `send_error` delivery tested separately.
+**Status:** implemented for review; documentation reviewed 2026-11-25. The v1 models and native runtime are in `unidb/`, pinned to Uni-DB 5.2.1 on Python 3.13. The three JSON cases now contain captured native result payloads. Internal IDs and commit versions are run-specific. The guild-denied exchange remains an application fixture, with its actual `send_error` delivery tested separately.
 
 This evolves [Nihal’s PR 236](https://github.com/rustic-ai/rustic-ai/pull/236), retaining all 15 operation names while replacing its older `Database` API and wire shapes. No legacy adapters are provided. The [Agentic ERP book](https://github.com/milliondreams/erp_book) informs the business examples; its Uni-DB 3.4.0 observations are not compatibility guarantees.
 
 Two agreed deferrals remain: scenario applicability checks and a general Rustic resource shutdown hook. Owners must explicitly call `UniDBResolver.close()` before guild shutdown. Message-driven cancellation, pinned/fork reads, remote storage certification, multiple write owners, and receipt retention are outside this initial supported surface.
 
+
+For operational usage, start with the [agent guide](../agents/unidb/index.md), [protocol reference](../agents/unidb/protocol.md), and [resolver configuration](../dependencies/unidb/index.md).
 
 ## 1. Purpose and architectural boundary
 
@@ -49,7 +51,7 @@ The resolver owns:
 
 - `binding_id`: stable logical name returned in responses.
 - `open_mode`: `open_existing`, `create`, or `temporary`.
-- `location`: configured filesystem binding or a separately supported native URI binding.
+- `location`: persistent bindings require an injected filesystem and a relative path; direct native URI bindings are not a separate implemented opening mode.
 - `native_config`: supported engine settings, validated using the chosen native version.
 - `bootstrap`: schema/rule definitions, a revision, and an explicit application policy.
 - `receipts`: operation bookkeeping mode and reserved metadata namespace.
@@ -463,7 +465,7 @@ def price_second_source(ctx, human_terms):
 
 ### 6.5 Query diagnostics guild
 
-The [composed diagnostic guild](../../showcase/apps/unidb_query_diagnostics.json) contains a deterministic workflow driver and the same reusable UniDB agent. Its [runner](../../unidb/examples/run_query_diagnostics.py) adds a caller, starts the workflow, waits for a terminal result, and explicitly releases the native resolver.
+The [composed diagnostic guild](https://github.com/rustic-ai/rustic-ai/blob/969e69e90b8ed59233dd2a89d73d4ebbcbfdb7e9/showcase/apps/unidb_query_diagnostics.json) contains a deterministic workflow driver and the same reusable UniDB agent. Its [runner](https://github.com/rustic-ai/rustic-ai/blob/969e69e90b8ed59233dd2a89d73d4ebbcbfdb7e9/unidb/examples/run_query_diagnostics.py) adds a caller, starts the workflow, waits for a terminal result, and explicitly releases the native resolver.
 
 The workflow performs: seed 50 products → flush → query plan → query profile → create a BTREE name index → flush → query plan → query profile → typed comparison. Requests and observations have correlated IDs; duplicates, unexpected observations, and observations after termination are ignored. A database failure produces a typed comparison failure through `send_error`, and guild routes own its `error` status and presentation.
 
@@ -517,7 +519,7 @@ Scenario applicability checks and the general shutdown lifecycle hook remain exp
 
 ## 8. Sources and validation boundary
 
-Rustic contracts: [`Agent` and `ProcessContext`](../../core/src/rustic_ai/core/guild/agent.py), [`AgentSpec`/`GuildSpec`](../../core/src/rustic_ai/core/guild/dsl.py), [builders](../../core/src/rustic_ai/core/guild/builders.py), [dependency resolver](../../core/src/rustic_ai/core/guild/agent_ext/depends/dependency_resolver.py), [current Uniko integration](../../uniko-agent/README.md), and [ReAct design](react-agent-design.md).
+Rustic contracts: [`Agent` and `ProcessContext`](https://github.com/rustic-ai/rustic-ai/blob/969e69e90b8ed59233dd2a89d73d4ebbcbfdb7e9/core/src/rustic_ai/core/guild/agent.py), [`AgentSpec`/`GuildSpec`](https://github.com/rustic-ai/rustic-ai/blob/969e69e90b8ed59233dd2a89d73d4ebbcbfdb7e9/core/src/rustic_ai/core/guild/dsl.py), [builders](https://github.com/rustic-ai/rustic-ai/blob/969e69e90b8ed59233dd2a89d73d4ebbcbfdb7e9/core/src/rustic_ai/core/guild/builders.py), [dependency resolver](https://github.com/rustic-ai/rustic-ai/blob/969e69e90b8ed59233dd2a89d73d4ebbcbfdb7e9/core/src/rustic_ai/core/guild/agent_ext/depends/dependency_resolver.py), [current Uniko integration](https://github.com/rustic-ai/rustic-ai/blob/969e69e90b8ed59233dd2a89d73d4ebbcbfdb7e9/uniko-agent/README.md), and [ReAct design](react-agent-design.md).
 
 Native contracts: [Uni-DB](https://github.com/rustic-ai/uni-db), especially `bindings/uni-db/uni_db/__init__.pyi`, session/transaction/builders, and `test_bulk_commit_outcome.py`. Native APIs and all three example Locy/Cypher flows are exercised against the supported wheel.
 
