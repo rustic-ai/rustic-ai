@@ -9,7 +9,6 @@ from rustic_ai.uniko_agent import DocumentSourceOutcome
 
 
 class SemanticMemoryAssistantConfig(BaseAgentProps):
-    corpus_session_id: str = "corpus:semantic-assistant:references"
     assistant_agent_id: str = "memory_assistant"
     scraper_agent_id: str = "playwright_agent"
     document_coordinator_id: str = "document_coordinator"

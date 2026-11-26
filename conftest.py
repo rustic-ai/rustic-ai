@@ -85,7 +85,9 @@ def database(request):
 
     # Add worker ID for pytest-xdist parallel execution
     worker_id = os.environ.get("PYTEST_XDIST_WORKER", "master")
-    db_file = f"test_rustic_app_{test_name}_{worker_id}.db"
+    # Independent review/test processes may run the same test concurrently.
+    # Give each fixture its own metastore instead of deleting a peer's file.
+    db_file = f"test_rustic_app_{test_name}_{worker_id}_{uuid.uuid4().hex[:8]}.db"
     db = f"sqlite:///{db_file}"
 
     print(f"Worker '{worker_id}' test '{request.node.name}' using database {db_file}")

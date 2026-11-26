@@ -63,7 +63,7 @@ from rustic_ai.showcase.vending_bench.state_keys import (
 )
 from rustic_ai.showcase.vending_bench.supplier_messages import (
     ViewSuppliersRequest,
-    ViewSuppliersResponse,
+    build_supplier_view,
 )
 from rustic_ai.showcase.vending_bench.supplier_registry import (
     SupplierProfile,
@@ -180,7 +180,6 @@ class SupplierAgent(Agent[SupplierAgentProps]):
                 SCRATCHPAD: self.scratchpad,
                 SUPPLIER_CURRENT_DAY: self.current_day,
                 SUPPLIER_SIMULATION_TIME: self.simulation_time.model_dump(),
-                SUPPLIER_REGISTRY: self.registry.model_dump(),
             },
         )
 
@@ -498,7 +497,8 @@ Best regards,
             ctx.send(confirmation)
 
             logger.info(
-                f"Order {order_id} placed with {supplier.name}: {order}, total=${total_cost:.2f}, delivery day {delivery_day}"
+                f"Order {order_id} placed with {supplier.name}: {order}, "
+                f"total=${total_cost:.2f}, delivery day {delivery_day}"
             )
 
         elif "catalog" in body_lower or "products" in body_lower or "prices" in body_lower:
@@ -648,26 +648,7 @@ Best regards,
         """Handle request to view known suppliers."""
         self._load_state_from_guild()
 
-        request = ctx.payload
-
-        # Filter suppliers
-        if request.active_only:
-            suppliers = list(self.registry.get_active_suppliers().values())
-        else:
-            suppliers = list(self.registry.suppliers.values())
-
-        # Apply product filter if specified
-        if request.product_filter:
-            suppliers = [s for s in suppliers if request.product_filter in s.products_offered]
-
-        total_active = sum(1 for s in self.registry.suppliers.values() if s.is_active)
-
-        response = ViewSuppliersResponse(
-            request_id=request.request_id,
-            suppliers=suppliers,
-            total_active=total_active,
-            message=f"Found {len(suppliers)} suppliers matching your criteria",
-        )
+        response = build_supplier_view(self.registry, ctx.payload)
         ctx.send(response)
 
-        logger.debug(f"Viewed suppliers: {len(suppliers)} returned")
+        logger.debug(f"Viewed suppliers: {len(response.suppliers)} returned")

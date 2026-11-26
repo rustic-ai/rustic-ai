@@ -6,6 +6,7 @@ from copy import copy
 from hashlib import sha256
 import logging
 import threading
+import time
 from types import SimpleNamespace
 from typing import Any, Dict, Optional
 from uuid import uuid4
@@ -23,7 +24,7 @@ from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     TextContentPart,
     UserMessage,
 )
-from rustic_ai.core.messaging.core.message import ProcessStatus
+from rustic_ai.core.messaging.core.message import Message, ProcessStatus
 
 from .config import MemoryAgentConfig
 from .integration import (
@@ -99,6 +100,19 @@ class _BatchItemCancelled(asyncio.CancelledError):
     def __init__(self, outcome: BatchItemOutcome):
         super().__init__()
         self.outcome = outcome
+
+
+def _document_context_live(context: dict | None) -> bool:
+    """Honor optional workflow deadlines while preserving ordinary direct calls."""
+    context = context or {}
+    if "document_deadline_ms" not in context:
+        return True
+    deadline = context["document_deadline_ms"]
+    return isinstance(deadline, int) and not isinstance(deadline, bool) and time.time() * 1000 < deadline
+
+
+def _document_dispatch_live(_agent: Agent, message: Message) -> bool:
+    return _document_context_live(message.session_state)
 
 
 class MemoryAgent(Agent[MemoryAgentConfig], MemoryTools, StructuredMemoryTools):
@@ -422,7 +436,7 @@ class MemoryAgent(Agent[MemoryAgentConfig], MemoryTools, StructuredMemoryTools):
 
     # ========== Recall Processors ==========
 
-    @agent.processor(RecallRequest, depends_on=["uniko"])
+    @agent.processor(RecallRequest, depends_on=["uniko"], predicate=_document_dispatch_live)
     async def recall_knowledge(self, ctx: ProcessContext[RecallRequest], uniko: uniko.Agent):
         """Recall knowledge from memory based on query.
 
@@ -432,6 +446,8 @@ class MemoryAgent(Agent[MemoryAgentConfig], MemoryTools, StructuredMemoryTools):
             ctx: Process context with RecallRequest payload
             uniko: Guild-scoped uniko agent (injected dependency)
         """
+        if not _document_context_live(ctx.get_context()):
+            return
         try:
             await self._recall(ctx, uniko, ctx.payload, ctx.payload.scope.sessions)
         except Exception:
@@ -703,6 +719,7 @@ class MemoryAgent(Agent[MemoryAgentConfig], MemoryTools, StructuredMemoryTools):
     @agent.processor(
         IngestDocumentRequest,
         depends_on=["uniko", "filesystem:guild_fs:guild", "filesystem:agent_fs"],
+        predicate=_document_dispatch_live,
     )
     async def ingest_document(
         self, ctx: ProcessContext[IngestDocumentRequest], uniko: uniko.Agent, agent_fs: FileSystem, guild_fs: FileSystem
@@ -718,6 +735,8 @@ class MemoryAgent(Agent[MemoryAgentConfig], MemoryTools, StructuredMemoryTools):
             agent_fs: Private filesystem also injected by the Uniko resolver for persistence.
             guild_fs: Guild filesystem for reading files stored in guild storage
         """
+        if not _document_context_live(ctx.get_context()):
+            return
         req = ctx.payload
 
         if req.media_link is not None and not req.media_link.on_filesystem:

@@ -318,6 +318,14 @@ Package versions and published constraints are unchanged in this phase. A separa
 
 Focused Phase 4 verification on 2026-11-26: 309 regression tests passed, and all 679 remaining core tests collected. Thirteen fresh package builds excluded retired code; a clean environment containing those non-editable wheels passed 12 copied guild-flow tests plus independent native Chroma upsert/read/search/deletion. The root lock removed five LanceDB-only packages without changing remaining dependency versions. Retirement examples, blueprint class validation, affected lint/types and strict documentation builds passed. Native guild tests require access to their local model cache; no hosted synthesis provider was used.
 
+### Review hardening and composed acceptance
+
+The Phase 4 review added current-source evidence isolation, full requested-URL identity, malformed request cleanup, deadline guards at native dispatch, early source-timeout handling and browser cancellation/idle cleanup. Document requests with new sources cannot use older corpus evidence to satisfy required retrieval. Query-only requests retain corpus recall.
+
+The showcase wheel now includes all sixteen authored catalog blueprints and their runtime dependencies. Full flows retain real agents, typed tools, native stores and routing, with deterministic external-service clients. These tests uncovered and corrected recurring research routes, lost upload metadata, analyst event/schema wiring, MCP tool identity, council request mixing and supplier registry ownership. Guild-manager bootstrap supplies state services in composed tests and releases its owned actors on shutdown, including shutdown during launch. Failed partial launches release already started actors. Each metastore fixture is isolated across independent test processes.
+
+Release helpers report every module failure and publish only a complete fresh artifact generation. Permanent installed acceptance checks verify module provenance, catalog/plugin imports, retired API absence and retained native vector operations. See [testing composed guilds](../howto/testing_guilds.md) for the coverage matrix and commands.
+
 ### Phase 5 local verification boundary
 
 Use real native Uniko stores and the production message/routing paths. Deterministic LLM/planner endpoints verify evidence delivery and continuation without hosted-provider keys; native ingestion/recall must execute rather than be stubbed. Clean wheel installation verifies that the current development environment is not hiding retired dependencies.

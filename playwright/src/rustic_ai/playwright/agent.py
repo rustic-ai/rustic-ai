@@ -60,7 +60,10 @@ class WebScrapingRequest(BaseModel):
     depth: int = Field(
         default=0,
         title="Depth of recursive link scraping",
-        description="If 0, only scrape the input page. If 1, also scrape all links on the page. If 2, recurse into those links, and so on.",
+        description=(
+            "If 0, only scrape the input page. If 1, also scrape all links on the page. "
+            "If 2, recurse into those links, and so on."
+        ),
     )
 
     scrape_external_links: bool = Field(
@@ -72,7 +75,10 @@ class WebScrapingRequest(BaseModel):
     force: bool = Field(
         default=False,
         title="Force scrape the url",
-        description="Even if the url was scraped earlier will scrape it if force is set to true. This is used to avoid same url to be scrapped multiple times",
+        description=(
+            "Scrape a previously visited URL when force is true. "
+            "Otherwise avoid scraping the same URL multiple times."
+        ),
     )
 
 
@@ -156,26 +162,60 @@ class PlaywrightEventLoopThread:
             raise RuntimeError("Playwright event loop failed to start")
 
         future: Future = Future()
+        finished = threading.Event()
+        result_lock = threading.Lock()
+        owned_tasks: list[asyncio.Future] = []
+        self._loop.call_soon_threadsafe(self._schedule_coroutine, coro, future, finished, result_lock, owned_tasks)
+        try:
+            return future.result(timeout=timeout)
+        except TimeoutError:
+            with result_lock:
+                cancelled = not future.done()
+                if cancelled:
+                    future.cancel()
+            if cancelled:
+                self._loop.call_soon_threadsafe(self._cancel_owned_task, owned_tasks)
+                # Wait for cooperative cancellation/finally blocks, without
+                # cancelling another request or stopping the shared event loop.
+                finished.wait(timeout=5.0)
+            raise
 
-        def callback():
-            try:
-                task = asyncio.ensure_future(coro, loop=self._loop)
+    def _schedule_coroutine(self, coro, future, finished, result_lock, owned_tasks):
+        # The caller may expire while this callback is still queued.
+        if future.cancelled():
+            if hasattr(coro, "close"):
+                coro.close()
+            finished.set()
+            return
+        try:
+            task = asyncio.ensure_future(coro, loop=self._loop)
+            owned_tasks.append(task)
+            task.add_done_callback(lambda done: self._complete_coroutine(done, future, finished, result_lock))
+        except Exception as error:
+            with result_lock:
+                if not future.done():
+                    future.set_exception(error)
+            finished.set()
 
-                def done_callback(t):
-                    try:
-                        if t.exception():
-                            future.set_exception(t.exception())
-                        else:
-                            future.set_result(t.result())
-                    except asyncio.CancelledError:
-                        future.set_exception(asyncio.CancelledError())
+    @staticmethod
+    def _complete_coroutine(task, future, finished, result_lock):
+        try:
+            result = task.result()
+            with result_lock:
+                if not future.done():
+                    future.set_result(result)
+        except (Exception, asyncio.CancelledError) as error:
+            with result_lock:
+                if not future.done():
+                    future.set_exception(error)
+        finally:
+            finished.set()
 
-                task.add_done_callback(done_callback)
-            except Exception as e:
-                future.set_exception(e)
-
-        self._loop.call_soon_threadsafe(callback)
-        return future.result(timeout=timeout)
+    @staticmethod
+    def _cancel_owned_task(owned_tasks):
+        for task in owned_tasks:
+            if not task.done():
+                task.cancel()
 
     def stop(self):
         """Stop the event loop and thread."""
@@ -211,6 +251,7 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
         self._initialized = False
         self._chromium_installed = False
         self._active_ops: int = 0
+        self._idle_cleanup_task: Optional[asyncio.Task] = None
         self._loop_thread = get_playwright_loop_thread()
 
     def _run_in_playwright_loop(self, coro):
@@ -546,7 +587,9 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
                     )
 
             self.logger.debug(
-                f"Scraping completed for request: {scraping_request.id}. Total unique documents scraped: {len(scraped_docs)}"
+                "Scraping completed for request: %s. Total unique documents scraped: %s",
+                scraping_request.id,
+                len(scraped_docs),
             )
 
             return scraped_docs, errors
@@ -560,10 +603,12 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
                 self._active_ops -= 1
                 if self.config.browser_lifecycle == BrowserLifecycle.PER_REQUEST:
                     await self._cleanup(only_idle=True)
-                elif self.config.browser_lifecycle == BrowserLifecycle.IDLE_TIMEOUT:
-                    await asyncio.sleep(self.config.browser_idle_timeout_s)
-                    if self._active_ops == 0:
-                        await self._cleanup(only_idle=True)
+                elif self.config.browser_lifecycle == BrowserLifecycle.IDLE_TIMEOUT and self._active_ops == 0:
+                    # Idle retention must not delay successful scrape results.
+                    previous = getattr(self, "_idle_cleanup_task", None)
+                    if previous is not None and not previous.done():
+                        previous.cancel()
+                    self._idle_cleanup_task = asyncio.create_task(self._cleanup_after_idle())
 
     @agent.processor(
         WebScrapingRequest, depends_on=[agent.AgentDependency(dependency_key="filesystem", guild_level=True)]
@@ -603,5 +648,24 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
                     pass
             self._initialized = False
 
+    async def _cleanup_after_idle(self):
+        try:
+            await asyncio.sleep(self.config.browser_idle_timeout_s)
+            await self._cleanup(only_idle=True)
+        finally:
+            if getattr(self, "_idle_cleanup_task", None) is asyncio.current_task():
+                self._idle_cleanup_task = None
+
+    async def _shutdown_browser(self):
+        pending = getattr(self, "_idle_cleanup_task", None)
+        if pending is not None:
+            pending.cancel()
+            try:
+                await pending
+            except asyncio.CancelledError:
+                pass
+            self._idle_cleanup_task = None
+        await self._cleanup()
+
     def on_shutdown(self) -> None:
-        self._run_in_playwright_loop(self._cleanup())
+        self._run_in_playwright_loop(self._shutdown_browser())

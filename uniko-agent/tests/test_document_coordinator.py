@@ -82,7 +82,8 @@ class ControlledMemory(Agent):
                     score=0.9,
                     token_count=300,
                     record_kind="external_evidence",
-                    source_ids=["harbor"],
+                    source_id=ctx.payload.scope.sources[0] if ctx.payload.scope.sources else "harbor",
+                    source_ids=[ctx.payload.scope.sources[0] if ctx.payload.scope.sources else "harbor"],
                 )
             ]
         )
@@ -464,6 +465,7 @@ def test_native_ingestion_reopen_and_retry(launch, engine):
 def test_foundation_example_and_schemas(tmp_path):
     path = Path(__file__).parents[1] / "examples/document_guild.py"
     spec = importlib.util.spec_from_file_location("document_guild", path)
+    assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     guild_spec = module.build_document_guild(str(tmp_path)).build_spec()

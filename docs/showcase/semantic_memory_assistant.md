@@ -47,7 +47,7 @@ owns access controls, credentials, storage policy and acquisition permissions.
 
 Web and uploaded document evidence is shared across users of the same guild in
 `corpus:semantic-assistant:references`. Conversation assertions and assistant
-answers remain private. Keep these storage identities and volumes stable to reopen
+answers remain private. The document coordinator owns the corpus configuration; the assistant coordinator does not duplicate it. Keep these storage identities and volumes stable to reopen
 memory after restart. Active workflows are transient and do not resume after a
 process restart.
 
@@ -85,7 +85,7 @@ facts actually delivered to the model count as usable evidence. The
 original user message is retained rather than replaced with scraper feedback.
 Partial fetches may continue. A failed round returns a tool error so the model can
 try another URL. Existing corpus evidence cannot substitute for a required fetch
-that never produced usable evidence.
+that never produced usable evidence. Logical web identity hashes the complete fetched URL, preserving query parameters and fragments that distinguish documents. Public provenance may be redacted independently; redaction cannot collapse two source identities.
 
 Only the coordinator emits terminal presentation. Structured results on
 `sma.outcomes` use `SemanticMemoryAssistantResult`:
@@ -116,7 +116,7 @@ projects these to one terminal `TextFormat` with completed or error status.
 
 Invalid tool calls or incomplete model output dispatch no work. Replies must match
 sender, workflow attempt, round and call. Duplicates and late responses cannot
-advance completed workflows. Independent timers publish timeout outcomes even if
+advance completed workflows. Admission starts the deadline before history parsing; malformed entries cannot strand an active request or exhaust capacity. Independent timers publish timeout outcomes even if
 an endpoint is blocked; guild entry predicates reject expired requests, and a
 last wrapper checks the deadline after conversation recall.
 

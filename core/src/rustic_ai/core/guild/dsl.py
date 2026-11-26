@@ -283,6 +283,9 @@ class AgentSpec(BaseModel, Generic[APT]):
             # Revalidation from an already-built instance — nothing to resolve.
             return data
 
+        # Property coercion must not replace values inside the caller's message
+        # payload. The original serialized spec remains valid for routing/replay.
+        data = dict(data)
         class_name = data.get("class_name")
         agent_class: Type
 
@@ -319,7 +322,9 @@ class AgentSpec(BaseModel, Generic[APT]):
         if not issubclass(agent_class, agent_base_class):
             raise ValueError(f"Class {class_name} is not a subclass of Agent")
 
-        properties_type: Type[BaseAgentProps] = agent_class.__annotations__[MetaclassConstants.AGENT_PROPS_TYPE] or BaseAgentProps  # type: ignore
+        properties_type: Type[BaseAgentProps] = (
+            agent_class.__annotations__[MetaclassConstants.AGENT_PROPS_TYPE] or BaseAgentProps
+        )
 
         properties = data.get("properties")
 

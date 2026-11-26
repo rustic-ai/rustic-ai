@@ -47,7 +47,7 @@ from .document_sources import (
     document_source_info,
     normalize_showcase_input,
 )
-from .paper_banana_sources import HttpUploadSourceReader, source_uri
+from .paper_banana_sources import HttpUploadSourceReader
 from .semantic_memory_models import (
     SemanticMemoryAssistantConfig,
     SemanticMemoryAssistantError,
@@ -84,6 +84,7 @@ class _Turn:
     used_bytes: int = 0
     acquisition_gate: Any = field(default_factory=threading.Lock)
     memory_requested: bool = False
+    upload_evidence_required: bool = False
     page_attempts: int = 0
     web_required: bool = False
     web_usable: bool = False
@@ -265,6 +266,11 @@ class SemanticMemoryAssistantCoordinatorAgent(Agent[SemanticMemoryAssistantConfi
                 action = self._terminal(state, "capacity_exceeded")
             else:
                 self._requests[key] = state
+                state.timer = threading.Timer(
+                    max(0, state.expires_at - time.monotonic()), self._expire, args=(key, state.attempt)
+                )
+                state.timer.daemon = True
+                state.timer.start()
                 action = None
         if action:
             self._publish([action])
@@ -278,7 +284,7 @@ class SemanticMemoryAssistantCoordinatorAgent(Agent[SemanticMemoryAssistantConfi
             # comes from the private native store, never a synthetic scraper turn.
             images = []
             if ctx.message.format.endswith("ChatCompletionRequest"):
-                users = [m for m in ctx.message.payload["messages"] if m.get("role") == "user"]
+                users = [m for m in ctx.message.payload["messages"] if isinstance(m, dict) and m.get("role") == "user"]
                 content = users[-1].get("content")
                 if isinstance(content, list):
                     images = [
@@ -293,20 +299,17 @@ class SemanticMemoryAssistantCoordinatorAgent(Agent[SemanticMemoryAssistantConfi
                 state.messages = [UserMessage(content=ArrayOfContentParts(root=[*parts, *images]))]
             else:
                 state.messages = [UserMessage(content=state.text)] if state.text else []
-        except (ValueError, TypeError, KeyError):
+        except (ValueError, TypeError, KeyError, AttributeError, IndexError):
             with self._lock:
-                action = self._terminal(state, "request_invalid")
-            self._publish([action])
+                action = self._terminal(state, "request_invalid") if self._requests.get(key) is state else None
+            if action:
+                self._publish([action])
             return
         with self._lock:
             if self._requests.get(key) is not state:
                 return
-            state.timer = threading.Timer(
-                max(0, state.expires_at - time.monotonic()), self._expire, args=(key, state.attempt)
-            )
-            state.timer.daemon = True
-            state.timer.start()
             state.page_attempts = len(attachments)
+            state.upload_evidence_required = bool(attachments and state.messages)
         sources, outcomes = await self._acquire(state, attachments, guild_fs, reader)
         with self._lock:
             if self._requests.get(key) is not state:
@@ -331,7 +334,7 @@ class SemanticMemoryAssistantCoordinatorAgent(Agent[SemanticMemoryAssistantConfi
                             else None
                         ),
                         allow_partial=True,
-                        require_evidence=bool(attachments and state.messages),
+                        require_evidence=state.upload_evidence_required,
                     ),
                     "documents",
                     0,
@@ -410,16 +413,29 @@ class SemanticMemoryAssistantCoordinatorAgent(Agent[SemanticMemoryAssistantConfi
         )
 
     @staticmethod
-    def _evidence(result):
+    def _evidence(result, current_only: bool = False):
+        items = result.recall.items if result.recall else []
+        if current_only:
+            current = {
+                source.source_id
+                for source in result.sources
+                if source.source_id
+                and source.status == "ingested"
+                and source.outcome
+                and source.outcome.success
+                and source.outcome.stored
+                and source.outcome.searchable
+            }
+            # Canonical logical source IDs differ from the native chunk/record
+            # identifiers in item.source_ids. Never use unrelated corpus items
+            # to satisfy evidence required from this request's sources.
+            items = [item for item in items if item.source_id and item.source_id in current]
         return {
             "sources": [
                 {"source_id": item.source_id, "source_uri": item.source_uri, "name": item.name, "status": item.status}
                 for item in result.sources
             ],
-            "evidence": [
-                {"source_id": item.source_id, "content": item.content}
-                for item in (result.recall.items if result.recall else [])
-            ],
+            "evidence": [{"source_id": item.source_id, "content": item.content} for item in items],
             "partial": result.partial,
         }
 
@@ -499,18 +515,23 @@ class SemanticMemoryAssistantCoordinatorAgent(Agent[SemanticMemoryAssistantConfi
                     state.answer = f"Stored {stored}, searchable {searchable} reference files."
                     action = self._terminal(state)
                 else:
-                    evidence, usable = self._render_evidence(self._evidence(ctx.payload))
-                    if usable:
-                        state.messages.append(SystemMessage(content=evidence))
-                    action = self._model(state)
+                    evidence, usable = self._render_evidence(
+                        self._evidence(ctx.payload, current_only=state.upload_evidence_required)
+                    )
+                    if state.upload_evidence_required and not usable:
+                        action = self._terminal(state, "uploaded_evidence_unavailable")
+                    else:
+                        if usable:
+                            state.messages.append(SystemMessage(content=evidence))
+                        action = self._model(state)
                 actions = [action]
             else:
                 call = state.calls.get(ctx.get_context().get("sma_call", ""))
                 if not call or call.stage != "documents" or ctx.payload.request_id != call.request.id:
                     return
                 self._record_outcomes(state, ctx.payload.sources)
-                call.result = self._evidence(ctx.payload)
-                usable = bool(ctx.payload.recall and ctx.payload.recall.items)
+                call.result = self._evidence(ctx.payload, current_only=True)
+                usable = bool(call.result["evidence"])
                 if not usable:
                     call.result = {"error": "retrieved_evidence_unavailable"}
                 call.stage = "done"
@@ -661,9 +682,12 @@ class SemanticMemoryAssistantCoordinatorAgent(Agent[SemanticMemoryAssistantConfi
         attachments = []
         for link in ctx.payload.links[: call.request.max_pages]:
             raw = link.model_dump(mode="json")
-            uri = (link.metadata or {}).get("source_uri") or (link.metadata or {}).get("scraped_url")
-            if uri:
-                raw["source_id"] = "web:" + sha256(source_uri(uri).encode()).hexdigest()
+            metadata = link.metadata or {}
+            uri = metadata.get("scraped_url") or metadata.get("source_uri")
+            if isinstance(uri, str) and uri:
+                # Redacted attribution is not logical identity: query parameters
+                # (and SPA fragments) can identify distinct fetched documents.
+                raw["source_id"] = "web:" + sha256(uri.encode()).hexdigest()
             attachments.append(raw)
         sources, outcomes = await self._acquire(state, attachments, guild_fs, upload_reader)
         with self._lock:

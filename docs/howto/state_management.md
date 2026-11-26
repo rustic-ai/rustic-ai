@@ -37,6 +37,10 @@ However, you should not modify these dictionaries directly. Instead, use the sta
 
 The `StateRefresherMixin` is automatically included in all agents via the `AgentMetaclass`. It provides methods for state management:
 
+Current full snapshots track separate agent and guild versions. Older update responses cannot roll back a newer cached view. Full latest fetches, including an empty state path, refresh that view; historical or path-scoped fetches remain available to callbacks without replacing the current full cache.
+
+A state acknowledgment confirms the owner’s update. It does not guarantee every other agent has processed the broadcast yet. When a follow-up must read newly committed data, send a typed query to the owning capability. Keep concurrent request identity and intermediate evidence in per-message context rather than guild-global scratch fields.
+
 ```python
 from rustic_ai.core.state.models import StateUpdateFormat
 

@@ -187,7 +187,8 @@
                     "transformer": {
                         "style": "content_based_router",
                         "handler": "{\"format\": $.format, \"payload\": $.payload, \"topics\": $.context.next_topic}"
-                    }
+                    },
+                    "route_times": -1
                 },
                 {
                     "agent": {
@@ -197,7 +198,8 @@
                     "transformer": {
                         "style": "content_based_router",
                         "handler": "{\"format\": $.format, \"payload\": $.payload, \"topics\": $.context.next_topic}"
-                    }
+                    },
+                    "route_times": -1
                 },
                 {
                     "agent": {
@@ -207,7 +209,8 @@
                     "transformer": {
                         "style": "content_based_router",
                         "handler": "{\"format\": $.format, \"payload\": $.payload, \"topics\": $.context.next_topic}"
-                    }
+                    },
+                    "route_times": -1
                 },
                 {
                     "agent": {
@@ -217,7 +220,8 @@
                     "transformer": {
                         "style": "content_based_router",
                         "handler": "{\"format\": $.format, \"payload\": $.payload, \"topics\": $.context.next_topic}"
-                    }
+                    },
+                    "route_times": -1
                 },
                 {
                     "agent": {
@@ -227,7 +231,8 @@
                     "transformer": {
                         "style": "content_based_router",
                         "handler": "{\"format\": $.format, \"payload\": $.payload, \"topics\": $.context.next_topic}"
-                    }
+                    },
+                    "route_times": -1
                 },
                 {
                     "agent": {
@@ -237,7 +242,8 @@
                     "transformer": {
                         "style": "content_based_router",
                         "handler": "{\"format\": $.format, \"payload\": $.payload, \"topics\": $.context.next_topic}"
-                    }
+                    },
+                    "route_times": -1
                 },
                 {
                     "agent": {
@@ -247,7 +253,8 @@
                     "transformer": {
                         "style": "content_based_router",
                         "handler": "{\"format\": $.format, \"payload\": $.payload, \"topics\": $.context.next_topic}"
-                    }
+                    },
+                    "route_times": -1
                 },
                 {
                     "agent": {
@@ -276,7 +283,8 @@
                     "message_format": "rustic_ai.uniko_agent.models.RecallResponse",
                     "destination": {
                         "topics": "research_coordinator"
-                    }
+                    },
+                    "route_times": -1
                 },
                 {
                     "agent": {
@@ -285,7 +293,8 @@
                     "message_format": "rustic_ai.uniko_agent.models.RecordMemoryResult",
                     "destination": {
                         "topics": "research_coordinator"
-                    }
+                    },
+                    "route_times": -1
                 },
                 {
                     "agent": {
@@ -294,7 +303,8 @@
                     "message_format": "rustic_ai.uniko_agent.models.IngestOutcome",
                     "destination": {
                         "topics": "research_coordinator"
-                    }
+                    },
+                    "route_times": -1
                 },
                 {
                     "agent": {
@@ -303,7 +313,8 @@
                     "message_format": "rustic_ai.uniko_agent.models.FinalizeMemorySessionResult",
                     "destination": {
                         "topics": "research_coordinator"
-                    }
+                    },
+                    "route_times": -1
                 },
                 {
                     "agent": {
@@ -312,7 +323,8 @@
                     "message_format": "rustic_ai.uniko_agent.models.MemoryAgentError",
                     "destination": {
                         "topics": "research_coordinator"
-                    }
+                    },
+                    "route_times": -1
                 },
                 {
                     "agent": {
@@ -321,7 +333,8 @@
                     "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
                     "destination": {
                         "topics": "research_coordinator"
-                    }
+                    },
+                    "route_times": -1
                 },
                 {
                     "agent": {
@@ -330,7 +343,8 @@
                     "message_format": "rustic_ai.core.agents.commons.message_formats.ErrorMessage",
                     "destination": {
                         "topics": "research_coordinator"
-                    }
+                    },
+                    "route_times": -1
                 },
                 {
                     "agent": {
@@ -339,7 +353,8 @@
                     "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
                     "destination": {
                         "topics": "research_coordinator"
-                    }
+                    },
+                    "route_times": -1
                 },
                 {
                     "agent": {
@@ -348,7 +363,8 @@
                     "message_format": "rustic_ai.core.agents.commons.message_formats.ErrorMessage",
                     "destination": {
                         "topics": "research_coordinator"
-                    }
+                    },
+                    "route_times": -1
                 },
                 {
                     "agent": {
@@ -357,7 +373,8 @@
                     "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
                     "destination": {
                         "topics": "research_coordinator"
-                    }
+                    },
+                    "route_times": -1
                 },
                 {
                     "agent": {
@@ -366,7 +383,8 @@
                     "message_format": "rustic_ai.core.agents.commons.message_formats.ErrorMessage",
                     "destination": {
                         "topics": "research_coordinator"
-                    }
+                    },
+                    "route_times": -1
                 },
                 {
                     "agent": {
@@ -375,7 +393,8 @@
                     "message_format": "rustic_ai.serpapi.agent.SERPResults",
                     "destination": {
                         "topics": "research_coordinator"
-                    }
+                    },
+                    "route_times": -1
                 },
                 {
                     "agent": {
@@ -384,7 +403,8 @@
                     "message_format": "rustic_ai.serpapi.agent.SearchError",
                     "destination": {
                         "topics": "research_coordinator"
-                    }
+                    },
+                    "route_times": -1
                 },
                 {
                     "agent": {
@@ -393,7 +413,8 @@
                     "message_format": "rustic_ai.playwright.agent.WebScrapingCompleted",
                     "destination": {
                         "topics": "research_coordinator"
-                    }
+                    },
+                    "route_times": -1
                 },
                 {
                     "agent": {
@@ -402,7 +423,8 @@
                     "message_format": "rustic_ai.core.agents.commons.message_formats.ErrorMessage",
                     "destination": {
                         "topics": "research_coordinator"
-                    }
+                    },
+                    "route_times": -1
                 },
                 {
                     "agent": {
@@ -411,7 +433,8 @@
                     "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionError",
                     "destination": {
                         "topics": "research_coordinator"
-                    }
+                    },
+                    "route_times": -1
                 },
                 {
                     "agent": {
@@ -420,7 +443,8 @@
                     "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionError",
                     "destination": {
                         "topics": "research_coordinator"
-                    }
+                    },
+                    "route_times": -1
                 },
                 {
                     "agent": {
@@ -429,7 +453,8 @@
                     "message_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionError",
                     "destination": {
                         "topics": "research_coordinator"
-                    }
+                    },
+                    "route_times": -1
                 }
             ]
         }

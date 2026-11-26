@@ -336,3 +336,22 @@ def test_history_based_memories_store_names_recalled_senders_and_deduplicates_by
         ("assistant", "Model 2", "Same words"),
         ("assistant", "Explicit Assistant", "Same words"),
     ]
+
+
+def test_guild_state_memories_rehydrate_typed_messages_without_mutating_state():
+    from rustic_ai.llm_agent.memories.guild_state_memories_store import (
+        GuildStateBackedMemoriesStore,
+    )
+
+    class GuildAgent(DummyAgent):
+        def get_guild_state(self):
+            return self._state
+
+    stored = [{"role": "assistant", "content": "Harbor budget is 42000"}]
+    agent = GuildAgent({"memories": stored})
+    recalled = GuildStateBackedMemoriesStore().recall(agent, DummyCtx(), [])
+    assert isinstance(recalled[0], AssistantMessage)
+    prompt = ChatCompletionRequest(messages=recalled)
+    assert prompt.model_dump()["messages"][0]["content"] == "Harbor budget is 42000"
+    recalled[0].content = "changed"
+    assert stored[0]["content"] == "Harbor budget is 42000"

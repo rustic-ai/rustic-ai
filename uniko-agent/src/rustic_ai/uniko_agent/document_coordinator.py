@@ -79,6 +79,7 @@ class _Workflow:
     require_evidence: bool
     sources: list[DocumentSourceOutcome]
     expires_at: float
+    deadline_ms: int = 0
     timer: threading.Timer | None = None
     stage: str = "normalizing"
     pending: dict[str, list[int]] = field(default_factory=dict)
@@ -169,12 +170,24 @@ class DocumentCoordinatorAgent(Agent[DocumentCoordinatorConfig], SchedulerMixin)
                 ProcessorHelper.get_on_error_fixtures(type(self)),
                 ProcessorHelper.get_message_mod_fixtures(type(self)),
             )
+            # Context fixtures and scheduling can block after the first check.
+            # Revalidate before publishing; a receiving processor also checks the
+            # absolute control deadline if backend delivery is delayed.
+            with self._workflow_lock:
+                if self._closing:
+                    return
+                if action.stage != "terminal":
+                    if self._workflows.get(state.request_id) is not state or state.stage != action.stage:
+                        continue
+                    if time.monotonic() >= state.expires_at:
+                        action = self._terminal(state, "document_workflow_timed_out")
             ctx.update_context(
                 {
                     "document_request_id": state.request_id,
                     "document_attempt_id": state.attempt_id,
                     "document_stage": action.stage,
                     "document_item": action.item,
+                    "document_deadline_ms": state.deadline_ms,
                 }
             )
             if action.error:
@@ -192,16 +205,33 @@ class DocumentCoordinatorAgent(Agent[DocumentCoordinatorConfig], SchedulerMixin)
             if state.sources and all(item.status == "failed" for item in state.sources):
                 return [self._terminal(state, "document_ingestion_failed")]
             return [self._terminal(state)]
+        selected_sources = self._usable_source_ids(state)
+        if state.sources and not selected_sources:
+            empty = RecallResponse(items=[], total_tokens=0, phase1_only=False, phase2_only=False, coverage=0.0)
+            return [self._terminal(state, "document_evidence_unavailable" if state.require_evidence else None, empty)]
         state.stage = "recall"
         request = RecallRequest(
             query=state.query,
-            scope=MemoryScope(sessions=[self.config.corpus_session_id]),
+            scope=MemoryScope(sessions=[self.config.corpus_session_id], sources=sorted(selected_sources)),
             allowed_record_kinds=["external_evidence"],
             item_limit=self.config.recall_item_limit,
             max_characters=self.config.recall_max_characters,
             token_budget=self.config.recall_token_budget,
         )
         return [_Outbound(state, request, "recall")]
+
+    @staticmethod
+    def _usable_source_ids(state: _Workflow) -> set[str]:
+        return {
+            item.source_id
+            for item in state.sources
+            if item.source_id
+            and item.status == "ingested"
+            and item.outcome
+            and item.outcome.success
+            and item.outcome.stored
+            and item.outcome.searchable
+        }
 
     def _state_for_reply(self, ctx: ProcessContext, stage: str | None) -> _Workflow | None:
         if ctx.message.sender.id != self.config.memory_agent_id:
@@ -379,8 +409,15 @@ class DocumentCoordinatorAgent(Agent[DocumentCoordinatorConfig], SchedulerMixin)
                     state.pending.setdefault(outcome.record_id, []).append(index)
                     prepared[outcome.record_id] = snapshot
             except TimeoutError:
-                self._expire(state.request_id, state.attempt_id)
-                return None
+                if time.monotonic() >= state.expires_at:
+                    self._expire(state.request_id, state.attempt_id)
+                    return None
+                with self._workflow_lock:
+                    if self._workflows.get(state.request_id) is not state:
+                        return None
+                    state.sources[index] = DocumentSourceOutcome(
+                        index=index, status="failed", error="document_source_timed_out"
+                    )
             except Exception:
                 with self._workflow_lock:
                     if self._workflows.get(state.request_id) is not state:
@@ -405,6 +442,7 @@ class DocumentCoordinatorAgent(Agent[DocumentCoordinatorConfig], SchedulerMixin)
             require_evidence=request.require_evidence if request else True,
             sources=[DocumentSourceOutcome(index=index) for index in range(len(request.sources))] if request else [],
             expires_at=started + self.config.deadline_seconds,
+            deadline_ms=int((time.time() + max(0, started + self.config.deadline_seconds - time.monotonic())) * 1000),
         )
 
     def _expire(self, request_id: str, attempt_id: str) -> None:
@@ -447,8 +485,10 @@ class DocumentCoordinatorAgent(Agent[DocumentCoordinatorConfig], SchedulerMixin)
             if state is None:
                 return
             recall = ctx.payload
+            allowed = self._usable_source_ids(state)
+            candidates = [item for item in recall.items if not state.sources or item.source_id in allowed]
             items, truncated = bound_items(
-                recall.items,
+                candidates,
                 self.config.recall_item_limit,
                 self.config.recall_max_characters,
                 self.config.recall_token_budget,

@@ -699,21 +699,21 @@
                     "route_times": -1
                 },
                 {
-                    "description": "Route ViewSuppliersRequest to SUPPLIER_REGISTRY",
+                    "description": "Route ViewSuppliersRequest to the registry owner",
                     "agent": {
                         "name": "SimController"
                     },
                     "message_format": "rustic_ai.showcase.vending_bench.supplier_messages.ViewSuppliersRequest",
                     "transformer": {
                         "style": "content_based_router",
-                        "handler": "({'topics': 'SUPPLIER_REGISTRY', 'format': $.format, 'payload': $.payload})"
+                        "handler": "({'topics': 'SUPPLIER_REGISTRY', 'recipient_list': [{'id': 'supplier_discovery'}], 'format': $.format, 'payload': $.payload})"
                     },
                     "route_times": -1
                 },
                 {
                     "description": "Route ViewSuppliersResponse to SIMULATION_CONTROL",
                     "agent": {
-                        "name": "Supplier"
+                        "name": "SupplierDiscovery"
                     },
                     "message_format": "rustic_ai.showcase.vending_bench.supplier_messages.ViewSuppliersResponse",
                     "transformer": {

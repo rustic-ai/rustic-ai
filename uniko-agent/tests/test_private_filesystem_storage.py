@@ -52,7 +52,7 @@ async def test_guild_filesystem_failure_is_sanitized():
             on_filesystem=True,
         ),
     )
-    ctx = SimpleNamespace(payload=request, send=MagicMock(), send_error=MagicMock())
+    ctx = SimpleNamespace(payload=request, send=MagicMock(), send_error=MagicMock(), get_context=lambda: {})
     memory = SimpleNamespace(
         _session_lock=lambda *args: asyncio.Lock(),
         _producer_is_allowed=lambda *_: True,

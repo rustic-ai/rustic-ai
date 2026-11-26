@@ -12,6 +12,7 @@ nav:
       - State Management: howto/state_management.md
       - Using ReActAgent with Skills: howto/using_react_agent_with_skills.md
       - Testing Agents: howto/testing_agents.md
+      - Testing Composed Guilds: howto/testing_guilds.md
       - Writing Effective Agent Tests: howto/writing_effective_agent_tests.md
       - Client-Server Flow: howto/client_server_flow.md
       - Code Tag Quick Reference: howto/code_tag_quick_reference.md

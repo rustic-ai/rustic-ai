@@ -1,5 +1,6 @@
 from datetime import datetime
 import logging
+import threading
 from typing import List, Optional
 
 from sqlmodel import Session
@@ -79,6 +80,9 @@ from rustic_ai.core.utils.priority import Priority
 
 class GuildManagerAgent(Agent[GuildManagerAgentProps]):
     def __init__(self):
+        self._guild_lifecycle_lock = threading.RLock()
+        self._shutting_down = False
+        self._is_shutdown = False
         guild_spec = self.agent_spec.props.guild_spec
         database_url = self.agent_spec.props.database_url
         self.organization_id = self.agent_spec.properties.organization_id
@@ -155,6 +159,15 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
             )
 
         self.guild: Optional[Guild] = None
+
+    def on_shutdown(self) -> None:
+        """Release the actors owned by the bootstrapped manager's inner guild."""
+        with self._guild_lifecycle_lock:
+            self._shutting_down = True
+            guild = getattr(self, "guild", None)
+        if guild is not None:
+            guild.shutdown()
+        self._is_shutdown = True
 
     def _add_agent(self, agent_spec: AgentSpec, session: Optional[Session] = None) -> None:
         if self.guild is None:
@@ -278,13 +291,23 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
             if guild_model.status == GuildStatus.PENDING_LAUNCH:
                 # If the guild is not launched, we need to launch it.
                 logging.info(f"Guild Manager is Launching guild {self.guild_id}")
-                self.guild = GuildBuilder.from_spec(guild_spec).launch(self.organization_id)
+                launched_guild = GuildBuilder.from_spec(guild_spec).launch(self.organization_id)
             else:
                 # If the guild is already launched, we need to load it.
                 logging.info(f"Guild Manager is Loading guild {self.guild_id}")
-                self.guild = GuildBuilder.from_spec(guild_spec).load_or_launch(self.organization_id)
+                launched_guild = GuildBuilder.from_spec(guild_spec).load_or_launch(self.organization_id)
 
-            self.guild.register_agent(self.get_spec())
+            # Ready delivery can overlap wrapper shutdown. Adopt the result
+            # atomically so work launched after the hook still gets released.
+            with self._guild_lifecycle_lock:
+                rejected = self._shutting_down
+                if not rejected:
+                    self.guild = launched_guild
+            if rejected:
+                launched_guild.shutdown()
+                return
+
+            launched_guild.register_agent(self.get_spec())
             if AgentModel.get_by_id(session, self.guild_id, self.id) is None:
                 self_model = AgentModel.from_agent_spec(self.guild_id, self.get_spec())
                 session.add(self_model)  # pragma: no cover

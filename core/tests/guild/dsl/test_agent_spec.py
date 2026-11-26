@@ -311,3 +311,20 @@ class TestAgentSpecNestedPlugins:
         spec = AgentSpec.model_validate(gma, context={"require_agent_class": True})
         peer = spec.props.guild_spec.agents[0]
         assert isinstance(peer.properties, OpaqueProps)
+
+
+def test_agent_property_coercion_preserves_serialized_input_for_routing():
+    from copy import deepcopy
+    import json
+
+    raw = {
+        "name": "Typed agent",
+        "description": "Payload preservation",
+        "class_name": DemoAgentGenericWithoutTypedParams.get_qualified_class_name(),
+        "properties": {"prop1": "original", "prop2": 2},
+    }
+    before = deepcopy(raw)
+    spec = AgentSpec.model_validate(raw)
+    assert isinstance(spec.properties, DemoAgentProps)
+    assert raw == before
+    assert json.loads(json.dumps(raw)) == before
