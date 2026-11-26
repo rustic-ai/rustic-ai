@@ -20,6 +20,7 @@ def server():
 
     class Handler(BaseHTTPRequestHandler):
         redirect = "/reference.md"
+        cookie = None
 
         def log_message(self, *args):
             pass
@@ -29,6 +30,8 @@ def server():
             if self.path.startswith("/redirect"):
                 self.send_response(302)
                 self.send_header("Location", self.redirect)
+                if self.cookie:
+                    self.send_header("Set-Cookie", self.cookie)
                 self.end_headers()
                 return
             if self.path.startswith("/slow"):
@@ -125,3 +128,34 @@ def test_allowed_cross_origin_redirect_drops_configured_credentials(server):
     assert asyncio.run(reader.read(origin + "/redirect", 1000, time.monotonic() + 2)).data
     assert calls == [("/redirect", "private"), ("/reference.md", None)]
     assert source_uri("https://user:password@example.org/file?token=private#secret") == "https://example.org/file"
+
+
+def test_redirect_does_not_forward_response_cookies_between_allowed_ports(server):
+    first_origin, _, handler = server
+    received = []
+
+    class Destination(BaseHTTPRequestHandler):
+        def log_message(self, *args):
+            pass
+
+        def do_GET(self):
+            received.append((self.headers.get("Cookie"), self.headers.get("X-Upload-Token")))
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b"reference")
+
+    destination = ThreadingHTTPServer(("127.0.0.1", 0), Destination)
+    worker = threading.Thread(target=destination.serve_forever)
+    worker.start()
+    try:
+        first_origin = first_origin.replace("127.0.0.1", "localhost")
+        second_origin = f"http://localhost:{destination.server_port}"
+        handler.redirect = second_origin + "/reference.md"
+        handler.cookie = "session=private; Path=/"
+        reader = HttpUploadSourceReader([first_origin, second_origin], {"X-Upload-Token": "private"})
+        assert asyncio.run(reader.read(first_origin + "/redirect", 1000, time.monotonic() + 2)).data
+        assert received == [(None, None)]
+    finally:
+        destination.shutdown()
+        worker.join(3)
+        destination.server_close()

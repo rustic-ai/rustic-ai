@@ -208,8 +208,13 @@ def launch(tmp_path):
         for spec in data["agents"]:
             if spec["id"] == "visualizer_agent":
                 spec["class_name"], spec["properties"] = Renderer.get_qualified_class_name(), {}
+                spec["predicates"] = {"draw": spec["predicates"]["generate_image"]}
             if spec["id"] == "memory_agent" and not native:
                 spec["class_name"], spec["properties"] = ControlledMemory.get_qualified_class_name(), {}
+                spec["predicates"] = {
+                    "ingest": spec["predicates"]["ingest_document"],
+                    "recall": spec["predicates"]["recall_knowledge"],
+                }
             if spec["id"] == "paperbanana_coordinator":
                 spec["properties"].update(config)
         builder = GuildBuilder.from_spec(GuildSpec.model_validate(data))

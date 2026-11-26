@@ -111,6 +111,8 @@ Logical identity is namespaced by corpus and derived from explicit `source_id`/`
 
 A stored artifact can be unsearchable. Inspect `stored`, `searchable`, `extraction_failed`, and `was_deduplicated` independently. Archival success does not establish retrieval evidence.
 
+Native deduplicated ingestion creates no new chunks. MemoryAgent determines `searchable` from the existing immutable artifact under the same session lock; a deduplicated text-bearing document remains usable, and an archived blank PDF remains unsearchable.
+
 ## Limits, failures and restart behavior
 
 Defaults are 32 sources, 16 MiB per source, 32 MiB total source bytes, 32 active workflows, a 120-second deadline, and 1,024 completed-request tombstones. Recall is bounded to 10 items, 6,000 characters and 2,000 tokens. Configuration can lower or raise limits within the published schema bounds. Capacity and cheap inline-length guards run before incremental request hashing; source decoding and filesystem reads obey the remaining source/workflow byte budget.

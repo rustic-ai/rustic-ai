@@ -739,7 +739,19 @@ class MemoryAgent(Agent[MemoryAgentConfig], MemoryTools, StructuredMemoryTools):
             source = await build_source(spec, guild_fs, self.config.max_source_bytes)
             async with self._session_lock(req.session_id, uniko):
                 outcome = await uniko.session(req.session_id).ingest(source)
-            ctx.send(ingest_outcome(outcome, req.record_id))
+                response = ingest_outcome(outcome, req.record_id)
+                if response.was_deduplicated and response.stored and response.success:
+                    # Deduplication reports newly created chunks, not artifact readiness.
+                    # Query the immutable artifact under the same session mutation lock.
+                    node_id = response.artifact_node_id
+                    if not isinstance(node_id, int) or isinstance(node_id, bool) or node_id < 0:
+                        raise ValueError("Invalid native artifact identity")
+                    rows = await uniko.query(
+                        "MATCH (a:Artifact)-[:HAS_CHUNK]->(c:Chunk) "
+                        f"WHERE id(a) = {node_id} RETURN id(c) AS node_id LIMIT 1"
+                    )
+                    response.searchable = bool(rows)
+            ctx.send(response)
         except Exception:
             logger.exception("Guild document ingestion failed")
             self._send_failure(ctx, "document_ingest_failed")

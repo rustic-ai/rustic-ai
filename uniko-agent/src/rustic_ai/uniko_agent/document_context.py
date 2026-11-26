@@ -52,7 +52,14 @@ def compact_document_context(context: JsonDict) -> JsonDict:
     remaining = 16384 - 2
     for key, value in context.items():
         # Attachments and conversation bodies must never cross document branches.
-        if key in {"original_attachment", "attachments", "history", "messages", "conversation_history"}:
+        if key in {
+            "original_attachment",
+            "attachments",
+            "history",
+            "messages",
+            "conversation_history",
+            "enriched_history",
+        }:
             continue
         try:
             _, key_size = bounded(key, remaining, 0)

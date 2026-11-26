@@ -78,7 +78,7 @@ The latest user message supplies the original instruction. The coordinator recal
 }
 ```
 
-These relative paths refer to files already staged in the guild filesystem. The coordinator normalizes each attachment and waits for all ingestion outcomes. It returns an upload summary without running the illustration agents. Stored archival files can be successful while unsearchable; the summary reports stored, searchable, failed and unknown separately. Complete ingestion failure is a typed terminal error.
+These relative paths refer to files already staged in the guild filesystem. Studio upload replies of the form `/rustic/api/guilds/{guild_id}/files/{encoded_filename}` and guild-root `file:///uploads/harbor.pdf` links are also supported. The acquisition adapter verifies the guild ID, decodes transport filenames and rejects traversal. Plain absolute host paths must be inside the configured guild filesystem root. The coordinator normalizes each attachment and waits for all ingestion outcomes. It returns an upload summary without running the illustration agents. Stored archival files can be successful while unsearchable; the summary reports stored, searchable, failed and unknown separately. Deduplicated ingestion reports no newly created chunks, so MemoryAgent checks the existing artifact for searchable chunks. Repeated searchable uploads remain usable, while repeated blank archival PDFs remain unsearchable. Complete ingestion failure is a typed terminal error.
 
 ### Upload and request an illustration
 
@@ -122,7 +122,7 @@ The default `HttpUploadSourceResolver` has `allowed_origins: []`. Configure exac
 }
 ```
 
-Credentials belong in dependency configuration supplied securely at launch. They are not request fields. The reader validates every redirect against the allowed origins, follows at most three redirects, forwards configured headers only to the original origin, streams within the remaining byte budget, and respects the absolute workflow deadline. Content-Disposition and Content-Type provide filename and MIME defaults. URLs in outcome attribution omit user information, query strings and fragments; signed query credentials are not sent to the planner.
+Credentials belong in dependency configuration supplied securely at launch. They are not request fields. The reader validates every redirect against the allowed origins, follows at most three redirects, forwards configured headers only to the original origin, disables implicit response cookies, streams within the remaining byte budget, and respects the absolute workflow deadline. Each acquisition writes a distinct staging file; concurrent identical uploads cannot truncate another workflow's snapshot. An acquisition timeout before the workflow deadline marks that source failed and allows usable sibling sources to continue. Content-Disposition and Content-Type provide filename and MIME defaults. URLs in outcome attribution omit user information, query strings and fragments; signed query credentials are not sent to the planner.
 
 ### Bounds and refinement
 
@@ -149,7 +149,7 @@ Public typed outcomes are available on `paperbanana.outcomes`:
 
 Separate routes project these contracts onto `user_message_broadcast`: an upload/error `TextFormat`, or an approved `ImageFormat` with instruction and honest source counts. Each request produces one terminal presentation.
 
-Internal context carries request ID, attempt, stage and iteration. Replies must match these fields and the expected agent sender. Duplicate input/outcomes and stale refinement/image replies are suppressed. Independent timers produce a terminal timeout even during blocked acquisition; pending source outcomes become unknown. Context is compacted before forwarding and excludes attachment bodies and credentials.
+Internal context carries request ID, attempt, stage, iteration and an epoch-millisecond deadline. Control fields precede caller metadata so bounded compaction preserves them. Replies must match these fields and the expected agent sender. Duplicate input/outcomes and stale refinement/image replies are suppressed. Independent timers produce a terminal timeout even during blocked acquisition or an already running provider call; pending source outcomes become unknown. The coordinator validates dispatch after preparing its context, and guild entry predicates reject messages delivered after the deadline before document, memory, LLM or image work begins. Preserve these predicates when customizing the blueprint. Distributed deployments require synchronized host clocks for the deadline gate. Provider work that already began may finish, but its late response cannot advance the workflow. Context is compacted before forwarding and excludes attachment bodies, serialized `enriched_history` and known credential fields.
 
 ## Local verification
 
@@ -159,6 +159,6 @@ From the repository environment:
 pytest showcase/tests/paper_banana -q
 ```
 
-The tests execute the shipped routing slip with existing LLMAgents and deterministic LLM/image dependencies. Real native Uniko tests cover text-bearing and blank PDFs, current-upload scoping, persistence after reopen and reupload deduplication on sync and threaded engines. Local HTTP tests cover acquisition, metadata, signed URLs, redirect policy, byte bounds and timeout. No hosted LLM or image calls are needed for this suite.
+The tests execute the shipped routing slip with existing LLMAgents and deterministic LLM/image dependencies. Real native Uniko tests cover text-bearing and blank PDFs, current-upload scoping, persistence after reopen and reupload deduplication on sync and threaded engines. Regression tests cover actual Studio upload URLs and encoded filenames, repeated PDF readiness after reopen, concurrent identical staging, early source timeouts, large-context correlation, and delayed ingestion/planner/renderer dispatch on sync and threaded engines. Local HTTP tests cover acquisition, metadata, signed URLs, header/cookie isolation across redirect origins, byte bounds and timeout. No hosted LLM or image calls are needed for this suite.
 
 Phase 2 replaces PaperBanana's KnowledgeAgent usage. The Semantic Memory Assistant migration, legacy LanceDB retirement and deployed data cutover remain separate phases.

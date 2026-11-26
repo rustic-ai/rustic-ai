@@ -57,6 +57,7 @@ class _Request:
     origin: Message
     instruction: str | None
     expires_at: float
+    deadline_ms: int = 0
     sources: list[DocumentSourceOutcome] = field(default_factory=list)
     mapping: list[int] = field(default_factory=list)
     stage: str = "acquisition"
@@ -135,6 +136,26 @@ class PaperBananaCoordinatorAgent(Agent[PaperBananaConfig]):
     def _publish(self, actions: list[_Outbound]):
         for action in actions:
             state = action.state
+            # Control fields precede caller metadata so later bounded compaction
+            # preserves correlation and the deadline without application-specific
+            # knowledge in the reusable document capability.
+            control = {
+                "paperbanana_request_id": state.key,
+                "paperbanana_attempt": state.attempt,
+                "paperbanana_stage": action.stage,
+                "paperbanana_iteration": action.iteration,
+                "paperbanana_deadline_ms": state.deadline_ms,
+            }
+            origin = state.origin.model_copy(update={"session_state": control | (state.origin.session_state or {})})
+            # Preparation may block in fixtures or scheduling; validate afterwards.
+            ctx = self._make_process_context(
+                origin,
+                "workflow",
+                JsonDict,
+                ProcessorHelper.get_on_send_fixtures(type(self)),
+                ProcessorHelper.get_on_error_fixtures(type(self)),
+                ProcessorHelper.get_message_mod_fixtures(type(self)),
+            )
             with self._lock:
                 if self._closing:
                     return
@@ -147,22 +168,9 @@ class PaperBananaCoordinatorAgent(Agent[PaperBananaConfig]):
                         continue
                     if time.monotonic() >= state.expires_at:
                         action = self._terminal(state, "workflow_timed_out")
-            ctx = self._make_process_context(
-                state.origin,
-                "workflow",
-                JsonDict,
-                ProcessorHelper.get_on_send_fixtures(type(self)),
-                ProcessorHelper.get_on_error_fixtures(type(self)),
-                ProcessorHelper.get_message_mod_fixtures(type(self)),
-            )
-            ctx.update_context(
-                {
-                    "paperbanana_request_id": state.key,
-                    "paperbanana_attempt": state.attempt,
-                    "paperbanana_stage": action.stage,
-                    "paperbanana_iteration": action.iteration,
-                }
-            )
+            ctx.update_context(control | {"paperbanana_stage": action.stage, "paperbanana_iteration": action.iteration})
+            # Guild entry predicates reject dispatches delayed past the deadline.
+            # No state lock is held while invoking a synchronous message backend.
             if action.error:
                 ctx.send_error(action.payload)
             else:
@@ -244,7 +252,14 @@ class PaperBananaCoordinatorAgent(Agent[PaperBananaConfig]):
                 and name.lower() not in {"headers", "authorization", "credentials", "api_key"}
             }
             origin = ctx.message.model_copy(update={"payload": {"request_id": key}, "session_state": context})
-            state = _Request(key, uuid4().hex, origin, None, time.monotonic() + self.config.deadline_seconds)
+            state = _Request(
+                key,
+                uuid4().hex,
+                origin,
+                None,
+                time.monotonic() + self.config.deadline_seconds,
+                int((time.time() + self.config.deadline_seconds) * 1000),
+            )
             if len(self._requests) >= self.config.max_active_requests:
                 actions = [self._terminal(state, "capacity_exceeded")]
             else:
@@ -301,7 +316,7 @@ class PaperBananaCoordinatorAgent(Agent[PaperBananaConfig]):
         if not isinstance(part, dict):
             return DocumentSourceOutcome(index=index)
         name = part.get("name") or part.get("filename") or raw.get("name")
-        mime = part.get("mimetype") or part.get("mime_type")
+        mime = part.get("mimetype") or part.get("mime_type") or part.get("content_type")
         url = part.get("url") or part.get("file_data")
         uri = None
         if isinstance(url, str) and len(url) <= 4096 and not url.startswith("data:"):
@@ -321,6 +336,7 @@ class PaperBananaCoordinatorAgent(Agent[PaperBananaConfig]):
     ) -> tuple[MemorySource, int]:
         part = raw.get("mediaLink") or raw.get("media_link") or raw.get("file_url") or raw.get("file") or raw
         url = part.get("url") or part.get("file_data")
+        supplied_id = part.get("source_id") or raw.get("source_id")
         logical: str | None
         uri: str | None
         if isinstance(url, str) and url.startswith(("http://", "https://")):
@@ -332,36 +348,33 @@ class PaperBananaCoordinatorAgent(Agent[PaperBananaConfig]):
                 or acquired.name
                 or PurePosixPath(urlsplit(url).path).name
             )
-            mime = part.get("mimetype") or part.get("mime_type") or acquired.mime_type
+            mime = part.get("mimetype") or part.get("mime_type") or part.get("content_type") or acquired.mime_type
             data = acquired.data
             logical = part.get("source_id") or raw.get("source_id") or "upload:" + sha256(url.encode()).hexdigest()
             uri = source_uri(url)
         else:
-            if isinstance(url, str) and not urlsplit(url).scheme and not url.startswith("/"):
-                if ".." in PurePosixPath(url).parts:
-                    raise ValueError("Invalid staged path")
+            if isinstance(url, str) and not url.startswith("data:"):
+                path = reader.staged_path(url, self.guild_spec.id, getattr(guild_fs, "path", ""))
                 raw = {
                     "media_link": {
                         **part,
-                        "url": url,
+                        "url": path,
                         "name": part.get("name") or part.get("filename") or raw.get("name"),
-                        "mimetype": part.get("mimetype") or part.get("mime_type"),
+                        "mimetype": part.get("mimetype") or part.get("mime_type") or part.get("content_type"),
                         "on_filesystem": True,
-                    }
+                        "metadata": {
+                            **(part.get("metadata") or {}),
+                            "source_uri": (part.get("metadata") or {}).get("source_uri") or source_uri(url),
+                        },
+                    },
+                    "source_id": part.get("source_id") or raw.get("source_id"),
                 }
             source = normalize_document_attachment(raw)
-            if source.media_link and source.media_link.url.startswith("/"):
-                root = getattr(guild_fs, "path", "").rstrip("/") + "/"
-                if root == "/" or not source.media_link.url.startswith(root):
-                    raise ValueError("Source is outside the staged filesystem")
-                source.media_link.url = source.media_link.url[len(root) :]
-            if source.media_link and ".." in PurePosixPath(source.media_link.url).parts:
-                raise ValueError("Invalid staged path")
             data = await read_source_bytes(source, guild_fs, budget)
             link = source.media_link
             name = source.path_hint or (link.name or link.url if link else None)
             mime = source.mime_type or (link.mimetype if link else None)
-            logical = source.source_id or source.id or part.get("source_id")
+            logical = source.source_id or source.id or supplied_id
             uri = source_uri(str((link.metadata or {}).get("source_uri") or link.url)) if link else None
             if link and logical is None:
                 logical = "upload:" + sha256(link.url.encode()).hexdigest()
@@ -374,7 +387,7 @@ class PaperBananaCoordinatorAgent(Agent[PaperBananaConfig]):
             return MemorySource(
                 base64_data=base64.b64encode(data).decode(), path_hint=name, mime_type=mime, source_id=logical
             ), len(data)
-        path = "paperbanana/uploads/" + sha256(data).hexdigest() + PurePosixPath(name or "source.bin").suffix[:12]
+        path = "paperbanana/uploads/" + uuid4().hex + PurePosixPath(name or "source.bin").suffix[:12]
 
         def write():
             with guild_fs.open(path, "wb") as stream:
@@ -415,8 +428,14 @@ class PaperBananaCoordinatorAgent(Agent[PaperBananaConfig]):
                     prepared.append(source)
                     state.mapping.append(index)
             except TimeoutError:
-                self._expire(state.key, state.attempt)
-                return
+                if time.monotonic() >= state.expires_at:
+                    self._expire(state.key, state.attempt)
+                    return
+                with self._lock:
+                    if self._requests.get(state.key) is not state:
+                        return
+                    state.sources[index].status = "failed"
+                    state.sources[index].error = "source_acquisition_timed_out"
             except Exception:
                 with self._lock:
                     if self._requests.get(state.key) is not state:
