@@ -109,7 +109,9 @@ nav:
       - Transformation: patterns/transformation.md
       - Aggregation: patterns/aggregation.md
   - Ray: ray/index.md
-  - Showcase: showcase/index.md
+  - Showcase:
+      - Overview: showcase/index.md
+      - PaperBanana: showcase/paper_banana.md
   - API: api/index.md
   - UI Protocol Types: ui_protocol_types.md
   - Contributing: contributing.md

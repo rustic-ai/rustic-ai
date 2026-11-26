@@ -31,6 +31,7 @@ rusticai-llm-agent = { path = "../llm-agent", develop = true }
 rusticai-pandas-analyst = { path = "../pandas-analyst", develop = true }
 rusticai-uniko-agent = {path = "../uniko-agent", develop = true}
 arxiv = "^4.1.0"
+aiohttp = "^3.14.5"
 
 [tool.poetry.dependencies.pytest]
 version = "^9.2.0"

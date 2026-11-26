@@ -2,7 +2,7 @@
 
 Replace the LanceDB integration, KnowledgeAgent and its knowledge-base implementation with Uniko for document ingestion, evidence retrieval and semantic conversational memory. Migrate the existing consumers directly to Uniko's typed protocols, then remove the retired implementation. Keep generic media, filesystem, embedding and vector-store capabilities that have independent consumers.
 
-This is an implementation plan against repository revision `3c530d5` on 2026-11-25. Runtime and package changes are pending. The migration assumes existing deployed content may need preservation until deployment inventory establishes otherwise. Removing code does not authorize deleting stored data.
+This is an implementation plan against repository revision `3c530d5` on 2026-11-25. The shared foundation and PaperBanana migration are implemented; later consumer migration, legacy retirement and deployment cutover remain pending. The migration assumes existing deployed content may need preservation until deployment inventory establishes otherwise. Removing code does not authorize deleting stored data.
 
 ## Migration decision and scope
 
@@ -25,7 +25,7 @@ The migration does not require changing the native UniDB repository. UniDB remai
 
 Production imports into `core/knowledgebase` originate only from KnowledgeAgent, KnowledgeBasedMemoriesStore and the LanceDB adapter in this checkout. The directory contains 49 Python files and 5,859 lines. That establishes the repository removal boundary; it does not establish deployed usage.
 
-PaperBanana and Semantic Memory Assistant have no tracked tests that select their blueprint filenames. They need executable migration acceptance coverage before the old implementation tests are removed.
+At the baseline revision, neither consumer had tests selecting its blueprint filename. PaperBanana now has executable acceptance coverage in `showcase/tests/paper_banana`; Semantic Memory Assistant still needs migration coverage.
 
 ## Capability mapping
 
@@ -124,7 +124,7 @@ Retry with the same source/revision/record identities and reconcile stored sourc
 
 ## PaperBanana migration
 
-The current blueprint routes file input to indexing and text input to search. It then converts retrieval results into a planner prompt, followed by stylist and visualizer stages. Keep those illustration capabilities and their output contracts.
+At the baseline revision, the blueprint routed file input to indexing and text input to search. It then converts retrieval results into a planner prompt, followed by stylist and visualizer stages. Keep those illustration capabilities and their output contracts.
 
 Repair these boundaries as part of the migration:
 
@@ -153,7 +153,7 @@ Test follow-up recall, distinct users, repeated identical user instructions, fai
 
 ## Current protocol examples
 
-These examples use current Uniko message/configuration models. IDs are illustrative. The document coordinator and complete migrated guilds remain implementation work.
+These examples use current Uniko message/configuration models. IDs are illustrative. The document coordinator and PaperBanana guild are implemented; the Semantic Memory Assistant remains pending.
 
 Document ingestion on `knowledge.ingest`:
 
@@ -288,7 +288,13 @@ The Uniko package now provides `DocumentCoordinatorAgent`, typed workflow contra
 
 Workflow coordination is transient. Documents and their immutable source/revision identities persist; callers resubmit unfinished workflows after restart. There is no automatic workflow continuation or durable terminal journal in this phase. Within a running coordinator, retry a terminal failure with a new request ID while preserving the source identities and bytes. Bounded tombstones suppress completed duplicates only while retained.
 
-PaperBanana and Semantic Memory Assistant have not yet migrated. LanceDB, KnowledgeAgent and the legacy memory plugin remain until their consumer migration and retirement phases complete.
+PaperBanana has migrated in Phase 2. LanceDB, KnowledgeAgent and the legacy memory plugin remain until the Semantic Memory Assistant migration and retirement phases complete.
+
+### Phase 2 implemented PaperBanana
+
+The v2 blueprint replaces KnowledgeAgent with the shared document coordinator and MemoryAgent, plus an application coordinator for ingestion, source-scoped recall and bounded illustration refinement. Upload-only requests report native stored/searchable outcomes. Upload-plus-instruction requests require evidence from successful current uploads; text-only requests may proceed explicitly without evidence. Critique uses a validated JSON verdict and at most two refinements. Public typed outcomes and one terminal UI projection cover success and error paths.
+
+The [PaperBanana guide](../showcase/paper_banana.md) documents initialization, HTTP acquisition policy, typed I/O, persistence and limits. Acceptance tests execute the shipped routes with deterministic generation dependencies and real native Uniko text/PDF ingestion, source scoping, reopen and deduplication. Default HTTP origins are empty; deployment configures acquisition permissions and credentials. Active workflows remain transient.
 
 ### Phase 4 retirement checkpoint
 

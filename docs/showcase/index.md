@@ -13,6 +13,10 @@ Create agent systems that can search, summarize, and synthesize information from
 ### Content Generation
 Implement agent systems for generating various forms of content, from written articles and reports to images and multimedia.
 
+### PaperBanana
+
+The [PaperBanana guide](paper_banana.md) shows reference uploads, source-scoped Uniko recall, and bounded planning, styling, image generation and critique. It covers all three input paths, typed outcomes, persistent storage and guild-owned upload policy.
+
 ### Uniko Research Guild
 
 The [Uniko memory guide](../agents/uniko/index.md#research-guild-composition) explains the research guild: authenticated request initialization, attributed recall, search/scrape, bounded ingestion, a completion barrier, and synthesis using the original question. The coordinator owns workflow state and suppresses duplicate/late results. External research providers require their own configuration.
