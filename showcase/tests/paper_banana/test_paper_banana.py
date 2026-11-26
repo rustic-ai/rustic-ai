@@ -5,6 +5,7 @@ from copy import deepcopy
 import json
 from pathlib import Path
 import time
+from typing import Any
 from uuid import uuid4
 
 from pydantic import ValidationError
@@ -615,6 +616,7 @@ def test_in_flight_requests_and_stale_sender_attempt_iteration(launch, engine):
 @pytest.mark.parametrize("format", [ChatCompletionRequest, TextFormat, FilesWithTextFormat])
 def test_user_proxy_entry_routes(launch, format):
     guild, coord, _, caller, fs, _, _ = launch(proxy=True)
+    payload: dict[str, Any]
     if format is ChatCompletionRequest:
         payload = {"messages": [{"role": "user", "content": "Draw Harbor"}]}
     elif format is TextFormat:

@@ -170,7 +170,7 @@ def test_timeout_cancels_preparation_and_queued_dispatch(launch, monkeypatch, pa
     else:
         original = coordinator._client.publish
 
-        def intercept(message):
+        def intercept_publish(message):
             if (message.session_state or {}).get(
                 "paperbanana_stage"
             ) == stage and message.sender.id == coordinator.get_agent_tag().id:
@@ -178,7 +178,7 @@ def test_timeout_cancels_preparation_and_queued_dispatch(launch, monkeypatch, pa
                 assert resume.wait(5)
             return original(message)
 
-        monkeypatch.setattr(coordinator._client, "publish", intercept)
+        monkeypatch.setattr(coordinator._client, "publish", intercept_publish)
     if stage == "ingest":
         harness.write(fs, "reference.md")
         payload = harness.file_request("Draw Harbor")

@@ -136,6 +136,10 @@ class SendingContext:
         self.message = SimpleNamespace(sender=SimpleNamespace(id="upa-user-1"), id=42)
         self.sent = []
         self.errors = []
+        self.context = {}
+
+    def get_context(self):
+        return self.context
 
     def send(self, value, **kwargs):
         self.sent.append(value)
@@ -462,7 +466,7 @@ def test_deferred_wrapper_does_not_record_tool_or_final_responses():
     assert not engine.sessions and not engine.session_value.turns
 
 
-def test_deadline_guard_prevents_model_after_blocked_recall():
+def test_deadline_guard_prevents_model_after_blocked_recall(monkeypatch):
     import time
 
     from rustic_ai.uniko_agent.conversation import ConversationDeadlineGuard
@@ -471,7 +475,7 @@ def test_deadline_guard_prevents_model_after_blocked_recall():
     request = ChatCompletionRequest(messages=[UserMessage(content="hello")])
     ctx = SendingContext(request)
     deadline = time.time() * 1000 + 10
-    ctx.get_context = lambda: {"sma_deadline_ms": deadline}
+    ctx.context = {"sma_deadline_ms": deadline}
     native = FakeUniko()
     original = native.recall_with_sync
 
@@ -479,7 +483,7 @@ def test_deadline_guard_prevents_model_after_blocked_recall():
         time.sleep(0.02)
         return original(*args, **kwargs)
 
-    native.recall_with_sync = blocked
+    monkeypatch.setattr(native, "recall_with_sync", blocked)
     llm = Mock(spec=LLM)
     config = LLMAgentConfig(llm_request_wrappers=[store, ConversationDeadlineGuard()], max_retries=0)
     LLMAgentHelper.invoke_llm_and_handle_response(plugin_agent(native), config, llm, cast(ProcessContext, ctx), request)
