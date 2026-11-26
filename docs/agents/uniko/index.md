@@ -33,7 +33,7 @@ The first native operation can take longer while models initialize; the local ex
 
 The published dependency profile selects the CPU `uniko` distribution. Upstream Metal/CUDA wheels are mutually exclusive with that distribution and are not validated Rustic deployment profiles. Local embedding/NLP models need their model assets cached or downloaded; no hosted generation API is required for memory ingestion, structured experience, consolidation, or recall.
 
-Here is a complete local guild example that creates a goal through the real message bus. It uses disposable native storage and explicitly shuts down its resolver:
+Here is a complete local guild example that creates a goal through the real message bus. It uses disposable native storage and releases owned resources through guild shutdown:
 
 ```python
 import time
@@ -78,10 +78,8 @@ guild = (
     .add_route(response_route)
     .launch("docs-org")
 )
-resolver = None
 try:
     memory = guild._add_local_agent(memory_spec)
-    resolver = memory._dependency_resolvers["uniko"]
     caller = guild._add_local_agent(
         AgentBuilder(ProbeAgent)
         .set_id("caller")
@@ -109,12 +107,10 @@ try:
     else:
         raise TimeoutError("No memory outcome received")
 finally:
-    if resolver is not None:
-        resolver.shutdown()
     guild.shutdown()
 ```
 
-`GoalView` returns the native goal ID, status, ownership, and operation metadata. Errors arrive as `MemoryAgentError` through `ctx.send_error`. The example uses the probe's publication with the guild routing slip attached; a production caller sending with `ctx.send` needs an output route for each request format. `_add_local_agent` is a local harness API, used here to retain the actual resolver for explicit cleanup. Production deployment uses its managed agent launch path.
+`GoalView` returns the native goal ID, status, ownership, and operation metadata. Errors arrive as `MemoryAgentError` through `ctx.send_error`. The example uses the probe's publication with the guild routing slip attached; a production caller sending with `ctx.send` needs an output route for each request format. `_add_local_agent` is a local harness API. Runtime wrappers release the native resolver they constructed during guild shutdown. Production deployment uses its managed agent launch path.
 
 For persistent storage and models, see [UnikoResolver](../../dependencies/uniko/index.md). For all message families, see the [protocol reference](protocol.md).
 
@@ -212,3 +208,7 @@ The coordinator waits for expected enumeration and per-document outcomes, ignore
 Core memory and structured experience have executable acceptance evidence in the [completion plan](../../design/uniko-agent-completion.md). BGE-M3 dense/sparse/ColBERT certification, scanned-PDF OCR, richer multimodal memory, accelerated deployment profiles, and operational-scale certification remain separate open gates. Default model warmup is best effort; `require_verified` readiness is rejected. Source visibility is supported on turns, while explicit document visibility is unavailable in 0.6.0 and rejected.
 
 Keep the structured operation journal alongside persistent native storage during backup/restore. Shut down the resolver explicitly: `shutdown()` outside active event-loop work or `await shutdown_async()` when draining on an event loop. External raw native handles can prevent clean shutdown and their errors remain visible.
+
+## Document workflow foundation
+
+Use the [Document Coordinator](documents.md) for bounded source normalization, immutable ingestion identities, multi-source barriers, and explicit corpus recall. It collaborates with MemoryAgent through existing typed messages and leaves synthesis and access policy in the guild. Its workflow state is transient; native documents persist and callers retry unfinished work after restart.

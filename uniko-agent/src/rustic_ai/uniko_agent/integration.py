@@ -94,9 +94,8 @@ def apply_provenance(builder: Any, spec: Any, kind: MemoryRecordKind) -> Any:
     return builder
 
 
-async def build_source(
-    spec: MemorySource | dict, guild_fs: Any, max_bytes: int, byte_counts: list[int] | None = None
-) -> IngestSource:
+async def read_source_bytes(spec: MemorySource | dict, guild_fs: Any, max_bytes: int) -> bytes:
+    """Read at most max_bytes + 1 bytes, enforcing the native source bound."""
     spec = MemorySource.model_validate(spec)
     if spec.text is not None:
         data = spec.text.encode("utf-8")
@@ -123,10 +122,18 @@ async def build_source(
             data = await asyncio.to_thread(read)
     if len(data) > max_bytes:
         raise ValueError("Source exceeds byte limit")
+    return data
+
+
+async def build_source(
+    spec: MemorySource | dict, guild_fs: Any, max_bytes: int, byte_counts: list[int] | None = None
+) -> IngestSource:
+    spec = MemorySource.model_validate(spec)
+    data = await read_source_bytes(spec, guild_fs, max_bytes)
     if byte_counts is not None:
         byte_counts.append(len(data))
     hint = spec.path_hint or (
-        (spec.media_link.metadata.get("source_uri") or spec.media_link.name or spec.media_link.url)
+        ((spec.media_link.metadata or {}).get("source_uri") or spec.media_link.name or spec.media_link.url)
         if spec.media_link
         else None
     )

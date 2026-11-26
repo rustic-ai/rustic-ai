@@ -1,3 +1,4 @@
+import logging
 from typing import Any, Dict, List, Optional, Type
 
 from rustic_ai.core.guild.agent import Agent, AgentSpec
@@ -119,7 +120,10 @@ class SyncExecutionEngine(ExecutionEngine):
                 self.owned_agents.remove((guild_id, agent_id))
 
     def shutdown(self) -> None:
-        for guild_id, agent_id in self.owned_agents:
-            self.stop_agent(guild_id, agent_id)
+        for guild_id, agent_id in self.owned_agents.copy():
+            try:
+                self.stop_agent(guild_id, agent_id)
+            except Exception:
+                logging.exception("Error stopping owned agent %s", agent_id)
 
         self.agent_tracker.clear()

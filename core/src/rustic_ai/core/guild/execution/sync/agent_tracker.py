@@ -151,6 +151,7 @@ class InMemorySyncAgentTracker:
         """
         Clears the in-memory tracker.
         """
+        for guild_id, agents in list(self.agents.items()):
+            for agent_id in list(agents):
+                self.remove_agent(guild_id, agent_id)
         self.agents.clear()
-        inmem_sync_all_agents.clear()
-        inmem_sync_agents_by_name.clear()

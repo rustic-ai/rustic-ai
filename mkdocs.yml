@@ -41,6 +41,7 @@ nav:
       - Uniko Memory:
           - Agent Guide: agents/uniko/index.md
           - Message Protocol: agents/uniko/protocol.md
+          - Document Coordinator: agents/uniko/documents.md
       - Uni-DB:
           - Agent Guide: agents/unidb/index.md
           - Message Protocol: agents/unidb/protocol.md
@@ -115,6 +116,7 @@ nav:
   - Design:
       - ReAct Agent Design: design/react-agent-design.md
       - Uniko Agent Completion Plan: design/uniko-agent-completion.md
+      - KnowledgeAgent Migration: design/knowledge-agent-uniko-migration.md
       - Uni-DB Agent Design: design/uni-db-agent-design.md
       - Dependency Refresh (2026-11-25): design/dependency-refresh-2026-11-25.md
 theme:

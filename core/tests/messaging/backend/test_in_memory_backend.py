@@ -163,3 +163,47 @@ class TestInMemoryCleanup:
         assert not stale_handler_called.wait(timeout=0.2), "Cleanup should remove stale singleton handlers"
 
         backend_b.cleanup()
+
+
+def test_backend_cleanup_preserves_other_owner_history():
+    first = InMemoryMessagingBackend()
+    second = InMemoryMessagingBackend()
+    namespace = "history-" + uuid.uuid4().hex
+    topic = "topic-" + uuid.uuid4().hex
+    message = _make_message(topic, GemstoneGenerator(1), {"keep": True})
+    try:
+        second.store_message(namespace, topic, message)
+        first.cleanup()
+        first.cleanup()
+        assert second.get_messages_by_id(namespace, [message.id])[0].payload == {"keep": True}
+    finally:
+        first.cleanup()
+        second.cleanup()
+
+
+def test_memory_store_construction_does_not_reset_live_backend_ownership():
+    backend = InMemoryMessagingBackend()
+    try:
+        store = MemoryStore()
+        assert backend in store._backend_owners
+        assert MemoryStore() is store
+        assert backend in store._backend_owners
+    finally:
+        backend.cleanup()
+
+
+def test_stopped_namespace_history_is_released_while_other_namespace_survives():
+    first = InMemoryMessagingBackend()
+    second = InMemoryMessagingBackend()
+    generator = GemstoneGenerator(1)
+    first_message = _make_message("first-topic", generator, {"first": True})
+    second_message = _make_message("second-topic", generator, {"second": True})
+    first.store_message("first-namespace", "first-topic", first_message)
+    second.store_message("second-namespace", "second-topic", second_message)
+    try:
+        first.cleanup()
+        assert first._message_store.get_messages("first-namespace", [first_message.id]) == [None]
+        assert second.get_messages_by_id("second-namespace", [second_message.id])[0].payload == {"second": True}
+    finally:
+        first.cleanup()
+        second.cleanup()

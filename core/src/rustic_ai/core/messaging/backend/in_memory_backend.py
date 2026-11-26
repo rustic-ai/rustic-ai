@@ -3,6 +3,7 @@ import logging
 import random
 import threading
 from typing import Callable, Dict, List, Optional, Set
+from weakref import WeakSet
 
 import shortuuid
 
@@ -68,11 +69,16 @@ class MemoryStore:
 
     def __init__(self):
         if not self._initialized:
+            self._backend_owners: WeakSet = WeakSet()
+            self._namespace_owners: Dict[str, WeakSet] = {}
+            self._message_namespaces: Dict[int, str] = {}
+            self._owner_lock = threading.RLock()
             self.topics: Dict[str, List[Message]] = {}
             self.messages: Dict[str, Message] = {}
             self.subscribers: Dict[str, Set[str]] = {}
             self.callback_handlers: Dict[str, Dict[str, Callable[[Message], None]]] = {}
             self.is_initialized = True
+            self._initialized = True
             self._my_id = random.randint(0, 10)  # Helpful in debugging
 
     @staticmethod
@@ -83,6 +89,7 @@ class MemoryStore:
         message = message.model_copy(deep=True)
         key = self._get_message_key(namespace, message.id)
         self.messages[key] = message
+        self._message_namespaces[id(message)] = namespace
         if topic not in self.topics:
             self.topics[topic] = []
         bisect.insort_left(self.topics[topic], message, key=lambda msg: msg.timestamp)
@@ -131,7 +138,21 @@ class MemoryStore:
         if topic in self.callback_handlers:
             self.callback_handlers[topic].pop(subscriber, None)
 
+    def cleanup_namespace(self, namespace: str) -> None:
+        """Release only messages belonging to a namespace with no live owner."""
+        removed = {identity for identity, owner in self._message_namespaces.items() if owner == namespace}
+        self.messages = {key: message for key, message in self.messages.items() if id(message) not in removed}
+        for topic, messages in list(self.topics.items()):
+            retained = [message for message in messages if id(message) not in removed]
+            if retained:
+                self.topics[topic] = retained
+            else:
+                self.topics.pop(topic, None)
+        for identity in removed:
+            self._message_namespaces.pop(identity, None)
+
     def cleanup(self) -> None:
+        self._message_namespaces.clear()
         self.topics = {}
         self.messages = {}
         # Do NOT clear self.subscribers or self.callback_handlers.
@@ -164,7 +185,10 @@ class InMemoryMessagingBackend(MessagingBackend):
         self.subscriber_id = shortuuid.uuid()
         self.subscribers: Dict[str, Set[str]] = {}
         self.callback_handlers: Dict[str, Dict[str, Callable[[Message], None]]] = {}
+        self._owned_namespaces: Set[str] = set()
         self._message_store = MemoryStore.get_instance()
+        with self._message_store._owner_lock:
+            self._message_store._backend_owners.add(self)
         # Per-client delivery queues keyed by client_id
         self._client_delivery_queues: Dict[str, _ClientDeliveryQueue] = {}
         # Per-client position tracking: client_id -> last successfully processed message ID
@@ -174,6 +198,12 @@ class InMemoryMessagingBackend(MessagingBackend):
         # stale messages from previous backend instances (e.g. other tests that
         # share the MemoryStore singleton without calling cleanup) are not replayed.
         self._baseline_id: int = self._compute_baseline_id()
+
+    def _claim_namespace(self, namespace: str) -> None:
+        with self._message_store._owner_lock:
+            self._message_store._backend_owners.add(self)
+            self._owned_namespaces.add(namespace)
+            self._message_store._namespace_owners.setdefault(namespace, WeakSet()).add(self)
 
     def _compute_baseline_id(self) -> int:
         max_id = 0
@@ -192,6 +222,7 @@ class InMemoryMessagingBackend(MessagingBackend):
             message (Message): The message to be added.
         """
 
+        self._claim_namespace(namespace)
         self._message_store.store_message(namespace, topic, message)
 
         # We want to send the notification to all global subscribers that may have connected through all instances of the backend.
@@ -246,6 +277,7 @@ class InMemoryMessagingBackend(MessagingBackend):
         Returns:
             Dict[str, Set[str]]: A dictionary mapping topics to sets of client IDs.
         """
+        self._claim_namespace(namespace)
         # Only return the subscribers that are relevant to the current instance of the backend.
         return self.subscribers
 
@@ -262,6 +294,8 @@ class InMemoryMessagingBackend(MessagingBackend):
         When client_id is provided, uses a per-client delivery queue for sequential processing
         and replays any existing messages for the topic.
         """
+        if namespace is not None:
+            self._claim_namespace(namespace)
         if client_id is None:
             # Legacy per-topic subscribe (backward compat)
             if topic not in self.subscribers:
@@ -340,7 +374,21 @@ class InMemoryMessagingBackend(MessagingBackend):
                 self._message_store.unsubscribe(topic, subscriber_id)
         self.subscribers.clear()
         self.callback_handlers.clear()
-        self._message_store.cleanup()
+        # Message history belongs to the shared store, not this backend.
+        # Keep a namespace while another runtime owner uses it. Release stopped
+        # namespaces without retaining their histories behind unrelated owners.
+        with self._message_store._owner_lock:
+            for namespace in self._owned_namespaces:
+                owners = self._message_store._namespace_owners.get(namespace)
+                if owners is not None:
+                    owners.discard(self)
+                    if not owners:
+                        self._message_store._namespace_owners.pop(namespace, None)
+                        self._message_store.cleanup_namespace(namespace)
+            self._owned_namespaces.clear()
+            self._message_store._backend_owners.discard(self)
+            if not self._message_store._backend_owners:
+                self._message_store.cleanup()
         self._client_delivery_queues.clear()
         self._client_positions.clear()
 
@@ -359,6 +407,7 @@ class InMemoryMessagingBackend(MessagingBackend):
             List[Message]: A list of Message objects corresponding to the provided IDs.
         """
         if msg_ids:
+            self._claim_namespace(namespace)
             return self._message_store.get_messages(namespace, msg_ids)
         else:
             return []

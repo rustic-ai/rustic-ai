@@ -410,3 +410,9 @@ whose tool call references that user's message with `triggered_by`. Standalone
 `RecordToolCallRequest` can also reference a user's previously stored message.
 Mismatched embedded-tool senders are rejected before any native write; user
 message attribution is never rewritten to satisfy tool ownership.
+
+## Document coordinator
+
+`DocumentCoordinatorAgent` adds a typed ingestion-only, recall-only, or ingestion-plus-recall workflow over MemoryAgent. It preserves source metadata, snapshots bounded bytes, assigns immutable source/revision identities, waits for per-source outcomes, and emits bounded evidence or a typed terminal error. Guilds configure the corpus, routes, access and synthesis.
+
+See the [document guide](../docs/agents/uniko/documents.md), [executable persistent guild](examples/document_guild.py), and `document-*.schema.json` schemas. Defaults are 32 sources, 16 MiB per source, 32 MiB per workflow, a 120-second deadline and recall bounds of 10 items / 6,000 characters / 2,000 tokens. Native documents persist; unfinished workflows require caller retries after restart. Runtime shutdown releases coordinator timers and owned native resources.

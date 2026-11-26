@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 import logging
+import threading
 from typing import Any, Dict, Optional, Type
 
 from rustic_ai.core.guild.agent import Agent, AgentSpec
@@ -51,6 +52,8 @@ class AgentWrapper(ABC):
         # Create a named logger for this class
         self.logger = logging.getLogger(f"{guild_spec.id}.{guild_spec.name}.{agent_spec.name}")
 
+        self._shutdown_lock = threading.RLock()
+        self._shutdown_complete = False
         self.agent: Optional[Agent] = None
 
         self.agent_spec = agent_spec
@@ -66,7 +69,23 @@ class AgentWrapper(ABC):
         self.only_agent_class_name = self.agent_spec.class_name.split(".")[-1]
         self.organization_id = organization_id
 
+    def __getstate__(self):
+        # Wrappers cross process/distributed execution boundaries before launch.
+        state = self.__dict__.copy()
+        state.pop("_shutdown_lock", None)
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self._shutdown_lock = threading.RLock()
+
     def initialize_agent(self) -> Agent:
+        with self._shutdown_lock:
+            if self._shutdown_complete:
+                raise RuntimeError("Cannot initialize a stopped agent wrapper")
+            return self._initialize_agent()
+
+    def _initialize_agent(self) -> Agent:
         """
         Common logic for initializing the agent with the Messaging and its client.
         """
@@ -131,18 +150,49 @@ class AgentWrapper(ABC):
         pass  # pragma: no cover
 
     def shutdown(self) -> None:
-        """
-        Shuts down the agent and its connection to the Messaging.
-        """
-        if self.agent is None:
-            return
+        """Stop ingress, release owned resources, then disconnect messaging."""
+        with self._shutdown_lock:
+            if self._shutdown_complete:
+                return
+            self._shutdown_complete = True
+            messaging = getattr(self, "messaging", None)
+            try:
+                if self.agent is not None:
+                    if messaging is not None:
+                        for topic in self.agent.subscribed_topics:
+                            try:
+                                messaging.unsubscribe(topic, self.agent._get_client())
+                            except Exception:
+                                self.logger.exception("Failed to unsubscribe topic %s during shutdown", topic)
+                    try:
+                        self.agent.on_shutdown()
+                    except Exception:
+                        self.logger.exception("Agent shutdown hook failed")
+                    self._shutdown_resolvers()
+            finally:
+                if messaging is not None:
+                    try:
+                        if self.agent is not None:
+                            messaging.unregister_client(self.agent._get_client())
+                    finally:
+                        if self.messaging_owned:
+                            messaging.shutdown()
 
-        # Check if messaging exists (could be a race condition in threaded environments)
-        if hasattr(self, "messaging") and self.messaging is not None:
-            for topic in self.agent.subscribed_topics:
-                self.messaging.unsubscribe(topic, self.agent._get_client())
+    def _shutdown_resolvers(self) -> None:
+        seen: set[int] = set()
 
-            self.messaging.unregister_client(self.agent._get_client())
+        def close(resolver):
+            if id(resolver) in seen:
+                return
+            seen.add(id(resolver))
+            children = tuple(getattr(resolver, "_injectors", {}).values())
+            try:
+                resolver.shutdown()
+            except Exception:
+                self.logger.exception("Dependency shutdown failed: %s", type(resolver).__name__)
+            finally:
+                for child in children:
+                    close(child)
 
-            if self.messaging_owned:
-                self.messaging.shutdown()
+        for resolver in getattr(self.agent, "_owned_dependency_resolvers", ()):
+            close(resolver)

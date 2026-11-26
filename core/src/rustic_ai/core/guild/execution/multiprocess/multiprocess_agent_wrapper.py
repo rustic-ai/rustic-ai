@@ -69,35 +69,15 @@ class MultiProcessAgentWrapper(AgentWrapper):
             agent_id = self.agent.id if hasattr(self, "agent") and self.agent else "unknown"
             logging.info(f"Agent {agent_id} shutting down in process {multiprocessing.current_process().pid}")
 
-            # Clean shutdown
+        except Exception:
+            logging.exception("Error running agent %s in multiprocess wrapper", self.agent_spec.name)
+            raise
+        finally:
             self._cleanup_agent()
 
-        except Exception as e:
-            logging.error(f"Error running agent {self.agent_spec.name} in multiprocess wrapper: {e}", exc_info=True)
-            raise
-
     def _cleanup_agent(self) -> None:
-        """
-        Clean up the agent resources.
-        """
-        try:
-            if hasattr(self, "agent") and self.agent:
-                # Unsubscribe from topics
-                if hasattr(self.agent, "subscribed_topics") and hasattr(self.agent, "client"):
-                    for topic in self.agent.subscribed_topics:
-                        if hasattr(self, "messaging") and self.messaging:
-                            self.messaging.unsubscribe(topic, self.agent.client)  # type: ignore
-
-                # Unregister client
-                if hasattr(self, "messaging") and self.messaging and hasattr(self.agent, "client"):
-                    self.messaging.unregister_client(self.agent.client)  # type: ignore
-
-                # Shutdown messaging
-                if hasattr(self, "messaging") and self.messaging:
-                    self.messaging.shutdown()
-
-        except Exception as e:
-            logging.error(f"Error during agent cleanup: {e}")
+        """Run common owned-resource cleanup inside the child process."""
+        super().shutdown()
 
     def shutdown(self) -> None:
         """
