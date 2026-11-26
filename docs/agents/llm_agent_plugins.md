@@ -314,7 +314,7 @@ Memory stores are specialized `LLMCallWrapper` plugins:
 | `HistoryBasedMemoriesStore` | Extract from message history |
 | `StateBackedMemoriesStore` | Persist to agent state |
 | `GuildStateBackedMemoriesStore` | Shared guild-level memory |
-| `KnowledgeBasedMemoriesStore` | Semantic vector search |
+| `UnikoMemoriesStore` (optional Uniko package) | Private semantic recall and atomic visible turns |
 
 See [LLM Agent Memory Stores](llm_agent_memory.md) for detailed documentation.
 

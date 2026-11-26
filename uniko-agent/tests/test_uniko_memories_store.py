@@ -414,6 +414,7 @@ def test_configuration_serializes_public_contract():
     assert store.model_dump() == {
         "kind": "rustic_ai.uniko_agent.memories.UnikoMemoriesStore",
         "depends_on": ["uniko"],
+        "defer_recording": False,
         "query_message_count": 3,
         "recall_token_budget": 2000,
         "recall_item_limit": 10,
@@ -448,3 +449,39 @@ def test_llm_pipeline_emits_one_fixed_error_and_no_partial_answer(uniko, expecte
     assert ctx.sent == []
     serialized = result.model_dump_json()
     assert "private recall detail" not in serialized
+
+
+def test_deferred_wrapper_does_not_record_tool_or_final_responses():
+    store = UnikoMemoriesStore(defer_recording=True)
+    engine = FakeUniko()
+    request = ChatCompletionRequest(messages=[UserMessage(content="original user")])
+    tool_response = response().model_copy(deep=True)
+    tool_response.choices[0].message.tool_calls = []
+    store.postprocess(plugin_agent(engine), context(request), request, tool_response, Mock())
+    store.postprocess(plugin_agent(engine), context(request), request, response(), Mock())
+    assert not engine.sessions and not engine.session_value.turns
+
+
+def test_deadline_guard_prevents_model_after_blocked_recall():
+    import time
+
+    from rustic_ai.uniko_agent.conversation import ConversationDeadlineGuard
+
+    store = UnikoMemoriesStore(defer_recording=True)
+    request = ChatCompletionRequest(messages=[UserMessage(content="hello")])
+    ctx = SendingContext(request)
+    deadline = time.time() * 1000 + 10
+    ctx.get_context = lambda: {"sma_deadline_ms": deadline}
+    native = FakeUniko()
+    original = native.recall_with_sync
+
+    def blocked(*args, **kwargs):
+        time.sleep(0.02)
+        return original(*args, **kwargs)
+
+    native.recall_with_sync = blocked
+    llm = Mock(spec=LLM)
+    config = LLMAgentConfig(llm_request_wrappers=[store, ConversationDeadlineGuard()], max_retries=0)
+    LLMAgentHelper.invoke_llm_and_handle_response(plugin_agent(native), config, llm, cast(ProcessContext, ctx), request)
+    assert not llm.completion.called and not native.sessions
+    assert len(ctx.errors) == 1 and ctx.errors[0].message == "workflow_timed_out"

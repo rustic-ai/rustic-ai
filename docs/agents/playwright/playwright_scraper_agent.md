@@ -35,6 +35,8 @@ class WebScrapingRequest(BaseModel):
     links: List[MediaLink]  # URLs to scrape
     output_format: ScrapingOutputFormat = ScrapingOutputFormat.TEXT_HTML  # Output format
     transformer_options: JsonDict = {}  # Options for transforming the content
+    depth: int = 0  # Recursive link depth
+    max_pages: Optional[int] = None  # Optional total page-attempt cap
 ```
 
 The `ScrapingOutputFormat` enum supports:
@@ -90,7 +92,7 @@ class ErrorMessage(BaseModel):
    - Emits a MediaLink message for the stored content
 3. After processing all URLs, it emits a WebScrapingCompleted message
 
-The scraped content is saved in the `scraped_data/` directory with filenames based on a hash of the content.
+The scraped content is saved in `scraped_data/` with independent filenames for each retrieval. Returned paths are relative to the guild filesystem. Concurrent requests have separate visited-URL sets and page budgets; `max_pages` caps attempts across initial and recursive links. Per-request browser cleanup waits for other active crawls, and agent shutdown closes browser resources.
 
 ## Sample Usage
 

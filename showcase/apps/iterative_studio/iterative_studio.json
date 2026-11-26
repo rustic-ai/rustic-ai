@@ -276,11 +276,6 @@
                     }
                 },
                 "scope": "guild"
-            },
-            "kb_backend": {
-                "class_name": "rustic_ai.core.knowledgebase.kbindex_backend_memory.InMemoryKBIndexBackendResolver",
-                "properties": {},
-                "scope": "guild"
             }
         },
         "routes": {

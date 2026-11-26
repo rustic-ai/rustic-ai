@@ -161,4 +161,4 @@ pytest showcase/tests/paper_banana -q
 
 The tests execute the shipped routing slip with existing LLMAgents and deterministic LLM/image dependencies. Real native Uniko tests cover text-bearing and blank PDFs, current-upload scoping, persistence after reopen and reupload deduplication on sync and threaded engines. Regression tests cover actual Studio upload URLs and encoded filenames, repeated PDF readiness after reopen, concurrent identical staging, early source timeouts, large-context correlation, and delayed ingestion/planner/renderer dispatch on sync and threaded engines. Local HTTP tests cover acquisition, metadata, signed URLs, header/cookie isolation across redirect origins, byte bounds and timeout. No hosted LLM or image calls are needed for this suite.
 
-Phase 2 replaces PaperBanana's KnowledgeAgent usage. The Semantic Memory Assistant migration, legacy LanceDB retirement and deployed data cutover remain separate phases.
+Phase 2 replaces PaperBanana's KnowledgeAgent usage. Phase 3 migrates the [Semantic Memory Assistant](semantic_memory_assistant.md). Legacy LanceDB retirement and deployed data cutover remain separate phases.

@@ -40,6 +40,7 @@ _UNTRUSTED_MEMORY_HEADER = (
 class UnikoMemoriesStore(LLMCallWrapper):
     """Recall and record user-isolated conversational memory with Uniko."""
 
+    defer_recording: bool = False
     query_message_count: int = Field(default=3, ge=1)
     recall_token_budget: int = Field(default=2000, ge=1, le=10000)
     recall_item_limit: int = Field(default=10, ge=1)
@@ -197,7 +198,8 @@ class UnikoMemoriesStore(LLMCallWrapper):
         llm_response: ChatCompletionResponse,
         llm: LLM,
     ) -> Optional[List[BaseModel]]:
-        session_id, user_id, request_id = self._request_identity(agent, ctx)
+        if self.defer_recording:
+            return None
         user_messages = [
             self._text_content(message) for message in ctx.payload.messages if isinstance(message, UserMessage)
         ]
@@ -210,6 +212,14 @@ class UnikoMemoriesStore(LLMCallWrapper):
         if not assistant_content or choice.message.tool_calls:
             raise RuntimeError(MEMORY_RECORD_FAILED)
 
+        self.commit(agent, ctx, user_content, assistant_content)
+        return None
+
+    def commit(self, agent: Agent, ctx: ProcessContext, user_content: str, assistant_content: str) -> None:
+        """Persist one accepted visible turn using trusted forwarding identity."""
+        session_id, user_id, request_id = self._request_identity(agent, ctx)
+        if not user_content.strip() or not assistant_content.strip():
+            raise RuntimeError(MEMORY_RECORD_FAILED)
         user_content = user_content[: self.observed_message_max_characters]
         assistant_content = assistant_content[: self.observed_message_max_characters]
 

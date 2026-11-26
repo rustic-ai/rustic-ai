@@ -2,12 +2,12 @@ import asyncio
 from concurrent.futures import Future
 from datetime import datetime, timezone
 from enum import StrEnum
-import hashlib
 import mimetypes
 import os
 import threading
 from typing import Any, List, Optional, Set, TypeVar
 from urllib.parse import urljoin, urlparse, urlsplit
+from uuid import uuid4
 
 from install_playwright import install
 from markdownify import markdownify as md
@@ -51,6 +51,10 @@ class WebScrapingRequest(BaseModel):
         default={},
         title="Options for the transformer",
         description="Options for the transformer to be applied to the scraped content. Default is an empty dictionary.",
+    )
+
+    max_pages: Optional[int] = Field(
+        default=None, ge=1, le=10000, description="Maximum page attempts for this request, including recursive links."
     )
 
     depth: int = Field(
@@ -204,8 +208,6 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
         self._playwright: Optional[Playwright] = None
         self._browser: Optional[Browser] = None
         self._browser_lock = asyncio.Lock()
-        self._scraped_urls_lock = asyncio.Lock()
-        self._scraped_urls: Set[str] = set()
         self._initialized = False
         self._chromium_installed = False
         self._active_ops: int = 0
@@ -339,7 +341,7 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
                 elif not filetype:
                     filetype = ".txt"
 
-                filename = hashlib.md5(content.encode("utf-8")).hexdigest() + filetype
+                filename = uuid4().hex + filetype
                 mimetype = mimetypes.guess_type(filename)[0]
 
                 if request.output_format == ScrapingOutputFormat.MARKDOWN:
@@ -372,7 +374,7 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
                 }
 
                 output = MediaLink(
-                    url=f"file:///scraped_data/{filename}",
+                    url=f"scraped_data/{filename}",
                     name=filename,
                     metadata=metadata,
                     on_filesystem=True,
@@ -414,13 +416,16 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
         semaphore: asyncio.Semaphore,
         scraped_docs: List[MediaLink],
         errors: List[ErrorMessage],
+        visited: Optional[Set[str]] = None,
     ):
         """Scrape a URL and recursively scrape its links up to the specified depth."""
-        # Check if already scraped
-        async with self._scraped_urls_lock:
-            if url in self._scraped_urls and not request.force:
-                return
-            self._scraped_urls.add(url)
+        # Request-local accounting prevents concurrent crawls from resetting or
+        # borrowing each other's visited URLs and page budget.
+        if visited is None:
+            visited = set()
+        if url in visited or (request.max_pages is not None and len(visited) >= request.max_pages):
+            return
+        visited.add(url)
 
         # Skip certain file types
         if url.endswith((".zip", ".pdf", ".doc", ".docx", ".xls", ".xlsx")):
@@ -436,9 +441,10 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
             # Recursively scrape links if depth > 0
             if depth > 0 and links:
                 tasks = []
-                for link in links:
+                remaining = max(0, request.max_pages - len(visited)) if request.max_pages is not None else len(links)
+                for link in links[:remaining]:
                     task = self._scrape_url_with_depth(
-                        link, depth - 1, context, request, filesystem, semaphore, scraped_docs, errors
+                        link, depth - 1, context, request, filesystem, semaphore, scraped_docs, errors, visited
                     )
                     tasks.append(task)
 
@@ -457,10 +463,6 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
         Internal async method that performs the actual scraping.
         This runs in the playwright event loop thread.
         """
-        # Clear previous state
-        async with self._scraped_urls_lock:
-            self._scraped_urls.clear()
-
         # Ensure browser is running
         self._active_ops += 1
         browser = await self._ensure_browser()
@@ -486,6 +488,7 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
         scraped_docs: List[MediaLink] = []
         errors: List[ErrorMessage] = []
         semaphore = asyncio.Semaphore(self.config.parallel_pages)
+        visited: Set[str] = set()
 
         try:
             self.logger.debug(f"Starting scraping for request: {scraping_request.id}")
@@ -502,6 +505,7 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
                     semaphore,
                     scraped_docs,
                     errors,
+                    visited,
                 )
                 tasks.append(task)
 
@@ -533,11 +537,11 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
 
             # Handle browser lifecycle based on configuration
             if self.config.browser_lifecycle == BrowserLifecycle.PER_REQUEST:
-                await self._cleanup()
+                await self._cleanup(only_idle=True)
             elif self.config.browser_lifecycle == BrowserLifecycle.IDLE_TIMEOUT:
                 await asyncio.sleep(self.config.browser_idle_timeout_s)
                 if self._active_ops == 0:
-                    await self._cleanup()
+                    await self._cleanup(only_idle=True)
             # PERSISTENT: do nothing, browser stays alive
 
     @agent.processor(
@@ -561,9 +565,11 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
         unique_scraped_docs = list({doc.name: doc for doc in scraped_docs}.values())
         ctx.send(WebScrapingCompleted(id=scraping_request.id, links=unique_scraped_docs))
 
-    async def _cleanup(self):
+    async def _cleanup(self, only_idle: bool = False):
         """Cleanup method to free up resources."""
         async with self._browser_lock:
+            if only_idle and self._active_ops:
+                return
             if self._browser:
                 try:
                     await self._browser.close()
@@ -575,3 +581,6 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
                 except Exception:
                     pass
             self._initialized = False
+
+    def on_shutdown(self) -> None:
+        self._run_in_playwright_loop(self._cleanup())

@@ -153,7 +153,7 @@ Test follow-up recall, distinct users, repeated identical user instructions, fai
 
 ## Current protocol examples
 
-These examples use current Uniko message/configuration models. IDs are illustrative. The document coordinator and PaperBanana guild are implemented; the Semantic Memory Assistant remains pending.
+These examples use current Uniko message/configuration models. IDs are illustrative. The document coordinator and PaperBanana guild are implemented; the Semantic Memory Assistant v2 is also implemented.
 
 Document ingestion on `knowledge.ingest`:
 
@@ -295,6 +295,18 @@ PaperBanana has migrated in Phase 2. LanceDB, KnowledgeAgent and the legacy memo
 The v2 blueprint replaces KnowledgeAgent with the shared document coordinator and MemoryAgent, plus an application coordinator for ingestion, source-scoped recall and bounded illustration refinement. Upload-only requests report native stored/searchable outcomes. Upload-plus-instruction requests require evidence from successful current uploads; text-only requests may proceed explicitly without evidence. Critique uses a validated JSON verdict and at most two refinements. Public typed outcomes and one terminal UI projection cover success and error paths.
 
 The [PaperBanana guide](../showcase/paper_banana.md) documents initialization, HTTP acquisition policy, typed I/O, persistence and limits. Acceptance tests execute the shipped routes with deterministic generation dependencies and real native Uniko text/PDF ingestion, source scoping, reopen and deduplication. Default HTTP origins are empty; deployment configures acquisition permissions and credentials. Active workflows remain transient. Phase 2 review corrections add Studio/file-URI transport resolution, independent staging paths, redirect cookie isolation, deduplicated artifact readiness, early source-timeout continuation, enriched-history exclusion, and coordinator plus guild-entry deadline guards. Regression coverage includes delayed dispatch and repeated upload-plus-instruction after restart.
+
+### Phase 3 implemented Semantic Memory Assistant
+
+The v2 blueprint uses the existing Uniko conversation wrapper in deferred-recording
+mode, a typed commit processor on the owning conversational LLM agent, and an
+application coordinator for bounded distributed web tool rounds. Shared document
+evidence flows through DocumentCoordinator and a separate MemoryAgent. Original
+user identity and assistant/tool pairing survive continuations. Only accepted
+visible turns are persisted; unconfirmed commits return the answer with a warning.
+The retired wrapper and eager export are removed, as is Iterative Studio's unused
+KB dependency. See the [assistant guide](../showcase/semantic_memory_assistant.md)
+for initialization, protocols, limits and saved-spec migration.
 
 ### Phase 4 retirement checkpoint
 

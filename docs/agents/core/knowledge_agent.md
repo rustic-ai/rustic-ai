@@ -508,6 +508,6 @@ from rustic_ai.core.agents.commons.media import MediaLink
 ## Related Documentation
 
 - [Vector Agent](vector_agent.md) - Simpler vector search agent
-- [LLM Agent Memory](../llm_agent_memory.md) - KnowledgeBasedMemoriesStore uses this
+- [LLM Agent Memory](../llm_agent_memory.md) - Current conversation memory wrappers
 - [Dependency Injection](../../howto/dependency_injection.md) - Configuring dependencies
 - [Chroma Resolver](../../dependencies/chroma/chroma_resolver.md) - Chroma backend setup

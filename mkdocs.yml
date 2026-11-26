@@ -112,6 +112,7 @@ nav:
   - Showcase:
       - Overview: showcase/index.md
       - PaperBanana: showcase/paper_banana.md
+      - Semantic Memory Assistant: showcase/semantic_memory_assistant.md
   - API: api/index.md
   - UI Protocol Types: ui_protocol_types.md
   - Contributing: contributing.md
