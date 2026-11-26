@@ -13,10 +13,13 @@ from uuid import uuid4
 from rustic_ai.core.agents.commons.message_formats import ErrorMessage
 from rustic_ai.core.guild.agent import Agent, ProcessContext, ProcessorHelper, processor
 from rustic_ai.core.guild.agent_ext.depends.llm.models import (
+    ArrayOfContentParts,
     ChatCompletionError,
     ChatCompletionRequest,
     ChatCompletionResponse,
+    ImageContentPart,
     SystemMessage,
+    TextContentPart,
     ToolMessage,
     UserMessage,
 )
@@ -61,6 +64,7 @@ class _Call:
     request: WebScrapingRequest
     stage: str = "scrape"
     result: dict | None = None
+    error_ids: set[int] = field(default_factory=set)
 
 
 @dataclass
@@ -78,6 +82,8 @@ class _Turn:
     calls: dict[str, _Call] = field(default_factory=dict)
     sources: list[DocumentSourceOutcome] = field(default_factory=list)
     used_bytes: int = 0
+    acquisition_gate: Any = field(default_factory=threading.Lock)
+    memory_requested: bool = False
     page_attempts: int = 0
     web_required: bool = False
     web_usable: bool = False
@@ -142,8 +148,8 @@ class SemanticMemoryAssistantCoordinatorAgent(Agent[SemanticMemoryAssistantConfi
             payload = SemanticMemoryAssistantResult(
                 request_id=state.request_id,
                 answer=state.answer,
-                memory_status="saved" if saved else "unconfirmed",
-                warning=None if saved else _WARNING,
+                memory_status="saved" if saved else "unconfirmed" if state.memory_requested else "not_requested",
+                warning=_WARNING if state.memory_requested and not saved else None,
                 sources=state.sources,
             )
         return _Action(state, payload, "terminal", state.round, error=bool(error))
@@ -266,11 +272,27 @@ class SemanticMemoryAssistantCoordinatorAgent(Agent[SemanticMemoryAssistantConfi
         try:
             if not sender.id.startswith("upa-"):
                 raise ValueError("Missing user identity")
-            text, attachments = normalize_showcase_input(ctx.message.payload, ctx.message.format)
+            text, attachments = normalize_showcase_input(ctx.message.payload, ctx.message.format, allow_images=True)
             state.text = text or ""
             # Only the actual current user text is a user message. Prior context
             # comes from the private native store, never a synthetic scraper turn.
-            state.messages = [UserMessage(content=state.text)] if state.text else []
+            images = []
+            if ctx.message.format.endswith("ChatCompletionRequest"):
+                users = [m for m in ctx.message.payload["messages"] if m.get("role") == "user"]
+                content = users[-1].get("content")
+                if isinstance(content, list):
+                    images = [
+                        ImageContentPart.model_validate(part) for part in content if part.get("type") == "image_url"
+                    ]
+                    for image in images:
+                        url = str(image.image_url.url)
+                        if not url.startswith(("http://", "https://", "data:")):
+                            image.image_url.url = reader.staged_path(url, self.guild_id, getattr(guild_fs, "path", ""))
+            if images:
+                parts = [TextContentPart(text=state.text)] if state.text else []
+                state.messages = [UserMessage(content=ArrayOfContentParts(root=[*parts, *images]))]
+            else:
+                state.messages = [UserMessage(content=state.text)] if state.text else []
         except (ValueError, TypeError, KeyError):
             with self._lock:
                 action = self._terminal(state, "request_invalid")
@@ -292,15 +314,24 @@ class SemanticMemoryAssistantCoordinatorAgent(Agent[SemanticMemoryAssistantConfi
             self._record_outcomes(state, outcomes)
             if attachments and not sources:
                 action = self._terminal(state, "uploaded_evidence_unavailable")
+            elif not state.text and not sources:
+                action = self._model(state)
             else:
                 action = _Action(
                     state,
                     DocumentWorkflowRequest(
                         request_id=key,
                         sources=sources,
-                        query=state.text or None,
+                        # Nontext model turns use actual attachment names for
+                        # retrieval; ingestion-only turns need no model evidence.
+                        query=state.text
+                        or (
+                            "\n".join(source.media_link.name or source.media_link.url for source in sources)[:4000]
+                            if state.messages
+                            else None
+                        ),
                         allow_partial=True,
-                        require_evidence=bool(attachments and state.text),
+                        require_evidence=bool(attachments and state.messages),
                     ),
                     "documents",
                     0,
@@ -323,32 +354,50 @@ class SemanticMemoryAssistantCoordinatorAgent(Agent[SemanticMemoryAssistantConfi
     ):
         await self._begin(ctx, guild_fs, upload_reader)
 
+    async def _acquire_one(self, state: _Turn, raw: dict, fs, reader):
+        # Handlers may run on different event loops. A nonblocking thread gate
+        # serializes acquisition without occupying executor workers while waiting.
+        acquired = False
+        try:
+            while not acquired:
+                with self._lock:
+                    if self._closing or self._requests.get(state.key) is not state:
+                        raise ValueError("Workflow is no longer active")
+                remaining = state.expires_at - time.monotonic()
+                if remaining <= 0:
+                    raise TimeoutError("Workflow deadline expired")
+                acquired = state.acquisition_gate.acquire(blocking=False)
+                if not acquired:
+                    await asyncio.sleep(min(0.05, remaining))
+            with self._lock:
+                budget = min(self.config.max_source_bytes, self.config.max_workflow_bytes - state.used_bytes)
+            if budget <= 0:
+                raise ValueError("Workflow byte budget exhausted")
+            source, size = await asyncio.wait_for(
+                acquire_document_source(raw, fs, reader, budget, state.expires_at, self.guild_id),
+                timeout=max(0, state.expires_at - time.monotonic()),
+            )
+            with self._lock:
+                if self._requests.get(state.key) is not state:
+                    raise ValueError("Workflow is no longer active")
+                state.used_bytes += size
+            return source
+        finally:
+            if acquired:
+                state.acquisition_gate.release()
+
     async def _acquire(self, state: _Turn, attachments: list[dict], fs, reader):
         sources, outcomes = [], []
         for raw in attachments:
+            with self._lock:
+                if self._requests.get(state.key) is not state:
+                    break
             info = document_source_info(raw, 0)
             try:
-                with self._lock:
-                    if self._requests.get(state.key) is not state:
-                        break
-                    budget = min(self.config.max_source_bytes, self.config.max_workflow_bytes - state.used_bytes)
-                source, size = await asyncio.wait_for(
-                    acquire_document_source(raw, fs, reader, budget, state.expires_at, self.guild_id),
-                    timeout=max(0, state.expires_at - time.monotonic()),
-                )
-                with self._lock:
-                    if self._requests.get(state.key) is not state:
-                        break
-                    if state.used_bytes + size > self.config.max_workflow_bytes:
-                        raise ValueError("Workflow byte budget exceeded")
-                    state.used_bytes += size
-                sources.append(source)
-                # Only failed acquisition outcomes are retained here; successful
-                # entries are supplied by the document coordinator.
-                continue
+                sources.append(await self._acquire_one(state, raw, fs, reader))
             except Exception:
                 info.status, info.error = "failed", "source_acquisition_failed"
-            outcomes.append(info)
+                outcomes.append(info)
         return sources, outcomes
 
     def _model(self, state: _Turn) -> _Action:
@@ -375,11 +424,58 @@ class SemanticMemoryAssistantCoordinatorAgent(Agent[SemanticMemoryAssistantConfi
         }
 
     @staticmethod
+    def _render_evidence(value, characters=6000, tokens=2000) -> tuple[str, bool]:
+        """Fit complete attributed records; never slice JSON before its facts."""
+        codec = tokenizer()
+
+        def render(body):
+            return _EVIDENCE_HEADER + json.dumps(body, ensure_ascii=False, separators=(",", ":"))
+
+        def fits(body):
+            text = render(body)
+            return len(text) <= characters and len(codec.encode(text, disallowed_special=())) <= tokens
+
+        if not value or "error" in value:
+            body = value or {"error": "retrieved_evidence_unavailable"}
+            return render(body), False
+        sources = {item.get("source_id"): item for item in value.get("sources", [])}
+        body = {"evidence": [], "partial": bool(value.get("partial"))}
+        for item in value.get("evidence", [])[:10]:
+            content = str(item.get("content") or "").strip()
+            if not content:
+                continue
+            record = {"source_id": str(item.get("source_id") or "")[:128], "content": ""}
+            source = sources.get(item.get("source_id"), {})
+            uri = source.get("source_uri")
+            if isinstance(uri, str) and len(uri) <= 512:
+                record["source_uri"] = uri
+            name = source.get("name")
+            if isinstance(name, str):
+                record["name"] = name[:128]
+            # Content is mandatory. Optional attribution cannot displace it.
+            candidate = body | {"evidence": [*body["evidence"], record | {"content": content[0]}]}
+            if not fits(candidate):
+                record = {"source_id": record["source_id"], "content": ""}
+            low, high = 0, min(len(content), characters)
+            while low < high:
+                middle = (low + high + 1) // 2
+                candidate = body | {"evidence": [*body["evidence"], record | {"content": content[:middle]}]}
+                if fits(candidate):
+                    low = middle
+                else:
+                    high = middle - 1
+            if low == 0:
+                break
+            record["content"] = content[:low].rstrip()
+            body["evidence"].append(record)
+            if low < len(content):
+                body["partial"] = True
+                break
+        return render(body), bool(body["evidence"])
+
+    @staticmethod
     def _bounded(value, characters=6000, tokens=2000):
-        text = _EVIDENCE_HEADER + json.dumps(value, ensure_ascii=False)
-        text = text[:characters]
-        encoded = tokenizer().encode(text, disallowed_special=())[:tokens]
-        return tokenizer().decode_bytes(encoded).decode("utf-8", errors="ignore")
+        return SemanticMemoryAssistantCoordinatorAgent._render_evidence(value, characters, tokens)[0]
 
     def _record_outcomes(self, state: _Turn, outcomes: list[DocumentSourceOutcome]) -> None:
         for item in outcomes:
@@ -397,14 +493,15 @@ class SemanticMemoryAssistantCoordinatorAgent(Agent[SemanticMemoryAssistantConfi
                 if ctx.payload.request_id != state.key:
                     return
                 self._record_outcomes(state, ctx.payload.sources)
-                if not state.text:
+                if not state.messages:
                     stored = sum(bool(s.outcome and s.outcome.stored) for s in state.sources)
                     searchable = sum(bool(s.outcome and s.outcome.searchable) for s in state.sources)
                     state.answer = f"Stored {stored}, searchable {searchable} reference files."
                     action = self._terminal(state)
                 else:
-                    if ctx.payload.recall and ctx.payload.recall.items:
-                        state.messages.append(SystemMessage(content=self._bounded(self._evidence(ctx.payload))))
+                    evidence, usable = self._render_evidence(self._evidence(ctx.payload))
+                    if usable:
+                        state.messages.append(SystemMessage(content=evidence))
                     action = self._model(state)
                 actions = [action]
             else:
@@ -414,7 +511,6 @@ class SemanticMemoryAssistantCoordinatorAgent(Agent[SemanticMemoryAssistantConfi
                 self._record_outcomes(state, ctx.payload.sources)
                 call.result = self._evidence(ctx.payload)
                 usable = bool(ctx.payload.recall and ctx.payload.recall.items)
-                state.web_usable = state.web_usable or usable
                 if not usable:
                     call.result = {"error": "retrieved_evidence_unavailable"}
                 call.stage = "done"
@@ -425,10 +521,10 @@ class SemanticMemoryAssistantCoordinatorAgent(Agent[SemanticMemoryAssistantConfi
         if any(call.stage != "done" for call in state.calls.values()):
             return []
         count = len(state.calls)
-        state.messages.extend(
-            ToolMessage(tool_call_id=call.id, content=self._bounded(call.result, 6000 // count, 2000 // count))
-            for call in state.calls.values()
-        )
+        for call in state.calls.values():
+            evidence, usable = self._render_evidence(call.result, 6000 // count, 2000 // count)
+            state.web_usable = state.web_usable or usable
+            state.messages.append(ToolMessage(tool_call_id=call.id, content=evidence))
         return [self._model(state)]
 
     @processor(DocumentWorkflowError)
@@ -517,24 +613,11 @@ class SemanticMemoryAssistantCoordinatorAgent(Agent[SemanticMemoryAssistantConfi
                         raise ValueError("model_output_invalid")
                     if state.web_required and not state.web_usable:
                         raise ValueError("required_web_evidence_unavailable")
-                    state.answer, state.stage = answer, "commit"
-                    state.commit_timer = threading.Timer(
-                        min(self.config.commit_timeout_seconds, max(0, state.expires_at - time.monotonic())),
-                        self._expire,
-                        args=(state.key, state.attempt, True),
-                    )
-                    state.commit_timer.daemon = True
-                    state.commit_timer.start()
-                    actions = [
-                        _Action(
-                            state,
-                            CommitConversationRequest(
-                                request_id=state.request_id, user_text=state.text, assistant_text=answer
-                            ),
-                            "commit",
-                            state.round,
-                        )
-                    ]
+                    state.answer = answer
+                    if not state.text:
+                        actions = [self._terminal(state)]
+                    else:
+                        actions = [self._commit(state, answer)]
             except (ValueError, TypeError, AttributeError):
                 category = "model_output_invalid"
                 if time.monotonic() >= state.expires_at:
@@ -548,6 +631,22 @@ class SemanticMemoryAssistantCoordinatorAgent(Agent[SemanticMemoryAssistantConfi
                     category = "required_web_evidence_unavailable"
                 actions = [self._terminal(state, category)]
         self._publish(actions)
+
+    def _commit(self, state: _Turn, answer: str) -> _Action:
+        state.stage, state.memory_requested = "commit", True
+        state.commit_timer = threading.Timer(
+            min(self.config.commit_timeout_seconds, max(0, state.expires_at - time.monotonic())),
+            self._expire,
+            args=(state.key, state.attempt, True),
+        )
+        state.commit_timer.daemon = True
+        state.commit_timer.start()
+        return _Action(
+            state,
+            CommitConversationRequest(request_id=state.request_id, user_text=state.text, assistant_text=answer),
+            "commit",
+            state.round,
+        )
 
     @processor(WebScrapingCompleted, depends_on=["filesystem:guild_fs:guild", "upload_reader"])
     async def scraped(self, ctx: ProcessContext[WebScrapingCompleted], guild_fs, upload_reader: HttpUploadSourceReader):
@@ -585,7 +684,9 @@ class SemanticMemoryAssistantCoordinatorAgent(Agent[SemanticMemoryAssistantConfi
                         DocumentWorkflowRequest(
                             request_id=call.request.id,
                             sources=sources,
-                            query=state.text,
+                            # Image-only turns have no user text. Scope retrieval
+                            # with the requested URLs without inventing a user assertion.
+                            query=state.text or "\n".join(link.url for link in call.request.links)[:4000],
                             allow_partial=True,
                             require_evidence=True,
                         ),
@@ -605,7 +706,11 @@ class SemanticMemoryAssistantCoordinatorAgent(Agent[SemanticMemoryAssistantConfi
             call = state.calls.get(ctx.get_context().get("sma_call", ""))
             if not call or call.stage != "scrape":
                 return
-            self._record_outcomes(state, [DocumentSourceOutcome(index=0, status="failed", error="scrape_failed")])
+            if ctx.message.id in call.error_ids:
+                return
+            if len(call.error_ids) < (call.request.max_pages or 32):
+                call.error_ids.add(ctx.message.id)
+                self._record_outcomes(state, [DocumentSourceOutcome(index=0, status="failed", error="scrape_failed")])
             # Per-page errors do not settle a round; Completed enumerates successes.
             if ctx.payload.error_type != "UNHANDLED_EXCEPTION":
                 return

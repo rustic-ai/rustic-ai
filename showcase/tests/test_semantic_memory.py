@@ -472,6 +472,11 @@ def test_local_upload_partial_failure_and_file_only(launch):
     message = outcome(caller)
     assert message.process_status == "completed" and "Stored 1, searchable 1" in message.payload["text"]
     assert len(llm.calls) == previous
+    assert "warning" not in message.payload
+    structured = [
+        m.payload for m in instance(guild, "trace").get_messages() if m.format.endswith("SemanticMemoryAssistantResult")
+    ][-1]
+    assert structured["memory_status"] == "not_requested" and structured["warning"] is None
 
 
 def test_zero_choices_is_terminal_without_unhandled_error(launch):
@@ -582,3 +587,221 @@ def test_terminal_scraper_exception_allows_recovery(launch):
     )
     assert outcome(caller).process_status == "completed"
     assert len(scraper.calls) == 2
+
+
+def test_long_source_metadata_preserves_required_evidence(launch):
+    guild, coord, assistant, caller, llm, scraper, fs = launch()
+    scraper.hold = True
+    llm.responses = [response(None, [scrape_call()]), response("Answer accepted without its required evidence")]
+    send(guild, caller, "Fetch Harbor budget")
+    wait(lambda: scraper.calls)
+    ctx = scraper.calls[0]
+    links = []
+    for i in range(8):
+        filename = f"page-{i}.md"
+        with fs.open(filename, "wb") as stream:
+            stream.write(b"UNIQUE_FACT Harbor project budget is CAD 42000.")
+        links.append(
+            MediaLink(
+                url=filename,
+                name=filename,
+                mimetype="text/markdown",
+                on_filesystem=True,
+                metadata={"source_uri": f"https://example.test/{i}/" + ("long-path-" * 110)},
+            )
+        )
+    ctx.send(WebScrapingCompleted(id=ctx.payload.id, links=links))
+    final = outcome(caller)
+    tool = next(m for m in llm.calls[-1].messages if m.role == "tool")
+    assert "UNIQUE_FACT" in tool.content and '"evidence"' in tool.content
+    from rustic_ai.showcase.semantic_memory import _EVIDENCE_HEADER
+
+    assert json.loads(tool.content.removeprefix(_EVIDENCE_HEADER))["evidence"]
+    assert final.process_status == "completed"
+
+
+def test_duplicate_scrape_errors_preserve_successful_source_outcomes(launch):
+    from rustic_ai.core.agents.commons.message_formats import ErrorMessage
+    from rustic_ai.core.utils import Priority
+
+    guild, coord, assistant, caller, llm, scraper, fs = launch()
+    scraper.hold = True
+    llm.responses = [response(None, [scrape_call()]), response("Harbor budget CAD 42000")]
+    send(guild, caller, "Fetch Harbor budget")
+    wait(lambda: scraper.calls)
+    ctx = scraper.calls[0]
+    error = ErrorMessage(
+        agent_type=scraper.get_qualified_class_name(), error_type="HTTP_ERROR_404", error_message="Not found"
+    )
+    message_id = scraper._generate_id(Priority.NORMAL)
+    for _ in range(32):
+        from rustic_ai.core.agents.testutils.probe_agent import PublishMixin
+
+        PublishMixin.publish_dict(
+            scraper,
+            "sma.results",
+            error,
+            format=ErrorMessage,
+            msg_id=message_id,
+            session_state=ctx.get_context(),
+            routing_slip=scraper.guild_spec.routes,
+        )
+    with fs.open("good.md", "wb") as stream:
+        stream.write(b"Harbor budget is CAD 42000.")
+    ctx.send(
+        WebScrapingCompleted(
+            id=ctx.payload.id,
+            links=[
+                MediaLink(
+                    url="good.md",
+                    name="good.md",
+                    mimetype="text/markdown",
+                    on_filesystem=True,
+                    metadata={"source_uri": "https://example.test/good"},
+                )
+            ],
+        )
+    )
+    final = outcome(caller)
+    structured = [
+        m.payload for m in instance(guild, "trace").get_messages() if m.format.endswith("SemanticMemoryAssistantResult")
+    ][-1]
+    assert final.process_status == "completed"
+    assert len(structured["sources"]) == 2
+    assert [s["status"] for s in structured["sources"]] == ["failed", "ingested"]
+
+
+@pytest.mark.parametrize("image_kind", ["remote", "local", "data"])
+@pytest.mark.parametrize("text", ["Describe this picture", ""])
+def test_images_reach_model_and_only_actual_text_is_recorded(launch, image_kind, text):
+    import base64
+
+    guild, _, assistant, caller, llm, _, fs = launch()
+    png = base64.b64decode(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jE1cAAAAASUVORK5CYII="
+    )
+    with fs.open("picture.png", "wb") as stream:
+        stream.write(png)
+    urls = {
+        "remote": "https://example.test/picture.png",
+        "local": "file:///picture.png",
+        "data": "data:image/png;base64," + base64.b64encode(png).decode(),
+    }
+    parts = ([{"type": "text", "text": text}] if text else []) + [
+        {"type": "image_url", "image_url": {"url": urls[image_kind]}}
+    ]
+    request = send(guild, caller, text, parts=parts)
+    assert outcome(caller).process_status == "completed"
+    assert len(llm.calls) == 1
+    content = next(m.content for m in llm.calls[0].messages if m.role == "user")
+    assert any(part.type == "image_url" for part in content.root)
+    structured = [
+        m.payload for m in instance(guild, "trace").get_messages() if m.format.endswith("SemanticMemoryAssistantResult")
+    ][-1]
+    if text:
+        record = native(assistant).data.message_sync(f"rustic-memory:user_assertion:{request.id}:user")
+        assert record.content.endswith(text) and "picture.png" not in record.content
+        assert structured["memory_status"] == "saved"
+    else:
+        assert structured["memory_status"] == "not_requested" and structured["warning"] is None
+
+
+def test_parallel_acquisition_checks_budget_before_staging(launch, monkeypatch):
+    import asyncio
+
+    import rustic_ai.showcase.semantic_memory as workflow
+
+    guild, coord, _, caller, _, _, fs = launch()
+    coord.config.max_source_bytes = coord.config.max_workflow_bytes = 10
+    origin = Message(
+        id_obj=caller._generate_id(Priority.NORMAL),
+        sender=caller.get_agent_tag(),
+        topics="sma.requests",
+        format="dict",
+        payload={"query": "query"},
+    )
+    state = workflow._Turn(
+        "budget", "1", "a", origin, "query", [], time.monotonic() + 60, int((time.time() + 60) * 1000)
+    )
+    coord._requests[state.key] = state
+    for name in ["one.md", "two.md"]:
+        with fs.open(name, "wb") as stream:
+            stream.write(b"12345678")
+    budgets = []
+    original = workflow.acquire_document_source
+
+    async def delayed(*args, **kwargs):
+        budgets.append(args[3])
+        await asyncio.sleep(0.1)
+        return await original(*args, **kwargs)
+
+    monkeypatch.setattr(workflow, "acquire_document_source", delayed)
+    reader = coord._dependency_resolvers["upload_reader"].get_or_resolve("semantic-tests", guild.id, coord.id)
+
+    async def run():
+        return await asyncio.gather(
+            coord._acquire(state, [{"url": "one.md"}], fs, reader),
+            coord._acquire(state, [{"url": "two.md"}], fs, reader),
+        )
+
+    results = asyncio.run(run())
+    assert budgets == [10, 2]
+    assert sum(len(fs.cat_file(p)) for p in fs.find("documents/uploads")) == 8
+    assert sum(len(sources) for sources, errors in results) == 1
+    assert state.used_bytes == 8 and not state.acquisition_gate.locked()
+
+
+@pytest.mark.parametrize("count", [1, 4])
+def test_evidence_is_complete_json_within_character_and_token_budget(count):
+    from rustic_ai.showcase.semantic_memory import (
+        _EVIDENCE_HEADER,
+        SemanticMemoryAssistantCoordinatorAgent,
+    )
+    from rustic_ai.uniko_agent.memories import tokenizer
+
+    value = {
+        "sources": [{"source_id": "source-1", "source_uri": "https://example.test/" + "x" * 1000}],
+        "evidence": [{"source_id": "source-1", "content": "Harbor budget CAD 42000. " * 2000}],
+    }
+    rendered, usable = SemanticMemoryAssistantCoordinatorAgent._render_evidence(value, 6000 // count, 2000 // count)
+    data = json.loads(rendered.removeprefix(_EVIDENCE_HEADER))
+    assert usable and "42000" in data["evidence"][0]["content"] and data["partial"]
+    assert data["evidence"][0]["source_id"] == "source-1"
+    assert len(rendered) <= 6000 // count
+    assert len(tokenizer().encode(rendered, disallowed_special=())) <= 2000 // count
+    empty, usable = SemanticMemoryAssistantCoordinatorAgent._render_evidence({"evidence": [{"content": " "}]})
+    assert not usable and json.loads(empty.removeprefix(_EVIDENCE_HEADER))["evidence"] == []
+
+
+@pytest.mark.parametrize("text", ["Compare this image to the Harbor budget", ""])
+def test_images_and_documents_are_processed_separately(launch, text):
+    guild, _, _, caller, llm, _, fs = launch()
+    with fs.open("budget.md", "wb") as stream:
+        stream.write(b"Harbor budget CAD 42000.")
+    parts = ([{"type": "text", "text": text}] if text else []) + [
+        {"type": "image_url", "image_url": {"url": "https://example.test/harbor.png"}},
+        {"type": "file_url", "file_url": {"url": "budget.md", "filename": "budget.md", "mime_type": "text/markdown"}},
+    ]
+    send(guild, caller, text, parts=parts)
+    assert outcome(caller).process_status == "completed" and len(llm.calls) == 1
+    content = next(m.content for m in llm.calls[0].messages if m.role == "user")
+    assert any(part.type == "image_url" for part in content.root)
+    assert all(part.type != "file_url" for part in content.root)
+    structured = [
+        m.payload for m in instance(guild, "trace").get_messages() if m.format.endswith("SemanticMemoryAssistantResult")
+    ][-1]
+    assert structured["sources"][0]["status"] == "ingested"
+    assert "42000" in llm.calls[0].model_dump_json()
+    assert structured["memory_status"] == ("saved" if text else "not_requested")
+
+
+def test_image_only_tool_round_does_not_invent_a_user_assertion(launch):
+    guild, _, _, caller, llm, _, _ = launch()
+    llm.responses = [response(None, [scrape_call()]), response("Harbor budget CAD 42000")]
+    send(guild, caller, "", parts=[{"type": "image_url", "image_url": {"url": "https://example.test/harbor.png"}}])
+    assert outcome(caller).process_status == "completed"
+    assert "42000" in next(m.content for m in llm.calls[-1].messages if m.role == "tool")
+    structured = [
+        m.payload for m in instance(guild, "trace").get_messages() if m.format.endswith("SemanticMemoryAssistantResult")
+    ][-1]
+    assert structured["memory_status"] == "not_requested" and structured["warning"] is None

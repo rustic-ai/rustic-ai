@@ -94,7 +94,10 @@ async def acquire_document_source(
     ), len(data)
 
 
-def normalize_showcase_input(payload: JsonDict, format: str) -> tuple[str | None, list[dict]]:
+def normalize_showcase_input(
+    payload: JsonDict, format: str, *, allow_images: bool = False
+) -> tuple[str | None, list[dict]]:
+    images = []
     if format.endswith("FilesWithTextFormat"):
         text, attachments = payload.get("text") or "", payload.get("files", [])
     elif format.endswith("TextFormat"):
@@ -118,7 +121,12 @@ def normalize_showcase_input(payload: JsonDict, format: str) -> tuple[str | None
             attachments = [
                 part for part in content if isinstance(part, dict) and part.get("type") in {"file_url", "file"}
             ]
-            if len(texts) + len(attachments) != len(content):
+            images = (
+                [part for part in content if isinstance(part, dict) and part.get("type") == "image_url"]
+                if allow_images
+                else []
+            )
+            if len(texts) + len(attachments) + len(images) != len(content):
                 raise ValueError("Unsupported input part")
         else:
             raise ValueError("Invalid user content")
@@ -131,7 +139,7 @@ def normalize_showcase_input(payload: JsonDict, format: str) -> tuple[str | None
     ):
         raise ValueError("Invalid input")
     instruction = text.strip() or None
-    if instruction is None and not attachments:
+    if instruction is None and not attachments and not images:
         raise ValueError("Empty request")
     return instruction, attachments
 

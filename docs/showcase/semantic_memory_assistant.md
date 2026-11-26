@@ -60,8 +60,8 @@ policy independently of the HTTP upload dependency.
 ## Typed requests and outcomes
 
 Send ordinary `ChatCompletionRequest`, `TextFormat` or `FilesWithTextFormat` through
-a User Proxy. The coordinator supports the current user text and document
-attachments. It recalls shared evidence before calling the conversational model.
+a User Proxy. The coordinator supports current-user text, image parts and
+document attachments. It recalls shared evidence before calling the conversational model.
 File-only requests report stored and searchable counts without generating a
 synthetic user assertion or committing a conversational turn.
 
@@ -77,7 +77,11 @@ The model sees a `web_scrape` tool whose parameters use `WebScrapingRequest`:
 
 The coordinator assigns a unique scrape request ID, enforces crawl limits and
 retains the model's tool-call ID. Successful fetched documents are ingested before
-source-scoped recall. Tool results carry bounded evidence and attribution; the
+source-scoped recall. Tool results contain complete JSON records with nonblank
+facts and source IDs within their character and token budgets. Optional names and
+URLs cannot displace the facts; URLs longer than 512 characters are omitted from
+the model prompt and remain available in the structured source outcomes. Only
+facts actually delivered to the model count as usable evidence. The
 original user message is retained rather than replaced with scraper feedback.
 Partial fetches may continue. A failed round returns a tool error so the model can
 try another URL. Existing corpus evidence cannot substitute for a required fetch
@@ -101,7 +105,8 @@ projects these to one terminal `TextFormat` with completed or error status.
   Each scrape call reserves up to eight page attempts from the remaining budget;
   recursion depth is limited to three. Failed attempts consume the reservation.
 - 16 MiB per source and 32 MiB per workflow. Up to 32 active workflows and 1,024
-  completed-request tombstones.
+  completed-request tombstones. Acquisition is serialized within each workflow;
+  remaining bytes are checked before reading or staging each source.
 - Original text: 4,000 characters. Final answer: 16,000 characters. Model input:
   64,000 serialized characters including recalled memory and tool declarations.
 - Conversation recall: ten items, 6,000 characters and 2,000 tokens. Web evidence:
@@ -121,7 +126,16 @@ commit to the assistant's owning agent. Only the original user text and final
 answer are committed atomically. Evidence, tool messages, reasoning and warnings
 are excluded. If saving or acknowledgment fails, the answer is returned with
 “Conversational memory save could not be confirmed.” A lost acknowledgment does
-not prove that the native write failed or was rolled back.
+not prove that the native write failed or was rolled back. Upload-only ingestion
+and image-only answers do not request conversational memory writes; their results
+use `memory_status: "not_requested"` with no save warning.
+
+Current-user `image_url` parts are retained for the model alongside any actual
+text. HTTP, data URLs and guild-local images use the normal LLM attachment
+conversion. Document file parts are ingested separately. Image content and
+synthetic descriptions are never recorded as user text; image inputs remain
+subject to the model input limit. For image-only turns, actual attachment names
+or requested web URLs provide document retrieval terms without adding user text.
 
 ## Migration and verification
 

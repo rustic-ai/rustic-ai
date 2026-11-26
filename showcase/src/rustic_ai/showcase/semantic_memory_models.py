@@ -25,7 +25,7 @@ class SemanticMemoryAssistantResult(BaseModel):
     model_config = ConfigDict(extra="forbid")
     request_id: str
     answer: str
-    memory_status: Literal["saved", "unconfirmed"]
+    memory_status: Literal["saved", "unconfirmed", "not_requested"]
     warning: str | None = None
     sources: list[DocumentSourceOutcome] = Field(default_factory=list, max_length=32)
 

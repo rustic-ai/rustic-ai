@@ -423,13 +423,13 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
         # borrowing each other's visited URLs and page budget.
         if visited is None:
             visited = set()
-        if url in visited or (request.max_pages is not None and len(visited) >= request.max_pages):
+        if (
+            url in visited
+            or url.endswith((".zip", ".pdf", ".doc", ".docx", ".xls", ".xlsx"))
+            or (request.max_pages is not None and len(visited) >= request.max_pages)
+        ):
             return
         visited.add(url)
-
-        # Skip certain file types
-        if url.endswith((".zip", ".pdf", ".doc", ".docx", ".xls", ".xlsx")):
-            return
 
         # Scrape the page
         result, links, error = await self._scrape_page(url, context, request, filesystem, semaphore)
@@ -440,19 +440,40 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
 
             # Recursively scrape links if depth > 0
             if depth > 0 and links:
-                tasks = []
-                remaining = max(0, request.max_pages - len(visited)) if request.max_pages is not None else len(links)
-                for link in links[:remaining]:
-                    task = self._scrape_url_with_depth(
-                        link, depth - 1, context, request, filesystem, semaphore, scraped_docs, errors, visited
+                # Select eligible links before applying the remaining page budget.
+                # Create only one batch of coroutines at a time.
+                candidates = iter(dict.fromkeys(links))
+                while request.max_pages is None or len(visited) < request.max_pages:
+                    remaining = (
+                        request.max_pages - len(visited)
+                        if request.max_pages is not None
+                        else self.config.parallel_pages
                     )
-                    tasks.append(task)
-
-                # Process in batches
-                batch_size = self.config.parallel_pages
-                for i in range(0, len(tasks), batch_size):
-                    batch = tasks[i : i + batch_size]
-                    await asyncio.gather(*batch, return_exceptions=True)
+                    batch = []
+                    batch_urls = []
+                    for link in candidates:
+                        if link in visited or link.endswith((".zip", ".pdf", ".doc", ".docx", ".xls", ".xlsx")):
+                            continue
+                        batch_urls.append(link)
+                        batch.append(
+                            self._scrape_url_with_depth(
+                                link, depth - 1, context, request, filesystem, semaphore, scraped_docs, errors, visited
+                            )
+                        )
+                        if len(batch) >= min(self.config.parallel_pages, remaining):
+                            break
+                    if not batch:
+                        break
+                    results = await asyncio.gather(*batch, return_exceptions=True)
+                    for link, result in zip(batch_urls, results):
+                        if isinstance(result, Exception):
+                            errors.append(
+                                ErrorMessage(
+                                    agent_type=self.get_qualified_class_name(),
+                                    error_type="SCRAPE_ENTRY_ERROR",
+                                    error_message=f"Error scraping entry URL {link}: {str(result)}",
+                                )
+                            )
 
     async def _do_scrape(
         self,
@@ -463,34 +484,34 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
         Internal async method that performs the actual scraping.
         This runs in the playwright event loop thread.
         """
-        # Ensure browser is running
         self._active_ops += 1
-        browser = await self._ensure_browser()
-
-        # Create a new context for this scraping session
+        context = None
         try:
-            context = await browser.new_context(
-                viewport={"width": 1920, "height": 1080},
-                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-            )
-        except Exception as e:
-            # Check for specific error indicating browser connection loss
-            if "closed" in str(e).lower() or "transport" in str(e).lower():
-                self.logger.warning(f"Browser context creation failed, re-initializing browser: {e}")
-                browser = await self._ensure_browser(force=True)
+            browser = await self._ensure_browser()
+
+            # Create a new context for this scraping session
+            try:
                 context = await browser.new_context(
                     viewport={"width": 1920, "height": 1080},
                     user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
                 )
-            else:
-                raise
+            except Exception as e:
+                # Check for specific error indicating browser connection loss
+                if "closed" in str(e).lower() or "transport" in str(e).lower():
+                    self.logger.warning(f"Browser context creation failed, re-initializing browser: {e}")
+                    browser = await self._ensure_browser(force=True)
+                    context = await browser.new_context(
+                        viewport={"width": 1920, "height": 1080},
+                        user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                    )
+                else:
+                    raise
 
-        scraped_docs: List[MediaLink] = []
-        errors: List[ErrorMessage] = []
-        semaphore = asyncio.Semaphore(self.config.parallel_pages)
-        visited: Set[str] = set()
+            scraped_docs: List[MediaLink] = []
+            errors: List[ErrorMessage] = []
+            semaphore = asyncio.Semaphore(self.config.parallel_pages)
+            visited: Set[str] = set()
 
-        try:
             self.logger.debug(f"Starting scraping for request: {scraping_request.id}")
 
             # Create tasks for all initial URLs
@@ -531,18 +552,18 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
             return scraped_docs, errors
 
         finally:
-            # Always close the context
-            await context.close()
-            self._active_ops -= 1
-
-            # Handle browser lifecycle based on configuration
-            if self.config.browser_lifecycle == BrowserLifecycle.PER_REQUEST:
-                await self._cleanup(only_idle=True)
-            elif self.config.browser_lifecycle == BrowserLifecycle.IDLE_TIMEOUT:
-                await asyncio.sleep(self.config.browser_idle_timeout_s)
-                if self._active_ops == 0:
+            try:
+                if context is not None:
+                    await context.close()
+            finally:
+                # Balance startup, context creation, scraping, close and cancellation failures.
+                self._active_ops -= 1
+                if self.config.browser_lifecycle == BrowserLifecycle.PER_REQUEST:
                     await self._cleanup(only_idle=True)
-            # PERSISTENT: do nothing, browser stays alive
+                elif self.config.browser_lifecycle == BrowserLifecycle.IDLE_TIMEOUT:
+                    await asyncio.sleep(self.config.browser_idle_timeout_s)
+                    if self._active_ops == 0:
+                        await self._cleanup(only_idle=True)
 
     @agent.processor(
         WebScrapingRequest, depends_on=[agent.AgentDependency(dependency_key="filesystem", guild_level=True)]

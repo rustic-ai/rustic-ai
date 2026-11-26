@@ -71,3 +71,67 @@ async def test_concurrent_crawls_have_independent_caps_and_output_files(tmp_path
         server.shutdown()
         server.server_close()
         thread.join(5)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("failure", ["startup", "context", "close", "cancel"])
+async def test_failed_browser_request_balances_counter_and_allows_cleanup(failure):
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock, Mock
+
+    from rustic_ai.playwright.agent import BrowserLifecycle
+
+    context = SimpleNamespace(close=AsyncMock())
+    browser = SimpleNamespace(new_context=AsyncMock(return_value=context), close=AsyncMock())
+    state = SimpleNamespace(
+        _active_ops=0,
+        _browser_lock=asyncio.Lock(),
+        _browser=browser,
+        _playwright=None,
+        _initialized=True,
+        config=SimpleNamespace(parallel_pages=1, browser_lifecycle=BrowserLifecycle.PER_REQUEST),
+        logger=Mock(),
+        _ensure_browser=AsyncMock(return_value=browser),
+        _scrape_url_with_depth=AsyncMock(),
+    )
+
+    async def cleanup(only_idle=False):
+        await PlaywrightScraperAgent._cleanup(state, only_idle)
+
+    state._cleanup = cleanup
+    error = RuntimeError("Transient browser failure")
+    if failure == "startup":
+        state._ensure_browser.side_effect = [error, browser]
+    elif failure == "context":
+        browser.new_context.side_effect = [error, context]
+    elif failure == "close":
+        context.close.side_effect = [error, None]
+    else:
+        state._ensure_browser.side_effect = [asyncio.CancelledError(), browser]
+    request = WebScrapingRequest(links=[MediaLink(url="https://example.test/")], max_pages=1)
+    with pytest.raises(asyncio.CancelledError if failure == "cancel" else RuntimeError):
+        await PlaywrightScraperAgent._do_scrape(state, request, None)
+    assert state._active_ops == 0
+    await PlaywrightScraperAgent._do_scrape(state, request, None)
+    assert state._active_ops == 0 and browser.close.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_crawl_filters_visited_and_unsupported_links_before_page_cap():
+    from types import MethodType, SimpleNamespace
+
+    root = "https://example.test/"
+    child = root + "article"
+    state = SimpleNamespace(config=SimpleNamespace(parallel_pages=5))
+    fetched = []
+
+    async def page(url, *args):
+        fetched.append(url)
+        return MediaLink(url=url), [root, root + "download.pdf", child, child] if url == root else [], None
+
+    state._scrape_page = page
+    state._scrape_url_with_depth = MethodType(PlaywrightScraperAgent._scrape_url_with_depth, state)
+    request = WebScrapingRequest(links=[MediaLink(url=root)], depth=1, max_pages=2)
+    docs, errors, visited = [], [], set()
+    await state._scrape_url_with_depth(root, 1, None, request, None, asyncio.Semaphore(5), docs, errors, visited)
+    assert fetched == [root, child] and len(visited) == 2 and not errors
