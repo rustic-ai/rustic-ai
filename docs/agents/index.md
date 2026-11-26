@@ -55,7 +55,6 @@ Rustic AI includes several specialized agents for various tasks:
 
 ### Utility Agents
 - [VectorAgent](core/vector_agent.md) - Document indexing and similarity search
-- [KnowledgeAgent](core/knowledge_agent.md) - Advanced knowledge base indexing with chunking, embedding pipelines, and hybrid search
 - [ProbeAgent](core/probe_agent.md) - Testing utility for monitoring agent interactions
 
 ### System Agents

@@ -126,7 +126,7 @@ The repository follows a consistent structure per module:
 
 **Data & tools:**
 - `chroma/`: Chroma vector database integration
-- `lancedb/`: LanceDB vector database integration
+- `uniko-agent/`: Native cognitive memory, document ingestion and attributed recall
 - `langchain/`: LangChain integration
 - `serpapi/`: SerpAPI search integration
 - `playwright/`: Web automation agents

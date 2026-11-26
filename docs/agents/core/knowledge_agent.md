@@ -1,513 +1,109 @@
-# KnowledgeAgent
+# KnowledgeAgent retirement and migration
 
-The `KnowledgeAgent` indexes media content into a knowledge base and provides semantic search capabilities. It processes `MediaLink` objects through configurable pipelines that chunk, embed, and store content for later retrieval.
+KnowledgeAgent, the core knowledge-base implementation and `rusticai-lancedb`
+are retired from the source tree. Use [Uniko MemoryAgent](../uniko/index.md) for
+native document ingestion, attributed recall and memory lifecycle, and the
+[document coordinator](../uniko/documents.md) for correlated multi-source workflows.
 
-## Overview
+Both [PaperBanana v2](../../showcase/paper_banana.md) and
+[Semantic Memory Assistant v2](../../showcase/semantic_memory_assistant.md) use
+these capabilities. This page retains the previous documentation URL to help
+users migrate saved specifications.
 
-KnowledgeAgent provides three core capabilities:
+## Removed public contracts
 
-- **Catalog**: Register media files in the knowledge base library
-- **Index**: Process media through chunking and embedding pipelines, storing vectors for search
-- **Search**: Perform hybrid (dense + sparse) semantic search with filtering and reranking
+| Retired surface | Replacement or migration disposition |
+| --- | --- |
+| KnowledgeAgent; `CatalogMediaLinks`, `CatalogMediaResults`, `IndexMediaLinks`, `IndexMediaResult`, `IndexMediaResults`, `KBTarget`, `KBSearchRequest`, `KBSearchResults` | `DocumentWorkflowRequest` for coordinated ingestion/recall; direct `IngestDocumentRequest` and `RecallRequest` for individual operations |
+| KnowledgeBase, Knol, catalog managers and the core knowledge-base configuration, pipeline and query types | Ordinary source files plus Uniko source, revision and record identities |
+| In-memory KB backend and the knowledge-base resolver namespace | `UnikoResolver` with explicit agent ownership and persistent local storage |
+| LanceDB package and backend/resolver | Native Uniko ingestion and recall |
+| KnowledgeBasedMemoriesStore and `kb_backend` | `UnikoMemoriesStore`; conversational storage remains owned by the LLM agent |
+| Arbitrary table targets, custom chunk/embedding pipelines, weighted targets, backend filters and hybrid/reranking controls | Retired; use supported Uniko scopes, record kinds and recall bounds |
 
-## Architecture
+Removed contracts have no compatibility aliases or legacy protocol adapter.
+Independent VectorAgent, Chroma, generic VectorStore/Embeddings, media and
+filesystem capabilities remain available. Uniko does not automatically import
+old LanceDB or Knol stores or translate old filters and schema definitions.
 
-```mermaid
-flowchart LR
-    subgraph Input
-        ML[MediaLink]
-    end
+## Typed replacement examples
 
-    subgraph Pipeline
-        C[Chunker]
-        P[Projector]
-        E[Embedder]
-    end
-
-    subgraph Storage
-        KB[KBIndexBackend]
-    end
-
-    ML --> C --> P --> E --> KB
-
-    subgraph Search
-        Q[Query] --> KB
-        KB --> R[Results]
-    end
-```
-
-## Configuration
-
-### KnowledgeAgentProps
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `search_defaults` | `SearchDefaults` | See below | Default search parameters |
-| `chunking` | `ChunkingDefaults` | See below | Text chunking settings |
-| `embedder` | `EmbedderDefaults` | See below | Embedding settings |
-
-### SearchDefaults
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `limit` | `int` | `10` | Maximum results to return |
-| `hybrid` | `HybridOptions` | 50/50 dense/sparse | Hybrid search weights |
-| `rerank` | `RerankOptions` | `None` | Reranking configuration |
-| `explain` | `bool` | `False` | Include search explanation |
-
-### ChunkingDefaults
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `chunk_size` | `int` | `4000` | Maximum chunk size in characters |
-| `chunk_overlap` | `int` | `200` | Overlap between chunks |
-
-### EmbedderDefaults
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `dimension` | `int` | `1024` | Embedding vector dimension |
-| `use_sign_hash` | `bool` | `True` | Use sign hashing for sparse vectors |
-| `use_tf_log` | `bool` | `True` | Use TF-log weighting |
-
-## Dependencies
-
-KnowledgeAgent requires two guild-level dependencies:
-
-| Dependency | Type | Description |
-|------------|------|-------------|
-| `filesystem` | `FileSystem` | Filesystem for storing library files |
-| `kb_backend` | `KBIndexBackend` | Vector database backend |
-
-### Configuring Dependencies
-
-```yaml
-dependency_map:
-  filesystem:
-    class_name: rustic_ai.core.guild.agent_ext.depends.filesystem.FileSystemResolver
-    properties:
-      base_path: /path/to/data
-    scope: guild
-  kb_backend:
-    class_name: rustic_ai.chroma.ChromaKBIndexResolver
-    properties:
-      collection_name: knowledge_base
-    scope: guild
-```
-
-## Basic Example
+Configure a DocumentCoordinator with a stable corpus session and an explicit
+MemoryAgent ID. Configure the MemoryAgent's Uniko dependency separately; see the
+[executable document guild](https://github.com/milliondreams/rustic-ai/blob/main/uniko-agent/examples/document_guild.py).
 
 ```python
-from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder
-from rustic_ai.core.guild.dsl import DependencySpec
-from rustic_ai.core.agents.indexing.knowledge_agent import (
-    KnowledgeAgent,
-    KnowledgeAgentProps,
-    SearchDefaults,
-    ChunkingDefaults,
-    EmbedderDefaults,
-)
+from rustic_ai.uniko_agent import DocumentWorkflowRequest, MemorySource
 
-# Configure the agent
-props = KnowledgeAgentProps(
-    search_defaults=SearchDefaults(limit=20),
-    chunking=ChunkingDefaults(chunk_size=2000, chunk_overlap=100),
-    embedder=EmbedderDefaults(dimension=1024),
-)
-
-# Create agent spec
-knowledge_agent_spec = (
-    AgentBuilder(KnowledgeAgent)
-    .set_id("KnowledgeAgent")
-    .set_name("Knowledge Agent")
-    .set_description("Indexes and searches documents")
-    .set_properties(props)
-    .build_spec()
-)
-
-# Build guild with dependencies
-guild = (
-    GuildBuilder("kb_guild", "Knowledge Base Guild", "Document indexing and search")
-    .add_agent_spec(knowledge_agent_spec)
-    .set_dependency(
-        "filesystem",
-        DependencySpec(
-            class_name="rustic_ai.core.guild.agent_ext.depends.filesystem.FileSystemResolver",
-            properties={"base_path": "./data"},
-            scope="guild",
-        ),
-    )
-    .set_dependency(
-        "kb_backend",
-        DependencySpec(
-            class_name="rustic_ai.core.knowledgebase.kbindex_backend_memory.MemoryKBIndexBackend",
-            properties={},
-            scope="guild",
-        ),
-    )
-    .launch("myorg")
+request = DocumentWorkflowRequest(
+    request_id="harbor-reference-1",
+    sources=[MemorySource(
+        source_id="harbor-plan",
+        path_hint="harbor.md",
+        mime_type="text/markdown",
+        text="Harbor pilot budget is CAD 42000. Mina Patel coordinates it.",
+    )],
+    query="What is the Harbor pilot budget and who coordinates it?",
 )
 ```
 
-## Message Types
+Publish that request to the coordinator's configured request topic. It returns
+`DocumentWorkflowResult` with per-source ingestion outcomes and bounded evidence,
+or `DocumentWorkflowError` through `ctx.send_error`. A stored source is not
+necessarily searchable. Supply no query for ingestion-only requests; supply no
+sources to recall from the configured corpus.
 
-### IndexMediaLinks
-
-Request to index media files into the knowledge base.
+For direct recall through MemoryAgent:
 
 ```python
-from rustic_ai.core.agents.indexing.knowledge_agent import IndexMediaLinks
-from rustic_ai.core.agents.commons.media import MediaLink
+from rustic_ai.uniko_agent import MemoryScope, RecallRequest
 
-request = IndexMediaLinks(
-    media=[
-        MediaLink(
-            url="/path/to/document.txt",
-            name="document.txt",
-            mimetype="text/plain",
-            on_filesystem=True,
-        ),
-        MediaLink(
-            url="/path/to/readme.md",
-            name="readme.md",
-            mimetype="text/markdown",
-            on_filesystem=True,
-        ),
-    ]
+request = RecallRequest(
+    query="Harbor pilot budget",
+    scope=MemoryScope(sessions=["corpus:harbor:references"]),
+    allowed_record_kinds=["external_evidence"],
+    item_limit=10,
+    max_characters=6000,
+    token_budget=2000,
 )
 ```
 
-### IndexMediaResults
-
-Response containing indexing status for each media file.
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `results` | `List[IndexMediaResult]` | Per-file indexing results |
-
-Each `IndexMediaResult` contains:
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `media_id` | `str` | ID of the media file |
-| `knol_id` | `Optional[str]` | Knowledge object ID if successful |
-| `status` | `str` | `"indexed"` or `"failed"` |
-| `error` | `Optional[str]` | Error message if failed |
-| `metadata` | `Optional[Dict]` | Original media metadata |
-
-### CatalogMediaLinks
-
-Request to catalog (register) media files without full indexing.
-
-```python
-from rustic_ai.core.agents.indexing.knowledge_agent import CatalogMediaLinks
-
-request = CatalogMediaLinks(
-    media=[MediaLink(url="/path/to/file.txt", on_filesystem=True)]
-)
-```
-
-### KBSearchRequest
-
-Request to search the knowledge base.
-
-```python
-from rustic_ai.core.agents.indexing.knowledge_agent import KBSearchRequest, KBTarget
-from rustic_ai.core.knowledgebase.query import HybridOptions, BoolFilter, FilterClause, FilterOp
-
-# Simple text search
-request = KBSearchRequest(text="machine learning algorithms")
-
-# Advanced search with filters and hybrid options
-request = KBSearchRequest(
-    text="neural networks",
-    limit=20,
-    hybrid=HybridOptions(dense_weight=0.7, sparse_weight=0.3),
-    filter=BoolFilter(
-        must=[FilterClause(field="mimetype", op=FilterOp.EQ, value="text/markdown")]
-    ),
-    explain=True,
-)
-
-# Search specific tables/vectors
-request = KBSearchRequest(
-    text="embeddings",
-    targets=[
-        KBTarget(table_name="text_chunks", vector_column="v_text_1024", weight=1.0),
-    ],
-)
-```
-
-### KBSearchResults
-
-Search results with optional explanation data.
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `results` | `List[SearchResult]` | Matching chunks |
-| `query_text` | `Optional[str]` | Original query text |
-| `explain` | `Optional[ExplainData]` | Search explanation if requested |
-| `search_duration_ms` | `Optional[float]` | Search duration |
-
-Each `SearchResult` contains:
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `chunk_id` | `str` | Unique chunk identifier |
-| `score` | `float` | Similarity score |
-| `payload` | `Dict[str, Any]` | Chunk content and metadata |
-
-## Search Features
-
-### Hybrid Search
-
-Combine dense (vector) and sparse (keyword) search:
-
-```python
-from rustic_ai.core.knowledgebase.query import HybridOptions, FusionStrategy
-
-hybrid = HybridOptions(
-    dense_weight=0.6,      # Weight for vector similarity
-    sparse_weight=0.4,     # Weight for keyword matching
-    fusion_strategy=FusionStrategy.RRF,  # Reciprocal Rank Fusion
-)
-```
-
-### Filtering
-
-Apply structured filters to narrow search results:
-
-```python
-from rustic_ai.core.knowledgebase.query import BoolFilter, FilterClause, FilterOp
-
-filter = BoolFilter(
-    must=[
-        FilterClause(field="mimetype", op=FilterOp.EQ, value="text/plain"),
-        FilterClause(field="size_in_bytes", op=FilterOp.LT, value=100000),
-    ],
-    must_not=[
-        FilterClause(field="name", op=FilterOp.IN, value=["draft.txt", "temp.txt"]),
-    ],
-)
-```
-
-**Filter Operations:**
-
-| Operation | Description |
-|-----------|-------------|
-| `EQ` | Equal to |
-| `NEQ` | Not equal to |
-| `GT` | Greater than |
-| `GTE` | Greater than or equal |
-| `LT` | Less than |
-| `LTE` | Less than or equal |
-| `IN` | In list |
-| `NIN` | Not in list |
-| `EXISTS` | Field exists (boolean) |
-
-### Reranking
-
-Apply reranking to improve result quality:
-
-```python
-from rustic_ai.core.knowledgebase.query import RerankOptions, RerankStrategy
-
-rerank = RerankOptions(
-    strategy=RerankStrategy.RRF,  # Reciprocal Rank Fusion
-    top_n=50,                     # Rerank top N candidates
-)
-```
-
-**Rerank Strategies:**
-
-| Strategy | Description |
-|----------|-------------|
-| `NONE` | No reranking |
-| `RRF` | Reciprocal Rank Fusion |
-| `LINEAR` | Linear score combination |
-| `CROSS_ENCODER` | Cross-encoder model (requires model) |
-| `LLM` | LLM-based reranking (requires model) |
-
-## Pipeline Components
-
-### Chunkers
-
-Break content into smaller pieces for embedding:
-
-| Chunker | Description |
-|---------|-------------|
-| `SimpleTextChunker` | Fixed-size character chunks with overlap |
-| `RecursiveCharacterChunker` | Recursive splitting on separators |
-| `MarkdownHeaderChunker` | Split by markdown headers |
-| `SentenceRegexChunker` | Split by sentence boundaries |
-| `CodeLanguageChunker` | Language-aware code splitting |
-| `JsonPathChunker` | Split JSON by path |
-
-### Embedders
-
-Generate vector representations:
-
-| Embedder | Description |
-|----------|-------------|
-| `FeatureHashingTextEmbedder` | Fast feature hashing (default) |
-| `ByteHistTextEmbedder` | Byte histogram features |
-| `ByteNgramTextEmbedder` | Byte n-gram features |
-| `ContentDigestEmbedder` | Content hash-based |
-
-### Projectors
-
-Transform content before embedding:
-
-| Projector | Description |
-|-----------|-------------|
-| `HtmlToTextProjector` | Strip HTML tags |
-| `JsonToTextProjector` | Extract text from JSON |
-| `TextNormalizeWhitespaceProjector` | Normalize whitespace |
-
-## MediaLink
-
-Input format for media to be indexed:
-
-```python
-from rustic_ai.core.agents.commons.media import MediaLink
-
-# Local file
-media = MediaLink(
-    id="doc-001",
-    url="/path/to/document.txt",
-    name="document.txt",
-    mimetype="text/plain",
-    encoding="utf-8",
-    on_filesystem=True,
-    metadata={"author": "John Doe", "category": "technical"},
-)
-
-# Remote URL (will be fetched)
-media = MediaLink(
-    url="https://example.com/document.pdf",
-    name="document.pdf",
-    mimetype="application/pdf",
-    on_filesystem=False,
-)
-```
-
-## YAML Configuration
-
-```yaml
-agents:
-  - id: KnowledgeAgent
-    name: Knowledge Agent
-    description: Indexes and searches documents
-    class_name: rustic_ai.core.agents.indexing.knowledge_agent.KnowledgeAgent
-    properties:
-      search_defaults:
-        limit: 20
-        hybrid:
-          dense_weight: 0.6
-          sparse_weight: 0.4
-        explain: false
-      chunking:
-        chunk_size: 2000
-        chunk_overlap: 100
-      embedder:
-        dimension: 1024
-        use_sign_hash: true
-        use_tf_log: true
-
-dependency_map:
-  filesystem:
-    class_name: rustic_ai.core.guild.agent_ext.depends.filesystem.FileSystemResolver
-    properties:
-      base_path: ./data
-    scope: guild
-  kb_backend:
-    class_name: rustic_ai.chroma.ChromaKBIndexResolver
-    properties:
-      collection_name: knowledge
-    scope: guild
-```
-
-## Backend Options
-
-### In-Memory Backend
-
-For development and testing:
-
-```python
-from rustic_ai.core.knowledgebase.kbindex_backend_memory import MemoryKBIndexBackend
-```
-
-### Chroma Backend
-
-For production with Chroma vector database:
-
-```python
-# Requires: poetry add rusticai-chroma
-from rustic_ai.chroma import ChromaKBIndexResolver
-```
-
-### LanceDB Backend
-
-For production with LanceDB:
-
-```python
-# Requires: poetry add rusticai-lancedb
-from rustic_ai.lancedb import LanceDBKBIndexBackendResolver
-```
-
-## API Reference
-
-### Classes
-
-| Class | Description |
-|-------|-------------|
-| `KnowledgeAgent` | Main agent for indexing and search |
-| `KnowledgeAgentProps` | Agent configuration properties |
-| `KnowledgeAgentConfig` | Full configuration with pipelines |
-| `IndexMediaLinks` | Request to index media |
-| `IndexMediaResults` | Indexing results |
-| `CatalogMediaLinks` | Request to catalog media |
-| `CatalogMediaResults` | Catalog results |
-| `KBSearchRequest` | Search request |
-| `KBSearchResults` | Search results |
-| `KBTarget` | Search target specification |
-
-### Imports
-
-```python
-from rustic_ai.core.agents.indexing.knowledge_agent import (
-    KnowledgeAgent,
-    KnowledgeAgentProps,
-    KnowledgeAgentConfig,
-    IndexMediaLinks,
-    IndexMediaResults,
-    CatalogMediaLinks,
-    CatalogMediaResults,
-    KBSearchRequest,
-    KBSearchResults,
-    KBTarget,
-    SearchDefaults,
-    ChunkingDefaults,
-    EmbedderDefaults,
-)
-
-from rustic_ai.core.knowledgebase.query import (
-    SearchQuery,
-    SearchResults,
-    SearchResult,
-    HybridOptions,
-    RerankOptions,
-    BoolFilter,
-    FilterClause,
-    FilterOp,
-)
-
-from rustic_ai.core.agents.commons.media import MediaLink
-```
-
-## Related Documentation
-
-- [Vector Agent](vector_agent.md) - Simpler vector search agent
-- [LLM Agent Memory](../llm_agent_memory.md) - Current conversation memory wrappers
-- [Dependency Injection](../../howto/dependency_injection.md) - Configuring dependencies
-- [Chroma Resolver](../../dependencies/chroma/chroma_resolver.md) - Chroma backend setup
+Use `SourceReadRequest` for read, outline or original-content operations with
+returned source identities. Use `ForgetMemoryRecordRequest` with
+`kind="external_evidence"` for document removal, or `DeleteMemorySessionRequest`
+for corpus removal. Deletion is an explicit operation, never a migration side
+effect. See the [message protocol](../uniko/protocol.md) for complete I/O schemas.
+
+## Existing deployments and saved guilds
+
+1. Inventory saved GuildSpecs, catalog blueprints, corpus files, Knol manifests,
+   LanceDB stores and legacy conversation records before upgrading.
+2. Preserve the existing stores and a working old-release export environment.
+   The [pre-retirement source snapshot](https://github.com/milliondreams/rustic-ai/tree/918d9d403b2e9f0f08569655af7201271955cfcc)
+   remains available. Retain metadata and an export/import journal when required.
+3. Reimport the v2 consumer blueprints or rewrite custom agents, resolvers,
+   message formats and routes to the typed Uniko contracts. Remove `kb_backend`
+   and the retired memory plugin. A class-name substitution alone is insufficient.
+4. Stage remote source content into the configured guild filesystem. Configure
+   stable organization/guild/agent identities, persistent local native volumes,
+   one process owner and backups. Guild/deployment design owns access policy and
+   acquisition credentials.
+5. Reingest sources under stable source IDs and verify hashes/counts, provenance,
+   stored/searchable outcomes, current revisions, source reads and close/reopen.
+   Keep old stores for rollback until deployment cutover is verified.
+6. Drain active old guilds before installing the declared breaking release. If
+   inventory establishes no legacy data or saved specifications, verify a fresh
+   deployment instead.
+
+Unfinished application workflows are transient; replacing a blueprint does not
+resume an old workflow. The [migration plan](../../design/knowledge-agent-uniko-migration.md)
+separates repository retirement, broad acceptance and deployed-data cutover.
+
+## Publication gate
+
+Phase 4 removes source APIs without changing package versions. These builds are
+for local verification and must not be published under the existing compatibility
+promise. A separate release task must select a coordinated breaking release,
+update dependent package versions/constraints and refresh affected locks before
+publication. Repository cleanup does not establish deployment readiness and
+performs no stored-data deletion.

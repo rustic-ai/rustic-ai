@@ -50,7 +50,6 @@ nav:
           - Guild Manager Agent: agents/core/guild_manager_agent.md
           - User Proxy Agent: agents/core/user_proxy_agent.md
           - Vector Agent: agents/core/vector_agent.md
-          - Knowledge Agent: agents/core/knowledge_agent.md
           - Simple LLM Agent: agents/core/simple_llm_agent.md
           - Probe Agent: agents/core/probe_agent.md
       - LiteLLM:

@@ -2,7 +2,7 @@
 
 Replace the LanceDB integration, KnowledgeAgent and its knowledge-base implementation with Uniko for document ingestion, evidence retrieval and semantic conversational memory. Migrate the existing consumers directly to Uniko's typed protocols, then remove the retired implementation. Keep generic media, filesystem, embedding and vector-store capabilities that have independent consumers.
 
-This is an implementation plan against repository revision `3c530d5` on 2026-11-25. The shared foundation and PaperBanana migration are implemented; later consumer migration, legacy retirement and deployment cutover remain pending. The migration assumes existing deployed content may need preservation until deployment inventory establishes otherwise. Removing code does not authorize deleting stored data.
+This is an implementation plan against repository revision `3c530d5` on 2026-11-25. Phases 1–4 are implemented: the shared foundation, both consumer migrations and legacy retirement. Phase 5 broad repository acceptance and Phase 6 deployment cutover remain pending. Package versions are unchanged; coordinated breaking-release versioning is a separate publication gate. The migration assumes existing deployed content may need preservation until deployment inventory establishes otherwise. Removing code does not authorize deleting stored data.
 
 ## Migration decision and scope
 
@@ -12,9 +12,9 @@ Retire the old Knol catalog, table schema, pipeline and backend-selection contra
 
 The migration does not require changing the native UniDB repository. UniDB remains the generic application-graph capability. Chroma and the generic VectorAgent remain separate vector-store capabilities. Existing dated dependency and implementation reports remain historical evidence.
 
-## Current consumer inventory
+## Baseline consumer inventory
 
-| Consumer or surface | Current dependency | Required migration |
+| Consumer or surface | Baseline dependency | Required migration |
 | --- | --- | --- |
 | [PaperBanana](https://github.com/milliondreams/rustic-ai/blob/3c530d596b98217c47dad490f5d8cf24d0a294e3/showcase/apps/paper_banana_guild.json) | KnowledgeAgent through `IndexMediaLinks`, `KBSearchRequest` and result routes | Document ingestion, correlated completion, bounded recall and evidence-to-planner conversion |
 | [Semantic Memory Assistant](https://github.com/milliondreams/rustic-ai/blob/3c530d596b98217c47dad490f5d8cf24d0a294e3/showcase/apps/semantic_memory_assistant.json) | `KnowledgeBasedMemoriesStore`, `kb_backend`, filesystem and scraper | Existing Uniko conversational wrapper plus explicit document evidence ingestion/recall |
@@ -23,9 +23,9 @@ The migration does not require changing the native UniDB repository. UniDB remai
 | Saved catalog blueprints and GuildSpecs | Old class names, resolver names and plugin kinds | Inventory and rewrite or reimport specifications before upgrading those guilds to the release that removes the old classes |
 | External Python users | Public KnowledgeAgent, KnowledgeBase and Knol APIs | Breaking-release guidance with direct replacement examples |
 
-Production imports into `core/knowledgebase` originate only from KnowledgeAgent, KnowledgeBasedMemoriesStore and the LanceDB adapter in this checkout. The directory contains 49 Python files and 5,859 lines. That establishes the repository removal boundary; it does not establish deployed usage.
+At the baseline revision, production imports into `core/knowledgebase` originated only from KnowledgeAgent, KnowledgeBasedMemoriesStore and the LanceDB adapter. The directory contained 49 Python files and 5,859 lines. That establishes the repository removal boundary; it does not establish deployed usage.
 
-At the baseline revision, neither consumer had tests selecting its blueprint filename. PaperBanana now has executable acceptance coverage in `showcase/tests/paper_banana`; Semantic Memory Assistant still needs migration coverage.
+At the baseline revision, neither consumer had tests selecting its blueprint filename. PaperBanana now has executable acceptance coverage in `showcase/tests/paper_banana`; Semantic Memory Assistant now has executable native-memory, document and browser acceptance coverage.
 
 ## Capability mapping
 
@@ -288,7 +288,7 @@ The Uniko package now provides `DocumentCoordinatorAgent`, typed workflow contra
 
 Workflow coordination is transient. Documents and their immutable source/revision identities persist; callers resubmit unfinished workflows after restart. There is no automatic workflow continuation or durable terminal journal in this phase. Within a running coordinator, retry a terminal failure with a new request ID while preserving the source identities and bytes. Bounded tombstones suppress completed duplicates only while retained.
 
-PaperBanana has migrated in Phase 2. LanceDB, KnowledgeAgent and the legacy memory plugin remain until the Semantic Memory Assistant migration and retirement phases complete.
+PaperBanana migrated in Phase 2 and Semantic Memory Assistant in Phase 3. Phase 4 removes KnowledgeAgent, LanceDB and their dedicated knowledge-base internals and tests.
 
 ### Phase 2 implemented PaperBanana
 
@@ -308,11 +308,15 @@ The retired wrapper and eager export are removed, as is Iterative Studio's unuse
 KB dependency. See the [assistant guide](../showcase/semantic_memory_assistant.md)
 for initialization, protocols, limits and saved-spec migration.
 
-### Phase 4 retirement checkpoint
+### Phase 4 implemented legacy retirement
 
-Remove KnowledgeBasedMemoriesStore's eager import/export before deleting core KB modules. Preserve other cases in mixed resolver and memory tests. Remove the root LanceDB dependency and module registration, then refresh affected locks and build metadata. Keep the prior release/source snapshot available for deployments that still need export; do not perform data deletion as part of source cleanup.
+KnowledgeAgent, its message models, all core knowledge-base internals, the stale knowledge-base resolver namespace and the LanceDB subproject are removed. Their exclusive tests are retired; mixed resolver tests retain KV, filesystem and code-runner assertions. Independent VectorAgent, Chroma, embeddings, media, filesystem and pandas capabilities remain. The root LanceDB dependency and module registration are removed, and the root lock is refreshed without unrelated version upgrades.
 
-Record the public API removals, new protocol examples, retired controls, native storage requirements and saved-spec migration steps. Choose a coordinated breaking version before publication and update package constraints accordingly.
+The [retirement notice](../agents/core/knowledge_agent.md) lists removed APIs, direct Uniko replacements, saved-spec migration and native persistence requirements. The old documentation URL remains as a migration entry point. Historical reports and the pre-retirement source snapshot remain available; this cleanup performs no stored-data deletion or export/import.
+
+Package versions and published constraints are unchanged in this phase. A separate release task must choose a coordinated breaking version and update affected package constraints before publication. Focused retirement verification does not complete Phase 5's broad monorepo acceptance or Phase 6's deployed-data cutover.
+
+Focused Phase 4 verification on 2026-11-26: 309 regression tests passed, and all 679 remaining core tests collected. Thirteen fresh package builds excluded retired code; a clean environment containing those non-editable wheels passed 12 copied guild-flow tests plus independent native Chroma upsert/read/search/deletion. The root lock removed five LanceDB-only packages without changing remaining dependency versions. Retirement examples, blueprint class validation, affected lint/types and strict documentation builds passed. Native guild tests require access to their local model cache; no hosted synthesis provider was used.
 
 ### Phase 5 local verification boundary
 
@@ -326,7 +330,7 @@ Identify existing corpus/source locations, saved GuildSpecs/catalog blueprints, 
 
 If deployment inventory establishes that there are no old corpora or saved configurations, omit export/import and verify a fresh target deployment instead. Production synthesis-provider checks can use the deployment's existing credential configuration when required; phases 1–5 do not require new provider keys.
 
-Use a declared breaking framework release for removed public APIs rather than a patch release under old compatibility promises. Update published dependency constraints across affected packages. Uniko and pandas-analyst currently constrain core/llm-agent below 1.5.0, so version selection and package metadata must be coordinated. Planning this release does not publish packages or create a pull request.
+Publication requires a declared breaking framework release for removed public APIs rather than a patch release under old compatibility promises. Phase 4 deliberately leaves current versions unchanged until that separate release task. Update published dependency constraints across affected packages. Uniko and pandas-analyst currently constrain core/llm-agent below 1.5.0, so version selection and package metadata must be coordinated. Planning this release does not publish packages or create a pull request.
 
 ## Packaging and documentation work
 

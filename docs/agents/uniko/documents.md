@@ -2,7 +2,7 @@
 
 `DocumentCoordinatorAgent` provides a reusable document workflow over the existing Uniko MemoryAgent protocols. It snapshots sources, waits for their ingestion outcomes, optionally recalls bounded evidence, and emits one terminal result or typed error. A guild supplies the corpus, routes, filesystem and native memory dependency; synthesis and access policy remain in the guild.
 
-This is the shared foundation for the KnowledgeAgent migration. [PaperBanana v2](../../showcase/paper_banana.md) uses this foundation for uploaded references. The Semantic Memory Assistant migration remains a later phase.
+This is the shared document foundation used by [PaperBanana v2](../../showcase/paper_banana.md) and the [Semantic Memory Assistant v2](../../showcase/semantic_memory_assistant.md). It replaces the retired KnowledgeAgent document workflow; see the [migration notice](../core/knowledge_agent.md) for removed APIs and deployment preparation.
 
 ## Initialization and routing
 

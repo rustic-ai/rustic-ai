@@ -1847,21 +1847,6 @@ wrapt = ">=1.10,<3"
 dev = ["PyTest", "PyTest-Cov", "bump2version (<1)", "setuptools ; python_version >= \"3.12\"", "tox"]
 
 [[package]]
-name = "deprecation"
-version = "2.1.0"
-description = "A library to handle automated deprecations"
-optional = false
-python-versions = "*"
-groups = ["main"]
-files = [
-    {file = "deprecation-2.1.0-py2.py3-none-any.whl", hash = "sha256:a10811591210e1fb0e768a8c25517cabeabcba6f0bf96564f8ff45189f90b14a"},
-    {file = "deprecation-2.1.0.tar.gz", hash = "sha256:72b3bde64e5d778694b0cf68178aed03d15e15477116add3fb773e581f9518ff"},
-]
-
-[package.dependencies]
-packaging = "*"
-
-[[package]]
 name = "diffusers"
 version = "0.43.0"
 description = "State-of-the-art diffusion in PyTorch."
@@ -4234,74 +4219,6 @@ websocket-client = ">=0.32.0,!=0.40.0,<0.41 || >=0.43.dev0"
 
 [package.extras]
 google-auth = ["google-auth (>=1.0.1)"]
-
-[[package]]
-name = "lance-namespace"
-version = "0.13.0"
-description = "Lance Namespace interface and plugin registry"
-optional = false
-python-versions = ">=3.8"
-groups = ["main"]
-files = [
-    {file = "lance_namespace-0.13.0-py3-none-any.whl", hash = "sha256:438c7b17aef421c21c138196e715f2510d62f07e865372047f87c1e75e618c7a"},
-    {file = "lance_namespace-0.13.0.tar.gz", hash = "sha256:24554a0997bdb39595c6e4cb3ac6722069f6cd3bd1a74e7acbba7bfaf774a40d"},
-]
-
-[package.dependencies]
-lance-namespace-urllib3-client = "0.13.0"
-
-[[package]]
-name = "lance-namespace-urllib3-client"
-version = "0.13.0"
-description = "Lance Namespace Specification"
-optional = false
-python-versions = ">=3.8"
-groups = ["main"]
-files = [
-    {file = "lance_namespace_urllib3_client-0.13.0-py3-none-any.whl", hash = "sha256:fb361eb4f6c7f2d1f9e92809609657b73e38241393e9c4516e12d6b6ee643a0a"},
-    {file = "lance_namespace_urllib3_client-0.13.0.tar.gz", hash = "sha256:1e8a79c6e4e6277033597fd76aa0e2f33d909ca1436c935936e9e569221f43ef"},
-]
-
-[package.dependencies]
-pydantic = ">=2"
-python-dateutil = ">=2.8.2"
-typing-extensions = ">=4.7.1"
-urllib3 = ">=1.25.3,<3.0.0"
-
-[[package]]
-name = "lancedb"
-version = "0.41.0"
-description = "lancedb"
-optional = false
-python-versions = ">=3.10"
-groups = ["main"]
-files = [
-    {file = "lancedb-0.41.0-cp310-abi3-macosx_11_0_arm64.whl", hash = "sha256:b8892ff52eb32224c0414feb6f57357c4b79edeed0c2a4afe6d7f6f538dc12d0"},
-    {file = "lancedb-0.41.0-cp310-abi3-manylinux_2_28_aarch64.whl", hash = "sha256:984d97c50169face1539ccaa802a2002ebc7b50a445c3e7e8cd24513569c1aab"},
-    {file = "lancedb-0.41.0-cp310-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:e3da8fbde2c916d41fc324a91a25b3f57a7b8ac5eb2981d5fb8fd0914901c44e"},
-    {file = "lancedb-0.41.0-cp310-abi3-win_amd64.whl", hash = "sha256:c00ba59f0f880c2581566851a6018c00ef5c49be56ac4484c600e5129135f059"},
-    {file = "lancedb-0.41.0.tar.gz", hash = "sha256:ca0b0418eaaa5c2aa8e9ff1e98a475b14d4517af3b9face22300213871bd1ebc"},
-]
-
-[package.dependencies]
-deprecation = ">=2.1.0"
-lance-namespace = ">=0.13.0"
-numpy = ">=1.24.0"
-packaging = ">=23.0"
-pyarrow = ">=16"
-pydantic = ">=2.7.4,<3"
-tqdm = ">=4.27.0"
-
-[package.extras]
-azure = ["adlfs (>=2024.2.0)"]
-clip = ["open-clip-torch", "pillow (>=12.1.1)", "torch"]
-dev = ["maturin (>=1.10)", "pre-commit (>=3.5.0)", "pyright (>=1.1.350)", "ruff (>=0.3.0)", "typing-extensions (>=4.0.0) ; python_full_version < \"3.11.0\""]
-docs = ["mkdocs", "mkdocs-jupyter", "mkdocs-material", "mkdocstrings-python"]
-embeddings = ["awscli (>=1.44.38)", "boto3 (>=1.28.57)", "botocore (>=1.31.57)", "cohere (>=4.0)", "colpali-engine (>=0.3.10)", "google-genai (>=1.0.0)", "huggingface-hub (>=0.19.0)", "ibm-watsonx-ai (>=1.1.2) ; python_full_version >= \"3.10.0\"", "instructorembedding (>=1.0.1)", "ollama (>=0.3.0)", "open-clip-torch (>=2.20.0)", "openai (>=1.6.1)", "pillow (>=12.1.1)", "requests (>=2.31.0)", "sentence-transformers (>=2.2.0)", "sentencepiece (>=0.1.99)", "torch (>=2.0.0)"]
-otel = ["opentelemetry-api"]
-pylance = ["pylance (>=14.0.2)"]
-siglip = ["pillow (>=12.1.1)", "sentencepiece", "torch", "transformers (>=4.41.0)"]
-tests = ["aiohttp (>=3.9.0)", "boto3 (>=1.28.57)", "datafusion (>=54,<55)", "duckdb (>=0.9.0)", "opentelemetry-sdk (>=1.30.0)", "pandas (>=1.4)", "polars (>=0.19,<=1.32.3)", "pyarrow (<25)", "pyarrow-stubs (>=16.0)", "pylance (==14.0.2)", "pytest (>=7.0)", "pytest-asyncio (>=0.21)", "pytest-mock (>=3.10)", "pytz (>=2023.3)", "requests (>=2.31.0)"]
 
 [[package]]
 name = "langchain-core"
@@ -9238,27 +9155,6 @@ type = "directory"
 url = "huggingface"
 
 [[package]]
-name = "rusticai-lancedb"
-version = "1.4.0"
-description = "Support for LanceDB backend KnowledgeBase"
-optional = false
-python-versions = ">=3.13,<3.14"
-groups = ["main"]
-files = []
-develop = true
-
-[package.dependencies]
-lancedb = "^0.41.0"
-rusticai-core = {path = "../core", develop = true}
-
-[package.extras]
-test = ["pytest (>=9.2.0,<10.0.0)"]
-
-[package.source]
-type = "directory"
-url = "lancedb"
-
-[[package]]
 name = "rusticai-langchain"
 version = "1.4.0"
 description = "Rustic AI module with LangChain integrations"
@@ -12661,4 +12557,4 @@ google-cloud = ["gcsfs"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.13,<3.14"
-content-hash = "c44d00ac42817ffe395136e6a0e9419589f4dd1af4800b3cadece9396052e1a9"
+content-hash = "c414c113b9959ca27e4ccc0eab799d1cdd52647103ad7cd01c33e4abd0cd0714"

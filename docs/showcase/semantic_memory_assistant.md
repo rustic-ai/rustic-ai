@@ -142,7 +142,9 @@ or requested web URLs provide document retrieval terms without adding user text.
 Replace saved v1 guilds with the v2 topology, dependency map and routes. Remove
 the retired knowledge-backed wrapper and `kb_backend`; configure native Uniko
 persistence. Legacy deployed databases are preserved and require a separate
-export/import decision. KnowledgeAgent and LanceDB retirement remain Phase 4.
+export/import decision. Phase 4 retires KnowledgeAgent, LanceDB and the core
+knowledge-base implementation; see the [retirement notice](../agents/core/knowledge_agent.md).
+Broad repository acceptance and deployment cutover remain separate phases.
 
 Acceptance tests run the shipped routes with deterministic generation and native
 local Uniko memory, including user isolation, follow-up recall, scrape recovery,

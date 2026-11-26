@@ -204,7 +204,8 @@ intermediate tool calls are recall-only. The [Semantic Memory Assistant](../show
 shows the complete guild, deadlines and acknowledgment handling.
 
 The legacy knowledge-backed memory wrapper and its eager export are retired.
-This does not remove KnowledgeAgent or migrate deployed legacy databases.
+KnowledgeAgent, the core knowledge-base internals and the LanceDB package are also retired.
+Existing deployments require the [legacy migration steps](core/knowledge_agent.md) before upgrading; stored databases are not migrated or deleted by this source change.
 Keep `rusticai-llm-agent` independent of Uniko; configure the wrapper dynamically
 from the Uniko package.
 
