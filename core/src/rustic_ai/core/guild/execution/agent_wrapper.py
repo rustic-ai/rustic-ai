@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import asyncio
 import logging
 import threading
 from typing import Any, Dict, Optional, Type
@@ -54,6 +55,11 @@ class AgentWrapper(ABC):
 
         self._shutdown_lock = threading.RLock()
         self._shutdown_complete = False
+        self._shutdown_started = False
+        self._shutdown_running = False
+        self._shutdown_task: asyncio.Task | None = None
+        self._shutdown_thread: threading.Thread | None = None
+        self._pending_resolvers: list[DependencyResolver] = []
         self.agent: Optional[Agent] = None
 
         self.agent_spec = agent_spec
@@ -73,17 +79,26 @@ class AgentWrapper(ABC):
         # Wrappers cross process/distributed execution boundaries before launch.
         state = self.__dict__.copy()
         state.pop("_shutdown_lock", None)
+        state.pop("_shutdown_thread", None)
+        state.pop("_shutdown_task", None)
         return state
 
     def __setstate__(self, state):
         self.__dict__.update(state)
         self._shutdown_lock = threading.RLock()
+        self._shutdown_task = None
+        self._shutdown_thread = None
 
     def initialize_agent(self) -> Agent:
         with self._shutdown_lock:
-            if self._shutdown_complete:
+            if self._shutdown_started or self._shutdown_complete:
                 raise RuntimeError("Cannot initialize a stopped agent wrapper")
-            return self._initialize_agent()
+            agent = self._initialize_agent()
+        # Ready handlers may stop this wrapper from the coroutine bridge thread.
+        # Resource setup is protected; message delivery must not hold its lock.
+        if not self._shutdown_started:
+            agent._notify_ready()
+        return agent
 
     def _initialize_agent(self) -> Agent:
         """
@@ -121,8 +136,6 @@ class AgentWrapper(ABC):
 
         # Notify the agent that it is ready to process messages
         self.logger.info(f"Agent {self.agent_spec.name} is ready to process messages")
-        self.agent._notify_ready()
-
         return self.agent
 
     def _load_dependency_resolver(self, name: str) -> DependencyResolver:
@@ -149,50 +162,131 @@ class AgentWrapper(ABC):
         """
         pass  # pragma: no cover
 
-    def shutdown(self) -> None:
-        """Stop ingress, release owned resources, then disconnect messaging."""
+    def _claim_shutdown(self) -> bool | None:
         with self._shutdown_lock:
-            if self._shutdown_complete:
-                return
-            self._shutdown_complete = True
-            messaging = getattr(self, "messaging", None)
-            try:
-                if self.agent is not None:
-                    if messaging is not None:
-                        for topic in self.agent.subscribed_topics:
-                            try:
-                                messaging.unsubscribe(topic, self.agent._get_client())
-                            except Exception:
-                                self.logger.exception("Failed to unsubscribe topic %s during shutdown", topic)
-                    try:
-                        self.agent.on_shutdown()
-                    except Exception:
-                        self.logger.exception("Agent shutdown hook failed")
-                    self._shutdown_resolvers()
-            finally:
-                if messaging is not None:
-                    try:
-                        if self.agent is not None:
-                            messaging.unregister_client(self.agent._get_client())
-                    finally:
-                        if self.messaging_owned:
-                            messaging.shutdown()
+            if self._shutdown_complete or self._shutdown_running:
+                return None
+            self._shutdown_running = True
+            first_stop = not self._shutdown_started
+            self._shutdown_started = True
+            self._shutdown_task = None
+            return first_stop
 
-    def _shutdown_resolvers(self) -> None:
+    def shutdown(self) -> None:
+        """Stop ingress immediately and drain owned resources.
+
+        A synchronous call on an event loop drains on a separate thread so
+        accepted work can finish on that loop. This worker outlives temporary
+        processor loops. Await shutdown_async() to wait for resource release.
+        Failed cleanup remains retryable without repeating the agent hook.
+        """
+        first_stop = self._claim_shutdown()
+        if first_stop is None:
+            return
+        try:
+            if first_stop:
+                self._prepare_shutdown()
+            try:
+                asyncio.get_running_loop()
+            except RuntimeError:
+                self._finish_shutdown()
+            else:
+                if not self._pending_resolvers:
+                    self._finish_shutdown()
+                else:
+                    self._shutdown_thread = threading.Thread(target=self._finish_shutdown, daemon=False)
+                    self._shutdown_thread.start()
+        except BaseException:
+            with self._shutdown_lock:
+                self._shutdown_running = False
+            raise
+
+    async def shutdown_async(self) -> None:
+        """Wait for owned cleanup, leaving failed obligations available to retry."""
+        first_stop = self._claim_shutdown()
+        if first_stop is not None:
+            try:
+                if first_stop:
+                    self._prepare_shutdown()
+                self._shutdown_task = asyncio.create_task(self._finish_shutdown_async())
+            except BaseException:
+                with self._shutdown_lock:
+                    self._shutdown_running = False
+                raise
+        task = self._shutdown_task
+        if task is not None:
+            await asyncio.shield(task)
+        else:
+            while self._shutdown_running:
+                await asyncio.sleep(0.005)
+
+    def _prepare_shutdown(self) -> None:
         seen: set[int] = set()
 
-        def close(resolver):
+        def collect(resolver):
             if id(resolver) in seen:
                 return
             seen.add(id(resolver))
-            children = tuple(getattr(resolver, "_injectors", {}).values())
-            try:
-                resolver.shutdown()
-            except Exception:
-                self.logger.exception("Dependency shutdown failed: %s", type(resolver).__name__)
-            finally:
-                for child in children:
-                    close(child)
+            self._pending_resolvers.append(resolver)
+            for child in tuple(getattr(resolver, "_injectors", {}).values()):
+                collect(child)
 
         for resolver in getattr(self.agent, "_owned_dependency_resolvers", ()):
-            close(resolver)
+            collect(resolver)
+        messaging = getattr(self, "messaging", None)
+        if self.agent is not None:
+            if messaging is not None:
+                for topic in self.agent.subscribed_topics:
+                    try:
+                        messaging.unsubscribe(topic, self.agent._get_client())
+                    except Exception:
+                        self.logger.exception("Failed to unsubscribe topic %s during shutdown", topic)
+            try:
+                self.agent.on_shutdown()
+            except Exception:
+                self.logger.exception("Agent shutdown hook failed")
+
+    def _disconnect(self) -> None:
+        messaging = getattr(self, "messaging", None)
+        if messaging is not None:
+            try:
+                if self.agent is not None:
+                    messaging.unregister_client(self.agent._get_client())
+            finally:
+                if self.messaging_owned:
+                    messaging.shutdown()
+        self._shutdown_complete = True
+
+    def _finish_shutdown(self) -> None:
+        try:
+            for resolver in tuple(self._pending_resolvers):
+                try:
+                    resolver.shutdown()
+                except Exception:
+                    self.logger.exception("Dependency shutdown failed: %s", type(resolver).__name__)
+                else:
+                    self._pending_resolvers.remove(resolver)
+            if not self._pending_resolvers:
+                self._disconnect()
+        finally:
+            with self._shutdown_lock:
+                self._shutdown_running = False
+
+    async def _finish_shutdown_async(self) -> None:
+        try:
+            for resolver in tuple(self._pending_resolvers):
+                try:
+                    close_async = getattr(resolver, "shutdown_async", None)
+                    if close_async is not None:
+                        await close_async()
+                    else:
+                        await asyncio.to_thread(resolver.shutdown)
+                except Exception:
+                    self.logger.exception("Dependency shutdown failed: %s", type(resolver).__name__)
+                else:
+                    self._pending_resolvers.remove(resolver)
+            if not self._pending_resolvers:
+                self._disconnect()
+        finally:
+            with self._shutdown_lock:
+                self._shutdown_running = False

@@ -1144,7 +1144,7 @@ def processor(
                     for dep in deps
                 }
 
-                logging.debug(f"Processor [{func.__name__}] running for message:\n {msg.model_dump_json()}\n")
+                logging.debug("Processor [%s] running for message %s (%s)", func.__name__, msg.id, msg.format)
 
                 send_fixtures = ProcessorHelper.get_on_send_fixtures(self.__class__)
                 error_fixtures = ProcessorHelper.get_on_error_fixtures(self.__class__)

@@ -1,10 +1,13 @@
 """Deterministic ingestion barriers and bounded recall over typed messages."""
 
+import asyncio
 from collections import OrderedDict
 from dataclasses import dataclass, field
 from hashlib import sha256
 import json
+import re
 import threading
+import time
 from typing import Any
 from uuid import uuid4
 
@@ -13,9 +16,9 @@ from pydantic import ValidationError
 from rustic_ai.core.guild.agent import Agent, ProcessContext, ProcessorHelper, processor
 from rustic_ai.core.guild.agent_ext.mixins.scheduler import SchedulerMixin
 from rustic_ai.core.messaging.core.message import JsonDict, Message
-from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 
 from .document_models import (
+    IDENTIFIER,
     DocumentCoordinatorConfig,
     DocumentSourceOutcome,
     DocumentWorkflowDeadline,
@@ -35,6 +38,93 @@ from .models import (
 )
 
 
+def _fingerprint(request: DocumentWorkflowRequest) -> str:
+    """Hash caller semantics without materializing an encoded document body."""
+    digest = sha256()
+
+    def visit(value):
+        if isinstance(value, str):
+            digest.update(b"s" + str(len(value)).encode() + b":")
+            for offset in range(0, len(value), 4096):
+                digest.update(value[offset : offset + 4096].encode("utf-8", errors="surrogatepass"))
+        elif isinstance(value, dict):
+            digest.update(b"{")
+            for key in sorted(value):
+                visit(key)
+                visit(value[key])
+            digest.update(b"}")
+        elif isinstance(value, list):
+            digest.update(b"[")
+            for item in value:
+                visit(item)
+            digest.update(b"]")
+        else:
+            digest.update(json.dumps(value).encode() + b";")
+
+    value = request.model_dump(mode="json", exclude={"sources"})
+    value["sources"] = [source.model_dump(mode="json", exclude={"media_link": {"id"}}) for source in request.sources]
+    visit(value)
+    return digest.hexdigest()
+
+
+def _compact_context(context: JsonDict) -> JsonDict:
+    """Retain small caller metadata, omitting whole fields that exceed bounds.
+
+    Dropping a field rather than truncating it preserves the meaning of caller
+    identity and correlation values. Attachments/history stay caller-owned.
+    """
+
+    def bounded(value, budget, depth):
+        if depth > 4:
+            raise ValueError("Context nesting limit")
+        if isinstance(value, str):
+            if len(value) > min(4096, budget):
+                raise ValueError("Context string limit")
+            size = len(json.dumps(value, ensure_ascii=True).encode())
+            if size > budget:
+                raise ValueError("Context byte limit")
+            return value, size
+        if value is None or isinstance(value, (bool, int, float)):
+            size = len(json.dumps(value).encode())
+            if size > budget:
+                raise ValueError("Context byte limit")
+            return value, size
+        if isinstance(value, (dict, list)) and len(value) <= 32:
+            result: dict[str, Any] | list[Any] = {} if isinstance(value, dict) else []
+            size = 2
+            for key, item in (value.items() if isinstance(value, dict) else enumerate(value)):
+                if isinstance(value, dict):
+                    _, key_size = bounded(key, budget - size, depth + 1)
+                    size += key_size + 1
+                compact, item_size = bounded(item, budget - size, depth + 1)
+                size += item_size + 1
+                if size > budget:
+                    raise ValueError("Context byte limit")
+                if isinstance(result, dict):
+                    if not isinstance(key, str):
+                        raise ValueError("Context keys must be strings")
+                    result[key] = compact
+                else:
+                    result.append(compact)
+            return result, size
+        raise ValueError("Context value limit")
+
+    result = {}
+    remaining = 16384 - 2
+    for key, value in context.items():
+        # Attachments and conversation bodies must never cross document branches.
+        if key in {"original_attachment", "attachments", "history", "messages", "conversation_history"}:
+            continue
+        try:
+            _, key_size = bounded(key, remaining, 0)
+            compact, size = bounded(value, remaining - key_size - 2, 0)
+        except ValueError:
+            continue
+        result[key] = compact
+        remaining -= key_size + size + 2
+    return result
+
+
 @dataclass
 class _Workflow:
     request_id: str
@@ -45,8 +135,11 @@ class _Workflow:
     allow_partial: bool
     require_evidence: bool
     sources: list[DocumentSourceOutcome]
+    expires_at: float
+    timer: threading.Timer | None = None
     stage: str = "normalizing"
     pending: dict[str, list[int]] = field(default_factory=dict)
+    rejected: set[int] = field(default_factory=set)
 
 
 @dataclass
@@ -62,6 +155,7 @@ class DocumentCoordinatorAgent(Agent[DocumentCoordinatorConfig], SchedulerMixin)
     """Coordinate documents without owning access policy, synthesis or a store."""
 
     def __init__(self):
+        self._init_scheduler()
         self._workflow_lock = threading.RLock()
         self._workflows: dict[str, _Workflow] = {}
         self._completed: OrderedDict[str, None] = OrderedDict()
@@ -70,6 +164,9 @@ class DocumentCoordinatorAgent(Agent[DocumentCoordinatorConfig], SchedulerMixin)
     def on_shutdown(self) -> None:
         with self._workflow_lock:
             self._closing = True
+            for state in self._workflows.values():
+                if state.timer is not None:
+                    state.timer.cancel()
             self._workflows.clear()
         self.shutdown_scheduler()
 
@@ -79,9 +176,12 @@ class DocumentCoordinatorAgent(Agent[DocumentCoordinatorConfig], SchedulerMixin)
             self._completed.popitem(last=False)
 
     def _terminal(self, state: _Workflow, error: str | None = None, recall: RecallResponse | None = None) -> _Outbound:
+        if self._workflows.get(state.request_id) is state and time.monotonic() >= state.expires_at:
+            error = "document_workflow_timed_out"
         self._workflows.pop(state.request_id, None)
         self._remember_completed(state.request_id)
-        self.cancel_timer(state.attempt_id)
+        if state.timer is not None:
+            state.timer.cancel()
         state.stage = "terminal"
         payload: DocumentWorkflowError | DocumentWorkflowResult
         if error:
@@ -113,8 +213,11 @@ class DocumentCoordinatorAgent(Agent[DocumentCoordinatorConfig], SchedulerMixin)
             with self._workflow_lock:
                 if self._closing:
                     return
-                if action.stage != "terminal" and self._workflows.get(state.request_id) is not state:
-                    continue
+                if action.stage != "terminal":
+                    if self._workflows.get(state.request_id) is not state:
+                        continue
+                    if time.monotonic() >= state.expires_at:
+                        action = self._terminal(state, "document_workflow_timed_out")
             ctx = self._make_process_context(
                 state.origin,
                 "coordinate",
@@ -174,88 +277,18 @@ class DocumentCoordinatorAgent(Agent[DocumentCoordinatorConfig], SchedulerMixin)
 
     @processor(DocumentWorkflowRequest, depends_on=["filesystem:guild_fs:guild"])
     async def coordinate(self, ctx: ProcessContext[DocumentWorkflowRequest], guild_fs):
+        started = time.monotonic()
         try:
             request = ctx.payload
         except ValidationError:
-            raw_id = ctx.message.payload.get("request_id")
-            ctx.send_error(
-                DocumentWorkflowError(
-                    request_id=raw_id[:256] if isinstance(raw_id, str) else "invalid-request",
-                    error="document_request_invalid",
-                    message="Document request is invalid.",
-                )
-            )
+            self._reject_invalid(ctx, ctx.message.payload.get("request_id"), started)
             return
-        fingerprint = sha256(
-            json.dumps(request.model_dump(mode="json"), sort_keys=True, separators=(",", ":")).encode()
-        ).hexdigest()
-        with self._workflow_lock:
-            if self._closing or request.request_id in self._completed:
-                return
-            existing = self._workflows.get(request.request_id)
-            if existing:
-                actions = (
-                    [] if existing.fingerprint == fingerprint else [self._terminal(existing, "request_id_conflict")]
-                )
-                state = None
-            else:
-                # Keep the original envelope/forwarding metadata, without retaining
-                # another large copy of the incoming document bodies.
-                origin = ctx.message.model_copy(update={"payload": request.model_dump(exclude={"sources"})})
-                state = _Workflow(
-                    request.request_id,
-                    uuid4().hex,
-                    fingerprint,
-                    origin,
-                    request.query,
-                    request.allow_partial,
-                    request.require_evidence,
-                    [DocumentSourceOutcome(index=index) for index in range(len(request.sources))],
-                )
-                actions = []
-                if len(self._workflows) >= self.config.max_active_workflows:
-                    actions = [self._terminal(state, "document_capacity_exceeded")]
-                    state = None
-                else:
-                    self._workflows[state.request_id] = state
-                    self.schedule_once(
-                        key=state.attempt_id,
-                        delay_seconds=self.config.deadline_seconds,
-                        payload=DocumentWorkflowDeadline(
-                            request_id=state.request_id, attempt_id=state.attempt_id
-                        ).model_dump(),
-                        format=get_qualified_class_name(DocumentWorkflowDeadline),
-                    )
-        self._publish(actions)
+        state = self._admit_request(ctx, request, started)
         if state is None:
             return
-        prepared: dict[str, Any] = {}
-        total_bytes = 0
-        for index, source in enumerate(request.sources):
-            with self._workflow_lock:
-                if self._workflows.get(state.request_id) is not state:
-                    return
-            try:
-                snapshot, outcome, size = await snapshot_document(
-                    source, self.config.corpus_session_id, guild_fs, self.config.max_source_bytes, index
-                )
-                assert outcome.record_id is not None
-                total_bytes += size
-                if total_bytes > self.config.max_workflow_bytes:
-                    raise ValueError("Workflow exceeds byte limit")
-                with self._workflow_lock:
-                    if self._workflows.get(state.request_id) is not state:
-                        return
-                    state.sources[index] = outcome
-                    state.pending.setdefault(outcome.record_id, []).append(index)
-                    prepared[outcome.record_id] = snapshot
-            except Exception:
-                with self._workflow_lock:
-                    if self._workflows.get(state.request_id) is not state:
-                        return
-                    state.sources[index] = DocumentSourceOutcome(
-                        index=index, status="failed", error="document_source_rejected"
-                    )
+        prepared = await self._prepare_documents(state, request, guild_fs)
+        if prepared is None:
+            return
         with self._workflow_lock:
             if self._workflows.get(state.request_id) is not state:
                 return
@@ -275,6 +308,170 @@ class DocumentCoordinatorAgent(Agent[DocumentCoordinatorConfig], SchedulerMixin)
             ]
             if not actions:
                 actions = self._advance(state)
+        self._publish(actions)
+
+    def _reject_invalid(self, ctx: ProcessContext, raw_id: Any, started: float) -> None:
+        usable_id = isinstance(raw_id, str) and 0 < len(raw_id) <= 256 and re.fullmatch(IDENTIFIER, raw_id) is not None
+        request_id = raw_id[:256] if isinstance(raw_id, str) and raw_id else "invalid-request"
+        with self._workflow_lock:
+            if self._closing or (usable_id and request_id in self._completed):
+                return
+            existing = self._workflows.get(request_id) if usable_id else None
+            if existing is not None:
+                actions = [self._terminal(existing, "request_id_conflict")]
+            else:
+                state = self._new_state(ctx, request_id, started)
+                if usable_id:
+                    actions = [self._terminal(state, "document_request_invalid")]
+                else:
+                    # An anonymous malformed request has no deduplication key.
+                    # Its display label must never tombstone a valid caller ID.
+                    actions = [
+                        _Outbound(
+                            state,
+                            DocumentWorkflowError(
+                                request_id=request_id,
+                                error="document_request_invalid",
+                                message="Document request is invalid.",
+                            ),
+                            "terminal",
+                            error=True,
+                        )
+                    ]
+        self._publish(actions)
+
+    def _admit_request(self, ctx: ProcessContext, request: DocumentWorkflowRequest, started: float) -> _Workflow | None:
+        state: _Workflow | None
+        # Admission happens before hashing any document bodies.
+        with self._workflow_lock:
+            if self._closing or request.request_id in self._completed:
+                return None
+            existing = self._workflows.get(request.request_id)
+            if existing is None and len(self._workflows) >= self.config.max_active_workflows:
+                actions = [
+                    self._terminal(self._new_state(ctx, request.request_id, started), "document_capacity_exceeded")
+                ]
+                admitted = False
+            else:
+                actions = []
+                admitted = True
+        self._publish(actions)
+        if not admitted:
+            return None
+        # Cheap inline length guards precede canonical hashing and UTF-8/base64
+        # expansion. Hashing remains incremental even for rejected sources.
+        rejected = {
+            index
+            for index, source in enumerate(request.sources)
+            if (source.text is not None and len(source.text) > self.config.max_source_bytes)
+            or (
+                source.base64_data is not None
+                and len(source.base64_data) > 4 * ((self.config.max_source_bytes + 2) // 3)
+            )
+        }
+        fingerprint = _fingerprint(request)
+        with self._workflow_lock:
+            if self._closing or request.request_id in self._completed:
+                return None
+            existing = self._workflows.get(request.request_id)
+            if existing:
+                actions = (
+                    [] if existing.fingerprint == fingerprint else [self._terminal(existing, "request_id_conflict")]
+                )
+                state = None
+            else:
+                state = self._new_state(ctx, request.request_id, started, request, fingerprint)
+                if len(self._workflows) >= self.config.max_active_workflows:
+                    actions = [self._terminal(state, "document_capacity_exceeded")]
+                    state = None
+                else:
+                    self._workflows[state.request_id] = state
+                    state.timer = threading.Timer(
+                        max(0, state.expires_at - time.monotonic()),
+                        self._expire,
+                        args=(state.request_id, state.attempt_id),
+                    )
+                    state.timer.daemon = True
+                    state.timer.start()
+                    actions = []
+        self._publish(actions)
+        if state is not None:
+            state.rejected = rejected
+        return state
+
+    async def _prepare_documents(
+        self, state: _Workflow, request: DocumentWorkflowRequest, guild_fs
+    ) -> dict[str, Any] | None:
+        prepared: dict[str, Any] = {}
+        total_bytes = 0
+        for index, source in enumerate(request.sources):
+            with self._workflow_lock:
+                if self._workflows.get(state.request_id) is not state:
+                    return None
+            try:
+                remaining = state.expires_at - time.monotonic()
+                if remaining <= 0:
+                    self._expire(state.request_id, state.attempt_id)
+                    return None
+                if index in state.rejected:
+                    raise ValueError("Source exceeds byte limit")
+                snapshot, outcome, size = await asyncio.wait_for(
+                    snapshot_document(
+                        source,
+                        self.config.corpus_session_id,
+                        guild_fs,
+                        min(self.config.max_source_bytes, self.config.max_workflow_bytes - total_bytes),
+                        index,
+                    ),
+                    timeout=remaining,
+                )
+                assert outcome.record_id is not None
+                total_bytes += size
+                if total_bytes > self.config.max_workflow_bytes:
+                    raise ValueError("Workflow exceeds byte limit")
+                with self._workflow_lock:
+                    if self._workflows.get(state.request_id) is not state:
+                        return None
+                    state.sources[index] = outcome
+                    state.pending.setdefault(outcome.record_id, []).append(index)
+                    prepared[outcome.record_id] = snapshot
+            except TimeoutError:
+                self._expire(state.request_id, state.attempt_id)
+                return None
+            except Exception:
+                with self._workflow_lock:
+                    if self._workflows.get(state.request_id) is not state:
+                        return None
+                    state.sources[index] = DocumentSourceOutcome(
+                        index=index, status="failed", error="document_source_rejected"
+                    )
+        return prepared
+
+    def _new_state(self, ctx, request_id, started, request=None, fingerprint="") -> _Workflow:
+        payload = request.model_dump(exclude={"sources"}) if request is not None else {"request_id": request_id}
+        origin = ctx.message.model_copy(
+            update={"payload": payload, "session_state": _compact_context(ctx.get_context())}
+        )
+        return _Workflow(
+            request_id=request_id,
+            attempt_id=uuid4().hex,
+            fingerprint=fingerprint,
+            origin=origin,
+            query=request.query if request else None,
+            allow_partial=request.allow_partial if request else False,
+            require_evidence=request.require_evidence if request else True,
+            sources=[DocumentSourceOutcome(index=index) for index in range(len(request.sources))] if request else [],
+            expires_at=started + self.config.deadline_seconds,
+        )
+
+    def _expire(self, request_id: str, attempt_id: str) -> None:
+        # Expiration is independent of the agent's serialized inbox. Source
+        # reads can be slow or non-cooperative without withholding the outcome.
+        with self._workflow_lock:
+            state = self._workflows.get(request_id)
+            if state is None or state.attempt_id != attempt_id or self._closing or time.monotonic() < state.expires_at:
+                return
+            actions = [self._terminal(state, "document_workflow_timed_out")]
         self._publish(actions)
 
     def _settle(self, state: _Workflow, record_id: str | None, outcome: IngestOutcome | None, error: str | None):
@@ -344,13 +541,4 @@ class DocumentCoordinatorAgent(Agent[DocumentCoordinatorConfig], SchedulerMixin)
     def deadline(self, ctx: ProcessContext[DocumentWorkflowDeadline]):
         if ctx.message.sender.id != self.id:
             return
-        with self._workflow_lock:
-            state = self._workflows.get(ctx.payload.request_id)
-            if state is None or state.attempt_id != ctx.payload.attempt_id or self._closing:
-                return
-            for item in state.sources:
-                if item.status == "pending":
-                    item.status = "unknown"
-                    item.error = "document_outcome_unknown"
-            actions = [self._terminal(state, "document_workflow_timed_out")]
-        self._publish(actions)
+        self._expire(ctx.payload.request_id, ctx.payload.attempt_id)

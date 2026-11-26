@@ -98,7 +98,16 @@ async def read_source_bytes(spec: MemorySource | dict, guild_fs: Any, max_bytes:
     """Read at most max_bytes + 1 bytes, enforcing the native source bound."""
     spec = MemorySource.model_validate(spec)
     if spec.text is not None:
-        data = spec.text.encode("utf-8")
+        if len(spec.text) > max_bytes:
+            raise ValueError("Source exceeds byte limit")
+        buffer = bytearray()
+        chunk_size = min(4096, max_bytes + 1)
+        for offset in range(0, len(spec.text), chunk_size):
+            chunk = spec.text[offset : offset + chunk_size].encode("utf-8")
+            if len(buffer) + len(chunk) > max_bytes:
+                raise ValueError("Source exceeds byte limit")
+            buffer.extend(chunk)
+        data = bytes(buffer)
     elif spec.base64_data is not None:
         if len(spec.base64_data) > 4 * ((max_bytes + 2) // 3):
             raise ValueError("Source exceeds byte limit")

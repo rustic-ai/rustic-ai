@@ -86,78 +86,99 @@ class MemoryStore:
         return f"{namespace}:{message_id}"
 
     def store_message(self, namespace: str, topic: str, message: Message) -> None:
-        message = message.model_copy(deep=True)
-        key = self._get_message_key(namespace, message.id)
-        self.messages[key] = message
-        self._message_namespaces[id(message)] = namespace
-        if topic not in self.topics:
-            self.topics[topic] = []
-        bisect.insort_left(self.topics[topic], message, key=lambda msg: msg.timestamp)
+        with self._owner_lock:
+            message = message.model_copy(deep=True)
+            key = self._get_message_key(namespace, message.id)
+            self.messages[key] = message
+            self._message_namespaces[id(message)] = namespace
+            if topic not in self.topics:
+                self.topics[topic] = []
+            bisect.insort_left(self.topics[topic], message, key=lambda msg: msg.timestamp)
 
     def get_messages_for_topic(self, topic: str) -> List[Message]:
-        msgs = sorted(self.topics.get(topic, []), key=lambda msg: msg.id)
-        return [msg.model_copy(deep=True) for msg in msgs]
+        with self._owner_lock:
+            msgs = sorted(self.topics.get(topic, []), key=lambda msg: msg.id)
+            return [msg.model_copy(deep=True) for msg in msgs]
 
     def get_messages_for_topic_since(self, topic: str, timestamp_since: float) -> List[Message]:
-        topic_messages = [msg for msg in self.get_messages_for_topic(topic) if msg.timestamp > timestamp_since]
-        return topic_messages
+        with self._owner_lock:
+            topic_messages = [msg for msg in self.get_messages_for_topic(topic) if msg.timestamp > timestamp_since]
+            return topic_messages
 
     def get_next_message_for_topic_since(self, topic: str, timestamp_since: float) -> Optional[Message]:
-        topic_messages = self.get_messages_for_topic(topic)
-        topic_messages = [msg for msg in topic_messages if msg.timestamp > timestamp_since]
-        sorted_messages = sorted(topic_messages, key=lambda msg: msg.id)
-        return sorted_messages[0].model_copy(deep=True) if sorted_messages else None
+        with self._owner_lock:
+            topic_messages = self.get_messages_for_topic(topic)
+            topic_messages = [msg for msg in topic_messages if msg.timestamp > timestamp_since]
+            sorted_messages = sorted(topic_messages, key=lambda msg: msg.id)
+            return sorted_messages[0].model_copy(deep=True) if sorted_messages else None
 
     def get_callback_handlers(self, topic: str) -> Dict[str, Callable[[Message], None]]:
-        return self.callback_handlers.get(topic, {})
+        with self._owner_lock:
+            return self.callback_handlers.get(topic, {}).copy()
 
     def get_subscribers(self, topic: str) -> Set[str]:
-        return self.subscribers.get(topic, set())
+        with self._owner_lock:
+            return self.subscribers.get(topic, set()).copy()
 
     def get_all_subscribers(self) -> Dict[str, Set[str]]:
-        return self.subscribers
+        with self._owner_lock:
+            return {topic: subscribers.copy() for topic, subscribers in self.subscribers.items()}
 
     def get_all_topics(self) -> Dict[str, List[Message]]:
-        return self.topics
+        with self._owner_lock:
+            return {
+                topic: [message.model_copy(deep=True) for message in messages]
+                for topic, messages in self.topics.items()
+            }
 
     def get_messages(self, namespace: str, msg_ids: List[int]):
-        return [self.messages.get(self._get_message_key(namespace, message_id)) for message_id in msg_ids]
+        with self._owner_lock:
+            return [
+                message.model_copy(deep=True) if message is not None else None
+                for message in (
+                    self.messages.get(self._get_message_key(namespace, message_id)) for message_id in msg_ids
+                )
+            ]
 
     def subscribe(self, topic: str, subscriber: str, handler: Callable[[Message], None]) -> None:
-        if topic not in self.subscribers:
-            self.subscribers[topic] = set()
-        self.subscribers[topic].add(subscriber)
+        with self._owner_lock:
+            if topic not in self.subscribers:
+                self.subscribers[topic] = set()
+            self.subscribers[topic].add(subscriber)
 
-        if topic not in self.callback_handlers:
-            self.callback_handlers[topic] = {}
-        self.callback_handlers[topic][subscriber] = handler
+            if topic not in self.callback_handlers:
+                self.callback_handlers[topic] = {}
+            self.callback_handlers[topic][subscriber] = handler
 
     def unsubscribe(self, topic: str, subscriber: str) -> None:
-        if topic in self.subscribers:
-            self.subscribers[topic].discard(subscriber)
-        if topic in self.callback_handlers:
-            self.callback_handlers[topic].pop(subscriber, None)
+        with self._owner_lock:
+            if topic in self.subscribers:
+                self.subscribers[topic].discard(subscriber)
+            if topic in self.callback_handlers:
+                self.callback_handlers[topic].pop(subscriber, None)
 
     def cleanup_namespace(self, namespace: str) -> None:
         """Release only messages belonging to a namespace with no live owner."""
-        removed = {identity for identity, owner in self._message_namespaces.items() if owner == namespace}
-        self.messages = {key: message for key, message in self.messages.items() if id(message) not in removed}
-        for topic, messages in list(self.topics.items()):
-            retained = [message for message in messages if id(message) not in removed]
-            if retained:
-                self.topics[topic] = retained
-            else:
-                self.topics.pop(topic, None)
-        for identity in removed:
-            self._message_namespaces.pop(identity, None)
+        with self._owner_lock:
+            removed = {identity for identity, owner in self._message_namespaces.items() if owner == namespace}
+            self.messages = {key: message for key, message in self.messages.items() if id(message) not in removed}
+            for topic, messages in list(self.topics.items()):
+                retained = [message for message in messages if id(message) not in removed]
+                if retained:
+                    self.topics[topic] = retained
+                else:
+                    self.topics.pop(topic, None)
+            for identity in removed:
+                self._message_namespaces.pop(identity, None)
 
     def cleanup(self) -> None:
-        self._message_namespaces.clear()
-        self.topics = {}
-        self.messages = {}
-        # Do NOT clear self.subscribers or self.callback_handlers.
-        # MemoryStore is a singleton shared across all InMemoryMessagingBackend instances.
-        # Clearing subscriptions here would destroy other backends' handlers.
+        with self._owner_lock:
+            self._message_namespaces.clear()
+            self.topics = {}
+            self.messages = {}
+            # Do NOT clear self.subscribers or self.callback_handlers.
+            # MemoryStore is a singleton shared across all InMemoryMessagingBackend instances.
+            # Clearing subscriptions here would destroy other backends' handlers.
 
     @classmethod
     def get_instance(cls) -> "MemoryStore":
@@ -222,13 +243,14 @@ class InMemoryMessagingBackend(MessagingBackend):
             message (Message): The message to be added.
         """
 
-        self._claim_namespace(namespace)
-        self._message_store.store_message(namespace, topic, message)
+        with self._message_store._owner_lock:
+            self._claim_namespace(namespace)
+            self._message_store.store_message(namespace, topic, message)
+            handlers = list(self._message_store.get_callback_handlers(topic).values())
 
         # We want to send the notification to all global subscribers that may have connected through all instances of the backend.
-        if self._message_store.get_subscribers(topic):
-            for handler in list(self._message_store.get_callback_handlers(topic).values()):
-                handler(message.model_copy(deep=True))
+        for handler in handlers:
+            handler(message.model_copy(deep=True))
 
     def get_messages_for_topic(self, topic: str) -> List[Message]:
         """

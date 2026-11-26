@@ -23,6 +23,7 @@ class MultiThreadedEngine(ExecutionEngine):
         self.agent_tracker = InMemoryMTAgentTracker()
 
         self.owned_agents: List[tuple[str, str]] = []
+        self._stopping_wrappers: dict[tuple[str, str], Any] = {}
 
     """
     An execution engine that runs agents in separate threads for concurrent execution.
@@ -87,16 +88,26 @@ class MultiThreadedEngine(ExecutionEngine):
         """
         Stops the agent with the given ID in the guild with the given ID.
         """
+        for stopped_key, stopped_wrapper in list(self._stopping_wrappers.items()):
+            if stopped_wrapper._shutdown_complete:
+                self._stopping_wrappers.pop(stopped_key, None)
+        key = (guild_id, agent_id)
         agent_wrapper = self.agent_tracker.get_agent_wrapper(guild_id, agent_id)
+        if agent_wrapper is None:
+            agent_wrapper = self._stopping_wrappers.get(key)
         if agent_wrapper is not None:
+            self._stopping_wrappers[key] = agent_wrapper
             agent_wrapper.shutdown()
+            if agent_wrapper._shutdown_complete:
+                self._stopping_wrappers.pop(key, None)
             self.agent_tracker.remove_agent(guild_id, agent_id)
-            del self.agent_wrappers[agent_id]
+            self.agent_wrappers.pop(agent_id, None)
             del agent_wrapper
-            self.owned_agents.remove((guild_id, agent_id))
+            if (guild_id, agent_id) in self.owned_agents:
+                self.owned_agents.remove((guild_id, agent_id))
 
     def shutdown(self) -> None:
-        for guild_id, agent_id in self.owned_agents.copy():
+        for guild_id, agent_id in list(dict.fromkeys(self.owned_agents + list(self._stopping_wrappers))):
             try:
                 self.stop_agent(guild_id, agent_id)
             except Exception:

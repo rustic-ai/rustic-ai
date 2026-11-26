@@ -200,3 +200,83 @@ def test_unsubscribe_failure_does_not_skip_resource_cleanup():
     assert resolver.shutdown_count == 1
     assert w.agent.shutdown_count == 1
     assert not w.messaging.clients
+
+
+def test_failed_dependency_cleanup_is_retryable_without_repeating_successful_cleanup():
+    guild = build("sync.sync_exec_engine.SyncExecutionEngine", count=1)
+    w = wrapper(guild, "probe-0")
+    resolver = w.agent._dependency_resolvers["resource"]
+    child = OwnedResolver()
+    resolver._injectors["child"] = child
+    resolver.shutdown = Mock(side_effect=[RuntimeError("temporarily busy"), None])
+    try:
+        w.shutdown()
+        assert not w._shutdown_complete
+        assert w._pending_resolvers == [resolver]
+        assert child.shutdown_count == 1
+        assert w.agent.shutdown_count == 1
+        w.shutdown()
+        assert w._shutdown_complete
+        assert not w._pending_resolvers
+        assert resolver.shutdown.call_count == 2
+        assert child.shutdown_count == 1
+        assert w.agent.shutdown_count == 1
+        assert not w.messaging.clients
+    finally:
+        guild.shutdown()
+
+
+def test_async_ready_handler_can_stop_itself_from_sync_launch():
+    # A subprocess gives this deadlock regression a hard bound even when the
+    # coroutine bridge and launching thread are both blocked.
+    import subprocess
+    import sys
+    import textwrap
+
+    code = textwrap.dedent("""
+        import asyncio
+        from rustic_ai.core.guild.agent import Agent, ProcessContext, SelfReadyNotification, processor
+        from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder
+        from rustic_ai.core.guild.execution.sync.sync_exec_engine import SyncExecutionEngine
+        from rustic_ai.core.messaging import MessagingConfig
+
+        engine = SyncExecutionEngine("ready-stop", "test-org")
+        class SelfStopping(Agent):
+            @processor(SelfReadyNotification, handle_essential=True)
+            async def ready(self, ctx: ProcessContext[SelfReadyNotification]):
+                engine.stop_agent(self.guild_id, self.id)
+
+        guild = GuildBuilder("ready-stop", "Ready stop", "Reentrant lifecycle").build_spec()
+        spec = AgentBuilder(SelfStopping).set_id("self-stop").set_name("Self stop").set_description("Test").build_spec()
+        config = MessagingConfig(backend_module="rustic_ai.core.messaging.backend",
+                                 backend_class="InMemoryMessagingBackend", backend_config={})
+        async def run():
+            engine.run_agent(guild, spec, config, 1)
+            assert not engine.is_agent_running(guild.id, spec.id)
+        asyncio.run(run())
+        engine.shutdown()
+    """)
+    subprocess.run([sys.executable, "-c", code], check=True, timeout=10, capture_output=True, text=True)
+
+
+@pytest.mark.parametrize(
+    "engine",
+    ["sync.sync_exec_engine.SyncExecutionEngine", "multithreaded.multithreaded_exec_engine.MultiThreadedEngine"],
+)
+def test_engine_retains_failed_cleanup_for_retry_after_agent_is_stopped(engine):
+    guild = build(engine, count=1)
+    w = wrapper(guild, "probe-0")
+    resolver = w.agent._dependency_resolvers["resource"]
+    resolver.shutdown = Mock(side_effect=[RuntimeError("temporarily busy"), None])
+    try:
+        guild.execution_engine.stop_agent(guild.id, "probe-0")
+        assert not guild.execution_engine.is_agent_running(guild.id, "probe-0")
+        assert not w._shutdown_complete
+        assert guild.execution_engine._stopping_wrappers[(guild.id, "probe-0")] is w
+        guild.shutdown()
+        assert w._shutdown_complete
+        assert not guild.execution_engine._stopping_wrappers
+        assert resolver.shutdown.call_count == 2
+        assert w.agent.shutdown_count == 1
+    finally:
+        guild.shutdown()
