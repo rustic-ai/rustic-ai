@@ -73,10 +73,15 @@ jobs:
       - name: test with tox
         env:
           PYTEST_ADDOPTS: "--color=yes"
+          RUSTIC_PYTEST_ARGS: "-vv -r a --disable-warnings -o faulthandler_timeout=120"
           SKIP_EXPENSIVE_TESTS: true
           RUN_NATS_TESTS: "true"
         run: |
-          tox -e test
+          # Full-suite workers each import the ML dependency graph. Keep one
+          # test process on the hosted runner and retain per-test diagnostics.
+          free -m
+          df -h .
+          tox -e test-seq
 
       - name: Save Cache
         if: matrix.os == 'ubuntu-24.04' && matrix.python-versions == '3.13.12'
