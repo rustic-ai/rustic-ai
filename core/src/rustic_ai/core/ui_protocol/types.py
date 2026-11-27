@@ -749,7 +749,7 @@ class CanvasFormat(DataFormat):
             component=get_qualified_class_name(ImageFormat),
             title="Canvas Image Example",
             description="Canvas component with image content",
-            src="http://localhost:3000/640e5f0fb14b6075ead8.png",
+            src="https://rustic-ai.github.io/rustic-ui-components/images/dragonscale-logo.svg",
             alt="Dragonscale logo in canvas"
         )
         ```

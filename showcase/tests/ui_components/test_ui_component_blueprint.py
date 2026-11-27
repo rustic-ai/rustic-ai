@@ -25,6 +25,8 @@ from rustic_ai.core.ui_protocol.types import (
 )
 from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
 
+SAMPLE_IMAGE_URL = "https://rustic-ai.github.io/rustic-ui-components/images/dragonscale-logo.svg"
+
 
 class TestUiComponentBlueprint:
 
@@ -115,15 +117,15 @@ class TestUiComponentBlueprint:
             msg for msg in canvas_messages if msg.payload["component"] == get_qualified_class_name(ImageFormat)
         )
         assert canvas_img.payload["title"] == "Canvas Image Example"
-        assert canvas_img.payload["mediaLink"]["url"] == "http://localhost:3000/640e5f0fb14b6075ead8.png"
+        assert canvas_img.payload["mediaLink"]["url"] == SAMPLE_IMAGE_URL
 
         # Verify FilesWithTextFormat message
         files_messages = get_messages_by_format(FilesWithTextFormat)
         assert len(files_messages) == 1
         files_payload = files_messages[0].payload
         assert len(files_payload["files"]) == 1
-        assert files_payload["files"][0]["mediaLink"]["name"] == "logo.png"
-        assert files_payload["files"][0]["mediaLink"]["url"] == "http://localhost:3000/640e5f0fb14b6075ead8.png"
+        assert files_payload["files"][0]["mediaLink"]["name"] == "dragonscale-logo.svg"
+        assert files_payload["files"][0]["mediaLink"]["url"] == SAMPLE_IMAGE_URL
 
         # Verify QuestionFormat message
         question_messages = get_messages_by_format(QuestionFormat)
@@ -172,7 +174,7 @@ class TestUiComponentBlueprint:
         image_messages = get_messages_by_format(ImageFormat)
         assert len(image_messages) == 1
         image_payload = image_messages[0].payload
-        assert image_payload["src"] == "http://localhost:3000/640e5f0fb14b6075ead8.png"
+        assert image_payload["src"] == SAMPLE_IMAGE_URL
         assert image_payload["alt"] == "Dragonscale logo"
 
         # Verify MermaidFormat message
