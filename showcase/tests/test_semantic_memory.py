@@ -1,8 +1,10 @@
 """Acceptance tests execute the shipped guild with native local stores."""
 
+from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 import json
 from pathlib import Path
+import threading
 import time
 from uuid import uuid4
 
@@ -306,24 +308,56 @@ def test_shared_documents_and_restart(launch):
     assert "42000" in llm.calls[-1].model_dump_json()
 
 
-def test_late_model_does_not_write_memory(launch):
+def test_late_model_does_not_write_memory(launch, monkeypatch):
     guild, coord, assistant, caller, llm, _, _ = launch(engine=ENGINES[1])
     send(guild, caller, "Warm up memory")
     outcome(caller)
-    coord.config.deadline_seconds = 0.5
     before = len(llm.calls)
+    started, release, rejected = threading.Event(), threading.Event(), threading.Event()
+    original_reply = coord._reply
+
+    def observe_reply(ctx, stage, sender):
+        state = original_reply(ctx, stage, sender)
+        if stage == "model" and state is None:
+            rejected.set()
+        return state
+
+    monkeypatch.setattr(coord, "_reply", observe_reply)
 
     def delayed(prompt):
-        time.sleep(1)
+        started.set()
+        assert release.wait(120), "Model response was never released"
         return response("Too late")
 
     llm.responses = [delayed]
-    inner = send(guild, caller, "Hello")
+    # In-memory delivery can drain the workflow on the publishing thread.
+    with ThreadPoolExecutor(max_workers=1) as publisher:
+        pending = publisher.submit(send, guild, caller, "Hello")
+        try:
+            assert started.wait(120), "Model call never started"
+            # Expire only after inference starts, independently of recall/dispatch
+            # speed. Invoke the real timer callback while the response is held.
+            with coord._lock:
+                state = next(iter(coord._requests.values()))
+                state.timer.cancel()
+                state.expires_at = time.monotonic() - 1
+            expiry = threading.Timer(0, state.timer.function, args=state.timer.args, kwargs=state.timer.kwargs)
+            expiry.start()
+            wait(lambda: not coord._requests)
+        finally:
+            release.set()
+        inner = pending.result(120)
+    expiry.join(120)
+    assert not expiry.is_alive(), "Deadline callback did not finish"
     assert outcome(caller).process_status == "error"
-    time.sleep(1)
+    assert rejected.wait(120), "Late model response was not processed"
+    # _reply runs under this lock; wait for the handler to finish returning.
+    with coord._lock:
+        assert not coord._requests
     assert len(llm.calls) == before + 1
     assert native(assistant).data.message_sync(f"rustic-memory:user_assertion:{inner.id}:user") is None
-    assert not caller.get_messages() and not coord._requests
+    assert native(assistant).data.message_sync(f"rustic-memory:assistant_response:{inner.id}:assistant") is None
+    assert not caller.get_messages()
 
 
 def test_commit_failure_delivers_answer_warning(launch, monkeypatch):
