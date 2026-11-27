@@ -3102,7 +3102,7 @@ files = [
 
 [[package]]
 name = "rusticai-core"
-version = "1.4.2"
+version = "1.5.0"
 description = "Rustic AI’s modular, agentic AI framework for building human-centered, multi-agent workflows"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -3140,7 +3140,7 @@ url = "../core"
 
 [[package]]
 name = "rusticai-llm-agent"
-version = "1.4.4"
+version = "1.5.0"
 description = "A complete set of LLM agents"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -3164,7 +3164,7 @@ url = "../llm-agent"
 
 [[package]]
 name = "rusticai-testing"
-version = "1.4.0"
+version = "1.5.0"
 description = "Test Utilities for Rustic AI Framework"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -3881,4 +3881,4 @@ propcache = ">=0.2.1"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.13,<3.14"
-content-hash = "39e7dc99714de5575ac7d7bdb1ec361880a8107f2417b228237bd2b9075a896f"
+content-hash = "485448af33e50d57f4cee1e319086fa219b63605bad7a334ceb15d8c63a3589f"

@@ -3365,7 +3365,7 @@ files = [
 
 [[package]]
 name = "rusticai-core"
-version = "1.4.2"
+version = "1.5.0"
 description = "Rustic AI’s modular, agentic AI framework for building human-centered, multi-agent workflows"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -3403,7 +3403,7 @@ url = "../core"
 
 [[package]]
 name = "rusticai-llm-agent"
-version = "1.4.4"
+version = "1.5.0"
 description = "A complete set of LLM agents"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -3427,7 +3427,7 @@ url = "../llm-agent"
 
 [[package]]
 name = "rusticai-testing"
-version = "1.4.0"
+version = "1.5.0"
 description = "Test Utilities for Rustic AI Framework"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -3445,7 +3445,7 @@ url = "../testing"
 
 [[package]]
 name = "rusticai-uniko-agent"
-version = "0.0.6"
+version = "0.1.0"
 description = "module boilerplate"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -3456,8 +3456,8 @@ develop = true
 [package.dependencies]
 jsonschema = ">=4.26.0,<5.0.0"
 PyYAML = ">=6.0.4,<7.0.0"
-rusticai-core = ">=1.4.2,<1.5.0"
-rusticai-llm-agent = ">=1.4.3,<1.5.0"
+rusticai-core = ">=1.5.0,<1.6.0"
+rusticai-llm-agent = ">=1.5.0,<1.6.0"
 tiktoken = ">=0.14.0,<1.0.0"
 uniko = ">=0.6.0,<0.7.0"
 
@@ -4166,4 +4166,4 @@ propcache = ">=0.2.1"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.13,<3.14"
-content-hash = "b4ff275d84f89df75f7e3166b86780d05ac6dffe1f899ba881158f8a35383abe"
+content-hash = "c2de7ec02519060f9d43f962815ba794cd2b2c5c0e344ec4d600347101b455e6"

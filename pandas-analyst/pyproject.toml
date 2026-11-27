@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [project]
 name = "rusticai-pandas-analyst"
-version = "0.2.5"
+version = "0.3.0"
 description = "Pandas and DuckDB powered implementation of data analyst dependency."
 authors = [{name = "Dragonscale Industries Inc.", email = "dev@dragonscale.ai"}]
 license = "Apache-2.0"
@@ -12,9 +12,9 @@ readme = "README.md"
 requires-python = ">=3.13,<3.14"
 urls = { Homepage = "https://www.rustic.ai/", Repository = "https://github.com/dragonscale-ai/rustic-ai", "Rustic AI Core" = "https://pypi.org/project/rusticai-core/" }
 dependencies = [
-    "rusticai-core>=1.4.2,<1.5.0",
-    "rusticai-llm-agent>=1.4.4,<1.5.0",
-    "rusticai-uniko-agent>=0.0.6,<0.1.0",
+    "rusticai-core>=1.5.0,<1.6.0",
+    "rusticai-llm-agent>=1.5.0,<1.6.0",
+    "rusticai-uniko-agent>=0.1.0,<0.2.0",
     "duckdb>=2.0.1,<3.0.0",
     "pandas>=3.1.1,<4.0.0",
     "pyarrow>=26.0.1,<27.0.0",

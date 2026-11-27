@@ -6802,7 +6802,7 @@ files = [
 
 [[package]]
 name = "rusticai-chroma"
-version = "1.4.0"
+version = "1.5.0"
 description = "Rustic AI module for leveraging ChromaDB"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -6823,7 +6823,7 @@ url = "../chroma"
 
 [[package]]
 name = "rusticai-core"
-version = "1.4.2"
+version = "1.5.0"
 description = "Rustic AI’s modular, agentic AI framework for building human-centered, multi-agent workflows"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -6861,7 +6861,7 @@ url = "../core"
 
 [[package]]
 name = "rusticai-fact-checker"
-version = "1.4.0"
+version = "1.5.0"
 description = "Fact-checking agent for Rustic AI guilds"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -6884,7 +6884,7 @@ url = "../fact-checker"
 
 [[package]]
 name = "rusticai-langchain"
-version = "1.4.0"
+version = "1.5.0"
 description = "Rustic AI module with LangChain integrations"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -6907,7 +6907,7 @@ url = "../langchain"
 
 [[package]]
 name = "rusticai-litellm"
-version = "1.4.0"
+version = "1.5.0"
 description = "Rustic AI module leveraging LiteLLM for LLMs"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -6932,7 +6932,7 @@ url = "../litellm"
 
 [[package]]
 name = "rusticai-llm-agent"
-version = "1.4.4"
+version = "1.5.0"
 description = "A complete set of LLM agents"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -6956,7 +6956,7 @@ url = "../llm-agent"
 
 [[package]]
 name = "rusticai-mcp"
-version = "2.1.3"
+version = "2.2.0"
 description = "support for mcps"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -6977,7 +6977,7 @@ url = "../mcp"
 
 [[package]]
 name = "rusticai-pandas-analyst"
-version = "0.2.5"
+version = "0.3.0"
 description = "Pandas and DuckDB powered implementation of data analyst dependency."
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -6989,9 +6989,9 @@ develop = true
 duckdb = ">=2.0.1,<3.0.0"
 pandas = ">=3.1.1,<4.0.0"
 pyarrow = ">=26.0.1,<27.0.0"
-rusticai-core = ">=1.4.2,<1.5.0"
-rusticai-llm-agent = ">=1.4.4,<1.5.0"
-rusticai-uniko-agent = ">=0.0.6,<0.1.0"
+rusticai-core = ">=1.5.0,<1.6.0"
+rusticai-llm-agent = ">=1.5.0,<1.6.0"
+rusticai-uniko-agent = ">=0.1.0,<0.2.0"
 
 [package.source]
 type = "directory"
@@ -6999,7 +6999,7 @@ url = "../pandas-analyst"
 
 [[package]]
 name = "rusticai-playwright"
-version = "1.4.0"
+version = "1.5.0"
 description = "Rustic AI module for scraping using playwright"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -7022,7 +7022,7 @@ url = "../playwright"
 
 [[package]]
 name = "rusticai-research-manager"
-version = "1.4.0"
+version = "1.5.0"
 description = "Research workflow manager agent for Rustic AI guilds"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -7045,7 +7045,7 @@ url = "../research-manager"
 
 [[package]]
 name = "rusticai-serpapi"
-version = "1.4.2"
+version = "1.5.0"
 description = "Rustic AI module supporting Search through SerpApi"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -7067,7 +7067,7 @@ url = "../serpapi"
 
 [[package]]
 name = "rusticai-unidb"
-version = "0.0.1"
+version = "0.1.0"
 description = "Typed Uni-DB database capabilities for Rustic AI"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -7090,7 +7090,7 @@ url = "../unidb"
 
 [[package]]
 name = "rusticai-uniko-agent"
-version = "0.0.6"
+version = "0.1.0"
 description = "module boilerplate"
 optional = false
 python-versions = ">=3.13,<3.14"
@@ -7101,8 +7101,8 @@ develop = true
 [package.dependencies]
 jsonschema = ">=4.26.0,<5.0.0"
 PyYAML = ">=6.0.4,<7.0.0"
-rusticai-core = ">=1.4.2,<1.5.0"
-rusticai-llm-agent = ">=1.4.3,<1.5.0"
+rusticai-core = ">=1.5.0,<1.6.0"
+rusticai-llm-agent = ">=1.5.0,<1.6.0"
 tiktoken = ">=0.14.0,<1.0.0"
 uniko = ">=0.6.0,<0.7.0"
 
@@ -7112,7 +7112,7 @@ url = "../uniko-agent"
 
 [[package]]
 name = "rusticai-vertexai"
-version = "1.4.0"
+version = "1.5.0"
 description = "Rustic AI module with Vertex AI integrations"
 optional = false
 python-versions = ">=3.13,<3.14"

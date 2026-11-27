@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [project]
 name = "rusticai-fact-checker"
-version = "1.4.0"
+version = "1.5.0"
 description = "Fact-checking agent for Rustic AI guilds"
 authors = [{name = "Dragonscale Industries Inc.", email = "dev@dragonscale.ai"}]
 license = "Apache-2.0"

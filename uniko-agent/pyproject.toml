@@ -4,15 +4,15 @@ build-backend = "poetry.core.masonry.api"
 
 [project]
 name = "rusticai-uniko-agent"
-version = "0.0.6"
+version = "0.1.0"
 description = "module boilerplate"
 authors = [{name = "Dragonscale Industries Inc.", email = "dev@dragonscale.ai"}]
 license = "Apache-2.0"
 readme = "README.md"
 requires-python = ">=3.13,<3.14"
 dependencies = [
-    "rusticai-core>=1.4.2,<1.5.0",
-    "rusticai-llm-agent>=1.4.3,<1.5.0",
+    "rusticai-core>=1.5.0,<1.6.0",
+    "rusticai-llm-agent>=1.5.0,<1.6.0",
     "uniko>=0.6.0,<0.7.0",
     "tiktoken>=0.14.0,<1.0.0",
     "jsonschema>=4.26.0,<5.0.0",

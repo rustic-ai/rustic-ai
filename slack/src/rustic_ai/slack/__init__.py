@@ -22,7 +22,7 @@ Example:
     >>> # Bot processes and responds
 """
 
-__version__ = "0.0.1"
+__version__ = "0.2.0"
 
 # Agents
 from rustic_ai.slack.agents.connector_agent import SlackConnectorAgent

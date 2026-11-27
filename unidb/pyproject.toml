@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [project]
 name = "rusticai-unidb"
-version = "0.0.1"
+version = "0.1.0"
 description = "Typed Uni-DB database capabilities for Rustic AI"
 dynamic = ["dependencies"]
 authors = [{name = "Dragonscale Industries Inc.", email = "dev@dragonscale.ai"}]
