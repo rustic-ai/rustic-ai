@@ -2,6 +2,7 @@ from enum import Enum
 from typing import Dict, List, Optional
 
 import shortuuid
+from sqlalchemy import false
 from sqlalchemy.ext.mutable import MutableDict, MutableList
 from sqlmodel import JSON, Column, Field, Relationship, Session, SQLModel
 from sympy import Union
@@ -74,6 +75,7 @@ class GuildRoutes(SQLModel, table=True):
     destination_priority: Optional[Priority] = Field(default=None)
     method_name: Optional[str] = Field(default=None)
     route_times: int = Field(default=1)
+    mark_forwarded: bool = Field(default=False, nullable=False, sa_column_kwargs={"server_default": false()})
 
     guild: Optional["GuildModel"] = Relationship(back_populates="routes")
 
@@ -133,6 +135,7 @@ class GuildRoutes(SQLModel, table=True):
             destination_priority=(routing_rule.destination.priority if routing_rule.destination else None),
             method_name=routing_rule.method_name,
             route_times=routing_rule.route_times,
+            mark_forwarded=routing_rule.mark_forwarded,
             agent_state_update=(
                 routing_rule.agent_state_update.model_dump() if routing_rule.agent_state_update else None
             ),
@@ -194,6 +197,7 @@ class GuildRoutes(SQLModel, table=True):
             "destination": destination,
             "method_name": self.method_name,
             "route_times": self.route_times,
+            "mark_forwarded": self.mark_forwarded,
             "transformer": self.transformer,
             "agent_state_update": self.agent_state_update,
             "guild_state_update": self.guild_state_update,
