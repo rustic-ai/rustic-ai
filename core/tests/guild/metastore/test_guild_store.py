@@ -1,14 +1,20 @@
-import pytest
-from sqlalchemy import Engine
+from pathlib import Path
+import time
 
+import pytest
+from sqlalchemy import Engine, create_engine
+
+from rustic_ai.core.agents.testutils import ProbeAgent
 from rustic_ai.core.agents.testutils.echo_agent import EchoAgent
-from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder
+from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder, GuildHelper
 from rustic_ai.core.guild.dsl import AgentSpec, DependencySpec
 from rustic_ai.core.guild.metastore.database import Metastore
 from rustic_ai.core.guild.metastore.guild_store import GuildStore
 from rustic_ai.core.guild.metastore.models import GuildModel, GuildStatus
+from rustic_ai.core.messaging import MessageConstants
 from rustic_ai.core.messaging.core.message import (
     AgentTag,
+    ForwardHeader,
     FunctionalTransformer,
     PayloadTransformer,
     RoutingDestination,
@@ -215,6 +221,7 @@ class TestGuildStore:
                         RoutingRule(
                             agent=AgentTag(id="test_agent01", name="test_agent01"),
                             method_name="test_method01",
+                            mark_forwarded=True,
                             destination=RoutingDestination(topics="new_test_topic"),
                             transformer=PayloadTransformer(
                                 expression="$",
@@ -227,6 +234,7 @@ class TestGuildStore:
             .add_route(
                 route=RoutingRule(
                     agent=AgentTag(id="test", name="Test Agent"),
+                    mark_forwarded=False,
                     destination=RoutingDestination(
                         topics="test_topic",
                         recipient_list=[AgentTag(id="agent2", name="Agent 002")],
@@ -244,6 +252,7 @@ class TestGuildStore:
             .add_route(
                 route=RoutingRule(
                     agent=AgentTag(id="test_agent_03", name="Test Agent"),
+                    mark_forwarded=True,
                     transformer=FunctionalTransformer(
                         handler="{'payload': {'new_key': payload.key, 'origin_id': $.origin.id}}",
                     ),
@@ -255,7 +264,13 @@ class TestGuildStore:
         store = GuildStore(engine)
         store.add_guild(spec, org_id)
 
-        guild_model = store.get_guild(guild_id)
+        # Reload through a new engine so an in-memory model cannot mask lost fields.
+        engine.dispose()
+        reloaded_engine = create_engine(engine.url)
+        try:
+            guild_model = GuildStore(reloaded_engine).get_guild(guild_id)
+        finally:
+            reloaded_engine.dispose()
 
         assert guild_model is not None
         guild = guild_model.to_guild_spec()
@@ -272,6 +287,7 @@ class TestGuildStore:
 
         assert rule01 is not None
         assert rule01.method_name == "test_method01"
+        assert rule01.mark_forwarded is True
         assert rule01.destination is not None
         assert rule01.destination.topics == "new_test_topic"
         assert rule01.transformer is not None
@@ -285,6 +301,7 @@ class TestGuildStore:
         assert rule02.agent is not None
         assert rule02.agent.id == "test"
         assert rule02.agent.name == "Test Agent"
+        assert rule02.mark_forwarded is False
         assert rule02.destination is not None
         assert rule02.destination.topics == "test_topic"
         assert len(rule02.destination.recipient_list) == 1
@@ -297,6 +314,7 @@ class TestGuildStore:
         assert rule03.agent is not None
         assert rule03.agent.id == "test_agent_02"
         assert rule03.agent.name == "Test Agent"
+        assert rule03.mark_forwarded is False
         assert rule03.transformer is not None
         assert isinstance(rule03.transformer, PayloadTransformer)
         assert rule03.transformer.output_format == "test_message_format2"
@@ -307,9 +325,106 @@ class TestGuildStore:
         assert rule04.agent is not None
         assert rule04.agent.id == "test_agent_03"
         assert rule04.agent.name == "Test Agent"
+        assert rule04.mark_forwarded is True
         assert rule04.transformer is not None
         assert isinstance(rule04.transformer, FunctionalTransformer)
         assert rule04.transformer.handler == "{'payload': {'new_key': payload.key, 'origin_id': $.origin.id}}"
+        assert guild.model_dump(mode="json") == spec.model_dump(mode="json")
+
+    @pytest.mark.parametrize("mark_forwarded", [True, False, None])
+    def test_bootstrapped_route_preserves_forwarding_identity(self, engine, org_id, mark_forwarded):
+        route = RoutingRule(
+            agent=AgentTag(id="echo", name="Echo"),
+            method_name="echo_message",
+            message_format=MessageConstants.RAW_JSON_FORMAT,
+            destination=RoutingDestination(topics="forwarding.responses"),
+        )
+        if mark_forwarded is not None:
+            route.mark_forwarded = mark_forwarded
+        builder = (
+            GuildBuilder("forwarding-guild", "Forwarding", "Persist forwarding identity")
+            .add_agent_spec(
+                AgentBuilder(EchoAgent)
+                .set_id("echo")
+                .set_name("Echo")
+                .set_description("Forward requests")
+                .listen_to_default_topic(False)
+                .add_additional_topic("forwarding.requests")
+                .build_spec()
+            )
+            .set_routes(RoutingSlip(steps=[route]))
+        )
+        guild = builder.bootstrap(str(engine.url), org_id)
+        try:
+            manager_wrapper = guild.execution_engine.agent_tracker.get_agent_wrapper(
+                guild.id, GuildHelper.get_manager_agent_id(guild.id)
+            )
+            if hasattr(manager_wrapper, "initialization_complete"):
+                assert manager_wrapper.initialization_complete.wait(10)
+            manager = manager_wrapper.agent
+            deadline = time.monotonic() + 10
+            while getattr(manager, "guild", None) is None and time.monotonic() < deadline:
+                time.sleep(0.01)
+            assert manager.guild is not None
+            echo = manager.guild.execution_engine.agent_tracker.get_agent_wrapper(guild.id, "echo")
+            assert echo is not None
+            if hasattr(echo, "initialization_complete"):
+                assert echo.initialization_complete.wait(10)
+            probe = manager.guild._add_local_agent(
+                AgentBuilder(ProbeAgent)
+                .set_id("probe")
+                .set_name("Probe")
+                .set_description("Observe forwarded responses")
+                .listen_to_default_topic(False)
+                .add_additional_topic("forwarding.responses")
+                .build_spec()
+            )
+            request_id = probe.publish_dict_with_guild_route("forwarding.requests", {"request": "hello"})
+            deadline = time.monotonic() + 10
+            responses = []
+            while not responses and time.monotonic() < deadline:
+                responses = [m for m in probe.get_messages() if m.topic_published_to == "forwarding.responses"]
+                if not responses:
+                    time.sleep(0.01)
+            assert len(responses) == 1
+            response = responses[0]
+            assert response.id != request_id.to_int()
+            assert response.payload == {"request": "hello"}
+            if mark_forwarded:
+                assert response.forward_header == ForwardHeader(
+                    origin_message_id=request_id.to_int(), on_behalf_of=probe.get_agent_tag()
+                )
+            else:
+                assert response.forward_header is None
+        finally:
+            guild.shutdown()
+
+    def test_migrate_legacy_route_forwarding(self, tmp_path):
+        # Exercise the deployment SQL against a populated table without the new column.
+        engine = create_engine("sqlite:///" + str(tmp_path / "legacy.db"))
+        migration = Path(__file__).resolve().parents[4] / "scripts/migrations/add_route_mark_forwarded.sql"
+        try:
+            with engine.begin() as connection:
+                connection.exec_driver_sql(
+                    "CREATE TABLE guild_routes (id VARCHAR PRIMARY KEY, guild_id VARCHAR NOT NULL)"
+                )
+                connection.exec_driver_sql("INSERT INTO guild_routes (id, guild_id) VALUES ('existing', 'guild')")
+                connection.exec_driver_sql(migration.read_text())
+                assert connection.exec_driver_sql("SELECT id, guild_id, mark_forwarded FROM guild_routes").one() == (
+                    "existing",
+                    "guild",
+                    0,
+                )
+                connection.exec_driver_sql("INSERT INTO guild_routes (id, guild_id) VALUES ('default', 'guild')")
+                connection.exec_driver_sql(
+                    "INSERT INTO guild_routes (id, guild_id, mark_forwarded) VALUES ('forwarded', 'guild', TRUE)"
+                )
+            engine.dispose()
+            with engine.connect() as connection:
+                rows = connection.exec_driver_sql("SELECT id, mark_forwarded FROM guild_routes ORDER BY id").all()
+                assert rows == [("default", 0), ("existing", 0), ("forwarded", 1)]
+        finally:
+            engine.dispose()
 
     def test_model_with_dependencies(self, engine, org_id):
         guild_id = "guild_with_deps"
@@ -398,3 +513,5 @@ class TestGuildStore:
 
         assert d4.class_name == "test_dep04"
         assert d4.properties == {"test_dep": "test_dep_value4"}
+        expected = spec.model_copy(update={"agents": [agent]})
+        assert gs.model_dump(mode="json") == expected.model_dump(mode="json")

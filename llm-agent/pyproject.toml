@@ -1,11 +1,11 @@
 [build-system]
-requires = ["poetry-core"]
+requires = ["poetry-core>=2.5.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 
 [project]
 name = "rusticai-llm-agent"
-version = "1.4.4"
+version = "1.5.0"
 description = "A complete set of LLM agents"
 authors = [{name = "Dragonscale Industries Inc.", email = "dev@dragonscale.ai"}]
 license = "Apache-2.0"
@@ -21,10 +21,19 @@ packages = [{ include = "rustic_ai", from = "src" }]
 [tool.poetry.dependencies]
 rusticai-core = { path = "../core", develop = true }
 jsonschema = "^4.26.0"
-openai = "^3.52.0"
+openai = "^3.59.0"
 tzlocal = "^5.4.5"
 tzdata = "^2026.6"
+rusticai-testing = {path = "../testing", develop = true, optional = true}
+rusticai-litellm = {path = "../litellm", develop = true, optional = true}
 
+[tool.poetry.dependencies.pytest]
+version = "^9.2.0"
+optional = true
+
+[tool.poetry.dependencies.pytest-asyncio]
+version = "^1.5.0"
+optional = true
 [tool.poetry-monorepo.deps]
 
 
@@ -35,7 +44,7 @@ optional = true
 pytest = "^9.2.0"
 black = { version = "^26.10.1", extras = ["jupyter"] }
 flake8 = "^7.5.0"
-tox = "^4.67.13"
+tox = "^4.67.16"
 isort = "^9.0.2"
 mypy = "^2.4.1"
 flaky = "^3.8.1"

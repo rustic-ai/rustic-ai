@@ -12,7 +12,10 @@ from pydantic import BaseModel, Field, SerializationInfo, field_serializer
 import shortuuid
 
 from rustic_ai.showcase.vending_bench.config import ProductType
-from rustic_ai.showcase.vending_bench.supplier_registry import SupplierProfile
+from rustic_ai.showcase.vending_bench.supplier_registry import (
+    SupplierProfile,
+    SupplierRegistry,
+)
 
 # =============================================================================
 # Supplier Discovery Messages
@@ -208,6 +211,22 @@ class ViewSuppliersResponse(BaseModel):
     suppliers: List[SupplierProfile] = Field(default_factory=list)
     total_active: int = Field(default=0, description="Total active suppliers")
     message: str = Field(default="")
+
+
+def build_supplier_view(registry: SupplierRegistry, request: ViewSuppliersRequest) -> ViewSuppliersResponse:
+    """Build the same filtered registry view for every capability exposing this protocol."""
+    suppliers = [
+        supplier
+        for supplier in registry.suppliers.values()
+        if (not request.active_only or supplier.is_active)
+        and (request.product_filter is None or request.product_filter in supplier.products_offered)
+    ]
+    return ViewSuppliersResponse(
+        request_id=request.request_id,
+        suppliers=suppliers,
+        total_active=sum(supplier.is_active for supplier in registry.suppliers.values()),
+        message=f"Found {len(suppliers)} suppliers matching your criteria",
+    )
 
 
 # =============================================================================

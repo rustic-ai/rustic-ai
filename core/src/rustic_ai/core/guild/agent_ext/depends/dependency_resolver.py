@@ -36,6 +36,13 @@ class DependencyResolver(ABC, Generic[DT]):
         self._dependency_specs: Dict[str, DependencySpec] = {}
         self._injectors: Dict[str, DependencyResolver] = {}
 
+    def shutdown(self) -> None:
+        """Release resources owned by this resolver; never close borrowed values.
+
+        The runtime separately shuts down nested resolvers it constructed.
+        The default hook deliberately does not call methods on cached values.
+        """
+
     @abstractmethod
     def resolve(self, org_id: str, guild_id: str, agent_id: str) -> DT:
         """

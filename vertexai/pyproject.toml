@@ -1,11 +1,11 @@
 [build-system]
-requires = ["poetry-core"]
+requires = ["poetry-core>=2.5.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 
 [project]
 name = "rusticai-vertexai"
-version = "1.4.0"
+version = "1.5.0"
 description = "Rustic AI module with Vertex AI integrations"
 authors = [{name = "Dragonscale Industries Inc.", email = "dev@dragonscale.ai"}]
 license = "Apache-2.0"
@@ -21,12 +21,13 @@ packages = [{ include = "rustic_ai", from = "src" }]
 [tool.poetry.dependencies]
 rusticai-core = { path = "../core", develop = true }
 rusticai-serpapi = {path = "../serpapi", develop = true}
-google-cloud-aiplatform = "^2.9.0"
-# google-cloud-aiplatform 2.9 requires google-genai <3.0.0.
-google-genai = "^2.34.0"
+google-genai = "^3.6.1"
 google-cloud-language = "^2.22.0"
 tabulate = "^0.10.0"
 
+[tool.poetry.dependencies.pytest]
+version = "^9.2.0"
+optional = true
 [tool.poetry-monorepo.deps]
 
 
@@ -37,7 +38,7 @@ optional = true
 pytest = "^9.2.0"
 black = { version = "^26.10.1", extras = ["jupyter"] }
 flake8 = "^7.5.0"
-tox = "^4.67.13"
+tox = "^4.67.16"
 isort = "^9.0.2"
 mypy = "^2.4.1"
 pandas = "^3.1.1"

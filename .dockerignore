@@ -1,4 +1,10 @@
 ### Python template
+.git/
+.uni_cache/
+.ruff_cache/
+.test_session_pid
+coverage/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -163,6 +169,9 @@ cython_debug/
 .github
 uvicorn_output.txt
 *.db
+*.db-journal
+*.db-shm
+*.db-wal
 */.tox
 */.venv
 */dist

@@ -163,3 +163,134 @@ class TestInMemoryCleanup:
         assert not stale_handler_called.wait(timeout=0.2), "Cleanup should remove stale singleton handlers"
 
         backend_b.cleanup()
+
+
+def test_backend_cleanup_preserves_other_owner_history():
+    first = InMemoryMessagingBackend()
+    second = InMemoryMessagingBackend()
+    namespace = "history-" + uuid.uuid4().hex
+    topic = "topic-" + uuid.uuid4().hex
+    message = _make_message(topic, GemstoneGenerator(1), {"keep": True})
+    try:
+        second.store_message(namespace, topic, message)
+        first.cleanup()
+        first.cleanup()
+        assert second.get_messages_by_id(namespace, [message.id])[0].payload == {"keep": True}
+    finally:
+        first.cleanup()
+        second.cleanup()
+
+
+def test_memory_store_construction_does_not_reset_live_backend_ownership():
+    backend = InMemoryMessagingBackend()
+    try:
+        store = MemoryStore()
+        assert backend in store._backend_owners
+        assert MemoryStore() is store
+        assert backend in store._backend_owners
+    finally:
+        backend.cleanup()
+
+
+def test_stopped_namespace_history_is_released_while_other_namespace_survives():
+    first = InMemoryMessagingBackend()
+    second = InMemoryMessagingBackend()
+    generator = GemstoneGenerator(1)
+    first_message = _make_message("first-topic", generator, {"first": True})
+    second_message = _make_message("second-topic", generator, {"second": True})
+    first.store_message("first-namespace", "first-topic", first_message)
+    second.store_message("second-namespace", "second-topic", second_message)
+    try:
+        first.cleanup()
+        assert first._message_store.get_messages("first-namespace", [first_message.id]) == [None]
+        assert second.get_messages_by_id("second-namespace", [second_message.id])[0].payload == {"second": True}
+    finally:
+        first.cleanup()
+        second.cleanup()
+
+
+def test_namespace_claim_and_storage_commit_are_atomic_with_cleanup(monkeypatch):
+    first, second = InMemoryMessagingBackend(), InMemoryMessagingBackend()
+    generator = GemstoneGenerator(1)
+    first_ns, second_ns = "first-" + uuid.uuid4().hex, "second-" + uuid.uuid4().hex
+    first.store_message(first_ns, first_ns, _make_message(first_ns, generator, {"n": 1}))
+    second.store_message(second_ns, second_ns, _make_message(second_ns, generator, {"n": 2}))
+    stored = _make_message(second_ns, generator, {"n": 3})
+    claimed, allow_commit, cleanup_attempted, cleanup_entered = [threading.Event() for _ in range(4)]
+    original_claim = second._claim_namespace
+    original_cleanup = first._message_store.cleanup_namespace
+    errors = []
+
+    def delayed_claim(namespace):
+        original_claim(namespace)
+        claimed.set()
+        assert allow_commit.wait(3)
+
+    def observed_cleanup(namespace):
+        cleanup_entered.set()
+        original_cleanup(namespace)
+
+    def publish():
+        try:
+            second.store_message(second_ns, second_ns, stored)
+        except Exception as exc:
+            errors.append(exc)
+
+    def cleanup():
+        cleanup_attempted.set()
+        try:
+            first.cleanup()
+        except Exception as exc:
+            errors.append(exc)
+
+    monkeypatch.setattr(second, "_claim_namespace", delayed_claim)
+    monkeypatch.setattr(first._message_store, "cleanup_namespace", observed_cleanup)
+    publisher = threading.Thread(target=publish)
+    cleaner = threading.Thread(target=cleanup)
+    try:
+        publisher.start()
+        assert claimed.wait(2)
+        cleaner.start()
+        assert cleanup_attempted.wait(2)
+        assert not cleanup_entered.wait(0.1)
+        allow_commit.set()
+        publisher.join(3)
+        cleaner.join(3)
+        assert not publisher.is_alive() and not cleaner.is_alive()
+        assert not errors
+        assert cleanup_entered.is_set()
+        assert [message.payload["n"] for message in second.get_messages_for_topic(second_ns)] == [2, 3]
+        assert not first._message_store.get_messages_for_topic(first_ns)
+    finally:
+        allow_commit.set()
+        publisher.join(3)
+        if cleaner.ident is not None:
+            cleaner.join(3)
+        monkeypatch.setattr(second, "_claim_namespace", original_claim)
+        first.cleanup()
+        second.cleanup()
+
+
+def test_publication_callbacks_run_outside_shared_store_lock():
+    backend = InMemoryMessagingBackend()
+    namespace = "callback-" + uuid.uuid4().hex
+    acquired = threading.Event()
+
+    def acquire():
+        with backend._message_store._owner_lock:
+            acquired.set()
+
+    def handler(message):
+        worker = threading.Thread(target=acquire)
+        worker.start()
+        try:
+            assert acquired.wait(2)
+        finally:
+            worker.join(2)
+
+    try:
+        backend.subscribe(namespace, handler, namespace=namespace)
+        backend.store_message(namespace, namespace, _make_message(namespace, GemstoneGenerator(1), {"n": 1}))
+        assert acquired.is_set()
+    finally:
+        backend.cleanup()

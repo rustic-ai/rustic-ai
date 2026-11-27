@@ -142,8 +142,9 @@ class StructuredMemoryTools:
         if register:
             if not runtime.organization_id:
                 raise ValueError("A trusted organization is required for registration")
-            # Uniko #67: membership creates the real Participant idempotently.
-            # The native kind is unknown; do not claim a dedicated agent role.
+            # Register the reporting actor through the native identity API before
+            # adding its trusted deployment organization membership.
+            await runtime.instance.agent(actor).register()
             await runtime.instance.add_org_member(actor, runtime.organization_id)
         return runtime.wrap(runtime.instance.agent(actor))
 

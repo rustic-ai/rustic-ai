@@ -372,13 +372,12 @@
                     },
                     "mark_forwarded": false,
                     "route_times": 1,
-                    "transformer": null,
-                    "agent_state_update": null,
-                    "guild_state_update": {
-                        "expression_type": "jsonata",
-                        "update_format": "json-merge-patch",
-                        "state_update": "({\"user_query\": $.payload.messages[0].content[0].text, \"correlation_id\": $.id})"
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({\"context\": {\"council_query\": $.payload.messages[0].content[0].text, \"council_correlation_id\": $string($.origin.id)}})"
                     },
+                    "agent_state_update": null,
+                    "guild_state_update": null,
                     "process_status": null,
                     "reason": "Stage 1: Send user query to all council members for initial opinions"
                 },
@@ -400,7 +399,7 @@
                     "transformer": {
                         "style": "content_based_router",
                         "expression_type": "jsonata",
-                        "handler": "({\"topics\": 'AGGREGATE_OPINIONS', \"format\": 'rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse', \"payload\": $merge([$.payload, {\"correlation_id\": $string($.guild_state.correlation_id)}])})"
+                        "handler": "({\"topics\": \"AGGREGATE_OPINIONS\", \"payload\": $merge([$.payload, {\"correlation_id\": $.context.council_correlation_id, \"council_query\": $.context.council_query}])})"
                     },
                     "agent_state_update": null,
                     "guild_state_update": null,
@@ -425,7 +424,7 @@
                     "transformer": {
                         "style": "content_based_router",
                         "expression_type": "jsonata",
-                        "handler": "({\"topics\": 'user_message_broadcast', \"format\": 'rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse', \"payload\": {\"choices\": [{\"message\": {\"content\": '**' & $.sender.name & ' Opinion:**\\n\\n' & $.payload.choices[0].message.content}}]}})"
+                        "handler": "({\"topics\": \"user_message_broadcast\", \"format\": \"rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse\", \"payload\": $merge([$.payload, {\"choices\": [$merge([$.payload.choices[0], {\"message\": $merge([$.payload.choices[0].message, {\"content\": \"Council Opinion:\\n\\n\" & $.payload.choices[0].message.content}])}])]}])})"
                     },
                     "agent_state_update": null,
                     "guild_state_update": null,
@@ -451,14 +450,10 @@
                     "transformer": {
                         "style": "content_based_router",
                         "expression_type": "jsonata",
-                        "handler": "({\"topics\": 'COUNCIL_REVIEW', \"format\": 'rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest', \"payload\": {\"messages\": [{\"role\": 'user', \"content\": [{\"type\": 'text', \"text\": 'Original Query: ' & $.guild_state.user_query & '\\n\\nReview the following responses and rank them from 1 (best) to 3 (worst) based on accuracy, insight, and helpfulness. The responses are anonymized.\\n\\n' & $join($map($.payload.messages, function($v, $i) { 'Response_' & ($string($i + 1)) & ': ' & $v.data.choices[0].message.content }), '\\n\\n---\\n\\n') & '\\n\\nProvide your ranking as:\\n1. [Response_X] - [Brief reason]\\n2. [Response_Y] - [Brief reason]\\n3. [Response_Z] - [Brief reason]'}]}]}})"
+                        "handler": "({\"topics\": 'COUNCIL_REVIEW', \"format\": 'rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest', \"payload\": {\"messages\": [{\"role\": 'user', \"content\": [{\"type\": 'text', \"text\": 'Original Query: ' & $.payload.messages[0].data.council_query & '\\n\\nReview the following responses and rank them from 1 (best) to 3 (worst) based on accuracy, insight, and helpfulness. The responses are anonymized.\\n\\n' & $join($map($.payload.messages, function($v, $i) { 'Response_' & ($string($i + 1)) & ': ' & $v.data.choices[0].message.content }), '\\n\\n---\\n\\n') & '\\n\\nProvide your ranking as:\\n1. [Response_X] - [Brief reason]\\n2. [Response_Y] - [Brief reason]\\n3. [Response_Z] - [Brief reason]'}]}]}, \"context\": {\"council_query\": $.payload.messages[0].data.council_query, \"council_correlation_id\": $.payload.correlation_id, \"council_opinions\": $.payload.messages}})"
                     },
                     "agent_state_update": null,
-                    "guild_state_update": {
-                        "expression_type": "jsonata",
-                        "update_format": "json-merge-patch",
-                        "state_update": "{\"aggregated_opinions\": $.untransformed.payload.messages}"
-                    },
+                    "guild_state_update": null,
                     "process_status": null,
                     "reason": "Stage 2: Send aggregated opinions to all council members for peer review"
                 },
@@ -480,7 +475,7 @@
                     "transformer": {
                         "style": "content_based_router",
                         "expression_type": "jsonata",
-                        "handler": "({\"topics\": 'AGGREGATE_REVIEWS', \"format\": 'rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse', \"payload\": $merge([$.payload, {\"correlation_id\": $string($.guild_state.correlation_id)}])})"
+                        "handler": "({\"topics\": \"AGGREGATE_REVIEWS\", \"payload\": $merge([$.payload, {\"correlation_id\": $.context.council_correlation_id, \"council_query\": $.context.council_query, \"council_opinions\": $.context.council_opinions}])})"
                     },
                     "agent_state_update": null,
                     "guild_state_update": null,
@@ -506,7 +501,7 @@
                     "transformer": {
                         "style": "content_based_router",
                         "expression_type": "jsonata",
-                        "handler": "({\"topics\": 'CHAIRMAN_COMPILE', \"format\": 'rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest', \"payload\": {\"messages\": [{\"role\": 'user', \"content\": [{\"type\": 'text', \"text\": 'Original Query: ' & $.guild_state.user_query & '\\n\\nCouncil Member Responses:\\n' & $join($map($.guild_state.aggregated_opinions, function($v, $i) { 'Response ' & ($string($i + 1)) & ':\\n' & $v.data.choices[0].message.content }), '\\n\\n---\\n\\n') & '\\n\\nPeer Reviews and Rankings:\\n' & $join($map($.payload.messages, function($v, $i) { 'Review ' & ($string($i + 1)) & ':\\n' & $v.data.choices[0].message.content }), '\\n\\n') & '\\n\\nAs Chairman, synthesize all perspectives and provide the final, most comprehensive answer.'}]}]}})"
+                        "handler": "({\"topics\": 'CHAIRMAN_COMPILE', \"format\": 'rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest', \"payload\": {\"messages\": [{\"role\": 'user', \"content\": [{\"type\": 'text', \"text\": 'Original Query: ' & $.payload.messages[0].data.council_query & '\\n\\nCouncil Member Responses:\\n' & $join($map($.payload.messages[0].data.council_opinions, function($v, $i) { 'Response ' & ($string($i + 1)) & ':\\n' & $v.data.choices[0].message.content }), '\\n\\n---\\n\\n') & '\\n\\nPeer Reviews and Rankings:\\n' & $join($map($.payload.messages, function($v, $i) { 'Review ' & ($string($i + 1)) & ':\\n' & $v.data.choices[0].message.content }), '\\n\\n') & '\\n\\nAs Chairman, synthesize all perspectives and provide the final, most comprehensive answer.'}]}]}})"
                     },
                     "agent_state_update": null,
                     "guild_state_update": null,
@@ -532,7 +527,7 @@
                     "transformer": {
                         "style": "content_based_router",
                         "expression_type": "jsonata",
-                        "handler": "({\"topics\": 'user_message_broadcast', \"format\": 'rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse', \"payload\": {\"choices\": [{\"message\": {\"content\": '\\n\\n---\\n\\n## Chairman Final Response:\\n\\n' & $.payload.choices[0].message.content}}]}})"
+                        "handler": "({\"topics\": \"user_message_broadcast\", \"format\": \"rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse\", \"payload\": $merge([$.payload, {\"choices\": [$merge([$.payload.choices[0], {\"message\": $merge([$.payload.choices[0].message, {\"content\": \"## Chairman Final Response:\\n\\n\" & $.payload.choices[0].message.content}])}])]}])})"
                     },
                     "agent_state_update": null,
                     "guild_state_update": null,

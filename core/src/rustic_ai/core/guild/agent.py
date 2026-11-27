@@ -134,6 +134,7 @@ class Agent(Generic[APT], metaclass=AgentMetaclass):  # type: ignore
 
         self.subscribed_topics = agent_spec.subscribed_topics
         self._dependency_resolvers: Dict[str, DependencyResolver] = {}
+        self._owned_dependency_resolvers: tuple[DependencyResolver, ...] = ()
         self._agent_tag = AgentTag(id=self.id, name=self.name)
         self._dependency_resolvers = dependency_resolvers or {}
 
@@ -298,6 +299,13 @@ class Agent(Generic[APT], metaclass=AgentMetaclass):  # type: ignore
         Get the state of the guild.
         """
         return self._guild_state
+
+    def on_shutdown(self) -> None:
+        """Release agent-owned work before dependencies and messaging disconnect.
+
+        Runtime wrappers invoke this hook once. Overrides must be synchronous;
+        native asynchronous resources should use their runtime shutdown bridge.
+        """
 
     def _get_client(self) -> Client:
         return self._client
@@ -1136,7 +1144,7 @@ def processor(
                     for dep in deps
                 }
 
-                logging.debug(f"Processor [{func.__name__}] running for message:\n {msg.model_dump_json()}\n")
+                logging.debug("Processor [%s] running for message %s (%s)", func.__name__, msg.id, msg.format)
 
                 send_fixtures = ProcessorHelper.get_on_send_fixtures(self.__class__)
                 error_fixtures = ProcessorHelper.get_on_error_fixtures(self.__class__)

@@ -19,7 +19,7 @@ All memory stores implement two core methods:
 | [HistoryBasedMemoriesStore](#historybasedmemoriesstore) | Via message history | Thread/conversation | Extracting context from message flow |
 | [StateBackedMemoriesStore](#statebackedmemoriesstore) | Agent state | Agent | Persistent per-agent memory |
 | [GuildStateBackedMemoriesStore](#guildstatebackedmemoriesstore) | Guild state | Guild | Shared memory across agents |
-| [KnowledgeBasedMemoriesStore](#knowledgebasedmemoriesstore) | Vector database | Guild | Semantic search over conversations |
+| [UnikoMemoriesStore](#unikomemoriesstore) | Native Uniko | Per user | Semantic recall and atomic visible turns |
 
 ## QueueBasedMemoriesStore
 
@@ -181,94 +181,40 @@ llm_request_wrappers:
 
 The `remember()` method is a no-op—guild state should be updated through other mechanisms (e.g., a dedicated state management agent). During `recall()`, it reads from `agent.get_guild_state()["memories"]`.
 
-## KnowledgeBasedMemoriesStore
+## UnikoMemoriesStore
 
-The most sophisticated memory store, using a vector database for semantic search over conversation history. This enables retrieval of contextually relevant memories rather than just recent ones.
-
-### Configuration
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `context_window_size` | `int` | `5` | Number of recent messages to use for building search queries |
-| `recall_limit` | `int` | `10` | Maximum number of memories to retrieve |
-
-### Dependencies
-
-This store requires guild-level dependencies that must be configured:
-
-| Dependency | Type | Description |
-|------------|------|-------------|
-| `filesystem` | `FileSystem` | Filesystem for storing knowledge base data |
-| `kb_backend` | `KBIndexBackend` | Vector database backend for semantic search |
-
-### When to Use
-
-- Long conversations where recency isn't the best relevance signal
-- Agents that need to recall specific topics from past conversations
-- Scenarios requiring semantic similarity matching
-
-### Python Example
-
-```python
-from rustic_ai.llm_agent.memories import KnowledgeBasedMemoriesStore
-
-memory_store = KnowledgeBasedMemoriesStore(
-    context_window_size=5,
-    recall_limit=10,
-    depends_on=["filesystem", "kb_backend"]
-)
-```
-
-### YAML Configuration
+The optional `rusticai-uniko-agent` package provides
+`rustic_ai.uniko_agent.memories.UnikoMemoriesStore`. It recalls bounded, untrusted
+conversation context and records the current user text and final assistant answer
+as an atomic pair. Trusted User Proxy forwarding identity isolates users within a
+guild. Configure the `uniko` resolver and its persistent filesystem.
 
 ```yaml
 llm_request_wrappers:
-  - kind: rustic_ai.llm_agent.memories.knowledge_memories_store.KnowledgeBasedMemoriesStore
-    context_window_size: 5
-    recall_limit: 10
-    depends_on:
-      - filesystem
-      - kb_backend
+  - kind: rustic_ai.uniko_agent.memories.UnikoMemoriesStore
+    recall_item_limit: 10
+    recall_max_characters: 6000
+    recall_token_budget: 2000
 ```
 
-### Guild Dependency Configuration
+For tool continuations, select `defer_recording: true` and use
+`rustic_ai.uniko_agent.conversation.ConversationMemoryAgent`. Its typed
+`CommitConversationRequest` processor records only an accepted final turn;
+intermediate tool calls are recall-only. The [Semantic Memory Assistant](../showcase/semantic_memory_assistant.md)
+shows the complete guild, deadlines and acknowledgment handling.
 
-```yaml
-dependency_map:
-  filesystem:
-    class_name: rustic_ai.core.guild.agent_ext.depends.filesystem.FileSystemResolver
-    properties:
-      base_path: /path/to/guild/storage
-    scope: guild
-  kb_backend:
-    class_name: rustic_ai.chroma.ChromaKBIndexResolver
-    properties:
-      collection_name: memories
-    scope: guild
-```
-
-### How It Works
-
-1. **Remember Phase**: Messages are indexed into the knowledge base with metadata (role, timestamp, tool calls, etc.)
-2. **Recall Phase**: Recent messages are used to build a semantic search query, and the most relevant past memories are retrieved
+The legacy knowledge-backed memory wrapper and its eager export are retired.
+KnowledgeAgent, the core knowledge-base internals and the LanceDB package are also retired.
+Existing deployments require the [legacy migration steps](core/knowledge_agent.md) before upgrading; stored databases are not migrated or deleted by this source change.
+Keep `rusticai-llm-agent` independent of Uniko; configure the wrapper dynamically
+from the Uniko package.
 
 ## Combining Multiple Memory Stores
 
-You can use multiple memory stores together by adding them to the `llm_request_wrappers` list. They execute in order, with each store's recalled memories being added to the context.
-
-```yaml
-llm_request_wrappers:
-  # First, add recent queue-based memories
-  - kind: rustic_ai.llm_agent.memories.queue_memories_store.QueueBasedMemoriesStore
-    memory_size: 10
-  # Then, add semantically relevant memories from knowledge base
-  - kind: rustic_ai.llm_agent.memories.knowledge_memories_store.KnowledgeBasedMemoriesStore
-    context_window_size: 3
-    recall_limit: 5
-    depends_on:
-      - filesystem
-      - kb_backend
-```
+Wrappers preprocess in list order and postprocess in reverse order. Combine stores
+only when their ownership and stored conversation semantics agree. For example,
+queue memory stores live tool turns while Uniko stores only final visible turns;
+a queue is not a substitute for private persistent user memory.
 
 ## Creating Custom Memory Stores
 
@@ -308,3 +254,8 @@ The base `MemoriesStore` class automatically handles:
 - [LLM Agent & Plugins](llm_agent.md) - Overview of the LLM Agent
 - [LLM Agent Plugins](llm_agent_plugins.md) - Plugin system architecture
 - [Dependency Injection](../howto/dependency_injection.md) - Configuring dependencies
+
+
+## Uniko cognitive memory
+
+[UnikoMemoriesStore](uniko/index.md#conversational-llm-wrapper) adds user-isolated cognitive memory around LLM calls through `llm_request_wrappers`, with attributed bounded recall and atomic user/assistant recording. Use a separate [MemoryAgent](uniko/index.md) when memory should be an independently addressed guild capability. [UnikoResolver](../dependencies/uniko/index.md) documents private storage and lifecycle ownership.

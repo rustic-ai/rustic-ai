@@ -12,6 +12,7 @@ nav:
       - State Management: howto/state_management.md
       - Using ReActAgent with Skills: howto/using_react_agent_with_skills.md
       - Testing Agents: howto/testing_agents.md
+      - Testing Composed Guilds: howto/testing_guilds.md
       - Writing Effective Agent Tests: howto/writing_effective_agent_tests.md
       - Client-Server Flow: howto/client_server_flow.md
       - Code Tag Quick Reference: howto/code_tag_quick_reference.md
@@ -38,12 +39,18 @@ nav:
       - LLM Agent Memory: agents/llm_agent_memory.md
       - LLM Agent Plugins: agents/llm_agent_plugins.md
       - ReAct Agent: agents/react_agent.md
+      - Uniko Memory:
+          - Agent Guide: agents/uniko/index.md
+          - Message Protocol: agents/uniko/protocol.md
+          - Document Coordinator: agents/uniko/documents.md
+      - Uni-DB:
+          - Agent Guide: agents/unidb/index.md
+          - Message Protocol: agents/unidb/protocol.md
       - Core:
           - Overview: agents/core/index.md
           - Guild Manager Agent: agents/core/guild_manager_agent.md
           - User Proxy Agent: agents/core/user_proxy_agent.md
           - Vector Agent: agents/core/vector_agent.md
-          - Knowledge Agent: agents/core/knowledge_agent.md
           - Simple LLM Agent: agents/core/simple_llm_agent.md
           - Probe Agent: agents/core/probe_agent.md
       - LiteLLM:
@@ -77,6 +84,8 @@ nav:
           - In-Memory KV Store: dependencies/core/in_memory_kvstore.md
           - In-Process Interpreter: dependencies/core/in_process_interpreter.md
           - Python Exec Executor: dependencies/core/python_exec_executor.md
+      - Uniko Resolver: dependencies/uniko/index.md
+      - Uni-DB Resolver: dependencies/unidb/index.md
       - Redis:
           - Overview: dependencies/redis/index.md
           - Redis KV Store: dependencies/redis/redis_kvstore.md
@@ -100,13 +109,19 @@ nav:
       - Transformation: patterns/transformation.md
       - Aggregation: patterns/aggregation.md
   - Ray: ray/index.md
-  - Showcase: showcase/index.md
+  - Showcase:
+      - Overview: showcase/index.md
+      - PaperBanana: showcase/paper_banana.md
+      - Semantic Memory Assistant: showcase/semantic_memory_assistant.md
   - API: api/index.md
   - UI Protocol Types: ui_protocol_types.md
   - Contributing: contributing.md
   - Design:
       - ReAct Agent Design: design/react-agent-design.md
       - Uniko Agent Completion Plan: design/uniko-agent-completion.md
+      - KnowledgeAgent Migration: design/knowledge-agent-uniko-migration.md
+      - Uni-DB Agent Design: design/uni-db-agent-design.md
+      - Dependency Refresh (2026-11-25): design/dependency-refresh-2026-11-25.md
 theme:
   icon:
     repo: fontawesome/brands/github

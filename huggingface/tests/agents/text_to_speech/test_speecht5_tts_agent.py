@@ -1,8 +1,9 @@
+from functools import partial
 import os
-import time
 
 from fsspec import filesystem
 import pytest
+from transformers import pipeline
 
 from rustic_ai.core.agents.commons.media import MediaLink
 from rustic_ai.core.agents.commons.message_formats import GenerationPromptRequest
@@ -14,17 +15,19 @@ from rustic_ai.core.guild.agent_ext.depends.filesystem import (
 from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder
 from rustic_ai.core.guild.dsl import AgentSpec, DependencySpec
 from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
+from rustic_ai.huggingface.agents.text_to_speech import speecht5_tts_agent
 from rustic_ai.huggingface.agents.text_to_speech.speecht5_tts_agent import (
     SpeechT5TTSAgent,
 )
 
 
 class TestSpeechT5TtsAgent:
-    @pytest.mark.skipif(os.getenv("HF_TOKEN") is None, reason="HF_TOKEN environment variable not set")
-    def test_response_is_generated(self, probe_spec, org_id):
+    @pytest.mark.skipif(os.getenv("SKIP_EXPENSIVE_TESTS") == "true", reason="Skipping expensive tests")
+    def test_response_is_generated(self, probe_spec, org_id, wait_for_model_response, monkeypatch):
         """
         Test that the agent responds to a message with a message containing the filepath of the generated audio.
         """
+        monkeypatch.setattr(speecht5_tts_agent, "pipeline", partial(pipeline, device="cpu"))
         # Arrange
         agent_spec: AgentSpec = (
             AgentBuilder(SpeechT5TTSAgent)
@@ -67,11 +70,10 @@ class TestSpeechT5TtsAgent:
             guild.DEFAULT_TOPIC, {"generation_prompt": "Long live the dragons"}, GenerationPromptRequest
         )
 
-        time.sleep(5)
-        messages = probe_agent.get_messages()
+        messages = wait_for_model_response(probe_agent)
 
         assert len(messages) == 1
-        assert messages[0].format == get_qualified_class_name(MediaLink)
+        assert messages[0].format == get_qualified_class_name(MediaLink), messages[0].payload
         assert dfs.exists(f"{messages[0].payload['name']}")
         dfs.rm("", recursive=True)
         guild.shutdown()

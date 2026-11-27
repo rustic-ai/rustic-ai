@@ -1,8 +1,10 @@
 # Uni-DB agent
 
-`rustic_ai.unidb.agent.UniDBAgent` provides typed database capabilities for Rustic guilds. It uses Uni-DB **5.2.1** and Python **3.13**. Domain schema, Locy rules, named operations, and transaction assertions are supplied by the application. Guild composition owns authentication, permissions, approvals, and result visibility.
+`rustic_ai.unidb.agent.UniDBAgent` provides typed database capabilities for Rustic guilds. It uses Uni-DB **6.0.0** and Python **3.13**. Domain schema, Locy rules, named operations, and transaction assertions are supplied by the application. Guild composition owns authentication, permissions, approvals, and result visibility.
 
 This evolves Nihal's [PR 236](https://github.com/rustic-ai/rustic-ai/pull/236). All 15 original operation names remain, with a new v1 wire contract and no legacy adapters.
+
+Read the [site agent guide](../docs/agents/unidb/index.md), [protocol reference](../docs/agents/unidb/protocol.md), and [resolver guide](../docs/dependencies/unidb/index.md) for the supported v1 contract.
 
 ## Initialize
 
@@ -25,7 +27,7 @@ PYTHONPATH=unidb/src python unidb/examples/run_examples.py
 
 ## Messages and execution
 
-Named requests are `DBQueryRequest`, `DBEvaluateRequest`, `DBExplainRequest`, `DBMutateRequest`, and `DBScenarioRequest`. Discovery and reconciliation use `DBHealthRequest`, `DBCapabilitiesRequest`, `DBOperationStatusRequest`, and `DBBulkStatusRequest`.
+Named requests are `DBQueryRequest`, `DBQueryPlanRequest`, `DBQueryProfileRequest`, `DBEvaluateRequest`, `DBExplainRequest`, `DBMutateRequest`, and `DBScenarioRequest`. Discovery and reconciliation use `DBHealthRequest`, `DBCapabilitiesRequest`, `DBOperationStatusRequest`, and `DBBulkStatusRequest`.
 
 Every request carries `protocol_version: 1`, `request_id`, and `correlation_id`. Named execution also carries `operation` and `params`. Persistent effects require an `operation_id`, stable across retries; caller payloads do not supply principals or credentials.
 
@@ -52,7 +54,7 @@ Timeout, memory, input/output bytes, row count, and mutation statement count are
 
 `DBQueryPlanRequest` and `DBQueryProfileRequest` select existing catalog operations of kind `query`. They use the same request IDs, parameters, provenance, and live-view validation as named reads. Neither requires an operation ID or creates an execution receipt.
 
-Planning returns `executed: false` and native plan text, warnings, cost estimates, index usage, and suggestions. Uni-DB 5.2.1 plans the query template: parameter values do not specialize its estimates. The response explicitly reports `parameter_values_applied: false`, `planning_timeout_enforced: false`, and `planning_memory_enforced: false`. Only input/output byte-limit reductions are accepted for planning; other requested limits produce `unsupported_limit`.
+Planning returns `executed: false` and native plan text, warnings, cost estimates, index usage, and suggestions. Uni-DB 6.0.0 plans the query template: parameter values do not specialize its estimates. The response explicitly reports `parameter_values_applied: false`, `planning_timeout_enforced: false`, and `planning_memory_enforced: false`. Only input/output byte-limit reductions are accepted for planning; other requested limits produce `unsupported_limit`.
 
 Profiling executes the named read exactly once, enforcing native timeout and memory bounds. Its response contains `executed: true`, a bounded `query` result, and a `profile` with native operators, timing, memory, and query metrics. Empty native results can omit column names; configured catalog columns are then returned with `columns_source: catalog`. Otherwise their source is `native`. Row truncation does not erase the measurements of the complete native execution. Memory measurements are native operator figures, not process RSS.
 
@@ -75,7 +77,7 @@ Install the module's `tools` extra to use `UniDBToolsManagerPlugin` and `UniDBTo
 The native suite tests all three cases, all retained operations, rollback/reopen/replay, commit and publication faults, interrupted bulk/admin outcomes, bounds, proof serialization, readiness failure, and scratch isolation. Guild tests exercise actual processor selection, routes, typed errors, and an illustrative guild-owned access boundary. The showcase tool loop uses a scripted LLM; production model quality and authorization need application validation.
 
 ```bash
-PYTHONPATH=unidb/src:unidb/tests pytest unidb/tests showcase/tests/unidb
+PYTHONPATH=unidb/src:showcase/src:unidb/tests pytest unidb/tests showcase/tests/unidb
 ```
 
 Scenario applicability checks and a general Rustic resource shutdown hook are deliberately deferred. The embedding owner must call `UniDBResolver.close()` before guild shutdown. Native deadlines are supported; message-driven cancellation is not advertised. Remote storage certification, multiple writers, receipt retention, pinned/fork reads, and artifact transport are outside this version's supported surface. Existing-rule verification checks the connector's bootstrap digest, not out-of-band registry mutations.

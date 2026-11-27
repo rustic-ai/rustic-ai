@@ -64,6 +64,10 @@ def build_agent_from_spec(
         organization_id=organization_id,
     )
 
+    # These resolver instances were constructed for this runtime agent.
+    # Directly injected/test-owned dependencies are not implicitly owned.
+    new_agent._owned_dependency_resolvers = tuple(dependency_resolvers.values())
+
     if "__init__" in agent_class.__dict__:  # Only call custom __init__ if defined in this class
         agent_class.__init__(self=new_agent)
 

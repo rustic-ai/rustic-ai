@@ -328,7 +328,7 @@ class GuildBuilder:
         """
         Constructor for GuildBuilder
         Args:
-            guild_id (Optional[str]): The ID of the guild. If not provided, a unique ID will be generated using shortuuid.
+            guild_id (Optional[str]): The guild ID, generated using shortuuid when omitted.
             guild_name (Optional[str]): The name of the guild.
             guild_description (Optional[str]): The description of the guild.
         """
@@ -741,11 +741,15 @@ class GuildBuilder:
         guild = GuildHelper.shallow_guild_from_spec(guild_spec, organization_id)
         logging.info(f"Launching agents in guild {guild.id}")
 
-        for agent in guild_spec.agents:
-            logging.info(f"Launching agent {agent.name} in guild {guild.id}")
-            logging.info(f"Agent Spec: {agent.model_dump()}")
-            guild.launch_agent(agent)
-            logging.info(f"Agent {agent.name} launched")
+        try:
+            for agent in guild_spec.agents:
+                logging.info(f"Launching agent {agent.name} in guild {guild.id}")
+                logging.info(f"Agent Spec: {agent.model_dump()}")
+                guild.launch_agent(agent)
+                logging.info(f"Agent {agent.name} launched")
+        except Exception:
+            guild.shutdown()
+            raise
 
         is_running = guild.is_guild_running()
         logging.info(f"Guild {guild.id} is running: {is_running}")
@@ -774,7 +778,7 @@ class GuildBuilder:
     def load_or_launch(self, organization_id: str, skip_agents: List[str] = []) -> Guild:
         """
         Build and return a Guild instance with the set properties.
-        This WILL launch the agents in the guild if they are not already running, or just register them in the guild instance.
+        Launch agents that are not already running, or register them in the guild instance.
         This method is useful when you want to load the guild from a saved state and launch it.
         Note: This can be used directly in development and testing, but should not be used in production.
         In production, use bootstrap().
@@ -785,9 +789,13 @@ class GuildBuilder:
         guild_spec = self.build_spec()
         guild = GuildHelper.shallow_guild_from_spec(guild_spec, organization_id)
 
-        for agent in guild_spec.agents:
-            if agent.id not in skip_agents:
-                guild.register_or_launch_agent(agent)
+        try:
+            for agent in guild_spec.agents:
+                if agent.id not in skip_agents:
+                    guild.register_or_launch_agent(agent)
+        except Exception:
+            guild.shutdown()
+            raise
 
         return guild
 
@@ -795,10 +803,10 @@ class GuildBuilder:
         """
         Build and return a Guild instance with the set properties.
         This method will not launch or register the agents in the guild.
-        It will instead add a GuildManagerAgent to the Guild, which will be responsible for launching or registering agents.
+        It adds a GuildManagerAgent responsible for launching or registering the configured agents.
 
         Returns:
-            Guild: A shallow instance of the Guild without the configured Agents.
+            Guild: A shallow instance containing the manager that owns the configured agents.
         """
         # Build the GuildSpec and create a Guild instance from it.
         guild_spec = self.build_spec()
@@ -829,6 +837,7 @@ class GuildBuilder:
             guild.launch_agent(agent_spec)
             return guild
         except Exception as e:
+            guild.shutdown()
             logging.error(f"Error launching GuildManagerAgent: {e}")
             raise e
 

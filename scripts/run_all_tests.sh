@@ -21,47 +21,32 @@ DB_FILE="integration_testing_app.db"
 # -------- pre‑run cleanup --------
 rm -rf "$COVERAGE_DIR"
 mkdir -p "$COVERAGE_DIR"
-pkill -f "uvicorn rustic_ai.api_server.main:app" 2>/dev/null || :
-# Kill any processes using the embedded backend port
-lsof -ti:31134 | xargs -r kill -9 2>/dev/null || :
-lsof -ti:8880 | xargs -r kill -9 2>/dev/null || :
 
 # -------- cleanup on exit --------
 cleanup() {
+    trap - EXIT INT TERM
     printf '🧹  Cleaning up…\n' >&2
 
-    if [ -n "${SESSION_PID:-}" ] && kill -0 "$SESSION_PID" 2>/dev/null; then
+    if [ -n "${SESSION_PID:-}" ]; then
         echo "Killing session with PID: $SESSION_PID"
-        PGID=$(ps -o pgid= -p "$SESSION_PID" | tr -d ' ')
-        if [ -n "$PGID" ] && kill -0 "-$PGID" 2>/dev/null; then
-            kill -TERM "-$PGID" 2>/dev/null || :
-            sleep 0.2
-            kill -KILL "-$PGID" 2>/dev/null || :
-        fi
-        pkill -9 -P "$SESSION_PID" 2>/dev/null || :   # sweep for strays
+        # The launcher makes SESSION_PID the process-group ID. Signal that
+        # group even if its leader exited but the server is still running.
+        kill -TERM "-$SESSION_PID" 2>/dev/null || kill -TERM "$SESSION_PID" 2>/dev/null || :
+        sleep 0.2
+        kill -KILL "-$SESSION_PID" 2>/dev/null || :
         wait "$SESSION_PID" 2>/dev/null || :
     fi
-
-    echo "Killing any remaining processes on the embedded backend port"
-    sleep 0.2   # give processes time to exit
-    # Kill any remaining processes on the embedded backend port
-    lsof -ti:31134 | xargs -r kill -9 2>/dev/null || :
-
-    # Kill any remaining processes on the Uvicorn port
-    sleep 1  # give Uvicorn time to exit
-    echo "Killing any remaining processes on the Uvicorn port"
-    lsof -ti:8880 | xargs -r kill -9 2>/dev/null || :
-    pkill -f "uvicorn rustic_ai.api_server.main:app" 2>/dev/null || :
-
 
     rm -f "$DB_FILE" .test_session_pid 2>/dev/null || :
     printf '🧹  Cleanup complete.\n' >&2
 }
-trap cleanup EXIT INT TERM
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 # -------- run everything inside its own session --------
 # Pass script name as $0, then all arguments
-sh -c '
+python "$SCRIPT_DIR/run_in_session.py" sh -c '
     echo $$ > .test_session_pid     # session leader PID for cleanup
 
     export OTEL_TRACES_EXPORTER=console

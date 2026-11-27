@@ -1,6 +1,7 @@
 """Narrow configuration diagnostics and authorized deterministic source tools."""
 
 import base64
+from importlib.metadata import version
 import logging
 from typing import Any, AsyncContextManager
 
@@ -80,7 +81,7 @@ class MemoryTools:
             MemoryDiagnostics(
                 configured={"streaming": runtime["streaming"] if runtime else None},
                 observed={
-                    "sdk": "0.5.1",
+                    "sdk": version("uniko"),
                     "recall_overrides": ["limit", "token_budget", "min_score", "reranker", "reference_ts"],
                     "document_visibility": False,
                     "answer_max_tokens": False,
@@ -88,7 +89,7 @@ class MemoryTools:
                     "structured_experience": True,
                     "atomic_units": True,
                     "structured_owner": "authenticated_reporting_sender",
-                    "native_registration": "organization_membership_kind_unknown",
+                    "native_registration": "registered_agent_with_organization_membership",
                 },
                 unknown=["effective_execution_provider", "ocr", "multimodal_adapters", "sparse_and_colbert_readiness"],
             )

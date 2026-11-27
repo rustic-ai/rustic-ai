@@ -250,12 +250,7 @@ The guild requires the following dependencies:
     "properties": {
       "path_base": "/tmp/iterative_studio",
       "protocol": "file"
-    },
-    "scope": "guild"
-  },
-  "kb_backend": {
-    "class_name": "rustic_ai.core.knowledgebase.kbindex_backend_memory.InMemoryKBIndexBackendResolver",
-    "scope": "guild"
+    }
   }
 }
 ```

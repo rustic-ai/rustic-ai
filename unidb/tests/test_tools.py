@@ -23,7 +23,7 @@ from rustic_ai.unidb.tools import NAMED_OPERATIONS, PR_OPERATIONS, QueryArgument
 
 
 class ScriptedLLM(LLM):
-    prompts = []
+    prompts: list[ChatCompletionRequest] = []
 
     def completion(self, prompt, model=None):
         self.prompts.append(prompt)

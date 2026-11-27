@@ -6,6 +6,16 @@ cognitive memory system for episodic, semantic, and procedural memory.
 
 from .agent import MemoryAgent
 from .config import MemoryAgentConfig
+from .document_context import compact_document_context
+from .document_coordinator import DocumentCoordinatorAgent
+from .document_models import (
+    DocumentCoordinatorConfig,
+    DocumentSourceOutcome,
+    DocumentWorkflowError,
+    DocumentWorkflowRequest,
+    DocumentWorkflowResult,
+)
+from .document_sources import normalize_document_attachment
 from .initializer import MemoryRequestInitializerAgent
 from .memories import UnikoMemoriesStore
 from .models import (  # Observation; Recall; Answer; Document ingestion; Goal management; Task management; Error
@@ -58,6 +68,14 @@ from .models import (  # Observation; Recall; Answer; Document ingestion; Goal m
 from .resolver import UnikoResolver
 
 __all__ = [
+    "compact_document_context",
+    "DocumentCoordinatorAgent",
+    "DocumentCoordinatorConfig",
+    "DocumentSourceOutcome",
+    "DocumentWorkflowError",
+    "DocumentWorkflowRequest",
+    "DocumentWorkflowResult",
+    "normalize_document_attachment",
     "MemorySource",
     "MemoryViewer",
     "BatchItemOutcome",

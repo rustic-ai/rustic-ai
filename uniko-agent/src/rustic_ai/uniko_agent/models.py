@@ -140,7 +140,7 @@ class MemorySource(MemoryProvenance):
         if self.media_link is not None and not self.media_link.on_filesystem:
             raise ValueError("Remote URLs and host paths are not ingestion sources")
         if self.visibility is not None:
-            raise ValueError("Uniko 0.5.1 does not expose document visibility")
+            raise ValueError("Uniko 0.6.0 does not expose document visibility")
         if self.category in set(MemoryRecordKind) and self.category != MemoryRecordKind.EXTERNAL_EVIDENCE:
             raise ValueError("Document category cannot override external-evidence provenance")
         return self
@@ -410,7 +410,7 @@ class AnswerRequest(BaseModel):
 
     Attributes:
         question: Question to answer
-        max_tokens: Legacy field; non-null values are rejected by Uniko 0.5.1 integration
+        max_tokens: Legacy field; non-null values are rejected by Uniko 0.6.0 integration
         scope: Optional scope specification for recall
     """
 
@@ -461,7 +461,7 @@ class IngestDocumentRequest(MemoryProvenance):
         if (self.media_link is None) == (self.source is None):
             raise ValueError("Choose exactly one of media_link or source")
         if self.visibility is not None:
-            raise ValueError("Uniko 0.5.1 does not expose document visibility")
+            raise ValueError("Uniko 0.6.0 does not expose document visibility")
         if self.category in set(MemoryRecordKind) and self.category != MemoryRecordKind.EXTERNAL_EVIDENCE:
             raise ValueError("Document category cannot override external-evidence provenance")
         return self

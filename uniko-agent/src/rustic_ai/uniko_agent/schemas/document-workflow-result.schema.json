@@ -1,0 +1,563 @@
+{
+  "$defs": {
+    "DocumentSourceOutcome": {
+      "additionalProperties": false,
+      "properties": {
+        "index": {
+          "maximum": 31,
+          "minimum": 0,
+          "title": "Index",
+          "type": "integer"
+        },
+        "source_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Id"
+        },
+        "revision_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Revision Id"
+        },
+        "record_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Record Id"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Name"
+        },
+        "mime_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mime Type"
+        },
+        "source_uri": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Uri"
+        },
+        "encoding": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Encoding"
+        },
+        "status": {
+          "default": "pending",
+          "enum": [
+            "pending",
+            "ingested",
+            "failed",
+            "unknown"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "outcome": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/IngestOutcome"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "error": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error"
+        }
+      },
+      "required": [
+        "index"
+      ],
+      "title": "DocumentSourceOutcome",
+      "type": "object"
+    },
+    "IngestOutcome": {
+      "description": "Response from document ingestion.\n\nAttributes:\n    artifact_node_id: ID of created artifact node\n    chunk_count: Number of chunks extracted\n    page_count: Number of pages (for PDFs)\n    extracted_entities: List of entity node IDs\n    success: Whether ingestion succeeded\n    error_message: Error message if failed",
+      "properties": {
+        "artifact_node_id": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Artifact Node Id"
+        },
+        "chunk_count": {
+          "default": 0,
+          "title": "Chunk Count",
+          "type": "integer"
+        },
+        "page_count": {
+          "default": 0,
+          "title": "Page Count",
+          "type": "integer"
+        },
+        "extracted_entities": {
+          "items": {
+            "type": "integer"
+          },
+          "title": "Extracted Entities",
+          "type": "array"
+        },
+        "artifact_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Artifact Id"
+        },
+        "chunk_node_ids": {
+          "items": {
+            "type": "integer"
+          },
+          "title": "Chunk Node Ids",
+          "type": "array"
+        },
+        "page_node_ids": {
+          "items": {
+            "type": "integer"
+          },
+          "title": "Page Node Ids",
+          "type": "array"
+        },
+        "block_node_ids": {
+          "items": {
+            "type": "integer"
+          },
+          "title": "Block Node Ids",
+          "type": "array"
+        },
+        "was_deduplicated": {
+          "default": false,
+          "title": "Was Deduplicated",
+          "type": "boolean"
+        },
+        "extraction_failed": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Extraction Failed"
+        },
+        "extraction_error": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Extraction Error"
+        },
+        "stored": {
+          "default": false,
+          "title": "Stored",
+          "type": "boolean"
+        },
+        "tool_calls": {
+          "items": {
+            "$ref": "#/$defs/ToolCallOutcome"
+          },
+          "title": "Tool Calls",
+          "type": "array"
+        },
+        "searchable": {
+          "default": false,
+          "title": "Searchable",
+          "type": "boolean"
+        },
+        "success": {
+          "default": true,
+          "title": "Success",
+          "type": "boolean"
+        },
+        "record_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Record Id"
+        }
+      },
+      "title": "IngestOutcome",
+      "type": "object"
+    },
+    "MemoryRecordKind": {
+      "description": "Application-level provenance assigned before content enters memory.",
+      "enum": [
+        "unknown",
+        "user_assertion",
+        "external_evidence",
+        "deterministic_observation",
+        "model_interpretation",
+        "executed_result",
+        "assistant_response",
+        "conversation_turn"
+      ],
+      "title": "MemoryRecordKind",
+      "type": "string"
+    },
+    "RecallItem": {
+      "description": "Single recalled item from memory.\n\nAttributes:\n    node_id: Node ID in the graph\n    kind: Type of recall item (Fact, Observation, Chunk, etc.)\n    score: Relevance score (0.0-1.0)\n    content: Text content of the item\n    sources: List of source items (provenance chain)",
+      "properties": {
+        "node_id": {
+          "title": "Node Id",
+          "type": "integer"
+        },
+        "kind": {
+          "title": "Kind",
+          "type": "string"
+        },
+        "record_kind": {
+          "$ref": "#/$defs/MemoryRecordKind"
+        },
+        "score": {
+          "title": "Score",
+          "type": "number"
+        },
+        "content": {
+          "title": "Content",
+          "type": "string"
+        },
+        "sources": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Sources",
+          "type": "array"
+        },
+        "source_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Source Ids",
+          "type": "array"
+        },
+        "category": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Category"
+        },
+        "source_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Id"
+        },
+        "revision_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Revision Id"
+        },
+        "token_count": {
+          "default": 0,
+          "title": "Token Count",
+          "type": "integer"
+        },
+        "context": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Context"
+        },
+        "address": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Address"
+        },
+        "token_count_method": {
+          "default": "native",
+          "title": "Token Count Method",
+          "type": "string"
+        },
+        "legacy_metadata": {
+          "default": false,
+          "title": "Legacy Metadata",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "node_id",
+        "kind",
+        "record_kind",
+        "score",
+        "content",
+        "sources"
+      ],
+      "title": "RecallItem",
+      "type": "object"
+    },
+    "RecallResponse": {
+      "description": "Response with recalled knowledge.\n\nAttributes:\n    items: List of recalled items ranked by relevance\n    total_tokens: Total tokens in the context bundle\n    phase1_only: Whether only phase 1 was executed\n    phase2_only: Whether only phase 2 was executed\n    coverage: Coverage score (0.0-1.0)",
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/RecallItem"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "total_tokens": {
+          "title": "Total Tokens",
+          "type": "integer"
+        },
+        "phase1_only": {
+          "title": "Phase1 Only",
+          "type": "boolean"
+        },
+        "phase2_only": {
+          "title": "Phase2 Only",
+          "type": "boolean"
+        },
+        "coverage": {
+          "title": "Coverage",
+          "type": "number"
+        },
+        "truncated": {
+          "default": false,
+          "title": "Truncated",
+          "type": "boolean"
+        },
+        "legacy_compatibility": {
+          "default": false,
+          "title": "Legacy Compatibility",
+          "type": "boolean"
+        },
+        "legacy_limitations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Legacy Limitations",
+          "type": "array"
+        },
+        "token_count_method": {
+          "default": "native_or_cl100k_base",
+          "title": "Token Count Method",
+          "type": "string"
+        }
+      },
+      "required": [
+        "items",
+        "total_tokens",
+        "phase1_only",
+        "phase2_only",
+        "coverage"
+      ],
+      "title": "RecallResponse",
+      "type": "object"
+    },
+    "ToolCallOutcome": {
+      "properties": {
+        "call_id": {
+          "title": "Call Id",
+          "type": "string"
+        },
+        "action_node": {
+          "title": "Action Node",
+          "type": "integer"
+        },
+        "artifact_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Artifact Id"
+        },
+        "artifact_node": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Artifact Node"
+        },
+        "was_replay": {
+          "default": false,
+          "title": "Was Replay",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "call_id",
+        "action_node"
+      ],
+      "title": "ToolCallOutcome",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "request_id": {
+      "title": "Request Id",
+      "type": "string"
+    },
+    "query": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Query"
+    },
+    "sources": {
+      "items": {
+        "$ref": "#/$defs/DocumentSourceOutcome"
+      },
+      "maxItems": 32,
+      "title": "Sources",
+      "type": "array"
+    },
+    "recall": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RecallResponse"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "partial": {
+      "default": false,
+      "title": "Partial",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "request_id"
+  ],
+  "title": "DocumentWorkflowResult",
+  "type": "object"
+}

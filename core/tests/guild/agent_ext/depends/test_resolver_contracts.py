@@ -12,10 +12,6 @@ from rustic_ai.core.guild.agent_ext.depends.kvstore import (
     BaseKVStore,
     InMemoryKVStoreResolver,
 )
-from rustic_ai.core.knowledgebase.kbindex_backend import KBIndexBackend
-from rustic_ai.core.knowledgebase.kbindex_backend_memory import (
-    InMemoryKBIndexBackendResolver,
-)
 
 
 def _provided_type(resolver: type[DependencyResolver]) -> type:
@@ -29,7 +25,6 @@ def test_core_resolvers_declare_interface_contracts():
     assert _provided_type(InMemoryKVStoreResolver) is BaseKVStore
     assert _provided_type(FileSystemResolver) is DirFileSystem
     assert _provided_type(InProcessCodeInterpreterResolver) is CodeRunner
-    assert _provided_type(InMemoryKBIndexBackendResolver) is KBIndexBackend
 
 
 def test_kvstore_and_code_runner_resolve_their_interfaces():

@@ -1,10 +1,10 @@
 [build-system]
-requires = ["poetry-core"]
+requires = ["poetry-core>=2.5.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [project]
 name = "rusticai-unidb"
-version = "0.0.1"
+version = "0.1.0"
 description = "Typed Uni-DB database capabilities for Rustic AI"
 dynamic = ["dependencies"]
 authors = [{name = "Dragonscale Industries Inc.", email = "dev@dragonscale.ai"}]
@@ -19,7 +19,7 @@ packages = [{ include = "rustic_ai", from = "src" }]
 
 [tool.poetry.dependencies]
 rusticai-core = { path = "../core", develop = true }
-uni-db = "==5.2.1"
+uni-db = "==6.0.0"
 jsonschema = ">=4.26.0,<5.0.0"
 rusticai-llm-agent = {path = "../llm-agent", develop = true, optional = true}
 
@@ -33,7 +33,7 @@ optional = true
 pytest = "^9.2.0"
 black = { version = "^26.10.1", extras = ["jupyter"] }
 flake8 = "^7.5.0"
-tox = "^4.67.13"
+tox = "^4.67.16"
 isort = "^9.0.2"
 mypy = "^2.4.1"
 flaky = "^3.8.1"

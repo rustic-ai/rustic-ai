@@ -20,7 +20,7 @@ from rustic_ai.core.guild import agent
 from rustic_ai.core.guild.agent import Agent, ProcessContext
 from rustic_ai.core.guild.agent_ext.depends.llm.models import ChatCompletionResponse
 from rustic_ai.core.guild.dsl import BaseAgentProps
-from rustic_ai.core.state.models import StateUpdateFormat
+from rustic_ai.core.state.models import StateOwner, StateUpdateFormat
 from rustic_ai.serpapi.agent import SERPQuery
 from rustic_ai.showcase.vending_bench.config import DEFAULT_COSTS, ProductType
 from rustic_ai.showcase.vending_bench.messages import Email
@@ -40,6 +40,8 @@ from rustic_ai.showcase.vending_bench.supplier_config import (
 from rustic_ai.showcase.vending_bench.supplier_messages import (
     SupplierSearchRequest,
     SupplierSearchResponse,
+    ViewSuppliersRequest,
+    build_supplier_view,
 )
 from rustic_ai.showcase.vending_bench.supplier_registry import (
     SupplierBehaviorType,
@@ -67,6 +69,7 @@ class SupplierDiscoveryAgent(Agent[SupplierDiscoveryAgentProps]):
 
     def __init__(self):
         self.pending_searches: Dict[str, SupplierSearchRequest] = {}
+        self._pending_completions: dict[str, tuple[ProcessContext, Optional[Email], SupplierSearchResponse]] = {}
         self.registry: SupplierRegistry = SupplierRegistry()
         self.current_day: int = 1
 
@@ -85,17 +88,23 @@ class SupplierDiscoveryAgent(Agent[SupplierDiscoveryAgentProps]):
         # Load pending searches
         searches_data = guild_state.get(PENDING_SUPPLIER_SEARCHES, {})
         self.pending_searches = {
-            k: SupplierSearchRequest(**v) if isinstance(v, dict) else v for k, v in searches_data.items()
+            k: SupplierSearchRequest(**v) if isinstance(v, dict) else v
+            for k, v in searches_data.items()
+            if k not in self._pending_completions
         }
 
-    def _persist_state(self, ctx: ProcessContext):
+    def _persist_state(self, ctx: ProcessContext, completed_search_id: Optional[str] = None):
         """Persist current state to guild state."""
+        pending: dict[str, Optional[dict]] = {k: v.model_dump() for k, v in self.pending_searches.items()}
+        if completed_search_id:
+            # An empty merge-patch object preserves its old keys; null deletes one.
+            pending[completed_search_id] = None
         self.update_guild_state(
             ctx,
             update_format=StateUpdateFormat.JSON_MERGE_PATCH,
             update={
                 SUPPLIER_REGISTRY: self.registry.model_dump(),
-                PENDING_SUPPLIER_SEARCHES: {k: v.model_dump() for k, v in self.pending_searches.items()},
+                PENDING_SUPPLIER_SEARCHES: pending,
             },
         )
 
@@ -218,20 +227,27 @@ class SupplierDiscoveryAgent(Agent[SupplierDiscoveryAgentProps]):
         # Store pending search for correlation
         search_id = f"SEARCH-{shortuuid.uuid()[:8]}"
         self.pending_searches[search_id] = request
+        ctx.update_context({"supplier_search_id": search_id})
+
+        # Publish correlation state before the research capability can reply.
+        # Synchronous guilds may deliver the response during ctx.send itself.
+        self._persist_state(ctx)
 
         # Send search query to Google Research Agent
         serp_query = SERPQuery(engine="google", query=query, id=search_id, num=10)
         ctx.send(serp_query)
-
-        # Persist pending search
-        self._persist_state(ctx)
 
         logger.info(f"Initiated supplier search: {query}")
 
     @agent.processor(ChatCompletionResponse)
     def handle_research_response(self, ctx: ProcessContext[ChatCompletionResponse]):
         """Handle response from Google Research Agent."""
+        # State publication and the research reply may run in different agent
+        # mailboxes. Keep this owner's admitted searches while refreshing the
+        # persisted registry; a late state snapshot must not erase correlation.
+        pending = dict(self.pending_searches)
         self._load_state_from_guild()
+        self.pending_searches.update(pending)
 
         response = ctx.payload
 
@@ -242,16 +258,15 @@ class SupplierDiscoveryAgent(Agent[SupplierDiscoveryAgentProps]):
 
         research_content = response.choices[0].message.content or ""
 
-        # Try to find the corresponding search request
-        # In a real implementation, we'd track this via message correlation
-        # For now, process the most recent pending search
-        if not self.pending_searches:
-            logger.warning("No pending searches found for research response")
+        # Google Research gives its response a fresh ID; the originating search
+        # identity travels in message context throughout the capability call.
+        search_id = ctx.get_context().get("supplier_search_id")
+        if not isinstance(search_id, str) or search_id not in self.pending_searches:
+            logger.warning("Ignoring research response for an unknown or completed search")
             return
-
-        # Get the first pending search (FIFO)
-        search_id, original_request = next(iter(self.pending_searches.items()))
-        del self.pending_searches[search_id]
+        if search_id in self._pending_completions:
+            return
+        original_request = self.pending_searches.pop(search_id)
 
         # Use LLM to parse research results and create supplier profiles
         suppliers = self._parse_research_and_create_suppliers(
@@ -262,8 +277,7 @@ class SupplierDiscoveryAgent(Agent[SupplierDiscoveryAgentProps]):
         for supplier in suppliers:
             self.registry.add_supplier(supplier)
 
-        # Persist updated registry
-        self._persist_state(ctx)
+        email: Optional[Email] = None
 
         # Send email notification about discovered suppliers
         if suppliers:
@@ -282,7 +296,6 @@ Found {len(suppliers)} new suppliers:
 You can now contact these suppliers via email to place orders.
 Use 'view_suppliers' to see all known suppliers and their details.""",
             )
-            ctx.send(email)
 
         # Send response
         search_response = SupplierSearchResponse(
@@ -292,9 +305,31 @@ Use 'view_suppliers' to see all known suppliers and their details.""",
             time_elapsed_minutes=self.config.search_timeout_minutes,
             message=f"Found {len(suppliers)} suppliers",
         )
-        ctx.send(search_response)
+        # The player may immediately ask another agent to read this registry.
+        # Wait for authoritative state publication before announcing completion.
+        self._pending_completions[search_id] = (ctx, email, search_response)
+        self._persist_state(ctx, completed_search_id=search_id)
 
         logger.info(f"Discovered {len(suppliers)} suppliers from research")
+
+    def on_state_updated(self, new_state, ctx):
+        if ctx.payload.state_owner != StateOwner.GUILD:
+            return
+        registry = new_state.get(SUPPLIER_REGISTRY, {}).get("suppliers", {})
+        pending = new_state.get(PENDING_SUPPLIER_SEARCHES, {})
+        for search_id, (origin, email, response) in list(self._pending_completions.items()):
+            required = {supplier.supplier_id for supplier in response.suppliers_found}
+            if search_id not in pending and required.issubset(registry):
+                self._pending_completions.pop(search_id)
+                if email:
+                    origin.send(email)
+                origin.send(response)
+
+    @agent.processor(ViewSuppliersRequest)
+    def handle_view_suppliers(self, ctx: ProcessContext[ViewSuppliersRequest]):
+        """Read the published registry from its owner rather than another agent's cache."""
+        self._load_state_from_guild()
+        ctx.send(build_supplier_view(self.registry, ctx.payload))
 
     def _parse_research_and_create_suppliers(
         self, research_content: str, product_types: List[ProductType], location: str
@@ -312,7 +347,8 @@ Use 'view_suppliers' to see all known suppliers and their details.""",
         # Extract potential company names and emails from research
         # Pattern for company names (words ending in common business suffixes)
         company_patterns = [
-            r"([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)*(?:\s+(?:Inc|LLC|Co|Corp|Supply|Wholesale|Distributors?|Company)\.?))",
+            r"([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)*"
+            r"(?:\s+(?:Inc|LLC|Co|Corp|Supply|Wholesale|Distributors?|Company)\.?))",
             r"([A-Z][a-zA-Z]+(?:Supply|Snacks?|Beverage|Vending|Food|Wholesale|Distribution))",
         ]
 

@@ -101,7 +101,7 @@
             },
             {
                 "id": "SplitterAgent",
-                "name": "Agent Lauch Processor",
+                "name": "Agent Launch Processor",
                 "description": "Splits a list of agent specs",
                 "class_name": "rustic_ai.core.agents.eip.splitter_agent.SplitterAgent",
                 "additional_topics": [
@@ -110,7 +110,7 @@
                 "properties": {
                     "splitter": {
                         "split_type": "jsonata",
-                        "expression": "($map($split($.text, ','), function($v){ ({\"agent_spec\": {\"id\": $v, \"name\": $v, \"description\": \"An dynamic agent\", \"class_name\": \"rustic_ai.llm_agent.llm_agent.LLMAgent\", \"additional_topics\": [], \"additional_dependencies\": [], \"properties\": {\"model\": 'vertex_ai/' & $v, \"base_url\": null, \"api_version\": null, \"custom_llm_provider\": null, \"timeout\": null, \"max_retries\": 0, \"default_system_prompt\": \"You are an llm agent with memory store capabilities. Use the memories to answer user queries more effectively by fetching them\", \"system_prompt_generator\": null, \"request_preprocessors\": [], \"llm_request_wrappers\": [{\"kind\": \"rustic_ai.llm_agent.memories.guild_state_memories_store.GuildStateBackedMemoriesStore\", \"memory_type\": \"guild_state_backed\"}], \"response_postprocessors\": [], \"send_response\": true}, \"listen_to_default_topic\": true, \"act_only_when_tagged\": true, \"predicates\": {}, \"dependency_map\": {\"llm\": {\"class_name\": \"rustic_ai.litellm.agent_ext.llm.LiteLLMResolver\", \"properties\": {\"model\": 'vertex_ai/' & $v, \"conf\": {\"vertex_location\": $contains($v, 'claude') ? 'global' : $contains($v, 'llama') ? 'us-east5' : 'us-west1'}}}}, \"resources\": {\"num_cpus\": null, \"num_gpus\": null, \"custom_resources\": {}}, \"qos\": {\"timeout\": null, \"retry_count\": null, \"latency\": null}}}) }))"
+                        "expression": "($map($split($.text, ','), function($v){ ({\"agent_spec\": {\"id\": $v, \"name\": $v, \"description\": \"An dynamic agent\", \"class_name\": \"rustic_ai.llm_agent.llm_agent.LLMAgent\", \"additional_topics\": [], \"additional_dependencies\": [], \"properties\": {\"model\": ($substring($v, 0, 10) = 'vertex_ai/' ? $v : 'vertex_ai/' & $v), \"base_url\": null, \"api_version\": null, \"custom_llm_provider\": null, \"timeout\": null, \"max_retries\": 0, \"default_system_prompt\": \"You are an llm agent with memory store capabilities. Use the memories to answer user queries more effectively by fetching them\", \"system_prompt_generator\": null, \"request_preprocessors\": [], \"llm_request_wrappers\": [{\"kind\": \"rustic_ai.llm_agent.memories.guild_state_memories_store.GuildStateBackedMemoriesStore\", \"memory_type\": \"guild_state_backed\"}], \"response_postprocessors\": [], \"send_response\": true}, \"listen_to_default_topic\": true, \"act_only_when_tagged\": true, \"predicates\": {}, \"dependency_map\": {\"llm\": {\"class_name\": \"rustic_ai.litellm.agent_ext.llm.LiteLLMResolver\", \"properties\": {\"model\": ($substring($v, 0, 10) = 'vertex_ai/' ? $v : 'vertex_ai/' & $v), \"conf\": {\"vertex_location\": $contains($v, 'claude') ? 'global' : $contains($v, 'llama') ? 'us-east5' : 'us-west1'}}}}, \"resources\": {\"num_cpus\": null, \"num_gpus\": null, \"custom_resources\": {}}, \"qos\": {\"timeout\": null, \"retry_count\": null, \"latency\": null}}}) }))"
                     },
                     "format_selector": {
                         "strategy": "fixed",
@@ -283,7 +283,7 @@
                 {
                     "agent": {
                         "id": null,
-                        "name": "Agent Lauch Processor"
+                        "name": "Agent Launch Processor"
                     },
                     "agent_type": null,
                     "method_name": null,
@@ -320,7 +320,7 @@
                     "guild_state_update": {
                         "expression_type": "jsonata",
                         "update_format": "json-merge-patch",
-                        "state_update": "({\"memories\": $append($.guild_state.memories ? $.guild_state.memories : [], {\"role\": \"user\", \"content\": $.untransformed.payload.choices[0].message.content}) })"
+                        "state_update": "({\"memories\": $append($.guild_state.memories ? $.guild_state.memories : [], {\"role\": \"assistant\", \"content\": $.untransformed.payload.choices[0].message.content}) })"
                     },
                     "process_status": "completed",
                     "reason": null
@@ -339,10 +339,8 @@
                     "mark_forwarded": false,
                     "route_times": -1,
                     "transformer": {
-                        "style": "simple",
-                        "output_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionResponse",
-                        "expression_type": "jsonata",
-                        "expression": "({\"choices\": [{\"message\": {\"content\": 'Added the following agent to the guild: ' & $.agent_id}}]})"
+                        "style": "content_based_router",
+                        "handler": "({\"topics\": \"user_message_broadcast\", \"format\": \"rustic_ai.core.ui_protocol.types.TextFormat\", \"payload\": {\"text\": \"Added the following agent to the guild: \" & $.payload.agent_id}})"
                     },
                     "agent_state_update": null,
                     "guild_state_update": null,

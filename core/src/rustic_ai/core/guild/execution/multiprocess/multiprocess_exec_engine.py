@@ -347,22 +347,6 @@ class MultiProcessExecutionEngine(ExecutionEngine):
         # Clean up agent tracker (this will shut down the multiprocessing manager)
         self.agent_tracker.clear()
 
-        # Force cleanup any remaining active children (this is important for pytest)
-        try:
-            import multiprocessing
-
-            active_children = multiprocessing.active_children()
-            if active_children:
-                logging.warning(f"Terminating {len(active_children)} remaining multiprocessing children")
-                for child in active_children:
-                    try:
-                        child.terminate()
-                        child.join(timeout=1)
-                    except Exception as e:
-                        logging.error(f"Error terminating child process {child.pid}: {e}")
-        except Exception as e:
-            logging.error(f"Error during final multiprocessing cleanup: {e}")
-
         logging.info("MultiProcessExecutionEngine shutdown complete")
 
     # Delegate methods to agent tracker

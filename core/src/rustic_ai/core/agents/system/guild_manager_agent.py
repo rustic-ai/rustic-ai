@@ -1,5 +1,6 @@
 from datetime import datetime
 import logging
+import threading
 from typing import List, Optional
 
 from sqlmodel import Session
@@ -79,6 +80,9 @@ from rustic_ai.core.utils.priority import Priority
 
 class GuildManagerAgent(Agent[GuildManagerAgentProps]):
     def __init__(self):
+        self._guild_lifecycle_lock = threading.RLock()
+        self._shutting_down = False
+        self._is_shutdown = False
         guild_spec = self.agent_spec.props.guild_spec
         database_url = self.agent_spec.props.database_url
         self.organization_id = self.agent_spec.properties.organization_id
@@ -114,8 +118,8 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
                 session.add(guild_model)
 
                 # Add the agents to the Metastore
-                for guild_agent in guild_spec.agents:
-                    agent_model = AgentModel.from_agent_spec(guild_id, guild_agent)
+                for position, guild_agent in enumerate(guild_spec.agents):
+                    agent_model = AgentModel.from_agent_spec(guild_id, guild_agent, position=position)
                     session.add(agent_model)
 
             session.commit()
@@ -156,21 +160,35 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
 
         self.guild: Optional[Guild] = None
 
+    def on_shutdown(self) -> None:
+        """Release the actors owned by the bootstrapped manager's inner guild."""
+        with self._guild_lifecycle_lock:
+            self._shutting_down = True
+            guild = getattr(self, "guild", None)
+        if guild is not None:
+            guild.shutdown()
+        self._is_shutdown = True
+
     def _add_agent(self, agent_spec: AgentSpec, session: Optional[Session] = None) -> None:
         if self.guild is None:
             raise RuntimeError("Guild is not initialized")
 
         self.guild.launch_agent(agent_spec)
 
-        agent_model = AgentModel.from_agent_spec(self.guild_id, agent_spec)
         if session is None:
             with Session(self.engine) as session:
                 if AgentModel.get_by_id(session, self.guild_id, agent_spec.id) is None:
+                    agent_model = AgentModel.from_agent_spec(
+                        self.guild_id, agent_spec, position=AgentModel.next_position(session, self.guild_id)
+                    )
                     session.add(agent_model)
                     session.commit()
                     session.close()
         else:
             if AgentModel.get_by_id(session, self.guild_id, agent_spec.id) is None:
+                agent_model = AgentModel.from_agent_spec(
+                    self.guild_id, agent_spec, position=AgentModel.next_position(session, self.guild_id)
+                )
                 session.add(agent_model)  # pragma: no cover
 
         # When adding an agent, we should also initialize its health status in the manager's view
@@ -265,9 +283,9 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
                 session.add(guild_model)
 
                 # Add the agents to the Metastore
-                for guild_agent in self.guild_spec.agents:
+                for position, guild_agent in enumerate(self.guild_spec.agents):
                     if AgentModel.get_by_id(session, self.guild_id, guild_agent.id) is None:
-                        agent_model = AgentModel.from_agent_spec(self.guild_id, guild_agent)
+                        agent_model = AgentModel.from_agent_spec(self.guild_id, guild_agent, position=position)
                         session.add(agent_model)
 
                 session.commit()
@@ -278,15 +296,27 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
             if guild_model.status == GuildStatus.PENDING_LAUNCH:
                 # If the guild is not launched, we need to launch it.
                 logging.info(f"Guild Manager is Launching guild {self.guild_id}")
-                self.guild = GuildBuilder.from_spec(guild_spec).launch(self.organization_id)
+                launched_guild = GuildBuilder.from_spec(guild_spec).launch(self.organization_id)
             else:
                 # If the guild is already launched, we need to load it.
                 logging.info(f"Guild Manager is Loading guild {self.guild_id}")
-                self.guild = GuildBuilder.from_spec(guild_spec).load_or_launch(self.organization_id)
+                launched_guild = GuildBuilder.from_spec(guild_spec).load_or_launch(self.organization_id)
 
-            self.guild.register_agent(self.get_spec())
+            # Ready delivery can overlap wrapper shutdown. Adopt the result
+            # atomically so work launched after the hook still gets released.
+            with self._guild_lifecycle_lock:
+                rejected = self._shutting_down
+                if not rejected:
+                    self.guild = launched_guild
+            if rejected:
+                launched_guild.shutdown()
+                return
+
+            launched_guild.register_agent(self.get_spec())
             if AgentModel.get_by_id(session, self.guild_id, self.id) is None:
-                self_model = AgentModel.from_agent_spec(self.guild_id, self.get_spec())
+                self_model = AgentModel.from_agent_spec(
+                    self.guild_id, self.get_spec(), position=AgentModel.next_position(session, self.guild_id)
+                )
                 session.add(self_model)  # pragma: no cover
 
             guild_model.status = GuildStatus.STARTING
@@ -341,7 +371,11 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
 
         with Session(self.engine) as session:
             if AgentModel.get_by_id(session, self.guild_id, aar.agent_spec.id) is None:
-                session.add(AgentModel.from_agent_spec(self.guild_id, aar.agent_spec))
+                session.add(
+                    AgentModel.from_agent_spec(
+                        self.guild_id, aar.agent_spec, position=AgentModel.next_position(session, self.guild_id)
+                    )
+                )
                 session.commit()
 
         self.state_manager.update_state(
@@ -424,7 +458,9 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
 
         # Update persistent store
         with Session(self.engine) as session:
-            guild_route = GuildRoutes.from_routing_rule(self.guild_id, rule)
+            guild_route = GuildRoutes.from_routing_rule(
+                self.guild_id, rule, position=GuildRoutes.next_position(session, self.guild_id)
+            )
             guild_route.status = RouteStatus.ACTIVE
             session.add(guild_route)
             session.commit()

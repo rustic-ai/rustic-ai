@@ -20,6 +20,8 @@ class StateRefresherMixin:
     guild_id: str
     _state: JsonDict = {}
     _guild_state: JsonDict = {}
+    _agent_state_version: int = -1
+    _guild_state_version: int = -1
 
     def request_state(
         self,
@@ -136,26 +138,37 @@ class StateRefresherMixin:
         """
         pass
 
+    def _apply_snapshot(self, owner: StateOwner, agent_id: Optional[str], state: JsonDict, version: int) -> bool:
+        """Keep a newer full snapshot when responses arrive out of order."""
+        if owner == StateOwner.GUILD:
+            if version < self._guild_state_version:
+                return False
+            self._guild_state, self._guild_state_version = state, version
+        elif owner == StateOwner.AGENT and agent_id == self.id:
+            if version < self._agent_state_version:
+                return False
+            self._state, self._agent_state_version = state, version
+        else:
+            return False
+        return True
+
     @processor(StateFetchResponse, handle_essential=True)
     def update_local_state(self, ctx: ProcessContext[StateFetchResponse]):
         sfr = ctx.payload
-
-        if sfr.state_owner == StateOwner.GUILD:
-            self._guild_state = sfr.state
-        elif sfr.state_owner == StateOwner.AGENT and sfr.agent_id == self.id:
-            self._state = sfr.state
-
+        if sfr.guild_id != self.guild_id:
+            return
+        # Historical and path-scoped fetches are intentional query results; they
+        # must not replace the current full state used by ordinary processors.
+        if sfr.is_latest and not sfr.state_path:
+            if not self._apply_snapshot(sfr.state_owner, sfr.agent_id, sfr.state, sfr.version):
+                return
         self.on_state_updated(sfr.state, ctx)
 
     @processor(StateUpdateResponse, handle_essential=True)
     def update_local_state_on_update(self, ctx: ProcessContext[StateUpdateResponse]):
         sur = ctx.payload
-
         logging.debug(f"State update received: {sur.state_owner} {sur.guild_id} {sur.agent_id}")
-
-        if sur.state_owner == StateOwner.GUILD:
-            self._guild_state = sur.state
-        elif sur.state_owner == StateOwner.AGENT and sur.agent_id == self.id:
-            self._state = sur.state
-
-        self.on_state_updated(sur.state, ctx)
+        if sur.guild_id != self.guild_id:
+            return
+        if self._apply_snapshot(sur.state_owner, sur.agent_id, sur.state, sur.version):
+            self.on_state_updated(sur.state, ctx)

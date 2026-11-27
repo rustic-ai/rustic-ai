@@ -1,0 +1,347 @@
+{
+  "$defs": {
+    "DocumentSourceOutcome": {
+      "additionalProperties": false,
+      "properties": {
+        "index": {
+          "maximum": 31,
+          "minimum": 0,
+          "title": "Index",
+          "type": "integer"
+        },
+        "source_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Id"
+        },
+        "revision_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Revision Id"
+        },
+        "record_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Record Id"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Name"
+        },
+        "mime_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mime Type"
+        },
+        "source_uri": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Uri"
+        },
+        "encoding": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Encoding"
+        },
+        "status": {
+          "default": "pending",
+          "enum": [
+            "pending",
+            "ingested",
+            "failed",
+            "unknown"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "outcome": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/IngestOutcome"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "error": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error"
+        }
+      },
+      "required": [
+        "index"
+      ],
+      "title": "DocumentSourceOutcome",
+      "type": "object"
+    },
+    "IngestOutcome": {
+      "description": "Response from document ingestion.\n\nAttributes:\n    artifact_node_id: ID of created artifact node\n    chunk_count: Number of chunks extracted\n    page_count: Number of pages (for PDFs)\n    extracted_entities: List of entity node IDs\n    success: Whether ingestion succeeded\n    error_message: Error message if failed",
+      "properties": {
+        "artifact_node_id": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Artifact Node Id"
+        },
+        "chunk_count": {
+          "default": 0,
+          "title": "Chunk Count",
+          "type": "integer"
+        },
+        "page_count": {
+          "default": 0,
+          "title": "Page Count",
+          "type": "integer"
+        },
+        "extracted_entities": {
+          "items": {
+            "type": "integer"
+          },
+          "title": "Extracted Entities",
+          "type": "array"
+        },
+        "artifact_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Artifact Id"
+        },
+        "chunk_node_ids": {
+          "items": {
+            "type": "integer"
+          },
+          "title": "Chunk Node Ids",
+          "type": "array"
+        },
+        "page_node_ids": {
+          "items": {
+            "type": "integer"
+          },
+          "title": "Page Node Ids",
+          "type": "array"
+        },
+        "block_node_ids": {
+          "items": {
+            "type": "integer"
+          },
+          "title": "Block Node Ids",
+          "type": "array"
+        },
+        "was_deduplicated": {
+          "default": false,
+          "title": "Was Deduplicated",
+          "type": "boolean"
+        },
+        "extraction_failed": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Extraction Failed"
+        },
+        "extraction_error": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Extraction Error"
+        },
+        "stored": {
+          "default": false,
+          "title": "Stored",
+          "type": "boolean"
+        },
+        "tool_calls": {
+          "items": {
+            "$ref": "#/$defs/ToolCallOutcome"
+          },
+          "title": "Tool Calls",
+          "type": "array"
+        },
+        "searchable": {
+          "default": false,
+          "title": "Searchable",
+          "type": "boolean"
+        },
+        "success": {
+          "default": true,
+          "title": "Success",
+          "type": "boolean"
+        },
+        "record_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Record Id"
+        }
+      },
+      "title": "IngestOutcome",
+      "type": "object"
+    },
+    "ToolCallOutcome": {
+      "properties": {
+        "call_id": {
+          "title": "Call Id",
+          "type": "string"
+        },
+        "action_node": {
+          "title": "Action Node",
+          "type": "integer"
+        },
+        "artifact_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Artifact Id"
+        },
+        "artifact_node": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Artifact Node"
+        },
+        "was_replay": {
+          "default": false,
+          "title": "Was Replay",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "call_id",
+        "action_node"
+      ],
+      "title": "ToolCallOutcome",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "request_id": {
+      "title": "Request Id",
+      "type": "string"
+    },
+    "error": {
+      "title": "Error",
+      "type": "string"
+    },
+    "message": {
+      "title": "Message",
+      "type": "string"
+    },
+    "sources": {
+      "items": {
+        "$ref": "#/$defs/DocumentSourceOutcome"
+      },
+      "maxItems": 32,
+      "title": "Sources",
+      "type": "array"
+    }
+  },
+  "required": [
+    "request_id",
+    "error",
+    "message"
+  ],
+  "title": "DocumentWorkflowError",
+  "type": "object"
+}

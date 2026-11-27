@@ -1,3 +1,4 @@
+import logging
 from typing import Any, Dict, List, Optional, Type
 
 from rustic_ai.core.guild.agent import Agent, AgentSpec
@@ -13,6 +14,7 @@ class SyncExecutionEngine(ExecutionEngine):
         super().__init__(guild_id=guild_id, organization_id=organization_id)
         self.agent_tracker = InMemorySyncAgentTracker()
         self.owned_agents: List[tuple[str, str]] = []
+        self._stopping_wrappers: dict[tuple[str, str], Any] = {}
 
     """
     A synchronous execution engine that runs agents within the same thread and process.
@@ -109,9 +111,18 @@ class SyncExecutionEngine(ExecutionEngine):
             guild_id: The ID of the guild
             agent_id: The ID of the agent
         """
+        for stopped_key, stopped_wrapper in list(self._stopping_wrappers.items()):
+            if stopped_wrapper._shutdown_complete:
+                self._stopping_wrappers.pop(stopped_key, None)
+        key = (guild_id, agent_id)
         agent_wrapper = self.agent_tracker.get_agent_wrapper(guild_id, agent_id)
+        if agent_wrapper is None:
+            agent_wrapper = self._stopping_wrappers.get(key)
         if agent_wrapper:
+            self._stopping_wrappers[key] = agent_wrapper
             agent_wrapper.shutdown()
+            if agent_wrapper._shutdown_complete:
+                self._stopping_wrappers.pop(key, None)
             self.agent_tracker.remove_agent(guild_id, agent_id)
             del agent_wrapper
             # Remove the agent from the owned agents list
@@ -119,7 +130,10 @@ class SyncExecutionEngine(ExecutionEngine):
                 self.owned_agents.remove((guild_id, agent_id))
 
     def shutdown(self) -> None:
-        for guild_id, agent_id in self.owned_agents:
-            self.stop_agent(guild_id, agent_id)
+        for guild_id, agent_id in list(dict.fromkeys(self.owned_agents + list(self._stopping_wrappers))):
+            try:
+                self.stop_agent(guild_id, agent_id)
+            except Exception:
+                logging.exception("Error stopping owned agent %s", agent_id)
 
         self.agent_tracker.clear()

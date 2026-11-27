@@ -2,12 +2,12 @@ import asyncio
 from concurrent.futures import Future
 from datetime import datetime, timezone
 from enum import StrEnum
-import hashlib
 import mimetypes
 import os
 import threading
 from typing import Any, List, Optional, Set, TypeVar
 from urllib.parse import urljoin, urlparse, urlsplit
+from uuid import uuid4
 
 from install_playwright import install
 from markdownify import markdownify as md
@@ -53,10 +53,17 @@ class WebScrapingRequest(BaseModel):
         description="Options for the transformer to be applied to the scraped content. Default is an empty dictionary.",
     )
 
+    max_pages: Optional[int] = Field(
+        default=None, ge=1, le=10000, description="Maximum page attempts for this request, including recursive links."
+    )
+
     depth: int = Field(
         default=0,
         title="Depth of recursive link scraping",
-        description="If 0, only scrape the input page. If 1, also scrape all links on the page. If 2, recurse into those links, and so on.",
+        description=(
+            "If 0, only scrape the input page. If 1, also scrape all links on the page. "
+            "If 2, recurse into those links, and so on."
+        ),
     )
 
     scrape_external_links: bool = Field(
@@ -68,7 +75,10 @@ class WebScrapingRequest(BaseModel):
     force: bool = Field(
         default=False,
         title="Force scrape the url",
-        description="Even if the url was scraped earlier will scrape it if force is set to true. This is used to avoid same url to be scrapped multiple times",
+        description=(
+            "Scrape a previously visited URL when force is true. "
+            "Otherwise avoid scraping the same URL multiple times."
+        ),
     )
 
 
@@ -152,26 +162,60 @@ class PlaywrightEventLoopThread:
             raise RuntimeError("Playwright event loop failed to start")
 
         future: Future = Future()
+        finished = threading.Event()
+        result_lock = threading.Lock()
+        owned_tasks: list[asyncio.Future] = []
+        self._loop.call_soon_threadsafe(self._schedule_coroutine, coro, future, finished, result_lock, owned_tasks)
+        try:
+            return future.result(timeout=timeout)
+        except TimeoutError:
+            with result_lock:
+                cancelled = not future.done()
+                if cancelled:
+                    future.cancel()
+            if cancelled:
+                self._loop.call_soon_threadsafe(self._cancel_owned_task, owned_tasks)
+                # Wait for cooperative cancellation/finally blocks, without
+                # cancelling another request or stopping the shared event loop.
+                finished.wait(timeout=5.0)
+            raise
 
-        def callback():
-            try:
-                task = asyncio.ensure_future(coro, loop=self._loop)
+    def _schedule_coroutine(self, coro, future, finished, result_lock, owned_tasks):
+        # The caller may expire while this callback is still queued.
+        if future.cancelled():
+            if hasattr(coro, "close"):
+                coro.close()
+            finished.set()
+            return
+        try:
+            task = asyncio.ensure_future(coro, loop=self._loop)
+            owned_tasks.append(task)
+            task.add_done_callback(lambda done: self._complete_coroutine(done, future, finished, result_lock))
+        except Exception as error:
+            with result_lock:
+                if not future.done():
+                    future.set_exception(error)
+            finished.set()
 
-                def done_callback(t):
-                    try:
-                        if t.exception():
-                            future.set_exception(t.exception())
-                        else:
-                            future.set_result(t.result())
-                    except asyncio.CancelledError:
-                        future.set_exception(asyncio.CancelledError())
+    @staticmethod
+    def _complete_coroutine(task, future, finished, result_lock):
+        try:
+            result = task.result()
+            with result_lock:
+                if not future.done():
+                    future.set_result(result)
+        except (Exception, asyncio.CancelledError) as error:
+            with result_lock:
+                if not future.done():
+                    future.set_exception(error)
+        finally:
+            finished.set()
 
-                task.add_done_callback(done_callback)
-            except Exception as e:
-                future.set_exception(e)
-
-        self._loop.call_soon_threadsafe(callback)
-        return future.result(timeout=timeout)
+    @staticmethod
+    def _cancel_owned_task(owned_tasks):
+        for task in owned_tasks:
+            if not task.done():
+                task.cancel()
 
     def stop(self):
         """Stop the event loop and thread."""
@@ -204,11 +248,10 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
         self._playwright: Optional[Playwright] = None
         self._browser: Optional[Browser] = None
         self._browser_lock = asyncio.Lock()
-        self._scraped_urls_lock = asyncio.Lock()
-        self._scraped_urls: Set[str] = set()
         self._initialized = False
         self._chromium_installed = False
         self._active_ops: int = 0
+        self._idle_cleanup_task: Optional[asyncio.Task] = None
         self._loop_thread = get_playwright_loop_thread()
 
     def _run_in_playwright_loop(self, coro):
@@ -339,7 +382,7 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
                 elif not filetype:
                     filetype = ".txt"
 
-                filename = hashlib.md5(content.encode("utf-8")).hexdigest() + filetype
+                filename = uuid4().hex + filetype
                 mimetype = mimetypes.guess_type(filename)[0]
 
                 if request.output_format == ScrapingOutputFormat.MARKDOWN:
@@ -372,7 +415,7 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
                 }
 
                 output = MediaLink(
-                    url=f"file:///scraped_data/{filename}",
+                    url=f"scraped_data/{filename}",
                     name=filename,
                     metadata=metadata,
                     on_filesystem=True,
@@ -414,17 +457,20 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
         semaphore: asyncio.Semaphore,
         scraped_docs: List[MediaLink],
         errors: List[ErrorMessage],
+        visited: Optional[Set[str]] = None,
     ):
         """Scrape a URL and recursively scrape its links up to the specified depth."""
-        # Check if already scraped
-        async with self._scraped_urls_lock:
-            if url in self._scraped_urls and not request.force:
-                return
-            self._scraped_urls.add(url)
-
-        # Skip certain file types
-        if url.endswith((".zip", ".pdf", ".doc", ".docx", ".xls", ".xlsx")):
+        # Request-local accounting prevents concurrent crawls from resetting or
+        # borrowing each other's visited URLs and page budget.
+        if visited is None:
+            visited = set()
+        if (
+            url in visited
+            or url.endswith((".zip", ".pdf", ".doc", ".docx", ".xls", ".xlsx"))
+            or (request.max_pages is not None and len(visited) >= request.max_pages)
+        ):
             return
+        visited.add(url)
 
         # Scrape the page
         result, links, error = await self._scrape_page(url, context, request, filesystem, semaphore)
@@ -435,18 +481,40 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
 
             # Recursively scrape links if depth > 0
             if depth > 0 and links:
-                tasks = []
-                for link in links:
-                    task = self._scrape_url_with_depth(
-                        link, depth - 1, context, request, filesystem, semaphore, scraped_docs, errors
+                # Select eligible links before applying the remaining page budget.
+                # Create only one batch of coroutines at a time.
+                candidates = iter(dict.fromkeys(links))
+                while request.max_pages is None or len(visited) < request.max_pages:
+                    remaining = (
+                        request.max_pages - len(visited)
+                        if request.max_pages is not None
+                        else self.config.parallel_pages
                     )
-                    tasks.append(task)
-
-                # Process in batches
-                batch_size = self.config.parallel_pages
-                for i in range(0, len(tasks), batch_size):
-                    batch = tasks[i : i + batch_size]
-                    await asyncio.gather(*batch, return_exceptions=True)
+                    batch = []
+                    batch_urls = []
+                    for link in candidates:
+                        if link in visited or link.endswith((".zip", ".pdf", ".doc", ".docx", ".xls", ".xlsx")):
+                            continue
+                        batch_urls.append(link)
+                        batch.append(
+                            self._scrape_url_with_depth(
+                                link, depth - 1, context, request, filesystem, semaphore, scraped_docs, errors, visited
+                            )
+                        )
+                        if len(batch) >= min(self.config.parallel_pages, remaining):
+                            break
+                    if not batch:
+                        break
+                    results = await asyncio.gather(*batch, return_exceptions=True)
+                    for link, result in zip(batch_urls, results):
+                        if isinstance(result, Exception):
+                            errors.append(
+                                ErrorMessage(
+                                    agent_type=self.get_qualified_class_name(),
+                                    error_type="SCRAPE_ENTRY_ERROR",
+                                    error_message=f"Error scraping entry URL {link}: {str(result)}",
+                                )
+                            )
 
     async def _do_scrape(
         self,
@@ -457,37 +525,34 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
         Internal async method that performs the actual scraping.
         This runs in the playwright event loop thread.
         """
-        # Clear previous state
-        async with self._scraped_urls_lock:
-            self._scraped_urls.clear()
-
-        # Ensure browser is running
         self._active_ops += 1
-        browser = await self._ensure_browser()
-
-        # Create a new context for this scraping session
+        context = None
         try:
-            context = await browser.new_context(
-                viewport={"width": 1920, "height": 1080},
-                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-            )
-        except Exception as e:
-            # Check for specific error indicating browser connection loss
-            if "closed" in str(e).lower() or "transport" in str(e).lower():
-                self.logger.warning(f"Browser context creation failed, re-initializing browser: {e}")
-                browser = await self._ensure_browser(force=True)
+            browser = await self._ensure_browser()
+
+            # Create a new context for this scraping session
+            try:
                 context = await browser.new_context(
                     viewport={"width": 1920, "height": 1080},
                     user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
                 )
-            else:
-                raise
+            except Exception as e:
+                # Check for specific error indicating browser connection loss
+                if "closed" in str(e).lower() or "transport" in str(e).lower():
+                    self.logger.warning(f"Browser context creation failed, re-initializing browser: {e}")
+                    browser = await self._ensure_browser(force=True)
+                    context = await browser.new_context(
+                        viewport={"width": 1920, "height": 1080},
+                        user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                    )
+                else:
+                    raise
 
-        scraped_docs: List[MediaLink] = []
-        errors: List[ErrorMessage] = []
-        semaphore = asyncio.Semaphore(self.config.parallel_pages)
+            scraped_docs: List[MediaLink] = []
+            errors: List[ErrorMessage] = []
+            semaphore = asyncio.Semaphore(self.config.parallel_pages)
+            visited: Set[str] = set()
 
-        try:
             self.logger.debug(f"Starting scraping for request: {scraping_request.id}")
 
             # Create tasks for all initial URLs
@@ -502,6 +567,7 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
                     semaphore,
                     scraped_docs,
                     errors,
+                    visited,
                 )
                 tasks.append(task)
 
@@ -521,24 +587,28 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
                     )
 
             self.logger.debug(
-                f"Scraping completed for request: {scraping_request.id}. Total unique documents scraped: {len(scraped_docs)}"
+                "Scraping completed for request: %s. Total unique documents scraped: %s",
+                scraping_request.id,
+                len(scraped_docs),
             )
 
             return scraped_docs, errors
 
         finally:
-            # Always close the context
-            await context.close()
-            self._active_ops -= 1
-
-            # Handle browser lifecycle based on configuration
-            if self.config.browser_lifecycle == BrowserLifecycle.PER_REQUEST:
-                await self._cleanup()
-            elif self.config.browser_lifecycle == BrowserLifecycle.IDLE_TIMEOUT:
-                await asyncio.sleep(self.config.browser_idle_timeout_s)
-                if self._active_ops == 0:
-                    await self._cleanup()
-            # PERSISTENT: do nothing, browser stays alive
+            try:
+                if context is not None:
+                    await context.close()
+            finally:
+                # Balance startup, context creation, scraping, close and cancellation failures.
+                self._active_ops -= 1
+                if self.config.browser_lifecycle == BrowserLifecycle.PER_REQUEST:
+                    await self._cleanup(only_idle=True)
+                elif self.config.browser_lifecycle == BrowserLifecycle.IDLE_TIMEOUT and self._active_ops == 0:
+                    # Idle retention must not delay successful scrape results.
+                    previous = getattr(self, "_idle_cleanup_task", None)
+                    if previous is not None and not previous.done():
+                        previous.cancel()
+                    self._idle_cleanup_task = asyncio.create_task(self._cleanup_after_idle())
 
     @agent.processor(
         WebScrapingRequest, depends_on=[agent.AgentDependency(dependency_key="filesystem", guild_level=True)]
@@ -561,9 +631,11 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
         unique_scraped_docs = list({doc.name: doc for doc in scraped_docs}.values())
         ctx.send(WebScrapingCompleted(id=scraping_request.id, links=unique_scraped_docs))
 
-    async def _cleanup(self):
+    async def _cleanup(self, only_idle: bool = False):
         """Cleanup method to free up resources."""
         async with self._browser_lock:
+            if only_idle and self._active_ops:
+                return
             if self._browser:
                 try:
                     await self._browser.close()
@@ -575,3 +647,25 @@ class PlaywrightScraperAgent(Agent[PlaywrightScraperConfig]):
                 except Exception:
                     pass
             self._initialized = False
+
+    async def _cleanup_after_idle(self):
+        try:
+            await asyncio.sleep(self.config.browser_idle_timeout_s)
+            await self._cleanup(only_idle=True)
+        finally:
+            if getattr(self, "_idle_cleanup_task", None) is asyncio.current_task():
+                self._idle_cleanup_task = None
+
+    async def _shutdown_browser(self):
+        pending = getattr(self, "_idle_cleanup_task", None)
+        if pending is not None:
+            pending.cancel()
+            try:
+                await pending
+            except asyncio.CancelledError:
+                pass
+            self._idle_cleanup_task = None
+        await self._cleanup()
+
+    def on_shutdown(self) -> None:
+        self._run_in_playwright_loop(self._shutdown_browser())

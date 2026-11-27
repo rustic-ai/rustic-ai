@@ -32,6 +32,14 @@ Redis-based dependencies:
 Large language model integration:
 - [LiteLLMResolver](litellm/litellm_resolver.md) - Unified LLM access across multiple providers
 
+### [Uniko](uniko/index.md)
+Private cognitive memory:
+- [UnikoResolver](uniko/index.md) - Agent-private stores, native model configuration, readiness limits, and shutdown
+
+### [Uni-DB](unidb/index.md)
+Agent-scoped graph execution:
+- [UniDBResolver](unidb/index.md) - Explicit opening, bootstrap verification, native runtime ownership, and shutdown
+
 ### [Chroma](chroma/index.md)
 Vector database integration:
 - [ChromaResolver](chroma/chroma_resolver.md) - Vector database for embeddings

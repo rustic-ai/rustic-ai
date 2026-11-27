@@ -106,7 +106,7 @@
       ],
       "title": "Readiness Policy",
       "type": "string",
-      "description": "Native best-effort warmup. Verified readiness is unavailable in Uniko 0.5.1."
+      "description": "Native best-effort warmup. Verified readiness is not exposed by this integration."
     }
   },
   "title": "UnikoResolverProperties",

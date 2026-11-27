@@ -3,6 +3,7 @@
 from copy import deepcopy
 import json
 from pathlib import Path
+from typing import Any
 
 import pytest
 import uni_db
@@ -126,7 +127,7 @@ def test_retained_admin_raw_bulk_vector_operations(tmp_path):
         )
         call(m.FlushRequest)
         assert call(m.DBHealthRequest)["database_ready"]
-        assert call(m.DBCapabilitiesRequest)["native_version"] == "5.2.1"
+        assert call(m.DBCapabilitiesRequest)["native_version"] == "6.0.0"
     finally:
         rt.close()
 
@@ -225,7 +226,12 @@ def test_receivables_no_payment_and_multiple_payments(tmp_path):
 
 
 def test_invalid_catalog_is_rejected_before_runtime_construction():
-    invalid = {"name": "q", "kind": "query", "query": "RETURN 1", "parameters_schema": {"type": "object"}}
+    invalid: dict[str, Any] = {
+        "name": "q",
+        "kind": "query",
+        "query": "RETURN 1",
+        "parameters_schema": {"type": "object"},
+    }
     with pytest.raises(ValueError, match="closed objects"):
         m.UniDBAgentConfig(binding_id="x", operation_catalog={"operations": [invalid]})
     invalid["parameters_schema"]["additionalProperties"] = False

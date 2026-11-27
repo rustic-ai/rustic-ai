@@ -72,7 +72,7 @@ class TestGuildSpecLoading:
 
         assert "llm" in guild_spec.dependency_map
         assert "filesystem" in guild_spec.dependency_map
-        assert "kb_backend" in guild_spec.dependency_map
+        assert "kb_backend" not in guild_spec.dependency_map
 
     def test_routing_slip_is_valid(self):
         """Test that the routing slip can be parsed."""

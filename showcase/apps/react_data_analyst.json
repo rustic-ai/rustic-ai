@@ -44,7 +44,7 @@
                 "id": "react_data_analyst",
                 "name": "Data Analyst Agent",
                 "description": "A ReAct-based agent that can load, query, and analyze datasets using pandas and SQL",
-                "class_name": "rustic_ai.llm_agent.react.react_agent.ReActAgent",
+                "class_name": "rustic_ai.pandas_analyst.agent.DataAnalystAgent",
                 "additional_topics": [
                     "react_data_analyst"
                 ],
@@ -67,15 +67,10 @@
                         }
                     ],
                     "toolset": {
-                        "kind": "rustic_ai.pandas_analyst.react_toolset.DataAnalystReActToolset",
-                        "filesystem_base_path": "/",
-                        "filesystem_protocol": "file",
-                        "filesystem_options": {
-                            "auto_mkdir": true
-                        }
+                        "kind": "rustic_ai.pandas_analyst.react_toolset.DataAnalystReActToolset"
                     }
                 },
-                "listen_to_default_topic": true,
+                "listen_to_default_topic": false,
                 "act_only_when_tagged": false,
                 "predicates": {},
                 "dependency_map": {},
@@ -120,7 +115,18 @@
                 }
             }
         ],
-        "dependency_map": {},
+        "dependency_map": {
+            "filesystem": {
+                "class_name": "rustic_ai.core.guild.agent_ext.depends.filesystem.FileSystemResolver",
+                "properties": {
+                    "path_base": "/tmp/rustic-data-analyst",
+                    "protocol": "file",
+                    "storage_options": {
+                        "auto_mkdir": true
+                    }
+                }
+            }
+        },
         "routes": {
             "steps": [
                 {
@@ -133,7 +139,10 @@
                         "priority": null
                     },
                     "route_times": -1,
-                    "transformer": null,
+                    "transformer": {
+                        "style": "content_based_router",
+                        "handler": "({'format': $.format, 'payload': $.payload, 'context': {'analysis_user': $.origin.sender.id, 'analysis_session': $string($.origin.id), 'analysis_request_id': $string($.origin.id)}})"
+                    },
                     "guild_state_update": null
                 },
                 {
@@ -166,7 +175,7 @@
                     "agent_type": null,
                     "method_name": null,
                     "origin_filter": null,
-                    "message_format": "rustic_ai.pandas_analyst.enrichment.models.DatasetLoadedEvent",
+                    "message_format": "rustic_ai.pandas_analyst.memory.DatasetLoadedEvent",
                     "destination": {
                         "topics": "enrichment_requests",
                         "recipient_list": [],
@@ -177,7 +186,7 @@
                     "transformer": {
                         "style": "simple",
                         "output_format": "rustic_ai.core.guild.agent_ext.depends.llm.models.ChatCompletionRequest",
-                        "expression": "{'messages': [{'role': 'user', 'content': 'Analyze this dataset and generate enrichment metadata:\\n\\nDataset: ' & dataset_name & '\\nRows: ' & $string(row_count) & '\\nColumns: ' & $string(column_count) & '\\n\\nColumn Names: ' & $join(columns, ', ') & '\\n\\nSchema (column -> type):\\n' & $string(column_schema) & '\\n\\nSample Data (first ' & $string($count(sample_data)) & ' rows):\\n' & $string(sample_data)}]}"
+                        "expression": "{'messages': [{'role': 'user', 'content': 'Analyze this dataset and generate enrichment metadata:\\n\\nDataset: ' & dataset_name & '\\nRows: ' & $string(profile.row_count) & '\\nColumns: ' & $string(profile.column_count) & '\\n\\nColumn Names: ' & $join($keys(profile.column_schema), ', ') & '\\n\\nSchema (column -> type):\\n' & $string(profile.column_schema) & '\\n\\nSample Data (first ' & $string($count(sample_data)) & ' rows):\\n' & $string(sample_data)}]}"
                     },
                     "agent_state_update": null,
                     "guild_state_update": null,

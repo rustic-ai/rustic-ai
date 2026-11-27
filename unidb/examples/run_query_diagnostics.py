@@ -7,11 +7,10 @@ import json
 from pathlib import Path
 import time
 
-from rustic_ai.showcase.unidb_query_diagnostics import RunIndexComparison
-
 from rustic_ai.core.agents.testutils.probe_agent import ProbeAgent
 from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder
 from rustic_ai.core.guild.dsl import GuildSpec
+from rustic_ai.showcase.unidb_query_diagnostics import RunIndexComparison
 
 APP = Path(__file__).resolve().parents[2] / "showcase/apps/unidb_query_diagnostics.json"
 

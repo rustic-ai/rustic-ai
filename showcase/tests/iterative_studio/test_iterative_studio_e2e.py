@@ -424,13 +424,9 @@ class TestDependencyConfiguration:
         # Verify properties are set
         assert fs_dep.properties.get("path_base") == "/tmp/iterative_studio"
 
-    def test_kb_backend_dependency_is_configured(self, guild_spec: GuildSpec):
-        """Test that knowledge base backend is properly configured."""
-        dep_map = guild_spec.dependency_map
-
-        assert "kb_backend" in dep_map
-        kb_dep = dep_map["kb_backend"]
-        assert "InMemory" in kb_dep.class_name or "KBIndex" in kb_dep.class_name
+    def test_retired_kb_backend_is_absent(self, guild_spec: GuildSpec):
+        """The migrated guild must not resolve a retired knowledge backend."""
+        assert "kb_backend" not in guild_spec.dependency_map
 
 
 class TestEndToEndFlow:
@@ -548,7 +544,7 @@ class TestEndToEndFlow:
             assert guild.dependency_map is not None
             assert "llm" in guild.dependency_map
             assert "filesystem" in guild.dependency_map
-            assert "kb_backend" in guild.dependency_map
+            assert "kb_backend" not in guild.dependency_map
 
         finally:
             guild.shutdown()

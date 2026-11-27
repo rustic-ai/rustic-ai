@@ -40,6 +40,7 @@ from rustic_ai.uniko_agent import (
     RecallResponse,
     RecordMemoryRequest,
     RecordMemoryResult,
+    normalize_document_attachment,
 )
 
 
@@ -120,7 +121,7 @@ class UnikoResearchCoordinator(Agent):
             ctx.update_context(updates)
             ctx.send(payload)
 
-    def _state(self, ctx):
+    def _state_for_reply(self, ctx):
         state = self._requests.get((ctx.get_context() or {}).get("research_key", ""))
         # Only the configured agents can advance a barrier. Payload identities
         # cannot manufacture a new request or reopen a completed request.
@@ -351,8 +352,18 @@ class UnikoResearchCoordinator(Agent):
             self._begin(ctx, content, [])
         else:
             question = "\n".join(part.text for part in content.root if isinstance(part, TextContentPart))
-            files = [getattr(part, part.type) for part in content.root if part.type in {"file_url", "image_url"}]
-            self._begin(ctx, question, [MediaLink.model_validate(link.model_dump()) for link in files])
+            # FileUrl/ImageUrl transport models omit guild filesystem and
+            # presentation metadata. Preserve it from the validated message's
+            # raw payload before converting the attachments to document links.
+            raw_messages = ctx.message.payload.get("messages", [])
+            raw_content: Any = next((m.get("content") for m in reversed(raw_messages) if m.get("role") == "user"), [])
+            files = []
+            for part in raw_content if isinstance(raw_content, list) else []:
+                if part.get("type") in {"file_url", "image_url"}:
+                    source = normalize_document_attachment({"file_url": part[part["type"]]})
+                    if source.media_link is not None:
+                        files.append(source.media_link)
+            self._begin(ctx, question, files)
 
     @agent.processor(ResearchRequest)
     def begin_gateway(self, ctx: ProcessContext[ResearchRequest]):
@@ -361,7 +372,7 @@ class UnikoResearchCoordinator(Agent):
     @agent.processor(RecallResponse)
     def recalled(self, ctx: ProcessContext[RecallResponse]):
         with self._transaction(ctx):
-            state = self._state(ctx)
+            state = self._state_for_reply(ctx)
             if (
                 state is None
                 or ctx.message.sender.id != "memory_agent"
@@ -379,7 +390,7 @@ class UnikoResearchCoordinator(Agent):
     @agent.processor(RecordMemoryResult)
     def recorded(self, ctx: ProcessContext[RecordMemoryResult]):
         with self._transaction(ctx):
-            state = self._state(ctx)
+            state = self._state_for_reply(ctx)
             if state is None or ctx.message.sender.id != "memory_agent":
                 return
             if ctx.payload.record_id == state.key + ":user" and state.phase in {"initial", "user_record"}:
@@ -399,7 +410,7 @@ class UnikoResearchCoordinator(Agent):
     @agent.processor(ChatCompletionResponse)
     def llm_result(self, ctx: ProcessContext[ChatCompletionResponse]):
         with self._transaction(ctx):
-            state = self._state(ctx)
+            state = self._state_for_reply(ctx)
             if state is None:
                 return
             stage = ctx.get_context().get("research_stage")
@@ -478,7 +489,7 @@ class UnikoResearchCoordinator(Agent):
     @agent.processor(SERPResults)
     def searched(self, ctx: ProcessContext[SERPResults]):
         with self._transaction(ctx):
-            state = self._state(ctx)
+            state = self._state_for_reply(ctx)
             item = ctx.get_context().get("research_item")
             if state is None or ctx.message.sender.id != "serp_agent" or item not in state.pending:
                 return
@@ -493,7 +504,7 @@ class UnikoResearchCoordinator(Agent):
     @agent.processor(WebScrapingCompleted)
     def scraped(self, ctx: ProcessContext[WebScrapingCompleted]):
         with self._transaction(ctx):
-            state = self._state(ctx)
+            state = self._state_for_reply(ctx)
             item = ctx.get_context().get("research_item")
             if state is None or ctx.message.sender.id != "playwright_agent" or item not in state.pending:
                 return
@@ -506,7 +517,7 @@ class UnikoResearchCoordinator(Agent):
     @agent.processor(IngestOutcome)
     def ingested(self, ctx: ProcessContext[IngestOutcome]):
         with self._transaction(ctx):
-            state = self._state(ctx)
+            state = self._state_for_reply(ctx)
             item = ctx.get_context().get("research_item")
             if state is None or ctx.message.sender.id != "memory_agent" or item not in state.pending:
                 return
@@ -517,13 +528,13 @@ class UnikoResearchCoordinator(Agent):
     @agent.processor(FinalizeMemorySessionResult)
     def finalized(self, ctx: ProcessContext[FinalizeMemorySessionResult]):
         with self._transaction(ctx):
-            state = self._state(ctx)
+            state = self._state_for_reply(ctx)
             if state and state.phase == "finalizing" and ctx.message.sender.id == "memory_agent":
                 self._terminal(ctx, state, response=state.final_response)
 
     def failed(self, ctx: ProcessContext[Any]):
         with self._transaction(ctx):
-            state = self._state(ctx)
+            state = self._state_for_reply(ctx)
             if state is None or ctx.message.sender.id not in {
                 "memory_agent",
                 "serp_agent",

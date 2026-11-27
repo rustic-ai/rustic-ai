@@ -1,0 +1,282 @@
+"""Shutdown respects agent, resolver, guild and process ownership."""
+
+import multiprocessing
+import pickle
+from unittest.mock import Mock
+from uuid import uuid4
+
+import pytest
+
+from rustic_ai.core.agents.testutils import ProbeAgent
+from rustic_ai.core.guild.agent_ext.depends.dependency_resolver import (
+    DependencyResolver,
+    DependencySpec,
+)
+from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder
+from rustic_ai.core.guild.execution.multiprocess.multiprocess_agent_wrapper import (
+    MultiProcessAgentWrapper,
+)
+from rustic_ai.core.guild.execution.multiprocess.multiprocess_exec_engine import (
+    MultiProcessExecutionEngine,
+)
+
+
+class CleanupProbe(ProbeAgent):
+    def __init__(self):
+        ProbeAgent.__init__(self)
+        self.shutdown_count = 0
+
+    def on_shutdown(self):
+        self.shutdown_count += 1
+
+
+class OwnedResolver(DependencyResolver):
+    def __init__(self):
+        super().__init__()
+        self.shutdown_count = 0
+        self.value = Mock()
+
+    def resolve(self, org_id, guild_id, agent_id):
+        return self.value
+
+    def shutdown(self):
+        self.shutdown_count += 1
+
+
+def build(engine, count=2):
+    builder = GuildBuilder("cleanup-" + uuid4().hex, "Cleanup", "Owned shutdown")
+    builder.set_execution_engine("rustic_ai.core.guild.execution." + engine)
+    builder.set_dependency_map({"resource": DependencySpec(class_name=OwnedResolver.get_qualified_class_name())})
+    for index in range(count):
+        builder.add_agent_spec(
+            AgentBuilder(CleanupProbe)
+            .set_id("probe-" + str(index))
+            .set_name("Probe " + str(index))
+            .set_description("Lifecycle test")
+            .add_additional_dependency("resource")
+            .build_spec()
+        )
+    return builder.launch("cleanup-org")
+
+
+def wrapper(guild, agent_id):
+    result = guild.execution_engine.agent_tracker.get_agent_wrapper(guild.id, agent_id)
+    if hasattr(result, "initialization_complete"):
+        assert result.initialization_complete.wait(5)
+    return result
+
+
+@pytest.mark.parametrize(
+    "engine",
+    ["sync.sync_exec_engine.SyncExecutionEngine", "multithreaded.multithreaded_exec_engine.MultiThreadedEngine"],
+)
+def test_every_owned_agent_stops_other_guild_survives(engine):
+    first = build(engine)
+    second = build(engine, count=2)
+    try:
+        wrappers = [wrapper(first, "probe-" + str(index)) for index in range(2)]
+        survivor = wrapper(second, "probe-0")
+        recorder = wrapper(second, "probe-1").agent
+        historical_id = survivor.agent.publish_dict("default_topic", {"history": "keep"}).to_int()
+        assert recorder.get_messages()
+        assert survivor.messaging.backend.get_messages_by_id(second.id, [historical_id])
+        resolvers = [w.agent._dependency_resolvers["resource"] for w in wrappers]
+        for resolver in resolvers:
+            resolver.get_or_resolve("cleanup-org", first.id, "probe")
+        child = OwnedResolver()
+        resolvers[0]._injectors["child"] = child
+        first.shutdown()
+        first.shutdown()
+        assert [w.agent.shutdown_count for w in wrappers] == [1, 1]
+        assert [r.shutdown_count for r in resolvers] == [1, 1]
+        assert child.shutdown_count == 1
+        for resolver in resolvers:
+            resolver.value.shutdown.assert_not_called()
+        assert survivor.agent.shutdown_count == 0
+        assert survivor.messaging.backend.get_messages_by_id(second.id, [historical_id])
+        survivor.agent.publish_dict("default_topic", {"history": "still-running"})
+        assert len(recorder.get_messages()) == 2
+        assert second.execution_engine.is_agent_running(second.id, "probe-0")
+        assert second.execution_engine.find_agents_by_name(second.id, "Probe 0")
+    finally:
+        first.shutdown()
+        second.shutdown()
+
+
+def test_hook_failure_still_closes_owned_dependencies_and_messaging():
+    guild = build("sync.sync_exec_engine.SyncExecutionEngine", count=1)
+    w = wrapper(guild, "probe-0")
+    resolver = w.agent._dependency_resolvers["resource"]
+    w.agent.on_shutdown = Mock(side_effect=RuntimeError("hook failed"))
+    guild.shutdown()
+    assert resolver.shutdown_count == 1
+    assert not w.messaging.clients
+
+
+def test_borrowed_resolver_is_not_closed():
+    guild = build("sync.sync_exec_engine.SyncExecutionEngine", count=1)
+    w = wrapper(guild, "probe-0")
+    borrowed = OwnedResolver()
+    w.agent._dependency_resolvers = {"resource": borrowed}
+    w.agent._owned_dependency_resolvers = ()
+    guild.shutdown()
+    assert borrowed.shutdown_count == 0
+
+
+def wait_for_stop(event):
+    event.wait(15)
+
+
+def test_empty_multiprocess_engine_preserves_unrelated_child():
+    ctx = multiprocessing.get_context("spawn")
+    event = ctx.Event()
+    child = ctx.Process(target=wait_for_stop, args=(event,))
+    child.start()
+    engine = MultiProcessExecutionEngine(guild_id="owned", organization_id="cleanup-org", max_processes=1)
+    try:
+        engine.shutdown()
+        assert child.is_alive()
+    finally:
+        event.set()
+        child.join(timeout=5)
+        if child.is_alive():
+            child.terminate()
+            child.join(timeout=5)
+
+
+def test_multiprocess_exception_path_runs_common_cleanup():
+    guild = build("sync.sync_exec_engine.SyncExecutionEngine", count=1)
+    original = wrapper(guild, "probe-0")
+    spec = original.agent_spec
+    child_wrapper = MultiProcessAgentWrapper(original.guild_spec, spec, original.messaging_config, 1)
+    # This test exercises the child's run/finally path without spawning another
+    # transport, while the separate process test proves process ownership.
+    child_wrapper.agent = original.agent
+    child_wrapper.messaging = original.messaging
+    child_wrapper.messaging_owned = True
+    child_wrapper.initialize_agent = Mock(side_effect=RuntimeError("initialization failed"))
+    with pytest.raises(RuntimeError, match="initialization failed"):
+        child_wrapper.run()
+    assert original.agent.shutdown_count == 1
+    assert original.agent._dependency_resolvers["resource"].shutdown_count == 1
+    original._shutdown_complete = True
+    guild.shutdown()
+
+
+def test_process_wrapper_remains_serializable_before_launch():
+    builder = GuildBuilder("serialize", "Serialize", "Process wrapper")
+    spec = (
+        AgentBuilder(CleanupProbe)
+        .set_id("probe")
+        .set_name("Probe")
+        .set_description("Serializable wrapper")
+        .build_spec()
+    )
+    from rustic_ai.core.messaging import MessagingConfig
+
+    wrapper = MultiProcessAgentWrapper(
+        builder.build_spec(),
+        spec,
+        MessagingConfig(
+            backend_module="rustic_ai.core.messaging.backend",
+            backend_class="InMemoryMessagingBackend",
+            backend_config={},
+        ),
+        1,
+    )
+    restored = pickle.loads(pickle.dumps(wrapper))
+    assert restored.agent_spec.id == "probe"
+    assert not restored._shutdown_complete
+    with restored._shutdown_lock:
+        restored.shutdown()
+
+
+def test_unsubscribe_failure_does_not_skip_resource_cleanup():
+    guild = build("sync.sync_exec_engine.SyncExecutionEngine", count=1)
+    w = wrapper(guild, "probe-0")
+    resolver = w.agent._dependency_resolvers["resource"]
+    w.messaging.unsubscribe = Mock(side_effect=RuntimeError("transport already closed"))
+    guild.shutdown()
+    assert resolver.shutdown_count == 1
+    assert w.agent.shutdown_count == 1
+    assert not w.messaging.clients
+
+
+def test_failed_dependency_cleanup_is_retryable_without_repeating_successful_cleanup():
+    guild = build("sync.sync_exec_engine.SyncExecutionEngine", count=1)
+    w = wrapper(guild, "probe-0")
+    resolver = w.agent._dependency_resolvers["resource"]
+    child = OwnedResolver()
+    resolver._injectors["child"] = child
+    resolver.shutdown = Mock(side_effect=[RuntimeError("temporarily busy"), None])
+    try:
+        w.shutdown()
+        assert not w._shutdown_complete
+        assert w._pending_resolvers == [resolver]
+        assert child.shutdown_count == 1
+        assert w.agent.shutdown_count == 1
+        w.shutdown()
+        assert w._shutdown_complete
+        assert not w._pending_resolvers
+        assert resolver.shutdown.call_count == 2
+        assert child.shutdown_count == 1
+        assert w.agent.shutdown_count == 1
+        assert not w.messaging.clients
+    finally:
+        guild.shutdown()
+
+
+def test_async_ready_handler_can_stop_itself_from_sync_launch():
+    # A subprocess gives this deadlock regression a hard bound even when the
+    # coroutine bridge and launching thread are both blocked.
+    import subprocess
+    import sys
+    import textwrap
+
+    code = textwrap.dedent("""
+        import asyncio
+        from rustic_ai.core.guild.agent import Agent, ProcessContext, SelfReadyNotification, processor
+        from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder
+        from rustic_ai.core.guild.execution.sync.sync_exec_engine import SyncExecutionEngine
+        from rustic_ai.core.messaging import MessagingConfig
+
+        engine = SyncExecutionEngine("ready-stop", "test-org")
+        class SelfStopping(Agent):
+            @processor(SelfReadyNotification, handle_essential=True)
+            async def ready(self, ctx: ProcessContext[SelfReadyNotification]):
+                engine.stop_agent(self.guild_id, self.id)
+
+        guild = GuildBuilder("ready-stop", "Ready stop", "Reentrant lifecycle").build_spec()
+        spec = AgentBuilder(SelfStopping).set_id("self-stop").set_name("Self stop").set_description("Test").build_spec()
+        config = MessagingConfig(backend_module="rustic_ai.core.messaging.backend",
+                                 backend_class="InMemoryMessagingBackend", backend_config={})
+        async def run():
+            engine.run_agent(guild, spec, config, 1)
+            assert not engine.is_agent_running(guild.id, spec.id)
+        asyncio.run(run())
+        engine.shutdown()
+    """)
+    subprocess.run([sys.executable, "-c", code], check=True, timeout=10, capture_output=True, text=True)
+
+
+@pytest.mark.parametrize(
+    "engine",
+    ["sync.sync_exec_engine.SyncExecutionEngine", "multithreaded.multithreaded_exec_engine.MultiThreadedEngine"],
+)
+def test_engine_retains_failed_cleanup_for_retry_after_agent_is_stopped(engine):
+    guild = build(engine, count=1)
+    w = wrapper(guild, "probe-0")
+    resolver = w.agent._dependency_resolvers["resource"]
+    resolver.shutdown = Mock(side_effect=[RuntimeError("temporarily busy"), None])
+    try:
+        guild.execution_engine.stop_agent(guild.id, "probe-0")
+        assert not guild.execution_engine.is_agent_running(guild.id, "probe-0")
+        assert not w._shutdown_complete
+        assert guild.execution_engine._stopping_wrappers[(guild.id, "probe-0")] is w
+        guild.shutdown()
+        assert w._shutdown_complete
+        assert not guild.execution_engine._stopping_wrappers
+        assert resolver.shutdown.call_count == 2
+        assert w.agent.shutdown_count == 1
+    finally:
+        guild.shutdown()

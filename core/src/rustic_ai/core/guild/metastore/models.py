@@ -1,9 +1,11 @@
+from copy import deepcopy
 from enum import Enum
 from typing import Dict, List, Optional
 
 import shortuuid
+from sqlalchemy import false, func
 from sqlalchemy.ext.mutable import MutableDict, MutableList
-from sqlmodel import JSON, Column, Field, Relationship, Session, SQLModel
+from sqlmodel import JSON, Column, Field, Relationship, Session, SQLModel, select
 from sympy import Union
 
 from rustic_ai.core.guild.builders import GuildHelper
@@ -74,6 +76,11 @@ class GuildRoutes(SQLModel, table=True):
     destination_priority: Optional[Priority] = Field(default=None)
     method_name: Optional[str] = Field(default=None)
     route_times: int = Field(default=1)
+    mark_forwarded: bool = Field(default=False, nullable=False, sa_column_kwargs={"server_default": false()})
+    # Keep the complete definition; flattened query columns cannot preserve every
+    # nested shape (for example None versus an empty destination or one-item list).
+    spec_data: Optional[dict] = Field(default=None, sa_column=Column(MutableDict.as_mutable(JSON(none_as_null=True))))
+    position: int = Field(default=0, nullable=False, sa_column_kwargs={"server_default": "0"})
 
     guild: Optional["GuildModel"] = Relationship(back_populates="routes")
 
@@ -90,7 +97,7 @@ class GuildRoutes(SQLModel, table=True):
     status: str = Field(default=RouteStatus.ACTIVE)
 
     @classmethod
-    def from_routing_rule(cls, guild_id: str, routing_rule: RoutingRule):
+    def from_routing_rule(cls, guild_id: str, routing_rule: RoutingRule, position: int = 0):
         rlist = []
         if routing_rule.destination and routing_rule.destination.recipient_list:
             for recipient in routing_rule.destination.recipient_list:
@@ -116,6 +123,8 @@ class GuildRoutes(SQLModel, table=True):
                 destination_topics = routing_rule.destination.topics
 
         return cls(
+            spec_data=routing_rule.model_dump(mode="json"),
+            position=position,
             guild_id=guild_id,
             agent_name=routing_rule.agent.name if routing_rule.agent else None,
             agent_id=routing_rule.agent.id if routing_rule.agent else None,
@@ -133,6 +142,7 @@ class GuildRoutes(SQLModel, table=True):
             destination_priority=(routing_rule.destination.priority if routing_rule.destination else None),
             method_name=routing_rule.method_name,
             route_times=routing_rule.route_times,
+            mark_forwarded=routing_rule.mark_forwarded,
             agent_state_update=(
                 routing_rule.agent_state_update.model_dump() if routing_rule.agent_state_update else None
             ),
@@ -144,6 +154,16 @@ class GuildRoutes(SQLModel, table=True):
         )
 
     def to_routing_rule(self) -> RoutingRule:
+        if self.spec_data is not None:
+            data = deepcopy(self.spec_data)
+            data.update(
+                route_times=self.route_times,
+                mark_forwarded=self.mark_forwarded,
+                process_status=self.process_status,
+                reason=self.reason,
+            )
+            return RoutingRule.model_validate(data)
+        # Existing rows have no complete definition until their specs are re-saved.
         recipient_list = []
         if self.destination_recipient_list:
             for recipient in self.destination_recipient_list:
@@ -194,6 +214,7 @@ class GuildRoutes(SQLModel, table=True):
             "destination": destination,
             "method_name": self.method_name,
             "route_times": self.route_times,
+            "mark_forwarded": self.mark_forwarded,
             "transformer": self.transformer,
             "agent_state_update": self.agent_state_update,
             "guild_state_update": self.guild_state_update,
@@ -202,6 +223,11 @@ class GuildRoutes(SQLModel, table=True):
         }
 
         return RoutingRule.model_validate(rule_dict)
+
+    @classmethod
+    def next_position(cls, session: Session, guild_id: str) -> int:
+        position = session.exec(select(func.max(cls.position)).where(cls.guild_id == guild_id)).one()
+        return position + 1 if position is not None else 0
 
 
 class GuildModel(SQLModel, table=True):
@@ -220,16 +246,17 @@ class GuildModel(SQLModel, table=True):
     organization_id: str = Field(index=True, nullable=False)
 
     dependency_map: dict = Field(sa_column=Column(MutableDict.as_mutable(JSON(none_as_null=True)), default={}))
+    spec_data: Optional[dict] = Field(default=None, sa_column=Column(MutableDict.as_mutable(JSON(none_as_null=True))))
     # Use GuildStatus enum to ensure valid status values
     status: str = Field(default=GuildStatus.UNKNOWN)
     routes: list[GuildRoutes] = Relationship(
         back_populates="guild",
-        sa_relationship_kwargs={"cascade": "all", "lazy": "joined"},
+        sa_relationship_kwargs={"cascade": "all", "lazy": "joined", "order_by": "GuildRoutes.position, GuildRoutes.id"},
     )
 
     agents: list["AgentModel"] = Relationship(
         back_populates="guild",
-        sa_relationship_kwargs={"cascade": "all", "lazy": "joined"},
+        sa_relationship_kwargs={"cascade": "all", "lazy": "joined", "order_by": "AgentModel.position, AgentModel.id"},
     )
 
     @classmethod
@@ -253,24 +280,25 @@ class GuildModel(SQLModel, table=True):
 
         backend = GuildHelper.get_messaging_config(guild_spec)
 
-        deps_map = {k: v.model_dump() for k, v in guild_spec.dependency_map.items()}
+        data = guild_spec.model_dump(mode="json", exclude={"agents", "routes"})
 
         routes = []
 
         if guild_spec.routes:
-            for rule in guild_spec.routes.steps:
-                routes.append(GuildRoutes.from_routing_rule(guild_spec.id, rule))
+            for position, rule in enumerate(guild_spec.routes.steps):
+                routes.append(GuildRoutes.from_routing_rule(guild_spec.id, rule, position=position))
 
         return cls(
+            spec_data=data,
             id=guild_spec.id,
             name=guild_spec.name,
             description=guild_spec.description,
             execution_engine=exec_engine,
             backend_module=backend.backend_module,
             backend_class=backend.backend_class,
-            backend_config=backend.backend_config,
+            backend_config=backend.model_dump(mode="json")["backend_config"],
             organization_id=organization_id,
-            dependency_map=deps_map,
+            dependency_map=deepcopy(data["dependency_map"]),
             routes=routes,
         )
 
@@ -291,23 +319,29 @@ class GuildModel(SQLModel, table=True):
 
         routing_slip = RoutingSlip(steps=routes)
 
-        return GuildSpec(
+        data = (
+            deepcopy(self.spec_data)
+            if self.spec_data is not None
+            else {
+                "properties": {
+                    GSKC.EXECUTION_ENGINE: self.execution_engine,
+                    GSKC.MESSAGING: {
+                        GSKC.BACKEND_MODULE: self.backend_module,
+                        GSKC.BACKEND_CLASS: self.backend_class,
+                        GSKC.BACKEND_CONFIG: self.backend_config,
+                    },
+                }
+            }
+        )
+        data.update(
             id=self.id,
             name=self.name,
             description=self.description,
-            status=self.status,
             agents=[agent.to_agent_spec() for agent in self.agents if agent.status != AgentStatus.DELETED],
-            properties={
-                GSKC.EXECUTION_ENGINE: self.execution_engine,
-                GSKC.MESSAGING: {
-                    GSKC.BACKEND_MODULE: self.backend_module,
-                    GSKC.BACKEND_CLASS: self.backend_class,
-                    GSKC.BACKEND_CONFIG: self.backend_config,
-                },
-            },
             dependency_map=deps,
             routes=routing_slip,
         )
+        return GuildSpec.model_validate(data)
 
 
 class AgentModel(SQLModel, table=True):
@@ -318,7 +352,7 @@ class AgentModel(SQLModel, table=True):
     name: str = Field(index=True)
     description: str = Field(default="")
     class_name: str
-    properties: str = Field(sa_column=Column(MutableDict.as_mutable(JSON(none_as_null=True)), default={}))
+    properties: dict = Field(sa_column=Column(MutableDict.as_mutable(JSON(none_as_null=True)), default={}))
     additional_topics: List[str] = Field(
         sa_column=Column(MutableList.as_mutable(JSON(none_as_null=True))),
         default_factory=list,
@@ -336,6 +370,8 @@ class AgentModel(SQLModel, table=True):
     guild: Optional[GuildModel] = Relationship(back_populates="agents")
 
     predicates: dict = Field(sa_column=Column(MutableDict.as_mutable(JSON(none_as_null=True)), default={}))
+    spec_data: Optional[dict] = Field(default=None, sa_column=Column(MutableDict.as_mutable(JSON(none_as_null=True))))
+    position: int = Field(default=0, nullable=False, sa_column_kwargs={"server_default": "0"})
 
     status: str = Field(default=AgentStatus.PENDING_LAUNCH)
 
@@ -348,7 +384,7 @@ class AgentModel(SQLModel, table=True):
         return session.get(cls, guild_id)
 
     @classmethod
-    def from_agent_spec(cls, guild_id: str, agent_spec: AgentSpec) -> "AgentModel":
+    def from_agent_spec(cls, guild_id: str, agent_spec: AgentSpec, position: int = 0) -> "AgentModel":
         """
         Create an AgentModel instance from an AgentSpec instance.
 
@@ -360,22 +396,23 @@ class AgentModel(SQLModel, table=True):
             AgentModel: The AgentModel instance.
 
         """
-        deps_map = {k: v.model_dump() for k, v in agent_spec.dependency_map.items()}
-        predicates = {k: v.model_dump() for k, v in agent_spec.predicates.items()}
+        data = agent_spec.model_dump(mode="json")
 
         return cls(
+            spec_data=data,
+            position=position,
             id=agent_spec.id,
             name=agent_spec.name,
             description=agent_spec.description,
             class_name=agent_spec.class_name,
-            properties=(agent_spec.properties.model_dump() if agent_spec.properties else {}),
+            properties=deepcopy(data["properties"]),
             additional_topics=agent_spec.additional_topics,
             listen_to_default_topic=agent_spec.listen_to_default_topic,
             act_only_when_tagged=agent_spec.act_only_when_tagged,
             guild_id=guild_id,
-            dependency_map=deps_map,
+            dependency_map=deepcopy(data["dependency_map"]),
             additional_dependencies=agent_spec.additional_dependencies,
-            predicates=predicates,
+            predicates=deepcopy(data["predicates"]),
         )
 
     def to_agent_spec(self) -> AgentSpec:
@@ -388,18 +425,26 @@ class AgentModel(SQLModel, table=True):
         # deps = {k: DependencySpec.model_validate(v) for k, v in self.dependency_map.items()}
         # predicates = {k: RuntimePredicate.model_validate(v) for k, v in self.predicates.items()}
 
-        spec_dict = {
-            "id": self.id,
-            "name": self.name,
-            "description": self.description,
-            "class_name": self.class_name,
-            "properties": self.properties,
-            "additional_topics": self.additional_topics,
-            "listen_to_default_topic": self.listen_to_default_topic,
-            "act_only_when_tagged": self.act_only_when_tagged,
-            "dependency_map": self.dependency_map,
-            "additional_dependencies": self.additional_dependencies,
-            "predicates": self.predicates,
-        }
+        spec_dict = deepcopy(self.spec_data) if self.spec_data is not None else {}
+        spec_dict.update(
+            {
+                "id": self.id,
+                "name": self.name,
+                "description": self.description,
+                "class_name": self.class_name,
+                "properties": self.properties,
+                "additional_topics": self.additional_topics,
+                "listen_to_default_topic": self.listen_to_default_topic,
+                "act_only_when_tagged": self.act_only_when_tagged,
+                "dependency_map": self.dependency_map,
+                "additional_dependencies": self.additional_dependencies,
+                "predicates": self.predicates,
+            }
+        )
 
         return AgentSpec.model_validate(spec_dict)
+
+    @classmethod
+    def next_position(cls, session: Session, guild_id: str) -> int:
+        position = session.exec(select(func.max(cls.position)).where(cls.guild_id == guild_id)).one()
+        return position + 1 if position is not None else 0

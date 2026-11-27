@@ -123,7 +123,9 @@ class GuildStore:
             if not guild:
                 raise ValueError(f"Guild with ID {guild_id} not found")
             else:
-                agent_model = AgentModel.from_agent_spec(guild_id, agent_spec)
+                agent_model = AgentModel.from_agent_spec(
+                    guild_id, agent_spec, position=AgentModel.next_position(session, guild_id)
+                )
                 session.add(agent_model)
                 session.commit()
             session.close()

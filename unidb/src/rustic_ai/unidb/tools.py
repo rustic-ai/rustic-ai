@@ -6,10 +6,6 @@ import json
 from typing import Any
 
 from pydantic import create_model
-from rustic_ai.llm_agent.tools.tools_manager_plugin import (
-    ToolsHelper,
-    ToolsManagerPlugin,
-)
 
 from rustic_ai.core.guild.agent import Agent, ProcessContext, processor
 from rustic_ai.core.guild.agent_ext.depends.llm.models import (
@@ -22,6 +18,10 @@ from rustic_ai.core.guild.agent_ext.depends.llm.models import (
     UserMessage,
 )
 from rustic_ai.core.ui_protocol.types import TextFormat
+from rustic_ai.llm_agent.tools.tools_manager_plugin import (
+    ToolsHelper,
+    ToolsManagerPlugin,
+)
 
 from . import models as m
 from .serialization import canonical

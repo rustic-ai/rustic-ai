@@ -1,0 +1,79 @@
+{
+  "properties": {
+    "corpus_session_id": {
+      "maxLength": 256,
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+      "title": "Corpus Session Id",
+      "type": "string"
+    },
+    "memory_agent_id": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Memory Agent Id",
+      "type": "string"
+    },
+    "deadline_seconds": {
+      "default": 120,
+      "exclusiveMinimum": 0,
+      "maximum": 3600,
+      "title": "Deadline Seconds",
+      "type": "number"
+    },
+    "max_source_bytes": {
+      "default": 16777216,
+      "maximum": 134217728,
+      "minimum": 1,
+      "title": "Max Source Bytes",
+      "type": "integer"
+    },
+    "max_workflow_bytes": {
+      "default": 33554432,
+      "maximum": 134217728,
+      "minimum": 1,
+      "title": "Max Workflow Bytes",
+      "type": "integer"
+    },
+    "max_active_workflows": {
+      "default": 32,
+      "maximum": 128,
+      "minimum": 1,
+      "title": "Max Active Workflows",
+      "type": "integer"
+    },
+    "completed_request_limit": {
+      "default": 1024,
+      "maximum": 4096,
+      "minimum": 1,
+      "title": "Completed Request Limit",
+      "type": "integer"
+    },
+    "recall_item_limit": {
+      "default": 10,
+      "maximum": 50,
+      "minimum": 1,
+      "title": "Recall Item Limit",
+      "type": "integer"
+    },
+    "recall_max_characters": {
+      "default": 6000,
+      "maximum": 32000,
+      "minimum": 1,
+      "title": "Recall Max Characters",
+      "type": "integer"
+    },
+    "recall_token_budget": {
+      "default": 2000,
+      "maximum": 10000,
+      "minimum": 1,
+      "title": "Recall Token Budget",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "corpus_session_id",
+    "memory_agent_id"
+  ],
+  "title": "DocumentCoordinatorConfig",
+  "type": "object"
+}

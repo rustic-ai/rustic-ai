@@ -225,7 +225,8 @@ def test_add_routing_rule(guild_manager, metastore_engine):
     rule = RoutingRule(
         agent=AgentTag(id="test_agent", name="Test Agent"),
         method_name="test_method",
-        destination=RoutingDestination(topics=["test.output"]),
+        destination=RoutingDestination(topics=["test.output"], priority=0),
+        mark_forwarded=True,
     )
 
     # 2. Simulate AddRoutingRuleRequest
@@ -259,8 +260,7 @@ def test_add_routing_rule(guild_manager, metastore_engine):
         statement = select(GuildRoutes).where(GuildRoutes.guild_id == guild_manager.guild_id)
         routes = session.exec(statement).all()
 
-        # Find the route by matching on method_name and agent_id (more reliable than hashid
-        # due to topics list/string normalization in to_routing_rule())
+        # Locate the stored row, then require the entire rule to survive loading.
         found_route = None
         for r in routes:
             if r.method_name == rule.method_name and r.agent_id == rule.agent.id:
@@ -269,6 +269,7 @@ def test_add_routing_rule(guild_manager, metastore_engine):
 
         assert found_route is not None, f"Route should be added to database. Found {len(routes)} routes"
         assert found_route.status == RouteStatus.ACTIVE, "Route status should be ACTIVE"
+        assert found_route.to_routing_rule().model_dump(mode="json") == rule.model_dump(mode="json")
 
     # 4. Verify route was added to in-memory guild
     in_memory_routes = [
@@ -281,9 +282,7 @@ def test_add_routing_rule(guild_manager, metastore_engine):
         guild_model = GuildModel.get_by_id(session, guild_manager.guild_id)
         new_spec = guild_model.to_guild_spec()
 
-        if new_spec.routes:
-            spec_routes = [(s.method_name, s.agent.id if s.agent else None) for s in new_spec.routes.steps]
-            assert (rule.method_name, rule.agent.id) in spec_routes, "Added route should be in generated spec"
+        assert new_spec.routes.steps[-1].model_dump(mode="json") == rule.model_dump(mode="json")
 
 
 def test_guild_status_aggregation(guild_manager, metastore_engine):

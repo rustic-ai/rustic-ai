@@ -51,11 +51,12 @@ async def test_non_filesystem_media_and_legacy_sources_are_rejected():
     errors = []
     memory = SimpleNamespace(_send_failure=lambda ctx, code: errors.append(code))
     ctx = SimpleNamespace(
+        get_context=lambda: {},
         payload=IngestDocumentRequest(
             record_id="evidence-1",
             session_id="research",
             media_link=external,
-        )
+        ),
     )
     await MemoryAgent.ingest_document.__wfn__(memory, ctx, None, None, None)
     assert errors == ["document_rejected"]

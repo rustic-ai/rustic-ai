@@ -43,9 +43,18 @@ Rustic AI includes several specialized agents for various tasks:
 - [SquadAgent](huggingface/squad_agent.md) - Question answering using the SQuAD model
 - [MarvinAgent](marvin/marvin_agent.md) - Classification and data extraction
 
+### Cognitive Memory
+
+- [Uniko MemoryAgent](uniko/index.md) - Attributed recall, source ingestion, structured experience, goals/tasks, and controlled memory lifecycle
+- [Uniko Message Protocol](uniko/protocol.md) - Memory scopes, provenance, atomic units, and replay/reconciliation
+
+### Database Capabilities
+
+- [UniDBAgent](unidb/index.md) - Application-owned graph queries, Locy reasoning, checked mutations, scratch scenarios, and query diagnostics
+- [Uni-DB Message Protocol](unidb/protocol.md) - Typed requests, results, errors, bounds, and reconciliation
+
 ### Utility Agents
 - [VectorAgent](core/vector_agent.md) - Document indexing and similarity search
-- [KnowledgeAgent](core/knowledge_agent.md) - Advanced knowledge base indexing with chunking, embedding pipelines, and hybrid search
 - [ProbeAgent](core/probe_agent.md) - Testing utility for monitoring agent interactions
 
 ### System Agents
