@@ -118,8 +118,8 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
                 session.add(guild_model)
 
                 # Add the agents to the Metastore
-                for guild_agent in guild_spec.agents:
-                    agent_model = AgentModel.from_agent_spec(guild_id, guild_agent)
+                for position, guild_agent in enumerate(guild_spec.agents):
+                    agent_model = AgentModel.from_agent_spec(guild_id, guild_agent, position=position)
                     session.add(agent_model)
 
             session.commit()
@@ -175,15 +175,20 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
 
         self.guild.launch_agent(agent_spec)
 
-        agent_model = AgentModel.from_agent_spec(self.guild_id, agent_spec)
         if session is None:
             with Session(self.engine) as session:
                 if AgentModel.get_by_id(session, self.guild_id, agent_spec.id) is None:
+                    agent_model = AgentModel.from_agent_spec(
+                        self.guild_id, agent_spec, position=AgentModel.next_position(session, self.guild_id)
+                    )
                     session.add(agent_model)
                     session.commit()
                     session.close()
         else:
             if AgentModel.get_by_id(session, self.guild_id, agent_spec.id) is None:
+                agent_model = AgentModel.from_agent_spec(
+                    self.guild_id, agent_spec, position=AgentModel.next_position(session, self.guild_id)
+                )
                 session.add(agent_model)  # pragma: no cover
 
         # When adding an agent, we should also initialize its health status in the manager's view
@@ -278,9 +283,9 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
                 session.add(guild_model)
 
                 # Add the agents to the Metastore
-                for guild_agent in self.guild_spec.agents:
+                for position, guild_agent in enumerate(self.guild_spec.agents):
                     if AgentModel.get_by_id(session, self.guild_id, guild_agent.id) is None:
-                        agent_model = AgentModel.from_agent_spec(self.guild_id, guild_agent)
+                        agent_model = AgentModel.from_agent_spec(self.guild_id, guild_agent, position=position)
                         session.add(agent_model)
 
                 session.commit()
@@ -309,7 +314,9 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
 
             launched_guild.register_agent(self.get_spec())
             if AgentModel.get_by_id(session, self.guild_id, self.id) is None:
-                self_model = AgentModel.from_agent_spec(self.guild_id, self.get_spec())
+                self_model = AgentModel.from_agent_spec(
+                    self.guild_id, self.get_spec(), position=AgentModel.next_position(session, self.guild_id)
+                )
                 session.add(self_model)  # pragma: no cover
 
             guild_model.status = GuildStatus.STARTING
@@ -364,7 +371,11 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
 
         with Session(self.engine) as session:
             if AgentModel.get_by_id(session, self.guild_id, aar.agent_spec.id) is None:
-                session.add(AgentModel.from_agent_spec(self.guild_id, aar.agent_spec))
+                session.add(
+                    AgentModel.from_agent_spec(
+                        self.guild_id, aar.agent_spec, position=AgentModel.next_position(session, self.guild_id)
+                    )
+                )
                 session.commit()
 
         self.state_manager.update_state(
@@ -447,7 +458,9 @@ class GuildManagerAgent(Agent[GuildManagerAgentProps]):
 
         # Update persistent store
         with Session(self.engine) as session:
-            guild_route = GuildRoutes.from_routing_rule(self.guild_id, rule)
+            guild_route = GuildRoutes.from_routing_rule(
+                self.guild_id, rule, position=GuildRoutes.next_position(session, self.guild_id)
+            )
             guild_route.status = RouteStatus.ACTIVE
             session.add(guild_route)
             session.commit()

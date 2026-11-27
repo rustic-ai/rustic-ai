@@ -43,8 +43,8 @@ class GuildService:
             guild_model.status = GuildStatus.REQUESTED
             session.add(guild_model)
             # Add the agents to the Metastore
-            for guild_agent in guild_spec.agents:
-                agent_model = AgentModel.from_agent_spec(guild_spec.id, guild_agent)
+            for position, guild_agent in enumerate(guild_spec.agents):
+                agent_model = AgentModel.from_agent_spec(guild_spec.id, guild_agent, position=position)
                 session.add(agent_model)
             session.commit()
 

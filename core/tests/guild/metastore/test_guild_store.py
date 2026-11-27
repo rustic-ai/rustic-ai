@@ -329,6 +329,7 @@ class TestGuildStore:
         assert rule04.transformer is not None
         assert isinstance(rule04.transformer, FunctionalTransformer)
         assert rule04.transformer.handler == "{'payload': {'new_key': payload.key, 'origin_id': $.origin.id}}"
+        assert guild.model_dump(mode="json") == spec.model_dump(mode="json")
 
     @pytest.mark.parametrize("mark_forwarded", [True, False, None])
     def test_bootstrapped_route_preserves_forwarding_identity(self, engine, org_id, mark_forwarded):
@@ -512,3 +513,5 @@ class TestGuildStore:
 
         assert d4.class_name == "test_dep04"
         assert d4.properties == {"test_dep": "test_dep_value4"}
+        expected = spec.model_copy(update={"agents": [agent]})
+        assert gs.model_dump(mode="json") == expected.model_dump(mode="json")
