@@ -1,0 +1,326 @@
+{
+  "id": "unidb-example-receivables",
+  "name": "Receivables Example",
+  "description": "Uni-DB agent initialization for the receivables design example.",
+  "agents": [
+    {
+      "id": "unidb-receivables",
+      "name": "Uni-DB",
+      "description": "Owns the example database and executes configured operations.",
+      "class_name": "rustic_ai.unidb.agent.UniDBAgent",
+      "properties": {
+        "binding_id": "receivables",
+        "admission": "require_database_ready",
+        "limits": {
+          "timeout_ms": 5000,
+          "max_query_memory_bytes": 67108864,
+          "max_rows": 100,
+          "max_output_bytes": 65536,
+          "max_input_bytes": 65536,
+          "max_statements": 16,
+          "max_conflict_retries": 0
+        },
+        "raw_operations_enabled": false,
+        "operation_catalog": {
+          "revision": "receivables-v1",
+          "operations": [
+            {
+              "name": "record_invoice_payment",
+              "kind": "mutation",
+              "parameters_schema": {
+                "type": "object",
+                "properties": {
+                  "invoice_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
+                  "invoice_amount_cents": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "payment_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
+                  "payment_amount_cents": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                },
+                "required": [
+                  "invoice_id",
+                  "invoice_amount_cents",
+                  "payment_id",
+                  "payment_amount_cents"
+                ],
+                "additionalProperties": false
+              },
+              "statements": [
+                {
+                  "kind": "cypher",
+                  "text": "CREATE (:Invoice {ext_id: $invoice_id, amount_cents: $invoice_amount_cents})"
+                },
+                {
+                  "kind": "cypher",
+                  "text": "CREATE (:Payment {ext_id: $payment_id, amount_cents: $payment_amount_cents})"
+                },
+                {
+                  "kind": "cypher",
+                  "text": "MATCH (p:Payment {ext_id: $payment_id}), (i:Invoice {ext_id: $invoice_id}) CREATE (p)-[:APPLIES_TO]->(i)"
+                }
+              ],
+              "checks": []
+            },
+            {
+              "name": "invoice_balance",
+              "kind": "evaluate",
+              "parameters_schema": {
+                "type": "object",
+                "properties": {
+                  "invoice_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                },
+                "required": [
+                  "invoice_id"
+                ],
+                "additionalProperties": false
+              },
+              "program": "QUERY invoice_balance WHERE invoice.ext_id = $invoice_id RETURN invoice.ext_id AS invoice_id, balance_cents AS balance_cents",
+              "columns": [
+                "invoice_id",
+                "balance_cents"
+              ]
+            },
+            {
+              "name": "explain_invoice_balance",
+              "kind": "explain",
+              "parameters_schema": {
+                "type": "object",
+                "properties": {
+                  "invoice_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                },
+                "required": [
+                  "invoice_id"
+                ],
+                "additionalProperties": false
+              },
+              "program": "EXPLAIN RULE invoice_balance WHERE invoice.ext_id = $invoice_id"
+            }
+          ]
+        }
+      },
+      "additional_topics": [
+        "db.requests"
+      ],
+      "listen_to_default_topic": false,
+      "dependency_map": {
+        "unidb": {
+          "class_name": "rustic_ai.unidb.resolver.UniDBResolver",
+          "properties": {
+            "binding_id": "receivables",
+            "open_mode": "create",
+            "location": {
+              "kind": "filesystem",
+              "dependency_key": "filesystem",
+              "relative_path": "receivables-store"
+            },
+            "native_config": {
+              "wal_enabled": true,
+              "strict_schema": true
+            },
+            "bootstrap": {
+              "policy": "apply_to_new",
+              "revision": "receivables-v1",
+              "schema": {
+                "labels": [
+                  {
+                    "name": "Invoice",
+                    "properties": [
+                      {
+                        "name": "amount_cents",
+                        "type": "int64",
+                        "nullable": false
+                      }
+                    ]
+                  },
+                  {
+                    "name": "Payment",
+                    "properties": [
+                      {
+                        "name": "amount_cents",
+                        "type": "int64",
+                        "nullable": false
+                      }
+                    ]
+                  }
+                ],
+                "edge_types": [
+                  {
+                    "name": "APPLIES_TO",
+                    "source_labels": [
+                      "Payment"
+                    ],
+                    "target_labels": [
+                      "Invoice"
+                    ],
+                    "properties": []
+                  }
+                ]
+              },
+              "rule_programs": [
+                {
+                  "id": "receivables-rules-v1",
+                  "text": "CREATE RULE payment_total AS\n  MATCH (payment:Payment)-[:APPLIES_TO]->(invoice:Invoice)\n  FOLD paid_cents = SUM(payment.amount_cents)\n  YIELD KEY invoice, paid_cents\n\nCREATE RULE invoice_balance AS\n  MATCH (invoice:Invoice)\n  WHERE invoice IS payment_total\n  YIELD KEY invoice, invoice.amount_cents - paid_cents AS balance_cents\n\nCREATE RULE invoice_balance AS\n  MATCH (invoice:Invoice)\n  WHERE invoice IS NOT payment_total\n  YIELD KEY invoice, invoice.amount_cents AS balance_cents\n"
+                }
+              ]
+            },
+            "receipts": {
+              "mode": "same_transaction",
+              "namespace": "__rustic_unidb"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "dependency_map": {
+    "filesystem": {
+      "class_name": "rustic_ai.core.guild.agent_ext.depends.filesystem.filesystem.FileSystemResolver",
+      "properties": {
+        "path_base": "/tmp/rustic-unidb-design-examples",
+        "protocol": "file",
+        "storage_options": {}
+      }
+    }
+  },
+  "routes": {
+    "steps": [
+      {
+        "agent": {
+          "id": "unidb-receivables",
+          "name": "Uni-DB"
+        },
+        "message_format": "rustic_ai.unidb.models.DBCapabilitiesResponse",
+        "destination": {
+          "topics": "db.results"
+        },
+        "route_times": -1
+      },
+      {
+        "agent": {
+          "id": "unidb-receivables",
+          "name": "Uni-DB"
+        },
+        "message_format": "rustic_ai.unidb.models.DBHealthResponse",
+        "destination": {
+          "topics": "db.results"
+        },
+        "route_times": -1
+      },
+      {
+        "agent": {
+          "id": "unidb-receivables",
+          "name": "Uni-DB"
+        },
+        "message_format": "rustic_ai.unidb.models.DBQueryResponse",
+        "destination": {
+          "topics": "db.results"
+        },
+        "route_times": -1
+      },
+      {
+        "agent": {
+          "id": "unidb-receivables",
+          "name": "Uni-DB"
+        },
+        "message_format": "rustic_ai.unidb.models.DBMutateResponse",
+        "destination": {
+          "topics": "db.results"
+        },
+        "route_times": -1
+      },
+      {
+        "agent": {
+          "id": "unidb-receivables",
+          "name": "Uni-DB"
+        },
+        "message_format": "rustic_ai.unidb.models.DBEvaluateResponse",
+        "destination": {
+          "topics": "db.results"
+        },
+        "route_times": -1
+      },
+      {
+        "agent": {
+          "id": "unidb-receivables",
+          "name": "Uni-DB"
+        },
+        "message_format": "rustic_ai.unidb.models.DBExplainResponse",
+        "destination": {
+          "topics": "db.results"
+        },
+        "route_times": -1
+      },
+      {
+        "agent": {
+          "id": "unidb-receivables",
+          "name": "Uni-DB"
+        },
+        "message_format": "rustic_ai.unidb.models.DBScenarioResponse",
+        "destination": {
+          "topics": "db.results"
+        },
+        "route_times": -1
+      },
+      {
+        "agent": {
+          "id": "unidb-receivables",
+          "name": "Uni-DB"
+        },
+        "message_format": "rustic_ai.unidb.models.DBOperationStatusResponse",
+        "destination": {
+          "topics": "db.results"
+        },
+        "route_times": -1
+      }
+    ]
+  },
+  "properties": {
+    "example_guild_policy": {
+      "owner": "embedding_guild_boundary",
+      "enforcement": "application_provided_not_automatic",
+      "caller_profiles": {
+        "demo-ingester": [
+          "query",
+          "mutation",
+          "capabilities",
+          "health",
+          "operation_status"
+        ],
+        "demo-reasoner": [
+          "query",
+          "evaluate",
+          "explain",
+          "scenario",
+          "capabilities",
+          "health"
+        ],
+        "demo-approved-executor": [
+          "query",
+          "evaluate",
+          "mutation",
+          "operation_status"
+        ]
+      }
+    }
+  }
+}

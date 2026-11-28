@@ -1,0 +1,5774 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../react-agent-design/">
+      
+      
+        <link rel="next" href="../knowledge-agent-uniko-migration/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.jpg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.2">
+    
+    
+      
+        <title>Uniko Agent Completion Plan - Rustic AI Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.57a0d79d.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/theme.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#uniko-agent-implementation-and-completion-plan" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Rustic AI Documentation" class="md-header__button md-logo" aria-label="Rustic AI Documentation" data-md-component="logo">
+      
+  <img src="../../assets/images/logo.svg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Rustic AI Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Uniko Agent Completion Plan
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/rustic-ai/rustic-ai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Rustic AI Documentation" class="md-nav__button md-logo" aria-label="Rustic AI Documentation" data-md-component="logo">
+      
+  <img src="../../assets/images/logo.svg" alt="logo">
+
+    </a>
+    Rustic AI Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/rustic-ai/rustic-ai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Light Paper
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-To Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    How-To Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../howto/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../howto/creating_your_first_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Creating Your First Agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../howto/creating_a_guild/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Creating a Guild
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../howto/guild_specifications/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guild Specifications
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../howto/dependency_injection/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dependency Injection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../howto/state_management/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    State Management
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../howto/using_react_agent_with_skills/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Using ReActAgent with Skills
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../howto/testing_agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Testing Agents
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../howto/testing_guilds/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Testing Composed Guilds
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../howto/writing_effective_agent_tests/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Writing Effective Agent Tests
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../howto/client_server_flow/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Client-Server Flow
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../howto/code_tag_quick_reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Code Tag Quick Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../howto/llm_prompts_with_code_tag/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LLM Prompts with Code Tag
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_14" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_14" id="__nav_3_14_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Examples
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_14_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_14">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Examples
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../howto/examples/code_review_prompt/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Code Review Prompt
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../howto/examples/prompts/security_reviewer/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Security Reviewer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Core
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../core/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../core/architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../core/agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agents
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../core/guilds/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guilds
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../core/g2g/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guild-to-Guild (G2G)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../core/messaging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Messaging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../core/messaging_lifecycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Messaging Lifecycle
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../core/execution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Execution
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../core/multiprocess_execution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multiprocess Execution
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../core/dependencies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dependencies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../core/state_management/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    State Management
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agents
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Agents
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../core/agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agents
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/llm_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LLM Agent & Plugins
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/llm_agent_memory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LLM Agent Memory
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/llm_agent_plugins/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LLM Agent Plugins
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/react_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ReAct Agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_7" id="__nav_5_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Uniko Memory
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Uniko Memory
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/uniko/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agent Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/uniko/protocol/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Message Protocol
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/uniko/documents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Document Coordinator
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_8" id="__nav_5_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Uni-DB
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Uni-DB
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/unidb/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agent Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/unidb/protocol/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Message Protocol
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_9" id="__nav_5_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Core
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/core/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/core/guild_manager_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guild Manager Agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/core/user_proxy_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Proxy Agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/core/vector_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Vector Agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/core/simple_llm_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Simple LLM Agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/core/probe_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Probe Agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_10" id="__nav_5_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LiteLLM
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    LiteLLM
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/litellm/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/litellm/litellm_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LiteLLM Agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_11" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_11" id="__nav_5_11_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    HuggingFace
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_11">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    HuggingFace
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/huggingface/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/huggingface/llm_phi_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LLM Phi Agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/huggingface/squad_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Squad Agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/huggingface/image2image_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Image2Image Agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/huggingface/runwayml_stable_diffusion_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Runwayml Stable Diffusion Agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/huggingface/speecht5_tts_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SpeechT5 TTS Agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_12" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_12" id="__nav_5_12_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Playwright
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_12_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_12">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Playwright
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/playwright/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/playwright/playwright_scraper_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Playwright Scraper Agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_13" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_13" id="__nav_5_13_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SerpAPI
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_13_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_13">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    SerpAPI
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/serpapi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/serpapi/serp_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SERP Agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/serpapi/local_serp_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Local SERP Agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_14" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_14" id="__nav_5_14_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Marvin
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_14_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_14">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Marvin
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/marvin/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/marvin/marvin_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Marvin Agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_15" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_15" id="__nav_5_15_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_15_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_15">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    MCP
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/mcp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dependencies
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Dependencies
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_6_2" id="__nav_6_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Core
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/core/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/core/env_secret_provider/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Environment Secret Provider
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/core/filesystem/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    File System Resolver
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/core/in_memory_kvstore/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    In-Memory KV Store
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/core/in_process_interpreter/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    In-Process Interpreter
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/core/python_exec_executor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Python Exec Executor
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/uniko/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Uniko Resolver
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/unidb/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Uni-DB Resolver
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_6_5" id="__nav_6_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Redis
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Redis
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/redis/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/redis/redis_kvstore/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Redis KV Store
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6_6" id="__nav_6_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LiteLLM
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    LiteLLM
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/litellm/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/litellm/litellm_resolver/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LiteLLM Resolver
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_6_7" id="__nav_6_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Chroma
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Chroma
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/chroma/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/chroma/chroma_resolver/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Chroma Resolver
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_6_8" id="__nav_6_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LangChain
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    LangChain
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/langchain/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/langchain/character_splitter/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Character Splitter
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/langchain/openai_embeddings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OpenAI Embeddings
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/langchain/recursive_splitter/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Recursive Splitter
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Skills
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Skills
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../skills/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Patterns
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Patterns
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../patterns/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../patterns/messaging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Messaging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../patterns/routing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Routing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../patterns/transformation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Transformation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../patterns/aggregation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Aggregation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ray/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ray
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Showcase
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Showcase
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../showcase/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../showcase/paper_banana/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PaperBanana
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../showcase/semantic_memory_assistant/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Semantic Memory Assistant
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ui_protocol_types/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UI Protocol Types
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_14" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_14" id="__nav_14_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_14_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_14">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Design
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../react-agent-design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ReAct Agent Design
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Uniko Agent Completion Plan
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Uniko Agent Completion Plan
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#dependency-refresh-2026-11-25" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dependency refresh: 2026-11-25
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#baseline-and-tracking-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Baseline and tracking rules
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scope-and-completion-gates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scope and completion gates
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#current-delivery-and-review-status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Current delivery and review status
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ownership-and-message-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ownership and message flow
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#historical-baseline-and-defects" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Historical baseline and defects
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#g1-implementation-and-acceptance-evidence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        G1 implementation and acceptance evidence
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration-implementation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration implementation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ingestion-and-relation-extraction-implementation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ingestion and relation extraction implementation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#retrieval-implementation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Retrieval implementation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Retrieval implementation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#bge-m3-acceptance-profile" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BGE-M3 acceptance profile
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ocr-and-multimodal-implementation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OCR and multimodal implementation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#identity-lifecycle-and-operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Identity, lifecycle and operations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#public-contract-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Public contract changes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#upstream-dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Upstream dependencies
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#test-and-evidence-matrix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Test and evidence matrix
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#implementation-sequence-and-release-checklist" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implementation sequence and release checklist
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decisions-to-close-during-implementation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decisions to close during implementation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#source-map-and-maintenance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Source map and maintenance
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#g2-implementation-and-acceptance-evidence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        G2 implementation and acceptance evidence
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../knowledge-agent-uniko-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    KnowledgeAgent Migration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../uni-db-agent-design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Uni-DB Agent Design
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dependency-refresh-2026-11-25/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dependency Refresh (2026-11-25)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#dependency-refresh-2026-11-25" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dependency refresh: 2026-11-25
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#baseline-and-tracking-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Baseline and tracking rules
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scope-and-completion-gates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scope and completion gates
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#current-delivery-and-review-status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Current delivery and review status
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ownership-and-message-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ownership and message flow
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#historical-baseline-and-defects" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Historical baseline and defects
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#g1-implementation-and-acceptance-evidence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        G1 implementation and acceptance evidence
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration-implementation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration implementation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ingestion-and-relation-extraction-implementation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ingestion and relation extraction implementation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#retrieval-implementation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Retrieval implementation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Retrieval implementation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#bge-m3-acceptance-profile" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BGE-M3 acceptance profile
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ocr-and-multimodal-implementation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OCR and multimodal implementation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#identity-lifecycle-and-operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Identity, lifecycle and operations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#public-contract-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Public contract changes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#upstream-dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Upstream dependencies
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#test-and-evidence-matrix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Test and evidence matrix
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#implementation-sequence-and-release-checklist" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implementation sequence and release checklist
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decisions-to-close-during-implementation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decisions to close during implementation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#source-map-and-maintenance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Source map and maintenance
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#g2-implementation-and-acceptance-evidence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        G2 implementation and acceptance evidence
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="uniko-agent-implementation-and-completion-plan">Uniko agent implementation and completion plan<a class="headerlink" href="#uniko-agent-implementation-and-completion-plan" title="Permanent link">&para;</a></h1>
+<p>This plan tracks completion of Rustic's Uniko memory integration: reliable configuration, ingestion, extraction, retrieval, lifecycle and observable failure handling. Completion is measured by supported user workflows and executable acceptance tests. Configuration acceptance and a successful API response alone do not establish that a requested inference stage ran.</p>
+<p>The core text and document integration can progress independently of the upstream feature requests. OCR, multimodal processing and larger deployments have separate release gates and explicit dependencies.</p>
+<p>The current usage documentation is the <a href="../../agents/uniko/">agent guide</a>, <a href="../../agents/uniko/protocol/">message protocol</a>, and <a href="../../dependencies/uniko/">resolver guide</a>. The implementation evidence below retains its recorded dates and platforms.</p>
+<h2 id="dependency-refresh-2026-11-25">Dependency refresh: 2026-11-25<a class="headerlink" href="#dependency-refresh-2026-11-25" title="Permanent link">&para;</a></h2>
+<p>The current integration selects Uniko <code>&gt;=0.6.0,&lt;0.7.0</code>. It uses native idempotent agent registration plus trusted organization membership, forwards the SDK generic generation-provider contract, and publishes the refreshed native configuration schemas. Best-effort startup remains the supported policy; the integration does not yet expose the new native readiness APIs as <code>require_verified</code>. This refresh does not close the open extraction, retrieval or deployment gates. The dated G1/G2 evidence below remains the original 0.5.1 baseline. The <a href="../dependency-refresh-2026-11-25/">dependency refresh report</a> records the 0.6.0 native suite and current full monorepo validation.</p>
+<h2 id="baseline-and-tracking-rules">Baseline and tracking rules<a class="headerlink" href="#baseline-and-tracking-rules" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Status and evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Updated</td>
+<td>2026-11-17</td>
+</tr>
+<tr>
+<td>Current implementation</td>
+<td><a href="https://github.com/milliondreams/rustic-ai/commit/b21e144"><code>b21e144</code></a>, signed and pushed to the milliondreams fork's <code>main</code> branch</td>
+</tr>
+<tr>
+<td>Initial code baseline</td>
+<td><code>7bc3cf0</code>; historical source links below retain this pre-implementation snapshot</td>
+</tr>
+<tr>
+<td>Change under review</td>
+<td><a href="https://github.com/rustic-ai/rustic-ai/pull/480">Rustic PR 480</a>; dependency baseline merged through <a href="https://github.com/rustic-ai/rustic-ai/pull/479">PR 479</a></td>
+</tr>
+<tr>
+<td>Historical native dependency</td>
+<td>Uniko <code>&gt;=0.5.1,&lt;0.6.0</code>; the 2026-11-17 evidence below used 0.5.1</td>
+</tr>
+<tr>
+<td>Runtime environment validated</td>
+<td>Python 3.13.12, macOS ARM64, CPU Uniko wheel</td>
+</tr>
+<tr>
+<td>Upstream source snapshots checked</td>
+<td>Uniko <code>28f8a1ae3e343f62392800b7d693c0bac45c7c80</code>; uni-xervo <code>fd312158599cb3fe429e93c56f07f7124d216642</code></td>
+</tr>
+<tr>
+<td>Last full local CI</td>
+<td>2026-11-17: 2,020 passed, 88 skipped, 3 xfailed, 2 xpassed; exit 0; Redis and NATS/JetStream enabled</td>
+</tr>
+<tr>
+<td>Latest review regressions</td>
+<td>Eight new cases passed; all 18 G2 cases passed in full local CI, including routed native priority</td>
+</tr>
+<tr>
+<td>Earlier regression baseline</td>
+<td>G1: 2,002 passed, 88 skipped, 3 xfailed, 2 xpassed; focused integration: 113 passed, 2 skipped; both exit 0</td>
+</tr>
+<tr>
+<td>Other current checks</td>
+<td>Formatting, lint, mypy (701 files), strict docs and Uniko source/wheel build passed; five packaged schemas match sources; all 25 lockfiles fresh</td>
+</tr>
+</tbody>
+</table>
+<p>The current results validate G1/G2 and the four selected review fixes. Earlier results remain recorded as a regression baseline. They do not close the OCR, BGE-M3, richer retrieval or multimodal gates below. Existing xfails/xpasses and skipped tests must be reviewed for relevance to each release claim.</p>
+<p>Task states are <strong>Open</strong>, <strong>In progress</strong>, <strong>Waiting on upstream</strong>, <strong>Verified</strong>, and <strong>Deferred</strong>. P0 means current contract correctness; P1 means required core functionality; P2 means an extended capability or scale improvement. A task becomes Verified only when its acceptance evidence is linked. A deferred feature must disappear from supported-feature claims or have an explicit unavailable result.</p>
+<p>Each task record should include an assignee, implementation PR/commit, test command and result, dependency versions, platform/model profile, and any relevant upstream issue. Assignees remain unassigned until work is taken.</p>
+<h2 id="scope-and-completion-gates">Scope and completion gates<a class="headerlink" href="#scope-and-completion-gates" title="Permanent link">&para;</a></h2>
+<p>The scope includes <code>MemoryAgent</code>, <code>UnikoResolver</code>, <code>UnikoMemoriesStore</code>, <code>MemoryRequestInitializerAgent</code>, their public models, and their research/analyst Guild integrations. It does not require implementing every uni-xervo task or exposing internal graph mutation APIs without a use case.</p>
+<table>
+<thead>
+<tr>
+<th>Gate</th>
+<th>User outcome</th>
+<th>Current state</th>
+<th>Required tasks</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>G1 Core memory</td>
+<td>Text and supported documents can be recorded, recalled, attributed and deleted across restart with user isolation</td>
+<td>Verified</td>
+<td>C01–C08, I01–I05, R01–R06, L01–L04, T01–T03</td>
+</tr>
+<tr>
+<td>G2 Structured experience</td>
+<td>Tools, actions, facts and goals use native relationships and stable identities</td>
+<td>Verified</td>
+<td>I06–I08, R07, L05, T04</td>
+</tr>
+<tr>
+<td>G3 Hybrid retrieval</td>
+<td>A BGE-M3 store demonstrably uses dense, sparse and ColBERT paths with correct persistence</td>
+<td>Open</td>
+<td>C07, R08, T05</td>
+</tr>
+<tr>
+<td>G4 OCR documents</td>
+<td>Scanned PDFs become searchable, traceable text with explicit extraction outcomes</td>
+<td>Open</td>
+<td>M01, M04, T06</td>
+</tr>
+<tr>
+<td>G5 Multimodal memory</td>
+<td>Advertised image/audio/video workflows preserve original media and searchable derivations</td>
+<td>Open</td>
+<td>M02–M05, T07</td>
+</tr>
+<tr>
+<td>G6 Operational scale</td>
+<td>Resource sharing, readiness, bounded queues and recovery satisfy the intended deployment</td>
+<td>Open</td>
+<td>C05–C06, L03–L04, L06, T08</td>
+</tr>
+</tbody>
+</table>
+<p>G1 and G2 are implemented and locally verified with the evidence and runtime boundaries below. G2 review fixes are signed and pushed in <code>b21e144</code>; PR 480 remains the integration review. G3 builds on their identity, provenance and retrieval contracts. G4/G5 may use external extraction adapters while upstream packaging and adapters evolve. G6 needs a measured deployment budget; no arbitrary concurrency target is assumed.</p>
+<h2 id="current-delivery-and-review-status">Current delivery and review status<a class="headerlink" href="#current-delivery-and-review-status" title="Permanent link">&para;</a></h2>
+<p>G1 and G2 are <strong>Verified locally</strong>. Implementation is on the fork's <code>main</code> branch
+and submitted through <a href="https://github.com/rustic-ai/rustic-ai/pull/480">PR 480</a>.
+This records local acceptance; upstream review and merge remain pending.
+G3–G6 are <strong>Open</strong> and require their own implementation and acceptance evidence.</p>
+<table>
+<thead>
+<tr>
+<th>Delivery</th>
+<th>Status</th>
+<th>Implementation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>G1 core memory</td>
+<td>Verified locally; submitted for upstream review</td>
+<td><a href="https://github.com/milliondreams/rustic-ai/commit/38416ab"><code>38416ab</code></a></td>
+</tr>
+<tr>
+<td>G2 structured experience</td>
+<td>Verified locally; submitted for upstream review</td>
+<td><a href="https://github.com/milliondreams/rustic-ai/commit/b67a534"><code>b67a534</code></a></td>
+</tr>
+<tr>
+<td>Selected G2 review fixes</td>
+<td>All four addressed and verified locally; signed and pushed</td>
+<td><a href="https://github.com/milliondreams/rustic-ai/commit/b21e144"><code>b21e144</code></a></td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th>Selected finding</th>
+<th>Status</th>
+<th>Result and acceptance evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Native priority fails after serialization</td>
+<td>Verified</td>
+<td>Native and legacy priority choices survive JSON round trips, including native zero. A real Guild-routed task returns native priority <code>0.7</code>.</td>
+</tr>
+<tr>
+<td>Goal listing bypasses exact ownership</td>
+<td>Verified</td>
+<td>Both all-goal and active-goal listing exclude native records with conflicting owners before serializing their views or counting them. Legitimately owned goals remain visible.</td>
+</tr>
+<tr>
+<td>Batch cancellation hides uncertain effects</td>
+<td>Verified</td>
+<td>Cancellation after native Message/Action writes preserves <code>operation_outcome_unknown</code>, <code>stored: null</code>, stable message/operation IDs and <code>uncertain_count</code>. Unstarted items report <code>cancelled</code> with <code>stored: false</code>; replay does not duplicate the native action.</td>
+</tr>
+<tr>
+<td>Journal failure suppresses terminal error</td>
+<td>Verified</td>
+<td>Simultaneous receipt completion and uncertainty-update I/O failures still emit one typed unknown-outcome response with its operation identity. Original cancellation survives, the operation gate releases and the pending claim prevents redispatch.</td>
+</tr>
+</tbody>
+</table>
+<p>Regression evidence is in
+<a href="https://github.com/milliondreams/rustic-ai/blob/b21e144/uniko-agent/tests/test_g2_structured.py">test_g2_structured.py</a>
+and <a href="https://github.com/milliondreams/rustic-ai/blob/b21e144/uniko-agent/tests/test_g2_routed.py">test_g2_routed.py</a>.
+All four fixes and the regenerated request schema are included in PR 480.
+The full local run used <code>tox -e test -- --workers 4</code> on Python 3.13.12/macOS ARM64
+with Redis and NATS/JetStream: <strong>2,020 passed, 88 skipped, 3 xfailed, 2 xpassed</strong>.
+Configured expensive/provider tests remain excluded; this does not establish
+Windows, Linux, OCR, BGE-M3 or multimodal acceptance.</p>
+<p>Remaining work is G3 hybrid retrieval, G4 OCR, G5 multimodal memory and G6
+operational scale. G2 retains its documented registration and embedded-tool
+performer boundaries tracked by <a href="https://github.com/rustic-ai/uniko/issues/67">Uniko #67</a>
+and <a href="https://github.com/rustic-ai/uniko/issues/68">Uniko #68</a>.</p>
+<h2 id="ownership-and-message-flow">Ownership and message flow<a class="headerlink" href="#ownership-and-message-flow" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Responsibility</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Guild routes and initializer</td>
+<td>Carry authenticated user identity and request correlation; route typed requests and authoritative completion events</td>
+</tr>
+<tr>
+<td>MemoryAgent</td>
+<td>Validate domain requests, authorize scope, translate to native calls, return bounded results and terminal outcomes</td>
+</tr>
+<tr>
+<td>UnikoMemoriesStore</td>
+<td>Recall bounded conversational context and atomically record user/assistant pairs for LLM-agent use</td>
+</tr>
+<tr>
+<td>UnikoResolver</td>
+<td>Resolve private storage, configure native builders, manage resource ownership and expose runtime capability/readiness</td>
+</tr>
+<tr>
+<td>Extraction dependencies</td>
+<td>Turn media into explicit derivations; manage provider credentials and media processing outside routing expressions</td>
+</tr>
+<tr>
+<td>Uniko</td>
+<td>Own graph, sources, memory semantics, native extraction, consolidation and recall</td>
+</tr>
+<tr>
+<td>uni-xervo</td>
+<td>Own model/task/provider configuration, loading and inference</td>
+</tr>
+</tbody>
+</table>
+<p>Other Rustic agents access a memory agent's store through messages. They do not acquire a shared guild database merely because a native handle uses the guild ID. Sharing model resources must preserve separate graph stores and access scopes.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>User Proxy
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  -- ChatCompletionRequest --&gt; MemoryRequestInitializerAgent
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>  -- initialized ChatCompletionRequest --&gt; research or analyst workflow
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>Workflow
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>  -- RecordMemoryRequest / ObserveTurnRequest / IngestDocumentRequest --&gt; MemoryAgent
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>MemoryAgent
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>  -- RecordMemoryResult / ObserveResult / IngestOutcome or MemoryAgentError --&gt; workflow
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>Workflow
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>  -- all expected ingestion outcomes + source enumeration completion --&gt; ingestion barrier
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>  -- RecallRequest using the original resolved lookup --&gt; MemoryAgent
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>MemoryAgent
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>  -- RecallResponse or MemoryAgentError --&gt; synthesis stage
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>Synthesis
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>  -- ChatCompletionResponse --&gt; User Proxy
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>  -- final visible response recording --&gt; memory workflow
+</code></pre></div>
+<p>Each accepted operation has one terminal outcome correlated with its request. Bulk ingestion additionally has one terminal outcome per item and a batch completion result. Partial success, zero usable sources, irrelevant sources and provider failure remain distinguishable. Late results cannot restart a completed workflow or add extra user responses.</p>
+<h2 id="historical-baseline-and-defects">Historical baseline and defects<a class="headerlink" href="#historical-baseline-and-defects" title="Permanent link">&para;</a></h2>
+<p>At the initial baseline, the agent had 19 processors covering conversation recording, typed records, session finalization/deletion, participant forgetting, observation, recall, answers, document ingestion, streaming batches and basic goals/tasks. The resolver accepted native model/configuration inputs, and the separate memory wrapper used native atomic commits for user/assistant pairs.</p>
+<table>
+<thead>
+<tr>
+<th>Defect</th>
+<th>Impact</th>
+<th>Task</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Nonempty observation attachments call an undefined <code>_build_ingest_source</code></td>
+<td>Advertised attachments fail before observation</td>
+<td>I01</td>
+</tr>
+<tr>
+<td>Auto-flush defaults to true while resolver streaming defaults to false</td>
+<td>An observation can commit and then produce an error from flush</td>
+<td>L01</td>
+</tr>
+<tr>
+<td>Unmarked native recall items are discarded</td>
+<td>Ordinary observations or externally populated native records can be invisible</td>
+<td>R01</td>
+</tr>
+<tr>
+<td><code>sessions=None</code> becomes process-local session-lock keys</td>
+<td>Older persisted sessions may be excluded from unrestricted recall</td>
+<td>R02</td>
+</tr>
+<tr>
+<td>Record forgetting treats conversation-turn records as documents</td>
+<td>An observed turn can remain stored after the wrong deletion path</td>
+<td>L02</td>
+</tr>
+<tr>
+<td>Generated goal/task IDs are reconstructed from node IDs</td>
+<td>Returned identifiers may not address the created native object</td>
+<td>L05</td>
+</tr>
+<tr>
+<td>Agent recall/answer limits are declared but unused</td>
+<td>Caller expectations differ from native execution</td>
+<td>C01</td>
+</tr>
+<tr>
+<td>Source/result serializers omit supported native metadata</td>
+<td>Provenance, addressed retrieval and diagnostics are incomplete</td>
+<td>I05, R05</td>
+</tr>
+</tbody>
+</table>
+<p>This table records the pre-G1 findings. G1 resolves the attachment, direct-observe flush, unrestricted session scope, conversation deletion, provenance and recall-control findings. G2 resolves the generated goal/task ID finding through L05 with native identity and restart regressions.</p>
+<h2 id="g1-implementation-and-acceptance-evidence">G1 implementation and acceptance evidence<a class="headerlink" href="#g1-implementation-and-acceptance-evidence" title="Permanent link">&para;</a></h2>
+<p>G1 uses Uniko 0.5.1 on Python 3.13/macOS ARM64 with the CPU wheel. The native model/config/catalog surface remains the configuration authority. Request overrides take precedence over explicitly configured legacy recall limits, then effective native defaults. Unsupported phase-one and answer-generation controls fail explicitly. Schemas and a runnable payload example are published in <a href="https://github.com/milliondreams/rustic-ai/blob/main/uniko-agent/README.md#machine-readable-configuration-and-examples">the package</a>.</p>
+<p>The implemented ingestion boundary accepts inline text, base64 bytes or an injected guild-filesystem MediaLink. Reads are capped at 16 MiB per source, observations at 32 attachments and batches at 128 items. Text, Markdown, HTML, CSV, JSON, code and native-text PDFs use native extraction. Outcomes separate stored bytes from searchable text, preserve native IDs/deduplication/extraction errors, and retain category/source/revision and attachment relationships. Reserved provenance categories cannot override producer-assigned kinds. Native document visibility is unavailable and rejected rather than implied.</p>
+<p>Recall preserves native provenance and marks unclassified records Unknown. Native dimensional filters run before ranking; a separate bounded compatibility pass supports existing Rustic records and explicitly reports its metadata limitations. Returned item, character and token budgets are enforced; counts use native values where intact and labelled cl100k_base counts where rendered or truncated. Source search/read/outline/original operations apply session and available dimensional scope, viewer authorization and superseded-revision policy. A stored artifact without extracted chunks remains readable through its authorized session anchor.</p>
+<p>The research coordinator owns correlated branch enumeration, document ingestion barriers and exactly one final result. It keeps per-user sessions, rejects untrusted result senders and ignores duplicates/late results. It passes the original question and the exact attributed RecallResponse JSON to the existing synthesis LLMAgent. That agent's max_tokens configuration controls generation. MemoryAgent retains the native AnswerRequest/AnswerResponse compatibility path with the complete generation context; unsupported generation controls are rejected.</p>
+<p>Resolver-owned handles drain accepted operations before releasing native children and shutting down. Initialization and shutdown are synchronized; new work is rejected after closing begins. The per-agent operation gate is bounded independently of session count and event-loop lifetime. Direct observations never flush a disabled streaming pipeline, batches report durable per-item outcomes plus one terminal batch outcome, and the LLM memory wrapper retains atomic user/assistant commits.</p>
+<table>
+<thead>
+<tr>
+<th>Evidence</th>
+<th>Executable coverage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>C01–C04, I01–I05, R01–R05, L01–L04</td>
+<td><a href="https://github.com/milliondreams/rustic-ai/blob/main/uniko-agent/tests/test_g1_contracts.py">G1 native and boundary regressions</a>, <a href="https://github.com/milliondreams/rustic-ai/blob/main/uniko-agent/tests/test_memory_writer_reader_contract.py">memory contracts</a>, <a href="https://github.com/milliondreams/rustic-ai/blob/main/uniko-agent/tests/test_uniko_native_integration.py">native integration</a></td>
+</tr>
+<tr>
+<td>C05–C08</td>
+<td><a href="https://github.com/milliondreams/rustic-ai/blob/main/uniko-agent/tests/test_g1_contracts.py">Diagnostics/deployment tests</a>, <a href="https://github.com/milliondreams/rustic-ai/blob/main/uniko-agent/tests/test_uniko_integration.py">resolver configuration tests</a>, <a href="https://github.com/milliondreams/rustic-ai/blob/main/uniko-agent/README.md">deployment/runtime documentation</a></td>
+</tr>
+<tr>
+<td>T01, T02 and R02</td>
+<td><a href="https://github.com/milliondreams/rustic-ai/blob/main/uniko-agent/tests/test_private_filesystem_storage.py">Private-store restart/isolation</a>, <a href="https://github.com/milliondreams/rustic-ai/blob/main/uniko-agent/tests/test_document_recall_scope.py">scoped document recall</a>, <a href="https://github.com/milliondreams/rustic-ai/blob/main/uniko-agent/tests/test_routed_conversation_sessions.py">routed sessions</a>, <a href="https://github.com/milliondreams/rustic-ai/blob/main/uniko-agent/tests/test_uniko_memories_store.py">atomic memory wrapper</a></td>
+</tr>
+<tr>
+<td>R06 and T03</td>
+<td><a href="https://github.com/milliondreams/rustic-ai/blob/main/showcase/tests/test_uniko_research_guild.py">Sequential research acceptance</a>: real native ingestion/recall/finalization across document and remembered follow-up plus another user; controlled synthesis/search responses; partial/terminal failures, duplication and late-result tests</td>
+</tr>
+</tbody>
+</table>
+<p>Readiness remains Unknown where the SDK cannot expose it. sdk_default means native best-effort startup; require_verified is explicitly unavailable. Pipeline health and resource counts expose only observable SDK facts. Existing-store compatibility checks remain native; unsupported model/dimension changes require a fresh private store or a supported migration. Metal/CUDA, BGE-M3 channel population, OCR, multimodal adapters, native task IDs, model-backed extraction toggles and deployment-scale recovery are not certified by these CPU G1 checks. Those continue under G2–G6 and the upstream issues below.</p>
+<p>Final local verification: full CI test task <strong>2,002 passed, 88 skipped, 3 xfailed, 2 xpassed</strong> (exit 0), followed by the final affected suite <strong>113 passed, 2 skipped</strong> (exit 0). Black/isort, flake8, mypy (696 source files), strict MkDocs, all 25 lock freshness checks, installed dependency consistency (361 packages) and four affected sdist/wheel builds pass. The Uniko wheel contains five validated schemas, including agent/resolver policies. Existing test-extra metadata references development-only dependencies and makes poetry check --lock report those declarations; the locks themselves are fresh and builds succeed. Credential-dependent/expensive tests remain skipped; live search/synthesis and other runtime platforms are not claimed.</p>
+<p>Verified task states below apply to the bounded CPU G1 contract. Shared tasks C05–C07/L03–L04 remain subject to the additional G3/G6 model and deployment evidence; verified G1 diagnostics do not certify unavailable upstream capabilities.</p>
+<h2 id="configuration-implementation">Configuration implementation<a class="headerlink" href="#configuration-implementation" title="Permanent link">&para;</a></h2>
+<p>Keep engine settings in the resolver's native <code>config</code> surface and operation-specific settings in request models. Define one precedence rule and make it visible in effective configuration. Native validation remains authoritative; Rustic validates its own request relationships, capability requirements and deployment policy.</p>
+<p>Preserve the established <code>alias: openai</code> input while documenting the native <code>provider</code> plus model-alias shape. Reject the removed embedded <code>mistralrs</code> input. Do not reinterpret it as the hosted Mistral API.</p>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Priority</th>
+<th>State</th>
+<th>Implementation and acceptance</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>C01</td>
+<td>P0</td>
+<td>Verified</td>
+<td>Resolve unused <code>recall_max_tokens</code>, <code>recall_phase1_only</code>, <code>answer_max_tokens</code> and <code>AnswerRequest.max_tokens</code>. Wire settings supported by native APIs; explicitly reject or retire unsupported controls. Demonstrate changed execution/output limits, rather than merely checking stored config. <a href="#g1-implementation-and-acceptance-evidence">G1 evidence</a>.</td>
+</tr>
+<tr>
+<td>C02</td>
+<td>P1</td>
+<td>Verified</td>
+<td>Publish schemas and examples for native sections and Rustic policy. Document that top-level model overrides replace a whole base-config section and merge partial values with native defaults. Test precedence, invalid combinations and unknown keys. <a href="#g1-implementation-and-acceptance-evidence">G1 evidence</a>.</td>
+</tr>
+<tr>
+<td>C03</td>
+<td>P1</td>
+<td>Verified</td>
+<td>Add typed source, extraction and recall request options; stop accepting undocumented dictionary fields that handlers silently ignore. Export and document the selected public models. <a href="#g1-implementation-and-acceptance-evidence">G1 evidence</a>.</td>
+</tr>
+<tr>
+<td>C04</td>
+<td>P1</td>
+<td>Verified</td>
+<td>Resolve catalog/schema/rule references using an explicit path policy. Validate readability and alias requirements before use; preserve the distinction between shared deployment configuration and private agent data. <a href="#g1-implementation-and-acceptance-evidence">G1 evidence</a>.</td>
+</tr>
+<tr>
+<td>C05</td>
+<td>P1</td>
+<td>Verified</td>
+<td>Expose effective config, compiled capability, model readiness and available diagnostics. Report Unknown when upstream cannot provide a fact. Never convert Unknown into Healthy. Track U56/U59/U60 and X61. <a href="#g1-implementation-and-acceptance-evidence">G1 evidence</a>.</td>
+</tr>
+<tr>
+<td>C06</td>
+<td>P1</td>
+<td>Verified</td>
+<td>Add an explicit readiness/prefetch policy and clear startup errors for unavailable required stages. Credential lookup belongs to dependencies. Parsing configuration must not require a live API call. <a href="#g1-implementation-and-acceptance-evidence">G1 evidence</a>.</td>
+</tr>
+<tr>
+<td>C07</td>
+<td>P1</td>
+<td>Verified</td>
+<td>Preflight existing store compatibility for model/dimension/hybrid changes. Reuse native checks and provide an explicit fresh-store or supported reindex workflow. Track U66. <a href="#g1-implementation-and-acceptance-evidence">G1 evidence</a>.</td>
+</tr>
+<tr>
+<td>C08</td>
+<td>P1</td>
+<td>Verified</td>
+<td>Update README, Guild examples, dependency profiles and package metadata to match supported runtime variants and settings. Install one CPU/Metal/CUDA distribution per environment; unsupported installation profiles must be explicit. <a href="#g1-implementation-and-acceptance-evidence">G1 evidence</a>.</td>
+</tr>
+</tbody>
+</table>
+<p>Minimum documented engine settings include embedding model/provider/dimensions/batching/prefixes/devices/options; vector algorithm/metric; chunk thresholds/size/overlap/context; NLP generation/precision/device; SRL and entity admission; observation rules; OCR; consolidation; recall weights/budget/thresholds; reranker; blob backend and source lifecycle.</p>
+<h2 id="ingestion-and-relation-extraction-implementation">Ingestion and relation extraction implementation<a class="headerlink" href="#ingestion-and-relation-extraction-implementation" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Priority</th>
+<th>State</th>
+<th>Implementation and acceptance</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>I01</td>
+<td>P0</td>
+<td>Verified</td>
+<td>Implement attachment translation through a typed source specification and injected filesystem boundaries. Test text, document and invalid attachments plus duplicate delivery. Preserve <code>ATTACHED_TO</code> relationships. <a href="#g1-implementation-and-acceptance-evidence">G1 evidence</a>.</td>
+</tr>
+<tr>
+<td>I02</td>
+<td>P1</td>
+<td>Verified</td>
+<td>Unify source conversion across observation, document requests and record ingestion. Honor requested MIME/content type, retain original source paths for native detection, and avoid overriding unknown MIME with octet-stream unnecessarily. <a href="#g1-implementation-and-acceptance-evidence">G1 evidence</a>.</td>
+</tr>
+<tr>
+<td>I03</td>
+<td>P1</td>
+<td>Verified</td>
+<td>Carry native category, logical source, revision and visibility fields in supported requests. Preserve producer-assigned record kind without inserting provenance prose into every embedding where native metadata can represent it. Test existing record compatibility. <a href="#g1-implementation-and-acceptance-evidence">G1 evidence</a>.</td>
+</tr>
+<tr>
+<td>I04</td>
+<td>P1</td>
+<td>Verified</td>
+<td>Add byte/attachment/item limits, bounded file reads or spooling, and complete typed bulk outcomes. Page and OCR processing budgets belong to G4. Decide inline text/bytes versus filesystem references explicitly. A failed item cannot deadlock an ingestion barrier. <a href="#g1-implementation-and-acceptance-evidence">G1 evidence</a>.</td>
+</tr>
+<tr>
+<td>I05</td>
+<td>P1</td>
+<td>Verified</td>
+<td>Return artifact identity, chunk IDs, deduplication, extraction outcome/error and available page/block references. An artifact stored without extracted text is not a searchable-success result. <a href="#g1-implementation-and-acceptance-evidence">G1 evidence</a>.</td>
+</tr>
+<tr>
+<td>I06</td>
+<td>P1</td>
+<td>Verified</td>
+<td>Add native tool-call/action/episode recording with stable IDs, arguments/output/status/timing and causal references. Avoid replacing these relationships with an executed-result text blob. Preserve bounded outputs and original tool failures. <a href="#g2-implementation-and-acceptance-evidence">G2 evidence</a>.</td>
+</tr>
+<tr>
+<td>I07</td>
+<td>P1</td>
+<td>Verified</td>
+<td>Expose appropriate explicit observation/fact assertion/invalidation and consolidation requests. Keep deterministic extraction as the default; optional LLM consolidation remains explicit and depends on U63. <a href="#g2-implementation-and-acceptance-evidence">G2 evidence</a>.</td>
+</tr>
+<tr>
+<td>I08</td>
+<td>P1</td>
+<td>Verified</td>
+<td>Expose atomic multi-turn units where needed. Typed batches must preserve selected timestamps, recipients, attachments and provenance; document that streamed submit has different session/context semantics. <a href="#g2-implementation-and-acceptance-evidence">G2 evidence</a>.</td>
+</tr>
+</tbody>
+</table>
+<p>Extraction acceptance must demonstrate SRL toggles, model generation/precision selection, custom observation-rule application, entity admission thresholds and code/document chunking on meaningful fixtures. Loading a rule file or selecting an NLP preset is insufficient. A missing model or invalid rule file must produce the selected failure/fallback outcome.</p>
+<h2 id="retrieval-implementation">Retrieval implementation<a class="headerlink" href="#retrieval-implementation" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Priority</th>
+<th>State</th>
+<th>Implementation and acceptance</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>R01</td>
+<td>P0</td>
+<td>Verified</td>
+<td>Replace envelope-dependent result exclusion with a native-provenance-aware contract. Mark Unknown explicitly when record classification is unavailable; apply producer/visibility policy without silently dropping valid authorized memories. Test ordinary turns, documents and derived facts. <a href="#g1-implementation-and-acceptance-evidence">G1 evidence</a>.</td>
+</tr>
+<tr>
+<td>R02</td>
+<td>P0</td>
+<td>Verified</td>
+<td>Preserve <code>sessions=None</code> as no session filter, independent of lock history. Locking must coordinate writes without changing the query domain. Reopen a store, touch one session, and retrieve an older untouched session. <a href="#g1-implementation-and-acceptance-evidence">G1 evidence</a>.</td>
+</tr>
+<tr>
+<td>R03</td>
+<td>P1</td>
+<td>Verified</td>
+<td>Map per-request native limits, token budget, minimum score, reranker override and historical reference timestamp through <code>recall_with</code>. Retain separate returned-item/character bounds. Use native token counts or explicitly label any display estimate. <a href="#g1-implementation-and-acceptance-evidence">G1 evidence</a>.</td>
+</tr>
+<tr>
+<td>R04</td>
+<td>P1</td>
+<td>Verified</td>
+<td>Expose time/category/source/revision and viewer scopes as typed fields. Apply available native filters before ranking; test rejected cross-user/team/org access and superseded-source behavior. Post-filtering alone cannot satisfy candidate-budget semantics. <a href="#g1-implementation-and-acceptance-evidence">G1 evidence</a>.</td>
+</tr>
+<tr>
+<td>R05</td>
+<td>P1</td>
+<td>Verified</td>
+<td>Preserve source session/tool/call IDs and item category/source/revision/context/address. Add source search, outline, bounded read and original artifact access contracts. Test the native addresses available for G1 documents and bounded line/byte reads. OCR page/block and media-segment certification belong to G4/G5. <a href="#g1-implementation-and-acceptance-evidence">G1 evidence</a>.</td>
+</tr>
+<tr>
+<td>R06</td>
+<td>P1</td>
+<td>Verified</td>
+<td>Make answer generation obey the same authorized retrieval policy as its returned context. Prefer bounded recall followed by Rustic LLM generation if native answer cannot enforce the contract. Do not filter the displayed context only after the LLM has consumed a broader bundle. <a href="#g1-implementation-and-acceptance-evidence">G1 evidence</a>.</td>
+</tr>
+<tr>
+<td>R07</td>
+<td>P2</td>
+<td>Verified</td>
+<td>Add procedure matching/success feedback and selected rule/query interfaces. Keep arbitrary graph mutation outside ordinary retrieval. Distinguish application authorization from native read/query capability. <a href="#g2-implementation-and-acceptance-evidence">G2 evidence</a>.</td>
+</tr>
+<tr>
+<td>R08</td>
+<td>P1</td>
+<td>Open</td>
+<td>Verify BGE-M3 dense, sparse and ColBERT indexing/query paths, including diagnostics and persistence. Track X60/X63; memory optimization is not a prerequisite for correctness testing.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="bge-m3-acceptance-profile">BGE-M3 acceptance profile<a class="headerlink" href="#bge-m3-acceptance-profile" title="Permanent link">&para;</a></h3>
+<p>This is a configuration candidate, not a declaration that the profile is release-ready:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">properties</span> <span class="o">=</span> <span class="p">{</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>    <span class="s2">"embedding"</span><span class="p">:</span> <span class="s2">"bge-m3"</span><span class="p">,</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>    <span class="s2">"reranker"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"enabled"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">"style"</span><span class="p">:</span> <span class="s2">"colbert"</span><span class="p">,</span> <span class="s2">"top_n"</span><span class="p">:</span> <span class="mi">50</span><span class="p">},</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    <span class="s2">"config"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"recall_sparse_enabled"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">"recall_limit"</span><span class="p">:</span> <span class="mi">15</span><span class="p">},</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="p">}</span>
+</code></pre></div>
+<ul>
+<li>Dense output is 1,024-dimensional. Learned sparse output uses a 250,002-token vocabulary. ColBERT output has 1,024 dimensions per token.</li>
+<li>The preset prepares hybrid columns on Chunk and Observation. Sparse recall and ColBERT reranking require their separate switches; selecting the preset does not enable both query paths.</li>
+<li>Inspect populated columns and confirm query-time contributions on fixtures selected to require the relevant recall phase. An early compact-phase answer need not run every channel.</li>
+<li>Prove that ColBERT changes eligible candidate order against a reference/tolerance and distinguish successful reranking from logged fallback.</li>
+<li>Test close/reopen, duplicate ingestion, sparse/ColBERT querying after reopen and mismatched configurations.</li>
+<li>Measure actual memory with the separate dense/hybrid instances. Do not assume X60 resource sharing exists.</li>
+</ul>
+<h2 id="ocr-and-multimodal-implementation">OCR and multimodal implementation<a class="headerlink" href="#ocr-and-multimodal-implementation" title="Permanent link">&para;</a></h2>
+<p>The currently audited Python wheel feature declarations do not enable Uniko's tiered <code>pdf-ocr</code> path. Accepting <code>config.ocr</code> is not an OCR capability guarantee. Image/audio/video callbacks are available in native Python, but Rustic does not register them, and native TextExtractor retains derived text rather than original media bytes.</p>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Priority</th>
+<th>State</th>
+<th>Implementation and acceptance</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>M01</td>
+<td>P1 for G4</td>
+<td>Open</td>
+<td>Implement a verified scanned-PDF path: upstream OCR-capable build/profile or an external extraction dependency. Preserve original PDF and derived page/block references. Identify native-text-only versus OCR output explicitly. Track U55.</td>
+</tr>
+<tr>
+<td>M02</td>
+<td>P1 for G5</td>
+<td>Open</td>
+<td>Register typed/configurable image OCR/caption and audio transcription adapters. Retain source bytes separately when native callbacks cannot. Test searchable text with regions or timestamps and source identity. Track U61.</td>
+</tr>
+<tr>
+<td>M03</td>
+<td>P2</td>
+<td>Open</td>
+<td>Define video sampling/transcription/caption composition with bounded duration/frame count and segment locations. Claim support only for the tested composition and providers.</td>
+</tr>
+<tr>
+<td>M04</td>
+<td>P1</td>
+<td>Open</td>
+<td>Expose extraction tier, model/revision, confidence when available, page/region/time address and retryable failure. Add an explicit re-extraction operation with revision/derivation identity; retries cannot silently duplicate sources.</td>
+</tr>
+<tr>
+<td>M05</td>
+<td>P1</td>
+<td>Open</td>
+<td>Decide text-derived recall versus native multimodal embedding/query support per profile. Until a real mixed-input index/query path exists, expose media-to-text retrieval accurately. Use direct ingestion while streaming lacks extractor parity; track U62.</td>
+</tr>
+</tbody>
+</table>
+<p>A multimodal source outcome must link original media, extracted text and location metadata. Test unreadable scans, empty captions, unsupported MIME, transcription failure and partially extracted multi-page documents. Preserve the distinction between stored bytes and usable searchable evidence.</p>
+<h2 id="identity-lifecycle-and-operations">Identity, lifecycle and operations<a class="headerlink" href="#identity-lifecycle-and-operations" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Priority</th>
+<th>State</th>
+<th>Implementation and acceptance</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>L01</td>
+<td>P0</td>
+<td>Verified</td>
+<td>Coordinate flush policy with streaming capability. Direct observation must not return failure solely because an unnecessary flush was attempted after commit. Explicit flush requests on unsupported instances return a clear error. <a href="#g1-implementation-and-acceptance-evidence">G1 evidence</a>.</td>
+</tr>
+<tr>
+<td>L02</td>
+<td>P0</td>
+<td>Verified</td>
+<td>Route turn/document forgetting by the actual stored record representation, including routed conversation turns. Coordinate deletion with writes/finalization. Test idempotent deletion, redacted/invalidation outcomes and recall after deletion. <a href="#g1-implementation-and-acceptance-evidence">G1 evidence</a>.</td>
+</tr>
+<tr>
+<td>L03</td>
+<td>P1</td>
+<td>Verified</td>
+<td>Make resolver lifecycle release cached Agent/Session handles before native shutdown. Bound session locks/cache growth, prevent new work during shutdown and prove queued work has an explicit terminal disposition. <a href="#g1-implementation-and-acceptance-evidence">G1 evidence</a>.</td>
+</tr>
+<tr>
+<td>L04</td>
+<td>P1</td>
+<td>Verified</td>
+<td>Expose pipeline health, queue/failure diagnostics, recovery policy and resource counts available upstream. Track U65 for dead-letter replay; unavailable replay must remain explicit. <a href="#g1-implementation-and-acceptance-evidence">G1 evidence</a>.</td>
+</tr>
+<tr>
+<td>L05</td>
+<td>P0</td>
+<td>Verified</td>
+<td>Assign stable external goal/task IDs before creation or consume an upstream creation view when U64 lands. Remove unsupported pause/resume claims and preserve native transition results rather than reporting unconditional success. <a href="#g2-implementation-and-acceptance-evidence">G2 evidence</a>.</td>
+</tr>
+<tr>
+<td>L06</td>
+<td>P2</td>
+<td>Open</td>
+<td>Measure multiple private stores, CPU/GPU capacity and concurrency; adopt shared runtime APIs when available. One store's shutdown cannot invalidate another store's inference or leak memory between users. Track U57/X60.</td>
+</tr>
+</tbody>
+</table>
+<p>Identity comes from authenticated transport context, not user-provided Cypher or untrusted memory. Every asynchronous branch carries request correlation. Stable record IDs and persisted source identities support retries and restart; process-local lock maps are not durable identity or retrieval scope.</p>
+<h2 id="public-contract-changes">Public contract changes<a class="headerlink" href="#public-contract-changes" title="Permanent link">&para;</a></h2>
+<p>G1 and G2 contracts below are implemented and exported; media retry remains proposed for later gates. Source outline and original access use the operation field on SourceReadRequest.</p>
+<table>
+<thead>
+<tr>
+<th>Existing contract</th>
+<th>Proposed work</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ObserveTurnRequest</td>
+<td>Typed attachment/source specification; native provenance/visibility; explicit flush policy</td>
+</tr>
+<tr>
+<td>RecordMemoryRequest / IngestDocumentRequest</td>
+<td>Consistent SourceSpec with identity/revision/category/MIME; bounded inputs; richer IngestOutcome</td>
+</tr>
+<tr>
+<td>BatchSubmitRequest</td>
+<td>Typed turn list and per-item terminal results; separate streaming versus atomic-unit operation</td>
+</tr>
+<tr>
+<td>RecallRequest / MemoryScope</td>
+<td>Native query controls and filters; explicit Unknown record-kind handling; stable addressed sources</td>
+</tr>
+<tr>
+<td>AnswerRequest</td>
+<td>Authorized bounded context shared with generation; supported generation controls only</td>
+</tr>
+<tr>
+<td>No inspection requests</td>
+<td>CapabilityRequest, EffectiveConfigRequest and MemoryHealthRequest or equivalent narrow APIs</td>
+</tr>
+<tr>
+<td>No source navigation requests</td>
+<td>SourceSearchRequest, SourceOutlineRequest and SourceReadRequest with bounded read options</td>
+</tr>
+<tr>
+<td>Structured experience requests</td>
+<td>RecordToolCallRequest, RecordActionRequest, RecordEpisodeRequest and selected fact/consolidation requests</td>
+</tr>
+<tr>
+<td>No media retry request</td>
+<td>ReextractSourceRequest with source/revision identity and extraction profile</td>
+</tr>
+</tbody>
+</table>
+<p>Use existing named memory topics for their established contracts; add dedicated control/source topics only when needed. Update producer and consumer routes together. Schema and route tests must prove each emitted format has a subscriber and one terminal result.</p>
+<h2 id="upstream-dependencies">Upstream dependencies<a class="headerlink" href="#upstream-dependencies" title="Permanent link">&para;</a></h2>
+<p>Issues were open when filed on 2026-11-16. Update status and selected release during implementation. These requests do not block fixing Rustic's own defects.</p>
+<table>
+<thead>
+<tr>
+<th>Reference</th>
+<th>Request</th>
+<th>Integration decision</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="https://github.com/rustic-ai/uniko/issues/55">U55</a></td>
+<td>PDF OCR in Python wheels</td>
+<td>Required for a native-wheel G4 claim; external extraction is a viable interim path</td>
+</tr>
+<tr>
+<td><a href="https://github.com/rustic-ai/uniko/issues/56">U56</a></td>
+<td>Compiled capabilities/effective execution</td>
+<td>Consume when available; report Unknown for missing introspection</td>
+</tr>
+<tr>
+<td><a href="https://github.com/rustic-ai/uniko/issues/57">U57</a></td>
+<td>Shared runtimes/prefetch</td>
+<td>Scale dependency after capacity measurements</td>
+</tr>
+<tr>
+<td><a href="https://github.com/rustic-ai/uniko/issues/58">U58</a></td>
+<td>General generation providers/catalog alias</td>
+<td>Use existing constructors or Rustic LLM generation until supported</td>
+</tr>
+<tr>
+<td><a href="https://github.com/rustic-ai/uniko/issues/59">U59</a></td>
+<td>Degradation diagnostics</td>
+<td>Needed for complete native-stage reporting; probes offer partial evidence</td>
+</tr>
+<tr>
+<td><a href="https://github.com/rustic-ai/uniko/issues/60">U60</a></td>
+<td>Required-stage readiness</td>
+<td>Opt-in readiness probes until native policy exists</td>
+</tr>
+<tr>
+<td><a href="https://github.com/rustic-ai/uniko/issues/61">U61</a></td>
+<td>Model-backed structured media derivations</td>
+<td>Build narrow extraction adapters and retain original media</td>
+</tr>
+<tr>
+<td><a href="https://github.com/rustic-ai/uniko/issues/62">U62</a></td>
+<td>Streaming extractor mismatch, bug</td>
+<td>Use direct media ingestion; reproduce with fixed-text callbacks</td>
+</tr>
+<tr>
+<td><a href="https://github.com/rustic-ai/uniko/issues/63">U63</a></td>
+<td>Consolidation options/LLM refinement</td>
+<td>Keep deterministic default; extended mode depends on SDK support</td>
+</tr>
+<tr>
+<td><a href="https://github.com/rustic-ai/uniko/issues/64">U64</a></td>
+<td>Generated creation IDs/views</td>
+<td>Assign IDs locally now; adopt upstream result later</td>
+</tr>
+<tr>
+<td><a href="https://github.com/rustic-ai/uniko/issues/65">U65</a></td>
+<td>Dead-letter recovery</td>
+<td>Do not imply retry scheduling is available</td>
+</tr>
+<tr>
+<td><a href="https://github.com/rustic-ai/uniko/issues/66">U66</a></td>
+<td>Store compatibility/reindex</td>
+<td>Reuse current checks; choose fresh stores for unsupported migrations</td>
+</tr>
+<tr>
+<td><a href="https://github.com/rustic-ai/uniko/issues/67">U67</a></td>
+<td>Dedicated idempotent Python agent registration</td>
+<td>Temporarily ensure real organization membership; report native participant kind as unknown</td>
+</tr>
+<tr>
+<td><a href="https://github.com/rustic-ai/uniko/issues/68">U68</a></td>
+<td>Independent embedded-tool performer</td>
+<td>Require a reporting-agent tool turn; separate user/reporter turns retain atomicity</td>
+</tr>
+<tr>
+<td><a href="https://github.com/rustic-ai/uni-xervo/issues/60">X60</a></td>
+<td>BGE-M3 resource sharing</td>
+<td>Optimization; measure current resource requirements</td>
+</tr>
+<tr>
+<td><a href="https://github.com/rustic-ai/uni-xervo/issues/61">X61</a></td>
+<td>Runtime inspection</td>
+<td>Supplies data for C05/L04</td>
+</tr>
+<tr>
+<td><a href="https://github.com/rustic-ai/uni-xervo/issues/62">X62</a></td>
+<td>Provider schemas</td>
+<td>Consume authoritative schemas rather than duplicating option validation</td>
+</tr>
+<tr>
+<td><a href="https://github.com/rustic-ai/uni-xervo/issues/63">X63</a></td>
+<td>Deployment acceptance matrix</td>
+<td>Use as additional upstream evidence alongside Rustic tests</td>
+</tr>
+</tbody>
+</table>
+<p>The documented uni-db issue 130 is closed. Do not treat the Blackbook's older hybrid-reopen limitation as a current defect without reproduction against the pinned runtime. Similarly, sparse/multi-vector adapter issues already closed upstream are not open dependencies.</p>
+<h2 id="test-and-evidence-matrix">Test and evidence matrix<a class="headerlink" href="#test-and-evidence-matrix" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>State</th>
+<th>Required evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>T01</td>
+<td>Verified</td>
+<td>Native text/document lifecycle: record, duplicate replay, recall, finalize, close/reopen, forget and recall absence; verify source links and per-user/store isolation <a href="#g1-implementation-and-acceptance-evidence">G1 evidence</a>.</td>
+</tr>
+<tr>
+<td>T02</td>
+<td>Verified</td>
+<td>Committed regressions for attachment helper, flush-after-commit, null session scope, conversation deletion and unmarked recall records; generated goal/task IDs are covered by T04 in G2 <a href="#g1-implementation-and-acceptance-evidence">G1 evidence</a>.</td>
+</tr>
+<tr>
+<td>T03</td>
+<td>Verified</td>
+<td>Sequential Guild rounds: direct question, remembered follow-up, document-based follow-up, irrelevant document, partial failure and terminal failure; exactly one final response and no late mutation <a href="#g1-implementation-and-acceptance-evidence">G1 evidence</a>.</td>
+</tr>
+<tr>
+<td>T04</td>
+<td>Verified</td>
+<td>Native tool/action/episode/fact/goal relationships and atomic units; actual IDs survive restart and transitions reflect native success/failure <a href="#g2-implementation-and-acceptance-evidence">G2 evidence</a>.</td>
+</tr>
+<tr>
+<td>T05</td>
+<td>Open</td>
+<td>Real BGE-M3 vector population, sparse contribution, ColBERT ordering, persistence/reopen and memory measurement; mock-only runs cannot close G3</td>
+</tr>
+<tr>
+<td>T06</td>
+<td>Open</td>
+<td>Scanned, native-text, mixed and malformed PDFs; searchable OCR text and page/block provenance on the selected supported build/profile</td>
+</tr>
+<tr>
+<td>T07</td>
+<td>Open</td>
+<td>Image/audio and selected video flows; original media retention, addressed derivations, extraction failure/retry, duplicate delivery and user scope</td>
+</tr>
+<tr>
+<td>T08</td>
+<td>Open</td>
+<td>Intended deployment's concurrent stores, bounded queue/backpressure, shutdown, restart, readiness and degraded provider handling on each claimed platform</td>
+</tr>
+</tbody>
+</table>
+<p>Extend existing tests in <code>uniko-agent/tests</code>, analyst memory integration tests and showcase route tests. Existing schema/configuration checks do not establish full live Guild behavior. Assert emitted format/topic/correlation/status and native side effects; avoid tests that merely mirror a builder call.</p>
+<p>Representative commands from the repository root, using the locked development environment:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>poetry<span class="w"> </span>install<span class="w"> </span>--with<span class="w"> </span>dev
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>poetry<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>uniko-agent/tests<span class="w"> </span>pandas-analyst/tests/test_analysis_memory.py<span class="w"> </span>-q
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>poetry<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>showcase/tests/test_uniko_research_guild.py<span class="w"> </span>-q
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>tox<span class="w"> </span>-e<span class="w"> </span>format,lint
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="nv">NO_MKDOCS_2_WARNING</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>poetry<span class="w"> </span>run<span class="w"> </span>mkdocs<span class="w"> </span>build<span class="w"> </span>--strict
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>tox<span class="w"> </span>-e<span class="w"> </span><span class="nb">test</span>
+</code></pre></div>
+<p>Full CI requires the configured Redis/NATS services and installed Playwright browser. Use dedicated test services and the repository's declared environment flags. Record model/hardware requirements and run real-model gates explicitly when standard CI skips expensive or credential-dependent work. Build affected packages and verify portable dependency metadata when public contracts or runtime distributions change.</p>
+<h2 id="implementation-sequence-and-release-checklist">Implementation sequence and release checklist<a class="headerlink" href="#implementation-sequence-and-release-checklist" title="Permanent link">&para;</a></h2>
+<ol>
+<li>Fix P0 contract defects and add native regressions. Settle record identity/provenance and null-scope semantics before expanding ingestion.</li>
+<li>Unify configuration and effective capability reporting. Update examples with only supported fields.</li>
+<li>Complete core source ingestion, bounded retrieval, answers and lifecycle; run G1 sequential Guild/restart tests.</li>
+<li>Add structured experience and source navigation; verify G2.</li>
+<li>Validate BGE-M3 on a fresh store and intended hardware; verify G3 independently of upstream resource optimization.</li>
+<li>Select native or external OCR/media profiles, preserve original sources, and verify G4/G5.</li>
+<li>Measure operational scale and adopt upstream improvements as their releases become available; verify G6.</li>
+</ol>
+<ul>
+<li>[ ] Every advertised capability maps to a verified gate or an explicit unavailable/deferred state.</li>
+<li>[ ] Each task has an assignee and linked implementation/test evidence.</li>
+<li>[ ] Request models, exports, schemas, examples and routes agree.</li>
+<li>[ ] Unsupported settings fail clearly instead of being silently ignored.</li>
+<li>[ ] Ingest/recall/answer failures and fallbacks have explicit observable outcomes.</li>
+<li>[ ] Persistence, deletion, isolation and shutdown tests pass with native dependencies.</li>
+<li>[ ] Relevant skips/xfails/xpasses are reviewed; no feature is declared complete from unrelated CI totals.</li>
+<li>[ ] Selected CPU/GPU/OCR/media profiles have installation and execution evidence.</li>
+<li>[ ] Upstream issue states and required versions are refreshed.</li>
+<li>[ ] Package build, lint/types, strict docs and appropriate full regression CI pass.</li>
+</ul>
+<h2 id="decisions-to-close-during-implementation">Decisions to close during implementation<a class="headerlink" href="#decisions-to-close-during-implementation" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Decision</th>
+<th>Proposed direction</th>
+<th>Gate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>One config authority</td>
+<td>Engine settings in native resolver config; supported per-query overrides in typed requests</td>
+<td>G1</td>
+</tr>
+<tr>
+<td>Provenance migration</td>
+<td>Native category/source/revision first; explicitly support existing stored Rustic record identities</td>
+<td>G1</td>
+</tr>
+<tr>
+<td>Answer policy</td>
+<td>Generate from the exact authorized bounded context; use Rustic LLM dependencies when native answer cannot enforce it</td>
+<td>G1</td>
+</tr>
+<tr>
+<td>Media extraction location</td>
+<td>Narrow extraction dependencies with original bytes in filesystem storage and explicit derivation identity</td>
+<td>G4/G5</td>
+</tr>
+<tr>
+<td>OCR runtime</td>
+<td>Verified upstream wheel/build or external extractor; do not infer support from accepted config</td>
+<td>G4</td>
+</tr>
+<tr>
+<td>Scale target</td>
+<td>Set concurrency/memory/latency budgets from the intended deployment and measured profiles</td>
+<td>G6</td>
+</tr>
+<tr>
+<td>Extended reasoning surface</td>
+<td>Expose only selected authorized operations with use cases and tests</td>
+<td>G2</td>
+</tr>
+</tbody>
+</table>
+<h2 id="source-map-and-maintenance">Source map and maintenance<a class="headerlink" href="#source-map-and-maintenance" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="https://github.com/milliondreams/rustic-ai/blob/7bc3cf0/uniko-agent/src/rustic_ai/uniko_agent/resolver.py">Resolver baseline</a></li>
+<li><a href="https://github.com/milliondreams/rustic-ai/blob/7bc3cf0/uniko-agent/src/rustic_ai/uniko_agent/agent.py">MemoryAgent baseline</a></li>
+<li><a href="https://github.com/milliondreams/rustic-ai/blob/7bc3cf0/uniko-agent/src/rustic_ai/uniko_agent/models.py">Public requests and responses</a></li>
+<li><a href="https://github.com/milliondreams/rustic-ai/blob/7bc3cf0/uniko-agent/src/rustic_ai/uniko_agent/memories.py">LLM memory wrapper</a></li>
+<li><a href="https://github.com/rustic-ai/uniko/blob/28f8a1ae3e343f62392800b7d693c0bac45c7c80/docs/BLACKBOOK.md">Uniko Blackbook</a></li>
+<li><a href="https://github.com/rustic-ai/uni-xervo/blob/fd312158599cb3fe429e93c56f07f7124d216642/crates/uni-xervo/src/runtime.rs">uni-xervo runtime</a></li>
+</ul>
+<p>Update this plan in the same PR as a task's implementation. Change its state, link acceptance evidence and refresh affected feature claims. Preserve the evidence baseline when adding a newer run; do not replace an unverified capability with a broad statement that all CI is green.</p>
+<h2 id="g2-implementation-and-acceptance-evidence">G2 implementation and acceptance evidence<a class="headerlink" href="#g2-implementation-and-acceptance-evidence" title="Permanent link">&para;</a></h2>
+<p>G2 uses Uniko 0.5.1 native APIs for tool calls, actions, episodes, explicit
+observations/facts, deterministic consolidation, atomic multi-turn units,
+procedure matching/feedback and bounded rule/experience reads. Reporting actor
+identity is the authenticated message sender. Goal/task creation assigns stable
+external IDs before writing; native transitions retain their actual boolean,
+status, phase and timestamps. Native <code>done</code> status is not relabelled.
+Unsupported goal metadata, pause/resume, multiple task dependencies and task
+outcome controls are rejected. Goal context exposes recent message text and
+native sessions/facts/entities; episode context remains explicitly unavailable.</p>
+<p>The private runtime owns a SQLite operation journal beside persistent graph
+storage. In-memory storage uses an in-memory journal. It claims commands before
+native dispatch, saves compact results before publishing replies, rejects
+changed payloads and unmanaged existing native IDs, and replays completed
+commands without repeating effects. Goal/task creation replay returns current
+native state. Interrupted or ambiguous effects remain <code>operation_outcome_unknown</code>
+after restart; no automatic retry is attempted. Journal and native graph commits
+cannot be atomic, so an unknown outcome requires native inspection. Preserve
+both in backups. Receipt retention follows private-store retention.</p>
+<p>Units prepare all sources before dispatch and enforce 128 turns, 32 aggregate
+attachments and a configurable default 32 MiB prepared budget. Streamed batches
+retain per-item terminal outcomes; embedded-tool items use separate atomic units
+and receipts. An in-flight uncertain item retains its operation identity and
+uses <code>stored: null</code>; unstarted cancelled items use <code>stored: false</code>. Summaries
+report <code>uncertain_count</code> separately from known stored <code>submitted_count</code>.
+Store-wide consolidation, invalidation and procedure feedback
+require <code>control_producers</code>. Explicit owner selection requires <code>scope_producers</code>.
+Scoped/visible evidence is validated before dereferencing; unsupported native
+scope dimensions fail closed rather than broaden access. <a href="https://github.com/rustic-ai/uniko/issues/67">U67</a>
+tracks dedicated registration; the interim path uses the resolver's actual
+organization, creates no synthetic messages/actions, and reports unknown native
+participant kind honestly. U63's optional LLM consolidation remains deferred.</p>
+<p>Evidence is committed in
+<a href="https://github.com/milliondreams/rustic-ai/blob/main/uniko-agent/tests/test_g2_structured.py">test_g2_structured.py</a>
+and <a href="https://github.com/milliondreams/rustic-ai/blob/main/uniko-agent/tests/test_g2_routed.py">test_g2_routed.py</a>.
+Native tests cover fresh-store registration, ownership rejection, real IDs,
+causal and fact-support edges, learned procedures, feedback replay, actual
+store/journal restart, changed-payload conflicts, unknown effects, cancellation,
+prewrite attachment/budget rejection and bounded reads. The real Guild bus test
+routes typed commands/replies between a reporting agent and MemoryAgent with
+production sender filtering, one terminal reply per command, replay, lifecycle
+updates, serialized native task priority and partial batch outcomes. Goal listings
+exclude records with conflicting native owners before reading their views.
+Fault-injection regressions preserve unknown outcomes after native commits and
+original cancellation when both journal completion and uncertainty updates fail;
+the durable pending claim prevents duplicate dispatch. Existing research/analyst tool producers are
+not automatically instrumented; they can adopt these typed contracts separately.</p>
+<p>Uniko 0.5.1 attributes embedded tool calls to their turn sender. Until
+<a href="https://github.com/rustic-ai/uniko/issues/68">U68</a> adds an independent performer
+override, turns containing tools must use the authenticated reporting agent as
+<code>sender_id</code>. A unit can include a separate user turn and a reporting-agent turn
+whose tool call references that user's message with <code>triggered_by</code>. Standalone
+<code>RecordToolCallRequest</code> can also reference a user's previously stored message.
+Mismatched embedded-tool senders are rejected before any native write; user
+message attribution is never rewritten to satisfy tool ownership.</p>
+<p>Final local acceptance on 2026-11-17 (macOS ARM64, Python 3.13.12):
+<code>tox -e test -- --workers 4</code> passed with <strong>2,020 passed, 88 skipped,
+3 xfailed and 2 xpassed</strong> using Redis and NATS/JetStream. The existing expensive,
+credential-dependent and incomplete tests retain their configured exclusions.
+<code>tox -e format,lint</code> passed (701 files checked by mypy), strict MkDocs passed,
+and the final source distribution/wheel built with all five matching schemas.
+All 25 lockfiles remained fresh. Eighteen G2 regressions passed, including eight
+cases added for the selected review findings. The expanded actual-store restart
+test separately verified tool IDs, episode causal links,
+facts, goals and receipt replay after close/reopen. These checks do not certify
+G3–G6 or untested platform/provider combinations.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.a5f9d56c.min.js"></script>
+      
+        <script src="https://unpkg.com/mermaid@10/dist/mermaid.min.js"></script>
+      
+        <script src="../../assets/javascripts/mermaid-init.js"></script>
+      
+    
+  </body>
+</html>

@@ -1,0 +1,5465 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../uniko-agent-completion/">
+      
+      
+        <link rel="next" href="../uni-db-agent-design/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.jpg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.2">
+    
+    
+      
+        <title>KnowledgeAgent Migration - Rustic AI Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.57a0d79d.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/theme.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#knowledgeagent-migration-to-uniko" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Rustic AI Documentation" class="md-header__button md-logo" aria-label="Rustic AI Documentation" data-md-component="logo">
+      
+  <img src="../../assets/images/logo.svg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Rustic AI Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              KnowledgeAgent Migration
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/rustic-ai/rustic-ai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Rustic AI Documentation" class="md-nav__button md-logo" aria-label="Rustic AI Documentation" data-md-component="logo">
+      
+  <img src="../../assets/images/logo.svg" alt="logo">
+
+    </a>
+    Rustic AI Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/rustic-ai/rustic-ai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Light Paper
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-To Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    How-To Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../howto/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../howto/creating_your_first_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Creating Your First Agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../howto/creating_a_guild/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Creating a Guild
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../howto/guild_specifications/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guild Specifications
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../howto/dependency_injection/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dependency Injection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../howto/state_management/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    State Management
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../howto/using_react_agent_with_skills/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Using ReActAgent with Skills
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../howto/testing_agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Testing Agents
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../howto/testing_guilds/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Testing Composed Guilds
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../howto/writing_effective_agent_tests/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Writing Effective Agent Tests
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../howto/client_server_flow/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Client-Server Flow
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../howto/code_tag_quick_reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Code Tag Quick Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../howto/llm_prompts_with_code_tag/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LLM Prompts with Code Tag
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_14" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_14" id="__nav_3_14_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Examples
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_14_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_14">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Examples
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../howto/examples/code_review_prompt/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Code Review Prompt
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../howto/examples/prompts/security_reviewer/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Security Reviewer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Core
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../core/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../core/architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../core/agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agents
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../core/guilds/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guilds
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../core/g2g/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guild-to-Guild (G2G)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../core/messaging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Messaging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../core/messaging_lifecycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Messaging Lifecycle
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../core/execution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Execution
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../core/multiprocess_execution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multiprocess Execution
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../core/dependencies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dependencies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../core/state_management/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    State Management
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agents
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Agents
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../core/agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agents
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/llm_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LLM Agent & Plugins
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/llm_agent_memory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LLM Agent Memory
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/llm_agent_plugins/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LLM Agent Plugins
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/react_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ReAct Agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_7" id="__nav_5_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Uniko Memory
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Uniko Memory
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/uniko/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agent Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/uniko/protocol/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Message Protocol
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/uniko/documents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Document Coordinator
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_8" id="__nav_5_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Uni-DB
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Uni-DB
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/unidb/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agent Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/unidb/protocol/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Message Protocol
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_9" id="__nav_5_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Core
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/core/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/core/guild_manager_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guild Manager Agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/core/user_proxy_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Proxy Agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/core/vector_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Vector Agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/core/simple_llm_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Simple LLM Agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/core/probe_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Probe Agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_10" id="__nav_5_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LiteLLM
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    LiteLLM
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/litellm/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/litellm/litellm_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LiteLLM Agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_11" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_11" id="__nav_5_11_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    HuggingFace
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_11">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    HuggingFace
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/huggingface/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/huggingface/llm_phi_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LLM Phi Agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/huggingface/squad_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Squad Agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/huggingface/image2image_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Image2Image Agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/huggingface/runwayml_stable_diffusion_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Runwayml Stable Diffusion Agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/huggingface/speecht5_tts_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SpeechT5 TTS Agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_12" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_12" id="__nav_5_12_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Playwright
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_12_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_12">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Playwright
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/playwright/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/playwright/playwright_scraper_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Playwright Scraper Agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_13" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_13" id="__nav_5_13_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SerpAPI
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_13_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_13">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    SerpAPI
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/serpapi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/serpapi/serp_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SERP Agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/serpapi/local_serp_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Local SERP Agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_14" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_14" id="__nav_5_14_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Marvin
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_14_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_14">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Marvin
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/marvin/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/marvin/marvin_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Marvin Agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_15" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_15" id="__nav_5_15_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_15_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_15">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    MCP
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/mcp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dependencies
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Dependencies
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_6_2" id="__nav_6_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Core
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/core/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/core/env_secret_provider/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Environment Secret Provider
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/core/filesystem/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    File System Resolver
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/core/in_memory_kvstore/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    In-Memory KV Store
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/core/in_process_interpreter/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    In-Process Interpreter
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/core/python_exec_executor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Python Exec Executor
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/uniko/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Uniko Resolver
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/unidb/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Uni-DB Resolver
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_6_5" id="__nav_6_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Redis
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Redis
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/redis/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/redis/redis_kvstore/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Redis KV Store
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6_6" id="__nav_6_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LiteLLM
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    LiteLLM
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/litellm/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/litellm/litellm_resolver/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LiteLLM Resolver
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_6_7" id="__nav_6_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Chroma
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Chroma
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/chroma/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/chroma/chroma_resolver/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Chroma Resolver
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_6_8" id="__nav_6_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LangChain
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    LangChain
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/langchain/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/langchain/character_splitter/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Character Splitter
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/langchain/openai_embeddings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OpenAI Embeddings
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/langchain/recursive_splitter/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Recursive Splitter
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Skills
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Skills
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../skills/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Patterns
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Patterns
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../patterns/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../patterns/messaging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Messaging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../patterns/routing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Routing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../patterns/transformation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Transformation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../patterns/aggregation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Aggregation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ray/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ray
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Showcase
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Showcase
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../showcase/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../showcase/paper_banana/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PaperBanana
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../showcase/semantic_memory_assistant/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Semantic Memory Assistant
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ui_protocol_types/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UI Protocol Types
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_14" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_14" id="__nav_14_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_14_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_14">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Design
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../react-agent-design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ReAct Agent Design
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../uniko-agent-completion/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Uniko Agent Completion Plan
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    KnowledgeAgent Migration
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    KnowledgeAgent Migration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#migration-decision-and-scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Migration decision and scope
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#baseline-consumer-inventory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Baseline consumer inventory
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#capability-mapping" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Capability mapping
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#target-ownership-and-message-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Target ownership and message flow
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Target ownership and message flow">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#correlation-and-completion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Correlation and completion
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#storage-identity-and-source-policy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Storage, identity and source policy
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Storage, identity and source policy">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#native-store-ownership" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Native store ownership
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#corpus-and-source-identity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Corpus and source identity
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#repeat-ingestion-and-uncertainty" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Repeat ingestion and uncertainty
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#paperbanana-migration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PaperBanana migration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#semantic-memory-assistant-migration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Semantic Memory Assistant migration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#current-protocol-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Current protocol examples
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#existing-data-and-saved-specification-migration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Existing data and saved specification migration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Existing data and saved specification migration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#export-before-retiring-the-old-runtime" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Export before retiring the old runtime
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reimport-and-verify" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reimport and verify
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#removal-and-retention-boundaries" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Removal and retention boundaries
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#implementation-sequence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implementation sequence
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Implementation sequence">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#phase-1-foundation-boundary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 1 foundation boundary
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-1-implemented-foundation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 1 implemented foundation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-2-implemented-paperbanana" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 2 implemented PaperBanana
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-3-implemented-semantic-memory-assistant" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 3 implemented Semantic Memory Assistant
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-4-implemented-legacy-retirement" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 4 implemented legacy retirement
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#review-hardening-and-composed-acceptance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Review hardening and composed acceptance
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-5-local-verification-boundary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 5 local verification boundary
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-6-required-deployment-inputs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 6 required deployment inputs
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#packaging-and-documentation-work" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Packaging and documentation work
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#acceptance-and-evidence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Acceptance and evidence
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#source-references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Source references
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../uni-db-agent-design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Uni-DB Agent Design
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dependency-refresh-2026-11-25/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dependency Refresh (2026-11-25)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#migration-decision-and-scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Migration decision and scope
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#baseline-consumer-inventory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Baseline consumer inventory
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#capability-mapping" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Capability mapping
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#target-ownership-and-message-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Target ownership and message flow
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Target ownership and message flow">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#correlation-and-completion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Correlation and completion
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#storage-identity-and-source-policy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Storage, identity and source policy
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Storage, identity and source policy">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#native-store-ownership" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Native store ownership
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#corpus-and-source-identity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Corpus and source identity
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#repeat-ingestion-and-uncertainty" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Repeat ingestion and uncertainty
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#paperbanana-migration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PaperBanana migration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#semantic-memory-assistant-migration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Semantic Memory Assistant migration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#current-protocol-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Current protocol examples
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#existing-data-and-saved-specification-migration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Existing data and saved specification migration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Existing data and saved specification migration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#export-before-retiring-the-old-runtime" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Export before retiring the old runtime
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reimport-and-verify" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reimport and verify
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#removal-and-retention-boundaries" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Removal and retention boundaries
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#implementation-sequence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implementation sequence
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Implementation sequence">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#phase-1-foundation-boundary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 1 foundation boundary
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-1-implemented-foundation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 1 implemented foundation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-2-implemented-paperbanana" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 2 implemented PaperBanana
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-3-implemented-semantic-memory-assistant" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 3 implemented Semantic Memory Assistant
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-4-implemented-legacy-retirement" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 4 implemented legacy retirement
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#review-hardening-and-composed-acceptance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Review hardening and composed acceptance
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-5-local-verification-boundary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 5 local verification boundary
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-6-required-deployment-inputs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 6 required deployment inputs
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#packaging-and-documentation-work" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Packaging and documentation work
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#acceptance-and-evidence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Acceptance and evidence
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#source-references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Source references
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="knowledgeagent-migration-to-uniko">KnowledgeAgent migration to Uniko<a class="headerlink" href="#knowledgeagent-migration-to-uniko" title="Permanent link">&para;</a></h1>
+<p>Replace the LanceDB integration, KnowledgeAgent and its knowledge-base implementation with Uniko for document ingestion, evidence retrieval and semantic conversational memory. Migrate the existing consumers directly to Uniko's typed protocols, then remove the retired implementation. Keep generic media, filesystem, embedding and vector-store capabilities that have independent consumers.</p>
+<p>This is an implementation plan against repository revision <code>3c530d5</code> on 2026-11-25. Phases 1–4 are implemented: the shared foundation, both consumer migrations and legacy retirement. Phase 5 broad repository acceptance and Phase 6 deployment cutover remain pending. Package versions are unchanged; coordinated breaking-release versioning is a separate publication gate. The migration assumes existing deployed content may need preservation until deployment inventory establishes otherwise. Removing code does not authorize deleting stored data.</p>
+<h2 id="migration-decision-and-scope">Migration decision and scope<a class="headerlink" href="#migration-decision-and-scope" title="Permanent link">&para;</a></h2>
+<p>The target is one reusable Uniko capability with separately configured instances for meaningful corpus and ownership boundaries. A document <code>MemoryAgent</code> retrieves external evidence; a synthesis agent decides how to use it. A conversational <code>UnikoMemoriesStore</code> can remain local to an LLM agent. These roles need not share a native database.</p>
+<p>Retire the old Knol catalog, table schema, pipeline and backend-selection contracts instead of rebuilding them as a second knowledge stack around Uniko. The two checked-in consumer guilds do not require arbitrary table targets or backend SQL-style filters. External deployments using those public contracts require an explicit migration disposition before upgrading to the release that removes them.</p>
+<p>The migration does not require changing the native UniDB repository. UniDB remains the generic application-graph capability. Chroma and the generic VectorAgent remain separate vector-store capabilities. Existing dated dependency and implementation reports remain historical evidence.</p>
+<h2 id="baseline-consumer-inventory">Baseline consumer inventory<a class="headerlink" href="#baseline-consumer-inventory" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Consumer or surface</th>
+<th>Baseline dependency</th>
+<th>Required migration</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="https://github.com/milliondreams/rustic-ai/blob/3c530d596b98217c47dad490f5d8cf24d0a294e3/showcase/apps/paper_banana_guild.json">PaperBanana</a></td>
+<td>KnowledgeAgent through <code>IndexMediaLinks</code>, <code>KBSearchRequest</code> and result routes</td>
+<td>Document ingestion, correlated completion, bounded recall and evidence-to-planner conversion</td>
+</tr>
+<tr>
+<td><a href="https://github.com/milliondreams/rustic-ai/blob/3c530d596b98217c47dad490f5d8cf24d0a294e3/showcase/apps/semantic_memory_assistant.json">Semantic Memory Assistant</a></td>
+<td><code>KnowledgeBasedMemoriesStore</code>, <code>kb_backend</code>, filesystem and scraper</td>
+<td>Existing Uniko conversational wrapper plus explicit document evidence ingestion/recall</td>
+</tr>
+<tr>
+<td><a href="https://github.com/milliondreams/rustic-ai/blob/3c530d596b98217c47dad490f5d8cf24d0a294e3/llm-agent/src/rustic_ai/llm_agent/memories/knowledge_memories_store.py">KnowledgeBasedMemoriesStore</a></td>
+<td>Constructs KnowledgeBase directly</td>
+<td>Retire the implementation and remove its eager package import/export</td>
+</tr>
+<tr>
+<td><a href="https://github.com/milliondreams/rustic-ai/blob/3c530d596b98217c47dad490f5d8cf24d0a294e3/showcase/apps/iterative_studio/iterative_studio.json">Iterative Studio</a></td>
+<td>Unused <code>kb_backend</code> resolver</td>
+<td>Remove dead configuration and associated documentation/test expectation</td>
+</tr>
+<tr>
+<td>Saved catalog blueprints and GuildSpecs</td>
+<td>Old class names, resolver names and plugin kinds</td>
+<td>Inventory and rewrite or reimport specifications before upgrading those guilds to the release that removes the old classes</td>
+</tr>
+<tr>
+<td>External Python users</td>
+<td>Public KnowledgeAgent, KnowledgeBase and Knol APIs</td>
+<td>Breaking-release guidance with direct replacement examples</td>
+</tr>
+</tbody>
+</table>
+<p>At the baseline revision, production imports into <code>core/knowledgebase</code> originated only from KnowledgeAgent, KnowledgeBasedMemoriesStore and the LanceDB adapter. The directory contained 49 Python files and 5,859 lines. That establishes the repository removal boundary; it does not establish deployed usage.</p>
+<p>At the baseline revision, neither consumer had tests selecting its blueprint filename. PaperBanana now has executable acceptance coverage in <code>showcase/tests/paper_banana</code>; Semantic Memory Assistant now has executable native-memory, document and browser acceptance coverage.</p>
+<h2 id="capability-mapping">Capability mapping<a class="headerlink" href="#capability-mapping" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Existing contract</th>
+<th>Target contract</th>
+<th>Consequence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>IndexMediaLinks</code> document list</td>
+<td>One <code>IngestDocumentRequest</code> per source, returning <code>IngestOutcome</code></td>
+<td>Coordinator owns fan-out, source enumeration and an outcome per item</td>
+</tr>
+<tr>
+<td>Text/document extraction and embedding</td>
+<td>Native Uniko ingestion</td>
+<td>Verify actual supported formats and the selected model profile</td>
+</tr>
+<tr>
+<td><code>KBSearchRequest</code> and <code>KBSearchResults</code></td>
+<td><code>RecallRequest</code> and <code>RecallResponse</code></td>
+<td>Explicit scope, record kinds and output bounds; original query stays in workflow context</td>
+</tr>
+<tr>
+<td>Knol/chunk reading</td>
+<td><code>SourceReadRequest</code> and <code>SourceResponse</code></td>
+<td>Source IDs/addresses change; support read, outline and original content explicitly</td>
+</tr>
+<tr>
+<td>Source text search</td>
+<td><code>SourceSearchRequest</code></td>
+<td>Deterministic source hits and identifiers remain available</td>
+</tr>
+<tr>
+<td>Reindex and revisions</td>
+<td>Stable <code>source_id</code>, immutable <code>revision_id</code>, default current-only recall</td>
+<td>New revisions must not silently blend superseded facts into current answers</td>
+</tr>
+<tr>
+<td>Delete a document</td>
+<td><code>ForgetMemoryRecordRequest</code> with <code>kind=external_evidence</code></td>
+<td>Existing artifact path invokes native document deletion</td>
+</tr>
+<tr>
+<td>Delete a corpus</td>
+<td><code>DeleteMemorySessionRequest</code></td>
+<td>Corpus lifecycle is explicit</td>
+</tr>
+<tr>
+<td>Semantic conversational memory</td>
+<td>Existing <code>UnikoMemoriesStore</code></td>
+<td>User isolation, bounded recall and user/terminal-assistant recording replace random text-file memory IDs</td>
+</tr>
+<tr>
+<td>Backend-native answer generation</td>
+<td>Optional <code>AnswerRequest</code></td>
+<td>Migrated knowledge flows use recall followed by separate synthesis</td>
+</tr>
+<tr>
+<td>Catalog-only Knol storage</td>
+<td>Ordinary source files plus optional Uniko ingestion</td>
+<td>Retire the Knol-specific catalog API; storage success and searchability are separate</td>
+</tr>
+<tr>
+<td>Arbitrary tables, vector columns and custom pipelines</td>
+<td>Retired</td>
+<td>Do not silently accept old configuration or imitate backend schema machinery</td>
+</tr>
+<tr>
+<td>Weighted search targets, BoolFilter, hybrid weights, named rerank strategies and backend explain output</td>
+<td>Retired controls; use supported Uniko scope/recall options</td>
+<td>Preserve required application behavior through explicit source/session/category selection</td>
+</tr>
+<tr>
+<td>Arbitrary metadata sidecars</td>
+<td>Supported provenance fields plus an archival source manifest</td>
+<td>Preserve author/tags/date/custom metadata where required; current document ingestion does not carry every old scalar field</td>
+</tr>
+</tbody>
+</table>
+<p>Current native tests cover text, Markdown, HTML, CSV, JSON, code and text-bearing PDFs. Scanned PDF OCR, BGE-M3 hybrid acceptance and richer multimodal processing remain separate completion gates in the <a href="../uniko-agent-completion/">Uniko completion plan</a>. Format acceptance alone must not become a claim that extraction produced searchable evidence.</p>
+<h2 id="target-ownership-and-message-flow">Target ownership and message flow<a class="headerlink" href="#target-ownership-and-message-flow" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Responsibility</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Guild and deployment</td>
+<td>Corpus access policy, trusted producers, source acquisition, placement, persistent volumes and credentials</td>
+</tr>
+<tr>
+<td>Narrow document coordinator</td>
+<td>Normalize transport inputs, preserve original request, assign source identities, collect outcomes, select explicit scope and build bounded synthesis input</td>
+</tr>
+<tr>
+<td>Document MemoryAgent</td>
+<td>Execute typed ingestion, recall, source-read and deletion operations in its private native store</td>
+</tr>
+<tr>
+<td>Synthesis or planner agent</td>
+<td>Interpret the user's request using attributed evidence</td>
+</tr>
+<tr>
+<td>UnikoMemoriesStore when selected</td>
+<td>Record and recall visible conversation turns around the LLM's calls in the LLM's own private store</td>
+</tr>
+<tr>
+<td>Native Uniko</td>
+<td>Source storage, extraction, indexing, revisions, memory semantics and recall</td>
+</tr>
+</tbody>
+</table>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>flowchart LR
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    U[User Proxy or trusted source producer] --&gt;|ChatCompletionRequest or MediaLink| C[Document coordinator]
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    C --&gt;|IngestDocumentRequest per source| M[Document MemoryAgent]
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    M --&gt;|IngestOutcome or MemoryAgentError| C
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    C --&gt;|RecallRequest after required outcomes| M
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    M --&gt;|RecallResponse| C
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    C --&gt;|ChatCompletionRequest with original request and evidence| S[Planner or synthesis agent]
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    S --&gt;|ChatCompletionResponse| O[User or downstream illustration stages]
+</code></pre></div>
+<p>Use semantic topics such as <code>knowledge.ingest</code>, <code>knowledge.recall</code>, <code>knowledge.results</code> and <code>knowledge.errors</code>, stable agent IDs and explicit subscriptions. Internal agents have <code>listen_to_default_topic: false</code>. Reuse the same MemoryAgent class rather than introducing a renamed KnowledgeAgent facade.</p>
+<p>A coordinator is justified where lists of sources, asynchronous outcomes and request continuation need an owner. Keep the coordination code narrow. Payload-only conversions remain routing transformations; source identity, barriers and replay-safe terminal state should not become a large opaque expression.</p>
+<h3 id="correlation-and-completion">Correlation and completion<a class="headerlink" href="#correlation-and-completion" title="Permanent link">&para;</a></h3>
+<p>Assign a workflow <code>request_id</code> and stable source-item identities before dispatch. Carry only compact correlation, original query and selected corpus in context. Keep source bytes, documents and model reasoning out of shared workflow state.</p>
+<p>A barrier tracks the exact enumerated source IDs and one terminal outcome per ID. <code>stored</code>, <code>searchable</code>, <code>extraction_failed</code> and <code>was_deduplicated</code> have separate meanings. Neither <code>success=true</code> nor the number of replies proves that all references were indexed. An unsearchable but stored source remains an archival source, not usable retrieval evidence.</p>
+<p>Define these terminal behaviors:</p>
+<ul>
+<li>Upload only: report stored, searchable and failed source counts accurately.</li>
+<li>Upload plus instruction: after required ingestion outcomes, recall evidence and continue the original instruction.</li>
+<li>Some usable sources: continue with explicitly attributed partial evidence when the workflow permits it.</li>
+<li>No usable source when a reference is required: emit one typed terminal error before synthesis.</li>
+<li>A text-only illustration request without required references: allow explicit no-evidence generation without claiming retrieval succeeded.</li>
+<li>Duplicate, late or out-of-order outcomes: no repeated ingestion accounting, reopened workflow or second terminal output.</li>
+</ul>
+<p>Use <code>ctx.send_error</code> for typed failures. Progress and per-item diagnostics do not become additional terminal answers. Persist terminal markers and remove only the completed request's transient state when restart continuity is promised. Include timeouts and interrupted-ingestion reconciliation; a lost outcome must not leave a barrier waiting forever.</p>
+<h2 id="storage-identity-and-source-policy">Storage, identity and source policy<a class="headerlink" href="#storage-identity-and-source-policy" title="Permanent link">&para;</a></h2>
+<h3 id="native-store-ownership">Native store ownership<a class="headerlink" href="#native-store-ownership" title="Permanent link">&para;</a></h3>
+<p>UnikoResolver keys storage and handles by organization, guild and agent. One document MemoryAgent and one LLM using UnikoMemoriesStore therefore resolve different stores. A shared guild ID does not merge their data or locks. Send document evidence explicitly to synthesis; do not make synthesis open another agent's database.</p>
+<p>Persistent Uniko storage currently requires a local agent filesystem. Schedule it onto a durable local volume with stable identities, backup policy and one clear process owner. In-memory storage is for disposable tests. Verify close/reopen and actual resolver shutdown before claiming restart persistence.</p>
+<p>The standard FileSystemResolver uses one configured protocol for both agent and guild scopes. For deployments currently reading sources from a remote filesystem, preserve acquisition through explicit local staging or a separately supported source/storage dependency binding. A class-name substitution does not automatically preserve remote-source access together with a local native store. If remote-source parity is required, implement and test a narrow binding extension rather than changing the global filesystem resolver's behavior for unrelated agents.</p>
+<h3 id="corpus-and-source-identity">Corpus and source identity<a class="headerlink" href="#corpus-and-source-identity" title="Permanent link">&para;</a></h3>
+<p>Use a stable corpus session such as <code>corpus:paperbanana:references</code>. <code>MemoryScope.sessions</code> accepts at most 32 entries, so do not create an unbounded session-per-document search scheme. Separate private corpora or agent stores when access boundaries differ. <code>sessions=null</code> means the whole private store and must not be treated as the current user.</p>
+<p>Assign:</p>
+<ul>
+<li><code>source_id</code>: stable logical source identity, based on the known source URI or archival identity.</li>
+<li><code>revision_id</code>: immutable, store-unique source revision, usually including a content digest.</li>
+<li><code>record_id</code>: stable source-plus-revision identity for repeatable ingestion.</li>
+<li><code>request_id</code>: workflow correlation independent of the source revision.</li>
+</ul>
+<p>Document recall selects <code>allowed_record_kinds=[external_evidence]</code>. Generated plans, model interpretations and assistant replies do not automatically become external evidence. Preserve actual MIME, filename, source URI and available provenance. Never infer author, original bytes, revision chronology or user ownership that the old data did not record.</p>
+<p>Current Uniko 0.6.0 rejects document <code>visibility</code> fields. The migration must not advertise per-document viewer ACL parity. Guild routing, corpus selection and private stores supply the supported boundaries. Test every intended cross-user or cross-corpus access path.</p>
+<h3 id="repeat-ingestion-and-uncertainty">Repeat ingestion and uncertainty<a class="headerlink" href="#repeat-ingestion-and-uncertainty" title="Permanent link">&para;</a></h3>
+<p>Native duplicate ingestion for repeated identities is tested. IngestDocumentRequest has no structured-command <code>operation_id</code>, so it does not inherit the structured command receipt contract. A worker crash after storage but before delivery of IngestOutcome can leave an uncertain result.</p>
+<p>Retry with the same source/revision/record identities and reconcile stored source presence/outcome. Track ambiguous imports in a resumable migration journal. Do not claim exactly-once effects from broker persistence or reuse the UniDB transaction receipt store for document ingestion.</p>
+<h2 id="paperbanana-migration">PaperBanana migration<a class="headerlink" href="#paperbanana-migration" title="Permanent link">&para;</a></h2>
+<p>At the baseline revision, the blueprint routed file input to indexing and text input to search. It then converts retrieval results into a planner prompt, followed by stylist and visualizer stages. Keep those illustration capabilities and their output contracts.</p>
+<p>Repair these boundaries as part of the migration:</p>
+<ol>
+<li>The upload expression currently hardcodes <code>application/pdf</code>, names every file <code>upload</code> and sets <code>on_filesystem=false</code>. Preserve actual transport metadata and stage uploaded files into the guild filesystem. Uniko rejects an external MediaLink on the document-ingestion path.</li>
+<li>File-plus-instruction input currently discards the instruction after an indexing acknowledgment. Preserve the original request and implement the explicit upload-plus-instruction continuation described above.</li>
+<li>The existing default indexing pipeline is text-oriented while the blueprint marks every upload as PDF. Verify real text-bearing PDF extraction and source attribution in the replacement.</li>
+<li>The indexing response counts every result, including failures, as indexed. Replace it with stored/searchable/failed accounting from per-source outcomes.</li>
+<li>RecallResponse has no <code>query_text</code>. Build the planner input from preserved original query plus bounded <code>items</code>, their source IDs and provenance.</li>
+<li>Keep corpus evidence separate from plans, style instructions and critiques. Empty evidence and missing required references have different outcomes.</li>
+</ol>
+<p>Create executable blueprint tests for text-only requests, upload-only requests, upload-plus-instruction, multiple files, partial failure, complete failure, duplicate outcomes, recalled evidence attribution and the request reaching the existing planner/visualizer path. No image-provider calls are required to validate routing; use a deterministic endpoint and a local native document store for the evidence path.</p>
+<h2 id="semantic-memory-assistant-migration">Semantic Memory Assistant migration<a class="headerlink" href="#semantic-memory-assistant-migration" title="Permanent link">&para;</a></h2>
+<p>Replace KnowledgeBasedMemoriesStore with <code>rustic_ai.uniko_agent.memories.UnikoMemoriesStore</code>, located in the Uniko package. Remove filesystem/KB plugin dependencies that only served the old store. Configure its <code>uniko</code> dependency and the private filesystem needed for persistence.</p>
+<p>Keep <code>rusticai-llm-agent</code> independent of <code>rusticai-uniko-agent</code>: Uniko already depends on llm-agent. Adding the new plugin or a hardcoded import into llm-agent would create a cycle. Dynamic plugin configuration can select the existing Uniko wrapper.</p>
+<p>Use trusted User Proxy identity or preserved forwarding metadata. The wrapper requires that identity; an internal coordinator's sender tag alone is not sufficient. The original user request and terminal assistant response are the visible turns to remember.</p>
+<p>The current scraper-return expression creates a synthetic user prompt with file attachments. Migrate scraped pages as external evidence through the document agent, then return bounded recall evidence to the original conversation. Do not record scraper feedback, correction instructions or synthesized evidence prompts as new user-authored turns.</p>
+<p>The conversational wrapper and document agent own separate stores. The synthesis input combines returned document evidence with the wrapper's bounded prior-conversation context. If a future use case requires one message-first memory store, compose explicit record/finalize/recall exchanges; do not silently introduce shared native handles.</p>
+<p>Test follow-up recall, distinct users, repeated identical user instructions, failed model calls, scraper partial/complete failure, source attribution, preservation of the original request through internal continuations, exactly one terminal reply and restart behavior. Tool calls must retain valid assistant/tool pairing in the live conversation; retrieved memories are evidence rather than orphaned historical tool messages.</p>
+<h2 id="current-protocol-examples">Current protocol examples<a class="headerlink" href="#current-protocol-examples" title="Permanent link">&para;</a></h2>
+<p>These examples use current Uniko message/configuration models. IDs are illustrative. The document coordinator and PaperBanana guild are implemented; the Semantic Memory Assistant v2 is also implemented.</p>
+<p>Document ingestion on <code>knowledge.ingest</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="p">{</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">"record_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ref:harbor:r1"</span><span class="p">,</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span><span class="nt">"session_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"corpus:paperbanana:references"</span><span class="p">,</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span><span class="nt">"source_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"reference:harbor"</span><span class="p">,</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">  </span><span class="nt">"revision_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"reference:harbor:r1"</span><span class="p">,</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">  </span><span class="nt">"media_link"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">    </span><span class="nt">"url"</span><span class="p">:</span><span class="w"> </span><span class="s2">"file:///uploads/harbor.md"</span><span class="p">,</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">    </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"harbor.md"</span><span class="p">,</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">    </span><span class="nt">"mimetype"</span><span class="p">:</span><span class="w"> </span><span class="s2">"text/markdown"</span><span class="p">,</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">    </span><span class="nt">"encoding"</span><span class="p">:</span><span class="w"> </span><span class="s2">"utf-8"</span><span class="p">,</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">    </span><span class="nt">"on_filesystem"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">  </span><span class="p">}</span>
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="p">}</span>
+</code></pre></div>
+<p>Consume IngestOutcome's <code>record_id</code>, <code>stored</code>, <code>searchable</code>, <code>extraction_failed</code>, <code>was_deduplicated</code>, <code>artifact_id</code> and chunk identifiers. A response is one source outcome, not completion of an entire input list.</p>
+<p>Bounded evidence recall on <code>knowledge.recall</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="p">{</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">"query"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Find the Harbor architecture and data flow"</span><span class="p">,</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="nt">"scope"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"sessions"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"corpus:paperbanana:references"</span><span class="p">]},</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span><span class="nt">"allowed_record_kinds"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"external_evidence"</span><span class="p">],</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span><span class="nt">"item_limit"</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">  </span><span class="nt">"max_characters"</span><span class="p">:</span><span class="w"> </span><span class="mi">6000</span><span class="p">,</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">  </span><span class="nt">"token_budget"</span><span class="p">:</span><span class="w"> </span><span class="mi">2000</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="p">}</span>
+</code></pre></div>
+<p>The coordinator consumes RecallResponse <code>items</code> and builds the planner request using the original query and each retained item's content/source identifiers. Keep its <code>truncated</code>, coverage and token-count facts available for diagnostics rather than fabricating an old KBSearchResults envelope.</p>
+<p>Relevant MemoryAgent properties:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="p">{</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">"allowed_record_producers"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"external_evidence"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"document_coordinator"</span><span class="p">]},</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="nt">"scope_producers"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"document_coordinator"</span><span class="p">]</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="p">}</span>
+</code></pre></div>
+<p>Relevant dependency selections:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">filesystem</span><span class="p">:</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">class_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">rustic_ai.core.guild.agent_ext.depends.filesystem.filesystem.FileSystemResolver</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span><span class="nt">properties</span><span class="p">:</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="nt">path_base</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/var/lib/rustic</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">    </span><span class="nt">protocol</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">file</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">    </span><span class="nt">storage_options</span><span class="p">:</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">      </span><span class="nt">auto_mkdir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">    </span><span class="nt">asynchronous</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="nt">uniko</span><span class="p">:</span>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="w">  </span><span class="nt">class_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">rustic_ai.uniko_agent.UnikoResolver</span>
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="w">  </span><span class="nt">properties</span><span class="p">:</span>
+<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="w">    </span><span class="nt">storage_path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">uniko</span>
+<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="w">    </span><span class="nt">streaming</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+<a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="w">    </span><span class="nt">llm_spec</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">null</span>
+</code></pre></div>
+<p>These are dependency-map entries, not a complete deployment specification. Native models must be selected and cached for the intended deployment. Scope follows processor declarations and resolver calls; do not add an unsupported <code>scope</code> property to DependencySpec.</p>
+<h2 id="existing-data-and-saved-specification-migration">Existing data and saved specification migration<a class="headerlink" href="#existing-data-and-saved-specification-migration" title="Permanent link">&para;</a></h2>
+<p>Treat configuration migration and content migration as separate operations. Inventory deployed guilds, saved catalog blueprints, externally constructed specs and corpus locations before destructive cutover. If no deployed data exists, the offline import work can be skipped after that fact is established.</p>
+<h3 id="export-before-retiring-the-old-runtime">Export before retiring the old runtime<a class="headerlink" href="#export-before-retiring-the-old-runtime" title="Permanent link">&para;</a></h3>
+<p>The old Knol layout is <code>library/&lt;knol-id&gt;/content</code>, <code>.knol</code> and <code>.meta</code>, with additional derived chunks and backend-specific vectors. Conversation memories use <code>guild/memories/&lt;random-id&gt;.txt</code> and adjacent metadata sidecars.</p>
+<p>Export content and metadata using the old release before upgrading an existing deployment to a release that removes its APIs. Produce a manifest with old identities, source path/URI, available MIME, content digest, provenance, destination corpus, logical source/revision/record IDs and per-item status. Keep archival metadata that has no direct Uniko field. Prefer original bytes when available; explicitly label normalized or derived content if originals cannot be recovered.</p>
+<p>Rebuild indexes through Uniko ingestion. Do not transplant LanceDB vectors, dimensions, Knol chunk IDs or native database IDs. Search parity is evaluated by useful facts and attributed sources, not identical rankings or scores.</p>
+<p>Legacy conversation sidecars contain roles and timestamps but lack reliable user/session ownership. Import them only with an explicit destination identity mapping. Ambiguous records remain preserved in the export, pending assignment; they must not be promoted into a shared corpus or attributed to an invented user.</p>
+<h3 id="reimport-and-verify">Reimport and verify<a class="headerlink" href="#reimport-and-verify" title="Permanent link">&para;</a></h3>
+<p>Use an offline importer consuming the export manifest and content files without importing the deleted KB runtime. Stable identities and a journal make imports resumable. Reconcile duplicate/uncertain outcomes rather than relying on in-memory progress.</p>
+<p>Verify source hashes/counts, stored versus searchable outcomes, provenance, reference queries, current-only revision behavior, source reads, delete behavior and close/reopen. Source-read scope for a stored source with no chunks needs an explicit test: current session-only fallback differs from more restrictive filters.</p>
+<p>Retain the original export/store until verification and the deployment cutover are complete. Keep old-release configuration and content backups usable for rollback. Drain active old guilds before installing a release that removes their classes. Rewrite saved class names, resolver names, plugin kinds and routes directly; do not add a permanent legacy protocol adapter to the new runtime.</p>
+<h2 id="removal-and-retention-boundaries">Removal and retention boundaries<a class="headerlink" href="#removal-and-retention-boundaries" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>File group</th>
+<th>Action and sequencing</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>lancedb/</code></td>
+<td>Remove package, manifest, lock, exports, README and three backend test modules after consumer/data preparation</td>
+</tr>
+<tr>
+<td><code>core/src/rustic_ai/core/agents/indexing/knowledge_agent.py</code></td>
+<td>Remove old class and its message models after PaperBanana migrates</td>
+</tr>
+<tr>
+<td><code>core/src/rustic_ai/core/knowledgebase/</code></td>
+<td>Remove all 49 files after the remaining Python consumers disappear</td>
+</tr>
+<tr>
+<td><code>core/src/rustic_ai/core/guild/agent_ext/depends/knowledgebase/</code></td>
+<td>Remove stale resolver facade; it currently refers to a missing backend_resolver module</td>
+</tr>
+<tr>
+<td><code>llm-agent/.../memories/knowledge_memories_store.py</code> and its import/export</td>
+<td>Remove together before deleting core KB modules; eager imports can otherwise break unrelated LLMAgent loading</td>
+</tr>
+<tr>
+<td><code>core/tests/knowledgebase/</code>, KnowledgeAgent tests and LanceDB tests</td>
+<td>Retire after replacement outcome tests exist</td>
+</tr>
+<tr>
+<td>Mixed resolver/memory tests</td>
+<td>Remove only old KB cases/fixtures; preserve other memory, filesystem, KV and code contracts</td>
+</tr>
+<tr>
+<td><code>core/agents/indexing/__init__.py</code></td>
+<td>Keep other indexing exports and agents; remove only references actually belonging to KnowledgeAgent</td>
+</tr>
+<tr>
+<td>Chroma, VectorAgent, generic VectorStore/Embeddings, media and filesystem</td>
+<td>Retain independent capabilities and tests</td>
+</tr>
+<tr>
+<td>JSONPath and PyArrow dependencies</td>
+<td>Retain independent uses in JSON utilities and pandas analysis</td>
+</tr>
+<tr>
+<td>Old KB-specific third-party dependencies</td>
+<td>Remove only after a whole-repository import/manifest check proves they are unused</td>
+</tr>
+</tbody>
+</table>
+<p>Removing LanceDB does not remove all Arrow or machine-learning packages: other modules still use them. Determine actual dependency/install reduction from regenerated locks and a clean installation.</p>
+<h2 id="implementation-sequence">Implementation sequence<a class="headerlink" href="#implementation-sequence" title="Permanent link">&para;</a></h2>
+<p>Phases 1–5 implement and verify the repository migration using the existing local environment. They can proceed while deployed-data inventory is unresolved. Phase 6 owns the deployment cutover; it requires the actual data, saved specifications and target environment. Removing the old implementation from the repository does not upgrade deployed guilds or remove their stores.</p>
+<table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>Deliverable</th>
+<th>Depends on</th>
+<th>Exit checks</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0 Investigation</td>
+<td>Consumer/dependency inventory, capability mapping, removal boundary and this plan</td>
+<td>Complete</td>
+<td>Current Uniko native baseline: 24 tests passed; protocol examples validate</td>
+</tr>
+<tr>
+<td>1 Shared migration foundation</td>
+<td>Narrow document coordinator, source normalization, stable identities, ingestion barrier, bounded evidence conversion and migration-relevant lifecycle fixes</td>
+<td>Phase 0</td>
+<td>Native ingest/recall, stored versus searchable outcomes, duplicate/late/time-out handling, terminal errors and shutdown/reopen pass through the real message bus</td>
+</tr>
+<tr>
+<td>2 PaperBanana migration</td>
+<td>Replace KnowledgeAgent routes with Uniko ingestion/recall and preserve the existing illustration stages</td>
+<td>Phase 1</td>
+<td>Text-only, upload-only, upload-plus-instruction, multiple sources, partial/total failure and evidence reaching the planner all pass</td>
+</tr>
+<tr>
+<td>3 Semantic Memory Assistant migration</td>
+<td>Select existing UnikoMemoriesStore, migrate scraper evidence/continuations, retire the old memory plugin and its eager export, remove Iterative Studio's unused KB dependency</td>
+<td>Phase 1</td>
+<td>User isolation, follow-up memory, original request identity, valid tool history, internal-prompt exclusion and one terminal reply pass; ordinary LLMAgent imports remain valid</td>
+</tr>
+<tr>
+<td>4 Legacy retirement</td>
+<td>Remove LanceDB, KnowledgeAgent, KB internals and exclusive tests; update package registration, affected locks, current guides and migration/release notes</td>
+<td>Phases 2 and 3</td>
+<td>No live imports/configuration references remain; independent vector/media/embedding capabilities remain intact; removed editable packages do not mask dependency errors</td>
+</tr>
+<tr>
+<td>5 Repository acceptance</td>
+<td>Verify clean installed wheels, packaged migrated guilds, native persistence and broad monorepo regressions</td>
+<td>Phase 4</td>
+<td>All remaining package builds/lock checks, relevant tests, types/lint and strict documentation pass; source-read/revisions/deletion/reopen and both complete guild flows pass</td>
+</tr>
+<tr>
+<td>6 Deployment and existing-data cutover</td>
+<td>Export/reimport any old corpora, migrate saved specs, verify the target deployment, drain old guilds and switch to the declared breaking release</td>
+<td>Phase 5 and deployment inventory</td>
+<td>Source hashes/counts, searchable outcomes, ownership, resumability, cold/warm native recall and rollback are verified before upgrading; skip data import only when no old data exists</td>
+</tr>
+</tbody>
+</table>
+<p>Phases 2 and 3 can run independently after the shared foundation is stable. Phase 4 starts only after both consumer migrations pass. Each implementation phase ends with its focused tests and a concrete diff; acceptance in phase 5 broadens verification rather than postponing correctness checks until cleanup is finished.</p>
+<h3 id="phase-1-foundation-boundary">Phase 1 foundation boundary<a class="headerlink" href="#phase-1-foundation-boundary" title="Permanent link">&para;</a></h3>
+<p>Reuse existing Uniko request/result models. Add only the deterministic coordination needed by the two consumers: source enumeration, immutable per-source identity, compact correlation, outcome accounting, bounded recall and terminal cleanup. Preserve original transport metadata before typed file parsing drops presentation fields. Select a stable corpus session and private local native storage for the local baseline.</p>
+<p>Address lifecycle, request-normalization or late-outcome defects only where the selected migration path relies on them. The broader code-review backlog remains separate. Native AnswerRequest, generic readiness APIs, OCR and arbitrary schema/filter compatibility are not prerequisites for the explicit recall-plus-synthesis path.</p>
+<h3 id="phase-1-implemented-foundation">Phase 1 implemented foundation<a class="headerlink" href="#phase-1-implemented-foundation" title="Permanent link">&para;</a></h3>
+<p>The Uniko package now provides <code>DocumentCoordinatorAgent</code>, typed workflow contracts and schemas, a raw-attachment normalization helper, and an executable local persistent guild. See the <a href="../../agents/uniko/documents/">document coordinator guide</a> for initialization and message I/O. Core wrappers expose an owned-resource shutdown path; sync/threaded shutdown preserves other guilds and their in-memory message history, and multiprocess shutdown preserves unrelated children. The Phase 1 review fixes add independent monotonic deadlines during source preparation, stable raw-request retry fingerprints, terminal guards for invalid ID reuse, bounded effective context after fixtures, incremental input hashing, synchronized shared-store mutation and retryable native cleanup from active event loops.</p>
+<p>Workflow coordination is transient. Documents and their immutable source/revision identities persist; callers resubmit unfinished workflows after restart. There is no automatic workflow continuation or durable terminal journal in this phase. Within a running coordinator, retry a terminal failure with a new request ID while preserving the source identities and bytes. Bounded tombstones suppress completed duplicates only while retained.</p>
+<p>PaperBanana migrated in Phase 2 and Semantic Memory Assistant in Phase 3. Phase 4 removes KnowledgeAgent, LanceDB and their dedicated knowledge-base internals and tests.</p>
+<h3 id="phase-2-implemented-paperbanana">Phase 2 implemented PaperBanana<a class="headerlink" href="#phase-2-implemented-paperbanana" title="Permanent link">&para;</a></h3>
+<p>The v2 blueprint replaces KnowledgeAgent with the shared document coordinator and MemoryAgent, plus an application coordinator for ingestion, source-scoped recall and bounded illustration refinement. Upload-only requests report native stored/searchable outcomes. Upload-plus-instruction requests require evidence from successful current uploads; text-only requests may proceed explicitly without evidence. Critique uses a validated JSON verdict and at most two refinements. Public typed outcomes and one terminal UI projection cover success and error paths.</p>
+<p>The <a href="../../showcase/paper_banana/">PaperBanana guide</a> documents initialization, HTTP acquisition policy, typed I/O, persistence and limits. Acceptance tests execute the shipped routes with deterministic generation dependencies and real native Uniko text/PDF ingestion, source scoping, reopen and deduplication. Default HTTP origins are empty; deployment configures acquisition permissions and credentials. Active workflows remain transient. Phase 2 review corrections add Studio/file-URI transport resolution, independent staging paths, redirect cookie isolation, deduplicated artifact readiness, early source-timeout continuation, enriched-history exclusion, and coordinator plus guild-entry deadline guards. Regression coverage includes delayed dispatch and repeated upload-plus-instruction after restart.</p>
+<h3 id="phase-3-implemented-semantic-memory-assistant">Phase 3 implemented Semantic Memory Assistant<a class="headerlink" href="#phase-3-implemented-semantic-memory-assistant" title="Permanent link">&para;</a></h3>
+<p>The v2 blueprint uses the existing Uniko conversation wrapper in deferred-recording
+mode, a typed commit processor on the owning conversational LLM agent, and an
+application coordinator for bounded distributed web tool rounds. Shared document
+evidence flows through DocumentCoordinator and a separate MemoryAgent. Original
+user identity and assistant/tool pairing survive continuations. Only accepted
+visible turns are persisted; unconfirmed commits return the answer with a warning.
+The retired wrapper and eager export are removed, as is Iterative Studio's unused
+KB dependency. See the <a href="../../showcase/semantic_memory_assistant/">assistant guide</a>
+for initialization, protocols, limits and saved-spec migration.</p>
+<h3 id="phase-4-implemented-legacy-retirement">Phase 4 implemented legacy retirement<a class="headerlink" href="#phase-4-implemented-legacy-retirement" title="Permanent link">&para;</a></h3>
+<p>KnowledgeAgent, its message models, all core knowledge-base internals, the stale knowledge-base resolver namespace and the LanceDB subproject are removed. Their exclusive tests are retired; mixed resolver tests retain KV, filesystem and code-runner assertions. Independent VectorAgent, Chroma, embeddings, media, filesystem and pandas capabilities remain. The root LanceDB dependency and module registration are removed, and the root lock is refreshed without unrelated version upgrades.</p>
+<p>The <a href="../../agents/core/knowledge_agent/">retirement notice</a> lists removed APIs, direct Uniko replacements, saved-spec migration and native persistence requirements. The old documentation URL remains as a migration entry point. Historical reports and the pre-retirement source snapshot remain available; this cleanup performs no stored-data deletion or export/import.</p>
+<p>Package versions and published constraints are unchanged in this phase. A separate release task must choose a coordinated breaking version and update affected package constraints before publication. Focused retirement verification does not complete Phase 5's broad monorepo acceptance or Phase 6's deployed-data cutover.</p>
+<p>Focused Phase 4 verification on 2026-11-26: 309 regression tests passed, and all 679 remaining core tests collected. Thirteen fresh package builds excluded retired code; a clean environment containing those non-editable wheels passed 12 copied guild-flow tests plus independent native Chroma upsert/read/search/deletion. The root lock removed five LanceDB-only packages without changing remaining dependency versions. Retirement examples, blueprint class validation, affected lint/types and strict documentation builds passed. Native guild tests require access to their local model cache; no hosted synthesis provider was used.</p>
+<h3 id="review-hardening-and-composed-acceptance">Review hardening and composed acceptance<a class="headerlink" href="#review-hardening-and-composed-acceptance" title="Permanent link">&para;</a></h3>
+<p>The Phase 4 review added current-source evidence isolation, full requested-URL identity, malformed request cleanup, deadline guards at native dispatch, early source-timeout handling and browser cancellation/idle cleanup. Document requests with new sources cannot use older corpus evidence to satisfy required retrieval. Query-only requests retain corpus recall.</p>
+<p>The showcase wheel now includes all sixteen authored catalog blueprints and their runtime dependencies. Full flows retain real agents, typed tools, native stores and routing, with deterministic external-service clients. These tests uncovered and corrected recurring research routes, lost upload metadata, analyst event/schema wiring, MCP tool identity, council request mixing and supplier registry ownership. Guild-manager bootstrap supplies state services in composed tests and releases its owned actors on shutdown, including shutdown during launch. Failed partial launches release already started actors. Each metastore fixture is isolated across independent test processes.</p>
+<p>Release helpers report every module failure and publish only a complete fresh artifact generation. Permanent installed acceptance checks verify module provenance, catalog/plugin imports, retired API absence and retained native vector operations. See <a href="../../howto/testing_guilds/">testing composed guilds</a> for the coverage matrix and commands.</p>
+<h3 id="phase-5-local-verification-boundary">Phase 5 local verification boundary<a class="headerlink" href="#phase-5-local-verification-boundary" title="Permanent link">&para;</a></h3>
+<p>Use real native Uniko stores and the production message/routing paths. Deterministic LLM/planner endpoints verify evidence delivery and continuation without hosted-provider keys; native ingestion/recall must execute rather than be stubbed. Clean wheel installation verifies that the current development environment is not hiding retired dependencies.</p>
+<p>Local acceptance establishes the repository behavior. It does not establish the production operating system, scheduling, volume durability, model readiness or saved-data migration. Those claims belong to phase 6.</p>
+<h3 id="phase-6-required-deployment-inputs">Phase 6 required deployment inputs<a class="headerlink" href="#phase-6-required-deployment-inputs" title="Permanent link">&para;</a></h3>
+<p>Identify existing corpus/source locations, saved GuildSpecs/catalog blueprints, and the destination identity map for legacy conversation records. Confirm the operating system, execution engine, local persistent volumes and selected Uniko model profile. Preserve original stores and a resumable export/import journal until cutover checks pass.</p>
+<p>If deployment inventory establishes that there are no old corpora or saved configurations, omit export/import and verify a fresh target deployment instead. Production synthesis-provider checks can use the deployment's existing credential configuration when required; phases 1–5 do not require new provider keys.</p>
+<p>Publication requires a declared breaking framework release for removed public APIs rather than a patch release under old compatibility promises. Phase 4 deliberately leaves current versions unchanged until that separate release task. Update published dependency constraints across affected packages. Uniko and pandas-analyst currently constrain core/llm-agent below 1.5.0, so version selection and package metadata must be coordinated. Planning this release does not publish packages or create a pull request.</p>
+<h2 id="packaging-and-documentation-work">Packaging and documentation work<a class="headerlink" href="#packaging-and-documentation-work" title="Permanent link">&para;</a></h2>
+<p>Remove <code>rusticai-lancedb</code> from root pyproject.toml and <code>lancedb</code> from scripts/modules.sh. Build/publish scripts read that list. Refresh root Poetry lock; refresh other Poetry/uv locks when version/dependency changes require it. Showcase already depends on Uniko, so the guild replacements need no new package dependency.</p>
+<p>Update the agent inventory, KnowledgeAgent navigation, semantic-memory/plugin guides, migrated showcase READMEs and current Uniko examples. Replace current guidance to removed FQCNs; preserve dated audit reports. No tracked blackbook artifact exists in this checkout, so external documentation updates require identifying its maintained location separately.</p>
+<p>Use a clean environment to ensure removed editable packages and old wheel artifacts do not mask imports. Verify metadata and imports from built wheels as well as the source tree. Failure-propagating package checks must prove each remaining package built successfully; the reviewed run_on_each runner currently masks failures.</p>
+<h2 id="acceptance-and-evidence">Acceptance and evidence<a class="headerlink" href="#acceptance-and-evidence" title="Permanent link">&para;</a></h2>
+<p>Current migration-fit tests: <strong>24 passed in 82.59 seconds</strong> on Uniko 0.6.0, covering native formats, recall/source/revision/bounds, private filesystem restart/isolation and writer-reader provenance. This is a current capability baseline, not validation of the proposed migrated guilds.</p>
+<p>Offline PaperBanana route probes validated text and one/two-file payloads, and demonstrated the failed-index response counting failure as indexed. Example ingestion, recall, deletion, source-read, properties and dependency specifications validate against current Pydantic models.</p>
+<p>Required migration acceptance:</p>
+<ol>
+<li>Strict schema/class/profile validation for each complete migrated guild, followed by executable route tests.</li>
+<li>Actual uploaded/scraped document ingestion, per-item outcomes, bounded attributed recall and deterministic synthesis/planning endpoint.</li>
+<li>Text-bearing PDF plus blank/unsupported/scanned inputs with honest stored/searchable/error outcomes.</li>
+<li>Source/revision replay, superseded/current source queries, source read/original/outline and deletion.</li>
+<li>Concurrent users/corpora, explicit scope and no accidental mixing of document and conversational stores.</li>
+<li>Duplicate, reordered, late, timed-out and interrupted outcomes with one terminal response and no repeated effects.</li>
+<li>Original user request preserved; internal prompts excluded from conversational memory; repeated legitimate turns retained.</li>
+<li>Persistent close/reopen, correct resolver shutdown and rejection of work after shutdown.</li>
+<li>Fresh installation/build/import smoke for remaining packages, all lock checks, relevant regressions, lint/types and strict site build.</li>
+<li>Deployment-specific cold/warm ingest-to-recall smoke with real model assets. Startup require_verified remains unavailable; generic health does not prove extraction/retrieval readiness.</li>
+<li>Existing-content and saved-spec migration verification when deployed stores exist; no old data deletion without a completed disposition.</li>
+<li>Static scan distinguishes live retired API references from intentionally preserved historical documentation.</li>
+</ol>
+<p>Existing broad code-review fixes continue as separate work. This migration retires the LanceDB-specific findings through removal. The late-branch-error bug must be fixed before reusing UnikoResearchCoordinator; runtime ownership/teardown and conversation normalization failures relevant to these guilds need their own regressions. The AnswerRequest default-scope issue is a prerequisite only if native answering is selected; the proposed explicit recall-plus-synthesis flow does not invoke it.</p>
+<h2 id="source-references">Source references<a class="headerlink" href="#source-references" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="https://github.com/milliondreams/rustic-ai/blob/3c530d596b98217c47dad490f5d8cf24d0a294e3/core/src/rustic_ai/core/agents/indexing/knowledge_agent.py">KnowledgeAgent contracts</a>, <a href="https://github.com/milliondreams/rustic-ai/blob/3c530d596b98217c47dad490f5d8cf24d0a294e3/core/src/rustic_ai/core/knowledgebase/agent_config.py">configuration</a>, <a href="https://github.com/milliondreams/rustic-ai/blob/3c530d596b98217c47dad490f5d8cf24d0a294e3/core/src/rustic_ai/core/knowledgebase/query.py">query model</a>, <a href="https://github.com/milliondreams/rustic-ai/blob/3c530d596b98217c47dad490f5d8cf24d0a294e3/core/src/rustic_ai/core/knowledgebase/knol_manager.py">Knol persistence</a>.</li>
+<li><a href="https://github.com/milliondreams/rustic-ai/blob/3c530d596b98217c47dad490f5d8cf24d0a294e3/uniko-agent/src/rustic_ai/uniko_agent/models.py">Uniko models</a>, <a href="https://github.com/milliondreams/rustic-ai/blob/3c530d596b98217c47dad490f5d8cf24d0a294e3/uniko-agent/src/rustic_ai/uniko_agent/tools.py">source and read operations</a>, <a href="https://github.com/milliondreams/rustic-ai/blob/3c530d596b98217c47dad490f5d8cf24d0a294e3/uniko-agent/src/rustic_ai/uniko_agent/agent.py">document processor</a>, <a href="https://github.com/milliondreams/rustic-ai/blob/3c530d596b98217c47dad490f5d8cf24d0a294e3/uniko-agent/src/rustic_ai/uniko_agent/resolver.py">private resolver</a>.</li>
+<li><a href="https://github.com/milliondreams/rustic-ai/blob/3c530d596b98217c47dad490f5d8cf24d0a294e3/uniko-agent/src/rustic_ai/uniko_agent/memories.py">Conversational wrapper</a>, <a href="https://github.com/milliondreams/rustic-ai/blob/3c530d596b98217c47dad490f5d8cf24d0a294e3/uniko-agent/src/rustic_ai/uniko_agent/initializer.py">identity initializer</a>, <a href="../uniko-agent-completion/">current completion gates</a>.</li>
+<li><a href="https://github.com/milliondreams/rustic-ai/blob/3c530d596b98217c47dad490f5d8cf24d0a294e3/showcase/apps/paper_banana_guild.json">PaperBanana</a>, <a href="https://github.com/milliondreams/rustic-ai/blob/3c530d596b98217c47dad490f5d8cf24d0a294e3/showcase/apps/semantic_memory_assistant.json">Semantic Memory Assistant</a>, <a href="https://github.com/milliondreams/rustic-ai/blob/3c530d596b98217c47dad490f5d8cf24d0a294e3/showcase/apps/iterative_studio/iterative_studio.json">Iterative Studio</a>.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.a5f9d56c.min.js"></script>
+      
+        <script src="https://unpkg.com/mermaid@10/dist/mermaid.min.js"></script>
+      
+        <script src="../../assets/javascripts/mermaid-init.js"></script>
+      
+    
+  </body>
+</html>

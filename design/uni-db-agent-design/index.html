@@ -1,0 +1,5627 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../knowledge-agent-uniko-migration/">
+      
+      
+        <link rel="next" href="../dependency-refresh-2026-11-25/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.jpg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.2">
+    
+    
+      
+        <title>Uni-DB Agent Design - Rustic AI Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.57a0d79d.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/theme.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#uni-db-agent-core-design-initialization-and-message-protocol" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Rustic AI Documentation" class="md-header__button md-logo" aria-label="Rustic AI Documentation" data-md-component="logo">
+      
+  <img src="../../assets/images/logo.svg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Rustic AI Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Uni-DB Agent Design
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/rustic-ai/rustic-ai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Rustic AI Documentation" class="md-nav__button md-logo" aria-label="Rustic AI Documentation" data-md-component="logo">
+      
+  <img src="../../assets/images/logo.svg" alt="logo">
+
+    </a>
+    Rustic AI Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/rustic-ai/rustic-ai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../paper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Light Paper
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-To Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    How-To Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../howto/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../howto/creating_your_first_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Creating Your First Agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../howto/creating_a_guild/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Creating a Guild
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../howto/guild_specifications/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guild Specifications
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../howto/dependency_injection/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dependency Injection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../howto/state_management/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    State Management
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../howto/using_react_agent_with_skills/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Using ReActAgent with Skills
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../howto/testing_agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Testing Agents
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../howto/testing_guilds/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Testing Composed Guilds
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../howto/writing_effective_agent_tests/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Writing Effective Agent Tests
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../howto/client_server_flow/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Client-Server Flow
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../howto/code_tag_quick_reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Code Tag Quick Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../howto/llm_prompts_with_code_tag/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LLM Prompts with Code Tag
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_14" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_14" id="__nav_3_14_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Examples
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_14_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_14">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Examples
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../howto/examples/code_review_prompt/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Code Review Prompt
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../howto/examples/prompts/security_reviewer/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Security Reviewer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Core
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../core/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../core/architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../core/agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agents
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../core/guilds/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guilds
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../core/g2g/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guild-to-Guild (G2G)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../core/messaging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Messaging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../core/messaging_lifecycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Messaging Lifecycle
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../core/execution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Execution
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../core/multiprocess_execution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multiprocess Execution
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../core/dependencies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dependencies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../core/state_management/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    State Management
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agents
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Agents
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../core/agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agents
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/llm_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LLM Agent & Plugins
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/llm_agent_memory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LLM Agent Memory
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/llm_agent_plugins/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LLM Agent Plugins
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/react_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ReAct Agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_7" id="__nav_5_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Uniko Memory
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Uniko Memory
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/uniko/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agent Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/uniko/protocol/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Message Protocol
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/uniko/documents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Document Coordinator
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_8" id="__nav_5_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Uni-DB
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Uni-DB
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/unidb/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agent Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/unidb/protocol/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Message Protocol
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_9" id="__nav_5_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Core
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/core/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/core/guild_manager_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guild Manager Agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/core/user_proxy_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Proxy Agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/core/vector_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Vector Agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/core/simple_llm_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Simple LLM Agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/core/probe_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Probe Agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_10" id="__nav_5_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LiteLLM
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    LiteLLM
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/litellm/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/litellm/litellm_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LiteLLM Agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_11" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_11" id="__nav_5_11_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    HuggingFace
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_11">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    HuggingFace
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/huggingface/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/huggingface/llm_phi_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LLM Phi Agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/huggingface/squad_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Squad Agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/huggingface/image2image_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Image2Image Agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/huggingface/runwayml_stable_diffusion_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Runwayml Stable Diffusion Agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/huggingface/speecht5_tts_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SpeechT5 TTS Agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_12" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_12" id="__nav_5_12_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Playwright
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_12_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_12">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Playwright
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/playwright/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/playwright/playwright_scraper_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Playwright Scraper Agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_13" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_13" id="__nav_5_13_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SerpAPI
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_13_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_13">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    SerpAPI
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/serpapi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/serpapi/serp_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SERP Agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/serpapi/local_serp_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Local SERP Agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_14" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_14" id="__nav_5_14_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Marvin
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_14_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_14">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Marvin
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/marvin/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/marvin/marvin_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Marvin Agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_15" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_15" id="__nav_5_15_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_15_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_15">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    MCP
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/mcp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dependencies
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Dependencies
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_6_2" id="__nav_6_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Core
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/core/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/core/env_secret_provider/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Environment Secret Provider
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/core/filesystem/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    File System Resolver
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/core/in_memory_kvstore/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    In-Memory KV Store
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/core/in_process_interpreter/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    In-Process Interpreter
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/core/python_exec_executor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Python Exec Executor
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/uniko/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Uniko Resolver
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/unidb/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Uni-DB Resolver
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_6_5" id="__nav_6_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Redis
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Redis
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/redis/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/redis/redis_kvstore/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Redis KV Store
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6_6" id="__nav_6_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LiteLLM
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    LiteLLM
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/litellm/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/litellm/litellm_resolver/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LiteLLM Resolver
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_6_7" id="__nav_6_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Chroma
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Chroma
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/chroma/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/chroma/chroma_resolver/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Chroma Resolver
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_6_8" id="__nav_6_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LangChain
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    LangChain
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/langchain/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/langchain/character_splitter/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Character Splitter
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/langchain/openai_embeddings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OpenAI Embeddings
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/langchain/recursive_splitter/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Recursive Splitter
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Skills
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Skills
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../skills/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Patterns
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Patterns
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../patterns/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../patterns/messaging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Messaging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../patterns/routing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Routing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../patterns/transformation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Transformation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../patterns/aggregation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Aggregation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ray/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ray
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Showcase
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Showcase
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../showcase/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../showcase/paper_banana/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PaperBanana
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../showcase/semantic_memory_assistant/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Semantic Memory Assistant
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ui_protocol_types/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UI Protocol Types
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_14" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_14" id="__nav_14_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_14_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_14">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Design
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../react-agent-design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ReAct Agent Design
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../uniko-agent-completion/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Uniko Agent Completion Plan
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../knowledge-agent-uniko-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    KnowledgeAgent Migration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Uni-DB Agent Design
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Uni-DB Agent Design
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-purpose-and-architectural-boundary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Purpose and architectural boundary
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-components-and-ownership" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Components and ownership
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-initialization-and-readiness" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Initialization and readiness
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Initialization and readiness">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#31-deployment-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.1 Deployment configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#32-agent-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.2 Agent configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#33-startup-sequence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.3 Startup sequence
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#34-bootstrap-policies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.4 Bootstrap policies
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-versioned-protocol" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Versioned protocol
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Versioned protocol">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#41-common-request-fields" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.1 Common request fields
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#42-initial-message-families" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.2 Initial message families
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#43-catalog-definition" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.3 Catalog definition
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#44-response-shape-and-values" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.4 Response shape and values
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#45-limits-and-provenance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.5 Limits and provenance
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-execution-receipts-failures-and-shutdown" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Execution, receipts, failures, and shutdown
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. Execution, receipts, failures, and shutdown">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#51-ordinary-reads-and-mutations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.1 Ordinary reads and mutations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#52-operation-identity-and-recovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.2 Operation identity and recovery
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#53-structured-failures" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.3 Structured failures
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#54-scenario-lifecycle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.4 Scenario lifecycle
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#55-cancellation-and-shutdown" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.5 Cancellation and shutdown
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-examples-initialization-usage-and-message-io" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Examples: initialization, usage, and message I/O
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6. Examples: initialization, usage, and message I/O">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#61-common-initialization-and-send-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.1 Common initialization and send usage
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#62-case-1-atomic-supply-network-ingestion-and-query" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.2 Case 1: atomic supply-network ingestion and query
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#63-case-2-derive-and-explain-a-receivable-balance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.3 Case 2: derive and explain a receivable balance
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#64-case-3-simulate-a-second-source-then-execute-an-approved-change" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.4 Case 3: simulate a second source, then execute an approved change
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#65-query-diagnostics-guild" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.5 Query diagnostics guild
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-implementation-plan-and-acceptance-evidence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Implementation plan and acceptance evidence
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7. Implementation plan and acceptance evidence">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#supported-boundaries" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Supported boundaries
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-sources-and-validation-boundary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Sources and validation boundary
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dependency-refresh-2026-11-25/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dependency Refresh (2026-11-25)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-purpose-and-architectural-boundary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Purpose and architectural boundary
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-components-and-ownership" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Components and ownership
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-initialization-and-readiness" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Initialization and readiness
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Initialization and readiness">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#31-deployment-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.1 Deployment configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#32-agent-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.2 Agent configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#33-startup-sequence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.3 Startup sequence
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#34-bootstrap-policies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.4 Bootstrap policies
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-versioned-protocol" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Versioned protocol
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Versioned protocol">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#41-common-request-fields" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.1 Common request fields
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#42-initial-message-families" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.2 Initial message families
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#43-catalog-definition" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.3 Catalog definition
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#44-response-shape-and-values" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.4 Response shape and values
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#45-limits-and-provenance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.5 Limits and provenance
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-execution-receipts-failures-and-shutdown" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Execution, receipts, failures, and shutdown
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. Execution, receipts, failures, and shutdown">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#51-ordinary-reads-and-mutations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.1 Ordinary reads and mutations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#52-operation-identity-and-recovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.2 Operation identity and recovery
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#53-structured-failures" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.3 Structured failures
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#54-scenario-lifecycle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.4 Scenario lifecycle
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#55-cancellation-and-shutdown" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.5 Cancellation and shutdown
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-examples-initialization-usage-and-message-io" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Examples: initialization, usage, and message I/O
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6. Examples: initialization, usage, and message I/O">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#61-common-initialization-and-send-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.1 Common initialization and send usage
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#62-case-1-atomic-supply-network-ingestion-and-query" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.2 Case 1: atomic supply-network ingestion and query
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#63-case-2-derive-and-explain-a-receivable-balance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.3 Case 2: derive and explain a receivable balance
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#64-case-3-simulate-a-second-source-then-execute-an-approved-change" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.4 Case 3: simulate a second source, then execute an approved change
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#65-query-diagnostics-guild" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.5 Query diagnostics guild
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-implementation-plan-and-acceptance-evidence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Implementation plan and acceptance evidence
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7. Implementation plan and acceptance evidence">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#supported-boundaries" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Supported boundaries
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-sources-and-validation-boundary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Sources and validation boundary
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="uni-db-agent-core-design-initialization-and-message-protocol">Uni-DB agent: core design, initialization, and message protocol<a class="headerlink" href="#uni-db-agent-core-design-initialization-and-message-protocol" title="Permanent link">&para;</a></h1>
+<p><strong>Status:</strong> implemented for review; documentation reviewed 2026-11-25. The v1 models and native runtime are in <code>unidb/</code>, pinned to Uni-DB 6.0.0 on Python 3.13. The three JSON cases contain native result payloads originally captured on Uni-DB 5.2.1; compatibility tests also run against 6.0.0. Internal IDs and commit versions are run-specific. The guild-denied exchange remains an application fixture, with its actual <code>send_error</code> delivery tested separately.</p>
+<p>This evolves <a href="https://github.com/rustic-ai/rustic-ai/pull/236">Nihal’s PR 236</a>, retaining all 15 operation names while replacing its older <code>Database</code> API and wire shapes. No legacy adapters are provided. The <a href="https://github.com/milliondreams/erp_book">Agentic ERP book</a> informs the business examples; its Uni-DB 3.4.0 observations are not compatibility guarantees.</p>
+<p>Two agreed deferrals remain: scenario applicability checks and a general Rustic resource shutdown hook. Owners must explicitly call <code>UniDBResolver.close()</code> before guild shutdown. Message-driven cancellation, pinned/fork reads, remote storage certification, multiple write owners, and receipt retention are outside this initial supported surface.</p>
+<p>For operational usage, start with the <a href="../../agents/unidb/">agent guide</a>, <a href="../../agents/unidb/protocol/">protocol reference</a>, and <a href="../../dependencies/unidb/">resolver configuration</a>.</p>
+<h2 id="1-purpose-and-architectural-boundary">1. Purpose and architectural boundary<a class="headerlink" href="#1-purpose-and-architectural-boundary" title="Permanent link">&para;</a></h2>
+<p><code>UniDBAgent</code> is a reusable, typed database execution capability. It stores and queries user-defined graph data, evaluates supplied logic, exposes native explanations, and executes bounded mutations and scenarios. It has no built-in accounting, procurement, memory-consolidation, or natural-language policy.</p>
+<p>One configured database binding belongs to one agent instance. Each invocation gets a fresh session. Each ordinary atomic mutation request owns one transaction. Native handles, credentials, mutable sessions, transactions, cursors, and cancellation tokens remain inside the runtime; messages carry serializable identifiers and values.</p>
+<table>
+<thead>
+<tr>
+<th>Concern</th>
+<th>Core integration</th>
+<th>User/application supplies</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Storage</td>
+<td>Resolve binding, open handle, manage lifetime</td>
+<td>Location, credentials, deployment, persistence requirements</td>
+</tr>
+<tr>
+<td>Schema</td>
+<td>Validate/translate supported definitions, inspect compatibility</td>
+<td>Labels, edge types, properties, indexes, domain constraints</td>
+</tr>
+<tr>
+<td>Operations</td>
+<td>Parameter validation, execution, bounds, results</td>
+<td>Named queries, mutations, checks, output contracts</td>
+</tr>
+<tr>
+<td>Logic</td>
+<td>Register/evaluate programs, preserve results and provenance</td>
+<td>Rules, dependencies, assumptions, versions</td>
+</tr>
+<tr>
+<td>Authority</td>
+<td>No caller permission policy; validate delivered execution requests</td>
+<td>Guild-owned access, authentication, approval policy, approver eligibility, response visibility</td>
+</tr>
+<tr>
+<td>Scenarios</td>
+<td>Isolated execution and cleanup</td>
+<td>Hypothetical changes, evaluation objectives</td>
+</tr>
+<tr>
+<td>Memory</td>
+<td>Store arbitrary domain records through explicit contracts</td>
+<td>Uniko owns cognitive memory semantics and its private store</td>
+</tr>
+<tr>
+<td>Presentation</td>
+<td>Typed facts, errors, metrics, explanations</td>
+<td>Natural-language interpretation, reports, UI</td>
+</tr>
+</tbody>
+</table>
+<p>A reasoning agent can consume the same request contracts as a deterministic workflow. Its tool declarations should expose selected named operations, not automatically expose the entire administrative surface.</p>
+<h2 id="2-components-and-ownership">2. Components and ownership<a class="headerlink" href="#2-components-and-ownership" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Responsibility</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>rustic_ai.unidb.agent.UniDBAgent</code></td>
+<td>Processor registration, database readiness, execution validation, correlated terminal results</td>
+</tr>
+<tr>
+<td><code>rustic_ai.unidb.resolver.UniDBResolver</code></td>
+<td>Resolve deployment configuration and construct/own a runtime</td>
+</tr>
+<tr>
+<td><code>UniDBRuntime</code></td>
+<td>Native handle, bounded session/transaction execution, receipts, explicit shutdown</td>
+</tr>
+<tr>
+<td><code>rustic_ai.unidb.models</code></td>
+<td>Public configuration and protocol models</td>
+</tr>
+<tr>
+<td>Operation catalog</td>
+<td>Versioned, user-supplied named execution definitions</td>
+</tr>
+<tr>
+<td>Serializer</td>
+<td>Explicit conversion of supported native results to protocol values</td>
+</tr>
+</tbody>
+</table>
+<p>Start with synchronous processors around synchronous <code>Uni</code>. This fits a sequential actor and avoids blocking calls hidden behind an <code>async</code> signature. A native async runtime is an extension with the same wire protocol, justified by measured execution requirements. Per-request bounds still matter when processing is sequential: one slow request can delay the actor's queue.</p>
+<p>Use an agent-scoped typed runtime dependency named <code>unidb</code>. Resolver scope describes caching, not cross-process object sharing. One authoritative write owner is the initial supported deployment. Multiple agents resolving the same URI do not establish coordinated write ownership; independent native readers also need an explicit freshness strategy. Object storage is not permission to assume safe multi-writer deployment.</p>
+<h2 id="3-initialization-and-readiness">3. Initialization and readiness<a class="headerlink" href="#3-initialization-and-readiness" title="Permanent link">&para;</a></h2>
+<h3 id="31-deployment-configuration">3.1 Deployment configuration<a class="headerlink" href="#31-deployment-configuration" title="Permanent link">&para;</a></h3>
+<p>The resolver owns:</p>
+<ul>
+<li><code>binding_id</code>: stable logical name returned in responses.</li>
+<li><code>open_mode</code>: <code>open_existing</code>, <code>create</code>, or <code>temporary</code>.</li>
+<li><code>location</code>: persistent bindings require an injected filesystem and a relative path; direct native URI bindings are not a separate implemented opening mode.</li>
+<li><code>native_config</code>: supported engine settings, validated using the chosen native version.</li>
+<li><code>bootstrap</code>: schema/rule definitions, a revision, and an explicit application policy.</li>
+<li><code>receipts</code>: operation bookkeeping mode and reserved metadata namespace.</li>
+</ul>
+<p>For a filesystem binding, resolve a relative path through the injected filesystem rather than the process working directory. Validate the backing filesystem and supported URI translation. The examples use a local <code>FileSystemResolver</code>; remote locations require their own tested native configuration, not copying Uniko's local-filesystem restriction.</p>
+<p>Use <code>open_existing</code> by default in persistent deployments. <code>create</code> refuses an existing store. <code>temporary</code> is explicit disposable storage; native <code>in_memory()</code> uses a temporary filesystem and is not a pure-RAM durability mode. Never fall back to an empty or temporary database after an opening failure.</p>
+<h3 id="32-agent-configuration">3.2 Agent configuration<a class="headerlink" href="#32-agent-configuration" title="Permanent link">&para;</a></h3>
+<p>Agent properties own database-ready admission, limits, raw-operation enablement, and the operation catalog. The catalog defines the capability offered by this instance; it does not grant caller permissions. Database paths and credentials are not request fields.</p>
+<p>Capability families include <code>capabilities</code>, <code>health</code>, <code>query</code>, <code>evaluate</code>, <code>explain</code>, <code>mutation</code>, <code>scenario</code>, <code>operation_status</code>, and separately defined administrative/bulk families. Guild design owns which callers may invoke them, including operation allowlists, approval paths, and error/result audiences. Authentication and enforcement belong to the guild's application-provided boundary and transport configuration; a routing topic or model-provided identity is not authentication. UniDBAgent assumes that boundary has authorized delivered requests. Stable runtime attribution may scope receipts without becoming an agent-owned permission system.</p>
+<p>The same database may need writes for a guild-authorized executor and scratch work for scenarios. The guild enforces caller profiles before delivery, rather than pretending a writable native handle is read-only. Use a native read-only handle when the entire deployed instance is read-only. Untrusted code must not receive the runtime object. Separate native read-only instances may be used when stronger process separation is required, with tested freshness behavior.</p>
+<h3 id="33-startup-sequence">3.3 Startup sequence<a class="headerlink" href="#33-startup-sequence" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Validate configuration, catalog definitions, parameter schemas, supported operation kinds, and resource bounds.</li>
+<li>Resolve storage and validate bootstrap resources before opening a persistent store.</li>
+<li>Open the native handle using the selected mode.</li>
+<li>Observe native version and capabilities; validate required behaviors for the advertised surface.</li>
+<li>Bootstrap or verify the supplied schema/rules according to policy.</li>
+<li>Initialize the connector-owned receipt namespace and recover uncertain operations.</li>
+<li>Publish database readiness and admit execution requests.</li>
+</ol>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>stateDiagram-v2
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    [*] --&gt; initializing
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    initializing --&gt; ready: compatible database and protocol resources
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    initializing --&gt; failed: opening or verification error
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    ready --&gt; draining: lifecycle shutdown
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    draining --&gt; closed: accepted operations resolved and handles released
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    failed --&gt; closed: partial initialization cleaned up
+</code></pre></div>
+<p>Rustic transport/agent readiness does not by itself prove database readiness. Implement eager runtime preparation before normal message admission, or an explicit database-ready gate if preparation is asynchronous. Health/discovery may describe initialization failure; data handlers must not run against a partially initialized binding. Startup failure needs a lifecycle-visible diagnostic even when no request is awaiting a reply.</p>
+<h3 id="34-bootstrap-policies">3.4 Bootstrap policies<a class="headerlink" href="#34-bootstrap-policies" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Policy</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>verify_existing</code></td>
+<td>Confirm expected schema/rules and revisions; make no domain changes</td>
+</tr>
+<tr>
+<td><code>apply_to_new</code></td>
+<td>Initialize a newly created store from supplied definitions</td>
+</tr>
+<tr>
+<td>Explicit administration</td>
+<td>Apply supported changes to an existing store through separately authorized operations</td>
+</tr>
+</tbody>
+</table>
+<p>A bootstrap revision is an identifier, not proof of compatibility. Verify relevant native definitions and content digests. Do not silently replace rules or infer migrations. Administrative schema application, rule registration, and index work are not promised to be one atomic transaction. If bootstrap fails after partial application, record failure and require an explicit recovery decision rather than reapplying blindly.</p>
+<p>Native <code>ext_id</code> is a reserved globally unique external identifier. The examples use prefixed values such as <code>product:digitizer</code>; they do not declare <code>ext_id</code> as an ordinary property or use local VIDs as business identifiers.</p>
+<h2 id="4-versioned-protocol">4. Versioned protocol<a class="headerlink" href="#4-versioned-protocol" title="Permanent link">&para;</a></h2>
+<p>All public models use <code>protocol_version: 1</code> and reject unexpected fields. The namespace is <code>rustic_ai.unidb.models</code>. The native dependency is pinned to <code>uni-db==6.0.0</code>; no backward compatibility with PR 236 is provided.</p>
+<h3 id="41-common-request-fields">4.1 Common request fields<a class="headerlink" href="#41-common-request-fields" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Contract</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>request_id</code></td>
+<td>Nonempty string identifying this invocation; retained in terminal replies</td>
+</tr>
+<tr>
+<td><code>correlation_id</code></td>
+<td>Nonempty string tying invocations to a larger workflow</td>
+</tr>
+<tr>
+<td><code>operation</code></td>
+<td>Configured catalog name for execution requests</td>
+</tr>
+<tr>
+<td><code>params</code></td>
+<td>Values validated against that operation's closed parameter schema</td>
+</tr>
+<tr>
+<td><code>limits</code></td>
+<td>Optional reductions of effective engine/delivery limits</td>
+</tr>
+<tr>
+<td><code>view</code></td>
+<td>Optional live selector; pinned/snapshot/fork selectors are refused in v1</td>
+</tr>
+<tr>
+<td><code>operation_id</code></td>
+<td>Required for persistent effect requests; stable across retransmission</td>
+</tr>
+</tbody>
+</table>
+<p>No credential, native handle, arbitrary storage path, principal, approver, or arbitrary response address belongs in these payloads. Native envelope IDs, sender attribution, reply ancestry, tracing, and routing remain Rustic envelope fields. <code>request_id</code> is not a replacement for the envelope's message ID.</p>
+<p>For v1 scenarios and mutations, the examples use the primary live binding. Snapshot/fork selection requires separate authorization and capability checks. Reject unsupported combinations explicitly, including pinned scenario behavior until it is verified against the supported native version.</p>
+<h3 id="42-initial-message-families">4.2 Initial message families<a class="headerlink" href="#42-initial-message-families" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Request</th>
+<th>Response</th>
+<th>Semantics</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>DBCapabilitiesRequest</code></td>
+<td><code>DBCapabilitiesResponse</code></td>
+<td>Protocol version, observed native features, configured operation surface; guild controls discovery access</td>
+</tr>
+<tr>
+<td><code>DBHealthRequest</code></td>
+<td><code>DBHealthResponse</code></td>
+<td>Database lifecycle and readiness, configured durability, outstanding work</td>
+</tr>
+<tr>
+<td><code>DBQueryRequest</code></td>
+<td><code>DBQueryResponse</code></td>
+<td>Named parameterized Cypher read</td>
+</tr>
+<tr>
+<td><code>DBQueryPlanRequest</code></td>
+<td><code>DBQueryPlanResponse</code></td>
+<td>Native template plan; does not execute the query</td>
+</tr>
+<tr>
+<td><code>DBQueryProfileRequest</code></td>
+<td><code>DBQueryProfileResponse</code></td>
+<td>One bounded native read with execution profiling</td>
+</tr>
+<tr>
+<td><code>DBEvaluateRequest</code></td>
+<td><code>DBEvaluateResponse</code></td>
+<td>Named Locy evaluation; explicit command results, no durable materialization</td>
+</tr>
+<tr>
+<td><code>DBExplainRequest</code></td>
+<td><code>DBExplainResponse</code></td>
+<td>Named native derivation explanation; no invented proof</td>
+</tr>
+<tr>
+<td><code>DBMutateRequest</code></td>
+<td><code>DBMutateResponse</code></td>
+<td>Named bounded mutation sequence and checks in one transaction</td>
+</tr>
+<tr>
+<td><code>DBScenarioRequest</code></td>
+<td><code>DBScenarioResponse</code></td>
+<td>Named hypothetical with before/after evaluations, discarded changes</td>
+</tr>
+<tr>
+<td><code>DBOperationStatusRequest</code></td>
+<td><code>DBOperationStatusResponse</code></td>
+<td>Read operation bookkeeping without redispatch; guild controls access</td>
+</tr>
+<tr>
+<td>Any rejected execution request</td>
+<td><code>DBFailure</code></td>
+<td>Correlated terminal failure or explicit uncertain-effect outcome</td>
+</tr>
+</tbody>
+</table>
+<p>Cypher plan explanation/profile is distinct from a Locy proof. Dedicated <code>DBQueryPlanRequest</code> and <code>DBQueryProfileRequest</code> now expose those diagnostics for existing named Cypher query operations. Bulk loading, rule/schema changes, snapshots, fork promotion, indexes, and maintenance get dedicated administrative/load protocols; they are not hidden inside a generic execution request.</p>
+<p>Raw Cypher interfaces are optional trusted developer surfaces with separate models. Locy programs are supplied in the catalog. V1 examples disable them. Native <code>Session.query()</code> is not a sufficient universal authorization classifier for every statement/procedure. Read-only catalog validation and native access controls must cover the actual supported language, including administrative or side-effectful commands. Do not implement this by checking whether a string starts with <code>MATCH</code>.</p>
+<h3 id="43-catalog-definition">4.3 Catalog definition<a class="headerlink" href="#43-catalog-definition" title="Permanent link">&para;</a></h3>
+<p>A catalog entry has a name, kind, closed JSON parameter schema, execution definition, and optional expected columns/checks. A catalog revision and content digest identify what executed. Callers choose values, not execution text or the enforcement checks.</p>
+<table>
+<thead>
+<tr>
+<th>Kind</th>
+<th>Definition</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>query</code></td>
+<td>Parameterized Cypher and expected projection columns</td>
+</tr>
+<tr>
+<td><code>evaluate</code></td>
+<td>Locy program, expected row-producing columns, permitted result kinds</td>
+</tr>
+<tr>
+<td><code>explain</code></td>
+<td>Fixed rule/key expression with parameterized key values</td>
+</tr>
+<tr>
+<td><code>mutation</code></td>
+<td>Bounded Cypher statements, pre/post checks, optional statement expectations</td>
+</tr>
+<tr>
+<td><code>scenario</code></td>
+<td>Isolation mode, before evaluations, hypothetical mutations, after evaluations</td>
+</tr>
+</tbody>
+</table>
+<p>The schema adapter accepts only explicitly supported property/edge/index definitions. The examples use string, int64 and float64 properties. Parameterized values are distinct from language identifiers: labels, property names, rule names, and operation bodies come from validated catalog definitions. No unchecked string interpolation is needed.</p>
+<p>For mutation entries, all checks execute inside the same transaction as their statements. Each check declares <code>phase: pre</code> or <code>phase: post</code>; execute each phase in catalog order. Example checks support bounded row count, equality, and approximate numeric comparison with an explicit tolerance. These are closed assertion forms, not arbitrary Python or model-generated predicates. The domain supplies their meaning. Validate check ordering: prechecks precede mutations; postchecks follow them. Zero matches or unexpected mutation statistics can refuse a transaction rather than report a successful no-op.</p>
+<h3 id="44-response-shape-and-values">4.4 Response shape and values<a class="headerlink" href="#44-response-shape-and-values" title="Permanent link">&para;</a></h3>
+<p>Responses preserve protocol/request/correlation IDs and the logical binding. Success responses have <code>outcome: succeeded</code>, a family-specific <code>result</code>, and metadata. Failure responses have <code>outcome: failed</code> or <code>unknown</code>, a structured error, and available metadata. A committed operation with ancillary warnings still reports its committed effect.</p>
+<p>Query results expose <code>columns</code>, <code>rows</code>, <code>returned_count</code>, <code>truncated</code>, and <code>complete</code>. <code>returned_count</code> is not a total-match count. Locy results retain command order and distinguish query rows, explanation trees, abduction candidates, hypothetical results, and derived-fact sets. Never flatten every command to one list or treat an unvalidated candidate as an approved intervention.</p>
+<p>For named evaluations, return the requested command outputs by default rather than every dependency's derived relation. Include rule program IDs/digests and any engine incompleteness warning. <code>allow_partial</code> is off initially. Native session-level <code>DERIVE</code> returns data for explicit application; transaction-level <code>DERIVE</code> can mutate the transaction. Durable application must have an explicit mutation contract.</p>
+<p>Serialization is a maintained adapter, not <code>dir()</code>, <code>__dict__</code>, or <code>str()</code> fallbacks. JSON-safe numbers remain numbers; int64 values outside the interoperable JSON safe-integer range use a tagged decimal-string encoding. Bytes use a tagged base64 encoding, temporal values use tagged canonical values, and supported graph values preserve identity/type/properties deliberately. Exact example cents fit the safe range. Reject unsupported values visibly, and preflight write result serialization before commit where possible.</p>
+<p>Proof trees are native evidence. A proof is valid for the read view and rule program used, not automatic historical evidence. Preserve actual native structure through the serializer. If too large, use an explicitly supported artifact reference or report truncation; never trim bytes into invalid JSON or claim an incomplete proof is complete. Empty explanations return <code>no_derivation</code>, not a proof of zero or absence.</p>
+<h3 id="45-limits-and-provenance">4.5 Limits and provenance<a class="headerlink" href="#45-limits-and-provenance" title="Permanent link">&para;</a></h3>
+<p>Server limits cap request size, statement count, timeout, engine memory, rows, and encoded output bytes. A request can reduce limits but cannot expand them. Query limits reach native builders/cancellation tokens; output caps alone do not bound computation. Reads may fetch at most an additional row to establish truncation where cursors permit it. Do not append <code>LIMIT</code> to arbitrary text and assume aggregates, plans, or nested results are bounded.</p>
+<p>Report catalog/rule identities, live versus pinned views, and native versions actually observed. A recorded snapshot name does not mean a read was pinned. Do not invent a read revision if the native operation cannot expose it. Commit responses can include observed native commit version, mutation statistics, promoted rules, and rule-promotion errors. Column/result normalization does not erase warnings.</p>
+<p>Large output streaming or artifact transport is an extension requiring a complete framing/resumption contract. The initial bounded inline protocol must fail or explicitly truncate according to the operation contract rather than silently dropping data.</p>
+<h2 id="5-execution-receipts-failures-and-shutdown">5. Execution, receipts, failures, and shutdown<a class="headerlink" href="#5-execution-receipts-failures-and-shutdown" title="Permanent link">&para;</a></h2>
+<h3 id="51-ordinary-reads-and-mutations">5.1 Ordinary reads and mutations<a class="headerlink" href="#51-ordinary-reads-and-mutations" title="Permanent link">&para;</a></h3>
+<p>Guild boundary: authenticate/authorize and route the request → deliver to the database agent, or emit a typed access error through <code>send_error</code>.</p>
+<p>Agent read: validate envelope/payload → resolve catalog → validate parameters/limits → create session/view → execute → serialize bounded result → emit terminal reply → release resources.</p>
+<p>Agent mutation: validate delivered request → resolve stable operation identity → check/claim receipt → create session/transaction → run prechecks → execute statements → run postchecks → prepare serializable result/receipt → commit → confirm outcome → emit terminal reply → release resources.</p>
+<p>Statement success is provisional. Exceptions or failed checks before commit roll back the entire ordinary batch. Do not use native bulk writers to implement this atomic request: bulk loading has its own load identity and incomplete/unknown commit outcomes.</p>
+<p>Commit durability and L1 flush differ. With WAL enabled, report the native commit rather than flushing every request by default. A post-commit flush, publication, or serialization error does not turn a committed effect into <code>rolled_back</code>. Report the established effect and a recoverable receipt/status path. WAL-disabled operation must expose reduced durability honestly.</p>
+<h3 id="52-operation-identity-and-recovery">5.2 Operation identity and recovery<a class="headerlink" href="#52-operation-identity-and-recovery" title="Permanent link">&para;</a></h3>
+<p>Receipt identity is <code>(binding, trusted caller, operation_id)</code>. Its fingerprint includes operation kind/name, normalized parameters, target view, and relevant catalog/rule/check content identities. Invocation/correlation IDs and tracing are excluded; retries need their new invocation IDs in the replayed response while retaining the original effect identity. Catalog changes under the same operation ID conflict rather than execute a new definition.</p>
+<p>Ordinary writes use the connector-owned <code>RusticUniDBOperation</code> label and <code>__rustic_unidb:</code> external-ID prefix. A durable pending claim is committed before executing the domain transaction. The completion record and prepared result are updated in the same transaction as the domain effect. A per-runtime lock serializes invocations; globally unique native external IDs protect claim creation. This supports one authoritative write owner. Catalog authors and trusted raw/admin callers must preserve this reserved metadata; it is not an authorization boundary against arbitrary Cypher.</p>
+<p>A completed receipt is authoritative when commit reporting or response publication fails. Replay returns the prepared domain result with <code>replayed: true</code>; the original native commit-only metadata was unavailable before commit and is not reconstructed (<code>commit.metadata_available: false</code>).</p>
+<table>
+<thead>
+<tr>
+<th>Receipt state</th>
+<th>Behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Unseen</td>
+<td>Admit only after acquiring the durable claim appropriate to the receipt design</td>
+</tr>
+<tr>
+<td>In progress</td>
+<td>Return current state; do not start another execution</td>
+</tr>
+<tr>
+<td>Completed, same fingerprint</td>
+<td>Return established result with <code>replayed: true</code> and current invocation IDs</td>
+</tr>
+<tr>
+<td>Existing, different fingerprint</td>
+<td><code>operation_id_conflict</code>; no effect</td>
+</tr>
+<tr>
+<td>Uncertain after dispatch</td>
+<td><code>operation_outcome_unknown</code>; inspect/resolve, never blindly rerun</td>
+</tr>
+</tbody>
+</table>
+<p>An unresolved pending record is reported as <code>unknown</code>, not blindly reexecuted. Known rollback records permit another attempt with the same fingerprint. Changed fingerprints are refused. Receipt status is scoped by binding, runtime sender attribution, and operation ID; attribution does not grant permission.</p>
+<p>DDL, index work, flush, and bulk loading use a separate journal around native effects, so their bookkeeping is not atomic with those effects. Bulk loading records the native load ID before applying data and uses <code>bulk_load_applied</code> for reconciliation. A native applied load is reported as committed even if reporting fails. Ambiguous admin/bulk work is never automatically repeated.</p>
+<p>Only bounded, known retryable conflicts may retry a whole transaction after rollback, using the same operation identity. Default automatic conflict retries are zero. Never retry an ambiguous commit. Receipt retention is tied to the promised retry window; backup/restore must retain bookkeeping with the domain store. Operation-status reads are authorized to the caller's scope.</p>
+<h3 id="53-structured-failures">5.3 Structured failures<a class="headerlink" href="#53-structured-failures" title="Permanent link">&para;</a></h3>
+<p><code>DBFailure.error</code> contains <code>code</code>, <code>stage</code>, <code>retryable</code>, <code>effect</code>, <code>message</code>, and bounded <code>details</code>. <code>effect</code> describes persistent mutation effects: <code>not_started</code>, <code>rolled_back</code>, <code>committed</code>, or <code>unknown</code>; it does not claim that no read was evaluated. Typical codes include invalid request/parameters, unavailable binding, capability denied, unknown operation, constraint conflict, check failure, native conflict/timeout/cancellation, no derivation, incomplete evaluation, serialization failure, operation ID conflict, and unknown outcome.</p>
+<p>Expected execution failures are emitted through <code>ctx.send_error(DBFailure(...))</code>, retaining the typed payload's request/correlation IDs, error code, and effect state. <code>DBFailure</code> is the database-specific error type. Current <code>send_error</code> accepts any Pydantic model and preserves its format; it does not wrap it in the generic <code>ErrorMessage</code>. Emit the error once through this API, rather than also emitting a normal failure response.</p>
+<p>Rustic always adds delivery to <code>GuildTopics.ERROR_TOPIC</code> (<code>error_topic</code>). Matching routing-slip rules can produce additional deliveries, so error consumers must tolerate duplicate delivery. The examples omit explicit DBFailure output routes and show the default error-topic projection. Error publication does not itself assign terminal <code>process_status: error</code>: the guild error-handling flow decides whether to recover, continue reasoning, or end the workflow. Subscribe the guild's error handler/probe to the error topic. Guild access rejections use the same API from the access boundary before delivery to UniDBAgent. Framework-level unhandled exceptions remain diagnostics and need an application error consumer. No path should emit a success response followed by a contradictory failure.</p>
+<p>Exactly one logical outcome per accepted invocation is the contract. It is not an exactly-once wire-delivery guarantee or automatic termination of the enclosing workflow. Receipts and caller-side event identities handle repeated delivery. A rejected malformed native envelope may fail before a processor can extract request IDs; boundary validation needs a diagnostic path without inventing correlation.</p>
+<h3 id="54-scenario-lifecycle">5.4 Scenario lifecycle<a class="headerlink" href="#54-scenario-lifecycle" title="Permanent link">&para;</a></h3>
+<p>The initial scenario mode uses a native scratch transaction when that combination of supplied operations and registered rules is verified. It evaluates baseline facts, applies hypothetical mutations, evaluates results, and rolls back before returning success. Native scratch commit refusal is an additional boundary; it does not replace cleanup. Scratch data never reaches primary business state.</p>
+<p>Do not silently fall back from scratch to ordinary commit-capable transactions or durable forks. A future managed-fork mode needs explicit creation, ownership, expiry, cleanup, and permitted promotion. Snapshot/pin/fork/registry interactions are tested capabilities, not inferred from their names. Scenario output describes modeled consequences under supplied assumptions, not a calibrated promise about the world.</p>
+<h3 id="55-cancellation-and-shutdown">5.5 Cancellation and shutdown<a class="headerlink" href="#55-cancellation-and-shutdown" title="Permanent link">&para;</a></h3>
+<p>Cancellation is cooperative and scoped to an authorized request identity. It cannot undo a completed commit. A sequential actor cannot service a cancellation message while blocked in the same long-running handler; live cancellation therefore needs a separate control path or native deadline mechanism. Do not advertise message-driven cancellation until that path is tested.</p>
+<p>The explicit runtime close acquires the execution lock, moves through draining, and shuts down the native handle. Cleanup is idempotent after success. <code>UniDBResolver.close()</code> closes its cached runtimes. Integration with a general Rustic lifecycle hook is deliberately deferred, so guild shutdown alone does not guarantee native cleanup. The embedding owner must close the resolver; health reports <code>shutdown_hook_integrated: false</code>.</p>
+<h2 id="6-examples-initialization-usage-and-message-io">6. Examples: initialization, usage, and message I/O<a class="headerlink" href="#6-examples-initialization-usage-and-message-io" title="Permanent link">&para;</a></h2>
+<p>Each example has a complete database-agent GuildSpec and a message-exchange fixture. The fixture supplies client identities and result projections; it is not a full native <code>Message</code> dump or a standalone deployed application. Caller/probe agents and their request routes are provided by the embedding application/test harness.</p>
+<table>
+<thead>
+<tr>
+<th>Case</th>
+<th>Initialization</th>
+<th>Message exchanges</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1. Atomic supply graph</td>
+<td><a href="../uni-db-agent-examples/supply-network-init.json">supply-network-init.json</a></td>
+<td><a href="../uni-db-agent-examples/supply-network-messages.json">supply-network-messages.json</a></td>
+</tr>
+<tr>
+<td>2. Derived receivables</td>
+<td><a href="../uni-db-agent-examples/receivables-init.json">receivables-init.json</a></td>
+<td><a href="../uni-db-agent-examples/receivables-messages.json">receivables-messages.json</a></td>
+</tr>
+<tr>
+<td>3. Supplier scenario and approved execution</td>
+<td><a href="../uni-db-agent-examples/supplier-scenario-init.json">supplier-scenario-init.json</a></td>
+<td><a href="../uni-db-agent-examples/supplier-scenario-messages.json">supplier-scenario-messages.json</a></td>
+</tr>
+</tbody>
+</table>
+<p>All three initialize new local databases, enable WAL and strict schema, apply explicitly supplied schema/rules, declare the receipt namespace, disable raw operations, and use bounded inline results. GuildSpec <code>properties.example_guild_policy</code> records the examples' guild-owned profiles/allowlists; this is an illustrative application annotation, not built-in Rustic enforcement. The embedding guild must implement the boundary and control transport access before exposing the database. They use stable prefixed external IDs. The filesystem resolver produces an organization/guild/agent-scoped path below <code>/tmp/rustic-unidb-design-examples</code>. These are disposable demonstrations; persistent deployments replace the location and choose <code>verify_existing</code>/<code>open_existing</code> where appropriate. Re-launching a <code>create</code> example against an existing path fails by design.</p>
+<h3 id="61-common-initialization-and-send-usage">6.1 Common initialization and send usage<a class="headerlink" href="#61-common-initialization-and-send-usage" title="Permanent link">&para;</a></h3>
+<p>With the package installed, a development harness can load a spec using the current Rustic builder API:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">rustic_ai.core.guild.builders</span><span class="w"> </span><span class="kn">import</span> <span class="n">GuildBuilder</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="kn">from</span><span class="w"> </span><span class="nn">rustic_ai.core.guild.dsl</span><span class="w"> </span><span class="kn">import</span> <span class="n">GuildSpec</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">"docs/design/uni-db-agent-examples/supply-network-init.json"</span><span class="p">)</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="n">spec</span> <span class="o">=</span> <span class="n">GuildSpec</span><span class="o">.</span><span class="n">model_validate</span><span class="p">(</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>    <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">path</span><span class="o">.</span><span class="n">read_text</span><span class="p">()),</span> <span class="n">context</span><span class="o">=</span><span class="p">{</span><span class="s2">"require_agent_class"</span><span class="p">:</span> <span class="kc">True</span><span class="p">}</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="p">)</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="n">builder</span> <span class="o">=</span> <span class="n">GuildBuilder</span><span class="o">.</span><span class="n">from_spec</span><span class="p">(</span><span class="n">spec</span><span class="p">)</span>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="c1"># Add caller/probe AgentSpecs and request routes before launching below.</span>
+</code></pre></div>
+<p>Strict class validation now passes for all three initialization specs and the showcase. Run all three native cases without an LLM from the repository root:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nv">PYTHONPATH</span><span class="o">=</span>unidb/src<span class="w"> </span>python<span class="w"> </span>unidb/examples/run_examples.py
+</code></pre></div>
+<p>The runner opens fresh disposable local stores, prints captured response projections, and explicitly closes each runtime. Actual guild delivery, typed errors, default-topic filtering, replay, and the example access boundary are covered by the integration tests.</p>
+<p>For a caller emitting the first request, add a recurring output route to <code>db.requests</code> and include that caller in the guild. The route matches the producer, not the destination agent:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">rustic_ai.core.guild.builders</span><span class="w"> </span><span class="kn">import</span> <span class="n">RouteBuilder</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">rustic_ai.core.messaging</span><span class="w"> </span><span class="kn">import</span> <span class="n">AgentTag</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">rustic_ai.unidb.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">DBMutateRequest</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="n">entry_route</span> <span class="o">=</span> <span class="p">(</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>    <span class="n">RouteBuilder</span><span class="p">(</span><span class="n">AgentTag</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="s2">"demo-ingester"</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">"demo-ingester"</span><span class="p">))</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>    <span class="o">.</span><span class="n">on_message_format</span><span class="p">(</span><span class="n">DBMutateRequest</span><span class="p">)</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>    <span class="o">.</span><span class="n">set_destination_topics</span><span class="p">(</span><span class="s2">"db.requests"</span><span class="p">)</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>    <span class="o">.</span><span class="n">set_route_times</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>    <span class="o">.</span><span class="n">build</span><span class="p">()</span>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="p">)</span>
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="n">builder</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="n">entry_route</span><span class="p">)</span>
+<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="c1"># After adding all required caller/probe AgentSpecs and their request routes:</span>
+<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="n">guild</span> <span class="o">=</span> <span class="n">builder</span><span class="o">.</span><span class="n">launch</span><span class="p">(</span><span class="n">organization_id</span><span class="o">=</span><span class="s2">"demo-org"</span><span class="p">)</span>
+<a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="c1"># Production lifecycle uses the managed bootstrap path instead of this demo launch.</span>
+</code></pre></div>
+<p>Add equivalent request routes for each caller/family it uses. A test client can instead publish the fixture request projection directly to <code>db.requests</code> through the actual messaging boundary. The initialization files route successful database response families to <code>db.results</code> with recurring rules; a probe/caller must subscribe there, and an error consumer must subscribe to <code>GuildTopics.ERROR_TOPIC</code>. The shared result topic is a demonstration topology; the embedding guild owns result visibility and trusted return paths. Application presentation/error routes decide whether a result completes the larger user workflow. A completed database call is not necessarily a completed user task.</p>
+<p>Inside an existing caller processor, the fixture payload can become a typed request:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">rustic_ai.unidb.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">DBMutateRequest</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="k">def</span><span class="w"> </span><span class="nf">submit_supply_import</span><span class="p">(</span><span class="n">ctx</span><span class="p">):</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>    <span class="n">fixture</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>        <span class="n">Path</span><span class="p">(</span><span class="s2">"docs/design/uni-db-agent-examples/supply-network-messages.json"</span><span class="p">)</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>        <span class="o">.</span><span class="n">read_text</span><span class="p">()</span>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>    <span class="p">)</span>
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>    <span class="n">request</span> <span class="o">=</span> <span class="n">fixture</span><span class="p">[</span><span class="s2">"exchanges"</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s2">"request"</span><span class="p">]</span>
+<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>    <span class="n">ctx</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">DBMutateRequest</span><span class="o">.</span><span class="n">model_validate</span><span class="p">(</span><span class="n">request</span><span class="p">[</span><span class="s2">"payload"</span><span class="p">]))</span>
+</code></pre></div>
+<p><code>ctx</code> is the real caller's <code>ProcessContext</code>; this helper does not create or impersonate a sender. Fixture sender IDs stand for authenticated harness identities. Clients consume <code>ctx.payload</code>/typed response models rather than expecting the agent to return a Python value from the handler.</p>
+<h3 id="62-case-1-atomic-supply-network-ingestion-and-query">6.2 Case 1: atomic supply-network ingestion and query<a class="headerlink" href="#62-case-1-atomic-supply-network-ingestion-and-query" title="Permanent link">&para;</a></h3>
+<p><strong>Outcome:</strong> a product, two suppliers, and their sourcing relationships become visible together; the caller then reads the supplied commercial data. This is domain graph storage, not cognitive-memory ingestion.</p>
+<p><strong>Initialization:</strong> <code>Product(name)</code>, <code>Party(name)</code>, and <code>SUPPLIES(reliability, unit_cost_cents, lead_time_days)</code>. The catalog supplies <code>register_supply_network</code> and <code>suppliers_for_product</code>. The import creates three nodes and two relationships through three ordinary Cypher statements in one transaction. Amounts are exact cents; a currency/UoM model would be supplied by a richer application.</p>
+<p><strong>Flow:</strong> ingester → <code>DBMutateRequest</code> → committed <code>DBMutateResponse</code>; reasoner → <code>DBQueryRequest</code> → <code>DBQueryResponse</code>; ingester retries with a new request ID and the same operation ID → replayed receipt. A changed payload under that operation ID is refused before any write.</p>
+<p>The query payload is:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="p">{</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">"protocol_version"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span><span class="nt">"request_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"req:suppliers-read:001"</span><span class="p">,</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span><span class="nt">"correlation_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"workflow:supply-import:001"</span><span class="p">,</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">  </span><span class="nt">"operation"</span><span class="p">:</span><span class="w"> </span><span class="s2">"suppliers_for_product"</span><span class="p">,</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">  </span><span class="nt">"params"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"product_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"product:digitizer"</span><span class="p">}</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="p">}</span>
+</code></pre></div>
+<p>The result has two rows: Allied Circuits at reliability <code>0.90</code>, cost <code>1850</code> cents, lead time <code>14</code>; Shenzhen Electronics at <code>0.87</code>, cost <code>1800</code> cents, lead time <code>7</code>. <code>returned_count</code> is <code>2</code>, <code>truncated</code> is false, and the view is live. The fixture contains the complete import payload and response envelope projections.</p>
+<p><strong>Acceptance:</strong> failed statement/check/constraint before commit leaves none of the imported batch; committed receipt replay creates no additional nodes/edges; changed fingerprint conflicts; a post-commit publication failure can be recovered through operation status/replay. Do not implement the import with a bulk writer while retaining these rollback claims.</p>
+<h3 id="63-case-2-derive-and-explain-a-receivable-balance">6.3 Case 2: derive and explain a receivable balance<a class="headerlink" href="#63-case-2-derive-and-explain-a-receivable-balance" title="Permanent link">&para;</a></h3>
+<p><strong>Outcome:</strong> compute an invoice's outstanding amount from recorded payment facts, and return a native explanation without storing a redundant balance/status field.</p>
+<p><strong>Initialization:</strong> <code>Invoice(amount_cents)</code>, <code>Payment(amount_cents)</code>, and <code>APPLIES_TO</code>. The supplied rules sum linked payments and derive invoice balance, with a separate keyed clause for an invoice with no payment. The catalog defines <code>record_invoice_payment</code>, <code>invoice_balance</code>, and <code>explain_invoice_balance</code>.</p>
+<p>The core rule pattern is user supplied:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>CREATE RULE payment_total AS
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>  MATCH (payment:Payment)-[:APPLIES_TO]-&gt;(invoice:Invoice)
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>  FOLD paid_cents = SUM(payment.amount_cents)
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>  YIELD KEY invoice, paid_cents
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>CREATE RULE invoice_balance AS
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>  MATCH (invoice:Invoice)
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>  WHERE invoice IS payment_total
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>  YIELD KEY invoice, invoice.amount_cents - paid_cents AS balance_cents
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>
+<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>CREATE RULE invoice_balance AS
+<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a>  MATCH (invoice:Invoice)
+<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a>  WHERE invoice IS NOT payment_total
+<a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a>  YIELD KEY invoice, invoice.amount_cents AS balance_cents
+</code></pre></div>
+<p>This is nonrecursive aggregation. KEY placement makes negation about invoice identity. The example is not a complete AR subsystem: currencies, credit notes, payment allocation controls, dates, and fiscal-period policy would be domain additions.</p>
+<p><strong>Flow:</strong> record invoice <code>25000</code> cents and linked payment <code>10000</code> cents atomically → evaluate the named rule → explain that invoice key. Usage from a caller:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">rustic_ai.unidb.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">DBEvaluateRequest</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="k">def</span><span class="w"> </span><span class="nf">request_balance</span><span class="p">(</span><span class="n">ctx</span><span class="p">):</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>    <span class="n">ctx</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">DBEvaluateRequest</span><span class="p">(</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>        <span class="n">protocol_version</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>        <span class="n">request_id</span><span class="o">=</span><span class="s2">"req:invoice-balance:1001"</span><span class="p">,</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>        <span class="n">correlation_id</span><span class="o">=</span><span class="s2">"workflow:receivable:1001"</span><span class="p">,</span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>        <span class="n">operation</span><span class="o">=</span><span class="s2">"invoice_balance"</span><span class="p">,</span>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>        <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">"invoice_id"</span><span class="p">:</span> <span class="s2">"invoice:1001"</span><span class="p">},</span>
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>    <span class="p">))</span>
+</code></pre></div>
+<p>The evaluation result contains one query command with columns <code>invoice_id</code>, <code>balance_cents</code> and row <code>{"invoice_id": "invoice:1001", "balance_cents": 15000}</code>. <code>materialized</code> is false. It retains the rule-program identity and read-view metadata.</p>
+<p>The explanation request selects the configured <code>explain_invoice_balance</code> operation with the same key. Its response reports a found derivation and serialized native proof. The fixture contains the engine's captured proof tree, including tagged native identifiers. Uni-DB 6.0.0 does not propagate builder parameters into EXPLAIN filters; the adapter binds only scalar values in fixed catalog programs using JSON literals while leaving quoted strings and comments intact. It does not interpolate arbitrary request programs. A missing key returns <code>no_derivation</code>; it is not interpreted as a zero balance.</p>
+<p><strong>Acceptance:</strong> exact cents arithmetic; unchanged stored facts after evaluate/explain; no-payment and multiple-payment cases; missing-key distinction; warnings/incompleteness retained; rule revision and read view are correct. Current-state proofs do not establish what was reported in a closed historical period.</p>
+<h3 id="64-case-3-simulate-a-second-source-then-execute-an-approved-change">6.4 Case 3: simulate a second source, then execute an approved change<a class="headerlink" href="#64-case-3-simulate-a-second-source-then-execute-an-approved-change" title="Permanent link">&para;</a></h3>
+<p><strong>Outcome:</strong> compare a specific sourcing change against the baseline, obtain domain approval outside the database agent, commit through an authorized executor, and verify the committed result freshly.</p>
+<p><strong>Initialization:</strong> two parties and one digitizer product; only the primary supplier initially has a <code>SUPPLIES</code> edge. The edge carries reliability, exact cost cents, lead time, and minimum quantity. Supplied Locy folds Noisy-OR over supplier reliability:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>CREATE RULE part_availability AS
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>  MATCH (part:Product)&lt;-[supply:SUPPLIES]-(supplier:Party)
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>  FOLD availability = MNOR(supply.reliability)
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>  YIELD KEY part, availability PROB
+</code></pre></div>
+<p>The catalog includes seed, baseline evaluation, scratch simulation, and qualification mutation operations. Guild-owned operation allowlists separate the ingester, reasoner, and approved executor; the guild boundary prevents the ingester from invoking supplier qualification. The scenario assumes the candidate supplier already exists as a domain record.</p>
+<p>Human-supplied candidate terms are:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="p">{</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span><span class="nt">"product_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"product:digitizer"</span><span class="p">,</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">  </span><span class="nt">"supplier_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"supplier:allied"</span><span class="p">,</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">  </span><span class="nt">"reliability"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.90</span><span class="p">,</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">  </span><span class="nt">"unit_cost_cents"</span><span class="p">:</span><span class="w"> </span><span class="mi">1850</span><span class="p">,</span>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="w">  </span><span class="nt">"lead_time_days"</span><span class="p">:</span><span class="w"> </span><span class="mi">14</span><span class="p">,</span>
+<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="w">  </span><span class="nt">"min_order_qty"</span><span class="p">:</span><span class="w"> </span><span class="mi">500</span>
+<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="p">}</span>
+</code></pre></div>
+<p><strong>Flow:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>sequenceDiagram
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>    participant R as Reasoning workflow
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>    participant D as UniDBAgent
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>    participant A as User approval workflow
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>    participant E as Trusted executor
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>    R-&gt;&gt;D: DBEvaluateRequest(part_availability)
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>    D--&gt;&gt;R: DBEvaluateResponse(0.87)
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>    R-&gt;&gt;D: DBScenarioRequest(simulate_second_source, terms)
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>    D--&gt;&gt;R: DBScenarioResponse(before 0.87, after 0.987, discarded)
+<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a>    R-&gt;&gt;A: Concrete proposal and expected effect
+<a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a>    A--&gt;&gt;E: Authenticated approval bound to exact proposal
+<a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a>    E-&gt;&gt;D: DBMutateRequest(qualify_second_source, stable operation_id)
+<a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a>    D--&gt;&gt;E: DBMutateResponse(committed)
+<a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a>    E-&gt;&gt;D: DBEvaluateRequest(part_availability)
+<a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a>    D--&gt;&gt;E: DBEvaluateResponse(0.987 from primary)
+</code></pre></div>
+<p>The scenario request uses <code>operation: simulate_second_source</code>, those parameters, a request ID, and correlation <code>workflow:second-source:001</code>. The response separates <code>before</code> and <code>after</code>, reports scratch isolation, <code>persisted: false</code>, and cleanup completion. The primary still has one supplier edge after simulation.</p>
+<p>The modeled result is <code>1 - (1 - 0.87) * (1 - 0.90) = 0.987</code>. Independence is a supplied model assumption, not something the database or LLM proves. The catalog supplies the scenario warning, copied to the result with <code>source: application_catalog</code>, a code, and a message; it must not be presented as a native engine diagnostic. Engine warnings use their own source attribution. This example concerns part availability, not a full assembly's probability, quantity exposure, or correlated supply failure.</p>
+<p>The user-provided approval workflow binds action, arguments, evidence, expected effect, and freshness policy. It authenticates the approver and applies business eligibility/four-eyes/SoD requirements where relevant. Its example is recorded in the fixture's <code>external_workflow</code>, not a UniDBAgent request family. An <code>approval_id</code> inside arbitrary model parameters confers no capability.</p>
+<p>The trusted executor submits <code>DBMutateRequest</code> with <code>operation: qualify_second_source</code>, the approved terms, and <code>operation_id: op:approved-qualification:001</code>. Prechecks confirm the selected endpoints and absence of an existing sourcing edge; statement expectations require one relationship created. The postcheck verifies modeled availability approximately <code>0.987</code> inside the transaction, then commit and receipt become visible together. The postcheck is deliberately specific to this example's supplied terms; a general domain package would define its own goals and tolerances.</p>
+<p>Afterward, a new <code>DBEvaluateRequest</code> reads committed primary data. A failed post-commit verification cannot retroactively roll back the business write; a correction would be another authorized operation. In the denied-call fixture, the reasoner submits to <code>db.access.requests</code>; the application-provided <code>demo-access-boundary</code> emits <code>capability_denied</code> with <code>effect: not_started</code> through <code>send_error</code>. The request never reaches UniDBAgent.</p>
+<p>Usage from the reasoning caller is:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">rustic_ai.unidb.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">DBScenarioRequest</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="k">def</span><span class="w"> </span><span class="nf">price_second_source</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">human_terms</span><span class="p">):</span>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>    <span class="n">ctx</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">DBScenarioRequest</span><span class="p">(</span>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>        <span class="n">protocol_version</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>        <span class="n">request_id</span><span class="o">=</span><span class="s2">"req:second-source-scenario:001"</span><span class="p">,</span>
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>        <span class="n">correlation_id</span><span class="o">=</span><span class="s2">"workflow:second-source:001"</span><span class="p">,</span>
+<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>        <span class="n">operation</span><span class="o">=</span><span class="s2">"simulate_second_source"</span><span class="p">,</span>
+<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a>        <span class="n">params</span><span class="o">=</span><span class="n">human_terms</span><span class="p">,</span>
+<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a>    <span class="p">))</span>
+</code></pre></div>
+<p><strong>Acceptance:</strong> the supplied rule works inside scratch; baseline/after reads have the documented view semantics; scratch commit is refused; cleanup occurs on success/error/cancellation; no primary change after simulation; unauthorized writes fail before native dispatch; approved arguments remain exact; checks/mutation/receipt are atomic; fresh verification reads primary state. Approval authentication and correctness require domain-workflow tests beyond database-agent tests.</p>
+<h3 id="65-query-diagnostics-guild">6.5 Query diagnostics guild<a class="headerlink" href="#65-query-diagnostics-guild" title="Permanent link">&para;</a></h3>
+<p>The <a href="https://github.com/rustic-ai/rustic-ai/blob/969e69e90b8ed59233dd2a89d73d4ebbcbfdb7e9/showcase/apps/unidb_query_diagnostics.json">composed diagnostic guild</a> contains a deterministic workflow driver and the same reusable UniDB agent. Its <a href="https://github.com/rustic-ai/rustic-ai/blob/969e69e90b8ed59233dd2a89d73d4ebbcbfdb7e9/unidb/examples/run_query_diagnostics.py">runner</a> adds a caller, starts the workflow, waits for a terminal result, and explicitly releases the native resolver.</p>
+<p>The workflow performs: seed 50 products → flush → query plan → query profile → create a BTREE name index → flush → query plan → query profile → typed comparison. Requests and observations have correlated IDs; duplicates, unexpected observations, and observations after termination are ignored. A database failure produces a typed comparison failure through <code>send_error</code>, and guild routes own its <code>error</code> status and presentation.</p>
+<p>The named query is <code>MATCH (p:Product) WHERE p.name=$name RETURN p.name AS name</code>, with <code>name: widget:12</code>. The captured lookup returns the same row before and after indexing. Native diagnostics report 50 scanned rows before and one after, along with actual index usage, costs, operators, and timings. Cost estimates and latency need not improve; no synthetic speedup is asserted.</p>
+<p><code>DBQueryPlanRequest</code> uses the ordinary named-query catalog, parameters, request/correlation IDs, and supported live view. <code>result</code> contains <code>executed: false</code>, <code>plan</code> (native text, warnings, cost estimates, index usage, suggestions), the enforced input/output byte limits, and three explicit flags: <code>parameter_values_applied</code>, <code>planning_timeout_enforced</code>, and <code>planning_memory_enforced</code>, all false on Uni-DB 6.0.0. Parameters are validated but not interpolated into query text. Explicit unsupported limit requests are refused with <code>unsupported_limit</code>; native planning bounds are not advertised.</p>
+<p><code>DBQueryProfileRequest</code> executes the named read exactly once using native read-only guards, timeout, and memory bounds. <code>result</code> contains <code>executed: true</code>, <code>query</code> with the existing bounded rows/count/truncation/warnings contract, and <code>profile</code> with native plan text, operator statistics, total time, peak memory, logical/physical planning time, physical-plan count, and explicit query metrics. For empty native results with absent column names, declared catalog columns are returned with <code>columns_source: catalog</code>; otherwise it is <code>native</code>. Metrics describe native execution, even when returned rows are truncated. Native memory figures are not process RSS.</p>
+<p>A caller uses the same typed contracts for both diagnostics:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">rustic_ai.unidb.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">DBQueryPlanRequest</span><span class="p">,</span> <span class="n">DBQueryProfileRequest</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="n">plan</span> <span class="o">=</span> <span class="n">DBQueryPlanRequest</span><span class="p">(</span>
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>    <span class="n">request_id</span><span class="o">=</span><span class="s2">"diagnostics:plan:1"</span><span class="p">,</span> <span class="n">correlation_id</span><span class="o">=</span><span class="s2">"diagnostics:workflow:1"</span><span class="p">,</span>
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>    <span class="n">operation</span><span class="o">=</span><span class="s2">"find_product"</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">"name"</span><span class="p">:</span> <span class="s2">"widget:12"</span><span class="p">},</span>
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="p">)</span>
+<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="n">profile</span> <span class="o">=</span> <span class="n">DBQueryProfileRequest</span><span class="p">(</span>
+<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>    <span class="n">request_id</span><span class="o">=</span><span class="s2">"diagnostics:profile:1"</span><span class="p">,</span> <span class="n">correlation_id</span><span class="o">=</span><span class="s2">"diagnostics:workflow:1"</span><span class="p">,</span>
+<a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a>    <span class="n">operation</span><span class="o">=</span><span class="s2">"find_product"</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">"name"</span><span class="p">:</span> <span class="s2">"widget:12"</span><span class="p">},</span> <span class="n">limits</span><span class="o">=</span><span class="p">{</span><span class="s2">"max_rows"</span><span class="p">:</span> <span class="mi">1</span><span class="p">},</span>
+<a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a><span class="p">)</span>
+<a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a><span class="c1"># Route ctx.send(plan) and ctx.send(profile) to the UniDB request topic.</span>
+</code></pre></div>
+<p>The corresponding <code>DBQueryPlanResponse</code> and <code>DBQueryProfileResponse</code> preserve these invocation/correlation IDs, return the configured binding, and include native/catalog provenance. The plan's <code>result.plan.index_usage</code> describes planned index use; the profile's <code>result.profile.query_metrics.index_scans</code> and <code>rows_scanned</code> describe the observed execution. The composed guild exposes a typed final comparison plus a JSON text presentation; the runner prints that captured terminal payload.</p>
+<p>Neither diagnostic creates an operation receipt. Their failures use <code>ctx.send_error(DBFailure)</code>, with diagnostic execution stages <code>plan</code>/<code>profile</code> and persistent effect <code>not_started</code>. Oversized diagnostic output fails serialization rather than silently trimming evidence. The optional tool bridge supports both diagnostic families with framework-assigned identities and actual provider ToolMessages. Locy planning/profiling and artifact/stream delivery remain future extensions.</p>
+<h2 id="7-implementation-plan-and-acceptance-evidence">7. Implementation plan and acceptance evidence<a class="headerlink" href="#7-implementation-plan-and-acceptance-evidence" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Stage</th>
+<th>Deliverable</th>
+<th>Evidence required</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A. Protocol/runtime foundation</td>
+<td>Models, serializer, resolver, startup/health/capabilities, bounded queries</td>
+<td>Strict configuration validation, actual readiness failure, native query bounds, supported value serialization</td>
+</tr>
+<tr>
+<td>B. Atomic writes and recovery</td>
+<td>Named mutation/check execution, receipt/status protocol</td>
+<td>Rollback, committed replay, changed fingerprint, injected crash/ambiguous commit, publication failure, reopen</td>
+</tr>
+<tr>
+<td>C. Logic and explanation</td>
+<td>Registered rules, named command results, proof adapter</td>
+<td>Exact receivable outputs, no unintended materialization, no-derivation, warning/proof bounds</td>
+</tr>
+<tr>
+<td>D. Scenarios</td>
+<td>Verified scratch lifecycle</td>
+<td>Primary unchanged, registered-rule visibility, cleanup, pinned combination rejection, cancellation</td>
+</tr>
+<tr>
+<td>E. Extensions</td>
+<td>Bulk/admin/search/managed forks/raw developer surfaces</td>
+<td>Separate capability and outcome gates for each</td>
+</tr>
+</tbody>
+</table>
+<p>Exercise the real <code>@processor</code> selection and <code>ctx.send</code> route path with callers/probes, including default-topic filtering, recurring routes, duplicated requests, error delivery, and late results. Handler-only tests do not establish broker delivery or managed startup. Restart tests reopen the native store and receipt state. Native engine invariants are checked against the supported wheel rather than a version label alone.</p>
+<p>Do not introduce an LLM dependency to test these three cases. Expected arithmetic, checks, execution, and routing are deterministic. A later LLM facade should be measured separately for operation selection and interpretation; its model behavior is not proven by deterministic database replay.</p>
+<h3 id="supported-boundaries">Supported boundaries<a class="headerlink" href="#supported-boundaries" title="Permanent link">&para;</a></h3>
+<p>The implementation covers all 15 PR operations: label/edge creation, property addition, scalar/vector indexing, label/edge/schema inspection, raw Cypher query/execute, flush, vector search, and native vertex/edge bulk loads. Raw Cypher is disabled by default. <code>DBBulkStatusRequest</code> exposes native load reconciliation. The optional <code>tools</code> extra supplies argument-only LLM schemas, assigns protocol IDs outside the model, preserves actual provider tool-call IDs and ToolMessage history, and routes uncertain writes to reconciliation instead of automatic reasoning retries.</p>
+<p>Native tests establish rollback, receipts after reopening, injected commit-reporting failures, interrupted admin/bulk work, bounded output rollback, no-payment/multiple-payment arithmetic, native proof shape, scratch rollback and commit refusal, configuration/readiness failure, and read non-materialization. Real guild tests cover message selection/routes and publication failures. The showcase runs with a scripted LLM to check the tool protocol; this does not establish real-model operation selection or business approval correctness.</p>
+<p>Scenario applicability checks and the general shutdown lifecycle hook remain explicitly deferred. Existing-store bootstrap verifies expected property definitions and the connector's recorded rule-program digest, then compiles supplied text without replacing registered rules. It does not independently detect out-of-band registry changes. Remote URI backends, multi-owner receipt coordination, retention, pinned/fork reads, external artifact transport, and live cancellation need separate implementation evidence before advertisement.</p>
+<h2 id="8-sources-and-validation-boundary">8. Sources and validation boundary<a class="headerlink" href="#8-sources-and-validation-boundary" title="Permanent link">&para;</a></h2>
+<p>Rustic contracts: <a href="https://github.com/rustic-ai/rustic-ai/blob/969e69e90b8ed59233dd2a89d73d4ebbcbfdb7e9/core/src/rustic_ai/core/guild/agent.py"><code>Agent</code> and <code>ProcessContext</code></a>, <a href="https://github.com/rustic-ai/rustic-ai/blob/969e69e90b8ed59233dd2a89d73d4ebbcbfdb7e9/core/src/rustic_ai/core/guild/dsl.py"><code>AgentSpec</code>/<code>GuildSpec</code></a>, <a href="https://github.com/rustic-ai/rustic-ai/blob/969e69e90b8ed59233dd2a89d73d4ebbcbfdb7e9/core/src/rustic_ai/core/guild/builders.py">builders</a>, <a href="https://github.com/rustic-ai/rustic-ai/blob/969e69e90b8ed59233dd2a89d73d4ebbcbfdb7e9/core/src/rustic_ai/core/guild/agent_ext/depends/dependency_resolver.py">dependency resolver</a>, <a href="https://github.com/rustic-ai/rustic-ai/blob/969e69e90b8ed59233dd2a89d73d4ebbcbfdb7e9/uniko-agent/README.md">current Uniko integration</a>, and <a href="../react-agent-design/">ReAct design</a>.</p>
+<p>Native contracts: <a href="https://github.com/rustic-ai/uni-db">Uni-DB</a>, especially <code>bindings/uni-db/uni_db/__init__.pyi</code>, session/transaction/builders, and <code>test_bulk_commit_outcome.py</code>. Native APIs and all three example Locy/Cypher flows are exercised against the supported wheel.</p>
+<p>Domain inspiration: <a href="https://github.com/milliondreams/erp_book/blob/main/erp_book/book/part5-agentic-layer/ch22-agent-interface.md">Agentic ERP agent interface</a>, <a href="https://github.com/milliondreams/erp_book/blob/main/erp_book/book/part5-agentic-layer/ch21-composing-domains.md">tool contract</a>, and <a href="https://github.com/milliondreams/erp_book/blob/main/erp_book/book/appendices/h-what-meridian-is-not.md">scope limits</a>. REA's word “agent” denotes a participating business actor; it is not automatically an AI agent.</p>
+<p>Validation on 2026-11-17 uses native integration tests plus strict Pydantic/GuildSpec class validation. All six JSON files load; all 14 exchanges are covered across the native examples and the guild boundary test. The guide and examples remain application building blocks: guild authentication, approval correctness, production transport, and real LLM behavior require deployment-specific validation.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.a5f9d56c.min.js"></script>
+      
+        <script src="https://unpkg.com/mermaid@10/dist/mermaid.min.js"></script>
+      
+        <script src="../../assets/javascripts/mermaid-init.js"></script>
+      
+    
+  </body>
+</html>

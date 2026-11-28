@@ -1,0 +1,362 @@
+{
+  "id": "unidb-example-supply-network",
+  "name": "Supply Network Example",
+  "description": "Uni-DB agent initialization for the supply-network design example.",
+  "agents": [
+    {
+      "id": "unidb-supply-network",
+      "name": "Uni-DB",
+      "description": "Owns the example database and executes configured operations.",
+      "class_name": "rustic_ai.unidb.agent.UniDBAgent",
+      "properties": {
+        "binding_id": "supply-network",
+        "admission": "require_database_ready",
+        "limits": {
+          "timeout_ms": 5000,
+          "max_query_memory_bytes": 67108864,
+          "max_rows": 100,
+          "max_output_bytes": 65536,
+          "max_input_bytes": 65536,
+          "max_statements": 16,
+          "max_conflict_retries": 0
+        },
+        "raw_operations_enabled": false,
+        "operation_catalog": {
+          "revision": "supply-network-v1",
+          "operations": [
+            {
+              "name": "register_supply_network",
+              "kind": "mutation",
+              "parameters_schema": {
+                "type": "object",
+                "properties": {
+                  "product": {
+                    "type": "object",
+                    "properties": {
+                      "ext_id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256
+                      },
+                      "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256
+                      }
+                    },
+                    "required": [
+                      "ext_id",
+                      "name"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "suppliers": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "ext_id": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 256
+                        },
+                        "name": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 256
+                        },
+                        "reliability": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 1
+                        },
+                        "unit_cost_cents": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "lead_time_days": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "ext_id",
+                        "name",
+                        "reliability",
+                        "unit_cost_cents",
+                        "lead_time_days"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "minItems": 2,
+                    "maxItems": 2
+                  }
+                },
+                "required": [
+                  "product",
+                  "suppliers"
+                ],
+                "additionalProperties": false
+              },
+              "statements": [
+                {
+                  "kind": "cypher",
+                  "text": "CREATE (:Product {ext_id: $product.ext_id, name: $product.name})"
+                },
+                {
+                  "kind": "cypher",
+                  "text": "UNWIND $suppliers AS row CREATE (:Party {ext_id: row.ext_id, name: row.name})"
+                },
+                {
+                  "kind": "cypher",
+                  "text": "UNWIND $suppliers AS row MATCH (s:Party {ext_id: row.ext_id}), (p:Product {ext_id: $product.ext_id}) CREATE (s)-[:SUPPLIES {reliability: row.reliability, unit_cost_cents: row.unit_cost_cents, lead_time_days: row.lead_time_days}]->(p)"
+                }
+              ],
+              "checks": []
+            },
+            {
+              "name": "suppliers_for_product",
+              "kind": "query",
+              "parameters_schema": {
+                "type": "object",
+                "properties": {
+                  "product_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                },
+                "required": [
+                  "product_id"
+                ],
+                "additionalProperties": false
+              },
+              "query": "MATCH (s:Party)-[r:SUPPLIES]->(p:Product {ext_id: $product_id}) RETURN s.ext_id AS supplier_id, s.name AS supplier_name, r.reliability AS reliability, r.unit_cost_cents AS unit_cost_cents, r.lead_time_days AS lead_time_days ORDER BY supplier_id",
+              "columns": [
+                "supplier_id",
+                "supplier_name",
+                "reliability",
+                "unit_cost_cents",
+                "lead_time_days"
+              ]
+            }
+          ]
+        }
+      },
+      "additional_topics": [
+        "db.requests"
+      ],
+      "listen_to_default_topic": false,
+      "dependency_map": {
+        "unidb": {
+          "class_name": "rustic_ai.unidb.resolver.UniDBResolver",
+          "properties": {
+            "binding_id": "supply-network",
+            "open_mode": "create",
+            "location": {
+              "kind": "filesystem",
+              "dependency_key": "filesystem",
+              "relative_path": "supply-network-store"
+            },
+            "native_config": {
+              "wal_enabled": true,
+              "strict_schema": true
+            },
+            "bootstrap": {
+              "policy": "apply_to_new",
+              "revision": "supply-network-v1",
+              "schema": {
+                "labels": [
+                  {
+                    "name": "Product",
+                    "properties": [
+                      {
+                        "name": "name",
+                        "type": "string",
+                        "nullable": false
+                      }
+                    ]
+                  },
+                  {
+                    "name": "Party",
+                    "properties": [
+                      {
+                        "name": "name",
+                        "type": "string",
+                        "nullable": false
+                      }
+                    ]
+                  }
+                ],
+                "edge_types": [
+                  {
+                    "name": "SUPPLIES",
+                    "source_labels": [
+                      "Party"
+                    ],
+                    "target_labels": [
+                      "Product"
+                    ],
+                    "properties": [
+                      {
+                        "name": "reliability",
+                        "type": "float64",
+                        "nullable": false
+                      },
+                      {
+                        "name": "unit_cost_cents",
+                        "type": "int64",
+                        "nullable": false
+                      },
+                      {
+                        "name": "lead_time_days",
+                        "type": "int64",
+                        "nullable": false
+                      }
+                    ]
+                  }
+                ]
+              },
+              "rule_programs": []
+            },
+            "receipts": {
+              "mode": "same_transaction",
+              "namespace": "__rustic_unidb"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "dependency_map": {
+    "filesystem": {
+      "class_name": "rustic_ai.core.guild.agent_ext.depends.filesystem.filesystem.FileSystemResolver",
+      "properties": {
+        "path_base": "/tmp/rustic-unidb-design-examples",
+        "protocol": "file",
+        "storage_options": {}
+      }
+    }
+  },
+  "routes": {
+    "steps": [
+      {
+        "agent": {
+          "id": "unidb-supply-network",
+          "name": "Uni-DB"
+        },
+        "message_format": "rustic_ai.unidb.models.DBCapabilitiesResponse",
+        "destination": {
+          "topics": "db.results"
+        },
+        "route_times": -1
+      },
+      {
+        "agent": {
+          "id": "unidb-supply-network",
+          "name": "Uni-DB"
+        },
+        "message_format": "rustic_ai.unidb.models.DBHealthResponse",
+        "destination": {
+          "topics": "db.results"
+        },
+        "route_times": -1
+      },
+      {
+        "agent": {
+          "id": "unidb-supply-network",
+          "name": "Uni-DB"
+        },
+        "message_format": "rustic_ai.unidb.models.DBQueryResponse",
+        "destination": {
+          "topics": "db.results"
+        },
+        "route_times": -1
+      },
+      {
+        "agent": {
+          "id": "unidb-supply-network",
+          "name": "Uni-DB"
+        },
+        "message_format": "rustic_ai.unidb.models.DBMutateResponse",
+        "destination": {
+          "topics": "db.results"
+        },
+        "route_times": -1
+      },
+      {
+        "agent": {
+          "id": "unidb-supply-network",
+          "name": "Uni-DB"
+        },
+        "message_format": "rustic_ai.unidb.models.DBEvaluateResponse",
+        "destination": {
+          "topics": "db.results"
+        },
+        "route_times": -1
+      },
+      {
+        "agent": {
+          "id": "unidb-supply-network",
+          "name": "Uni-DB"
+        },
+        "message_format": "rustic_ai.unidb.models.DBExplainResponse",
+        "destination": {
+          "topics": "db.results"
+        },
+        "route_times": -1
+      },
+      {
+        "agent": {
+          "id": "unidb-supply-network",
+          "name": "Uni-DB"
+        },
+        "message_format": "rustic_ai.unidb.models.DBScenarioResponse",
+        "destination": {
+          "topics": "db.results"
+        },
+        "route_times": -1
+      },
+      {
+        "agent": {
+          "id": "unidb-supply-network",
+          "name": "Uni-DB"
+        },
+        "message_format": "rustic_ai.unidb.models.DBOperationStatusResponse",
+        "destination": {
+          "topics": "db.results"
+        },
+        "route_times": -1
+      }
+    ]
+  },
+  "properties": {
+    "example_guild_policy": {
+      "owner": "embedding_guild_boundary",
+      "enforcement": "application_provided_not_automatic",
+      "caller_profiles": {
+        "demo-ingester": [
+          "query",
+          "mutation",
+          "capabilities",
+          "health",
+          "operation_status"
+        ],
+        "demo-reasoner": [
+          "query",
+          "evaluate",
+          "explain",
+          "scenario",
+          "capabilities",
+          "health"
+        ],
+        "demo-approved-executor": [
+          "query",
+          "evaluate",
+          "mutation",
+          "operation_status"
+        ]
+      }
+    }
+  }
+}
