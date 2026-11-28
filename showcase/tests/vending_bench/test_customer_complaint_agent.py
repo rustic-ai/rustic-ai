@@ -9,6 +9,9 @@ import shortuuid
 from rustic_ai.core.agents.testutils import ProbeAgent
 from rustic_ai.core.guild.builders import AgentBuilder, GuildBuilder
 from rustic_ai.core.utils.basic_class_utils import get_qualified_class_name
+from rustic_ai.showcase.vending_bench.customer_complaint_agent import (
+    CustomerComplaintAgent,
+)
 from rustic_ai.showcase.vending_bench.messages import (
     DayUpdateEvent,
     Email,
@@ -26,8 +29,13 @@ from rustic_ai.showcase.vending_bench.supplier_messages import (
 class TestCustomerComplaintAgent:
     """Tests for CustomerComplaintAgent."""
 
-    def test_generates_complaints_on_day_event(self, org_id, customer_complaint_spec):
+    def test_generates_complaints_on_day_event(self, org_id, customer_complaint_spec, monkeypatch):
         """CustomerComplaintAgent should generate complaints on day events."""
+        # The agent caps the daily complaint chance at 30%, so nine day events
+        # produced no complaint about 4% of the time (0.7 ** 9). Make every day
+        # roll a complaint; this test covers generation, not the rate.
+        monkeypatch.setattr(CustomerComplaintAgent, "_calculate_complaint_rate", lambda self: 1.0)
+
         builder = GuildBuilder(
             guild_id=f"complaint_test_{shortuuid.uuid()}",
             guild_name="Complaint Test Guild",
@@ -77,8 +85,7 @@ class TestCustomerComplaintAgent:
             format=get_qualified_class_name(DayUpdateEvent),
         )
 
-        # Send multiple day events to increase chance of complaint generation
-        for day in range(2, 10):  # Send 8 events for higher probability
+        for day in range(2, 10):
             sim_time = SimulationTime(
                 current_day=day,
                 current_time_minutes=0,
@@ -106,7 +113,6 @@ class TestCustomerComplaintAgent:
 
         messages = probe.get_messages()
 
-        # With 50% complaint rate over 8+ days, we should have at least one email
         email_messages = [m for m in messages if m.format == get_qualified_class_name(Email)]
         assert len(email_messages) >= 1, "Agent should generate at least one complaint email"
 

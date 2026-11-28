@@ -78,7 +78,7 @@ class UiComponentAgent(Agent):
             title="Canvas Image Example",
             description="Canvas component with image content",
             mediaLink=MediaLink(
-                url="http://localhost:3000/640e5f0fb14b6075ead8.png",
+                url="https://rustic-ai.github.io/rustic-ui-components/images/dragonscale-logo.svg",
             ),
             alt="Dragonscale logo in canvas",
         )
@@ -88,8 +88,8 @@ class UiComponentAgent(Agent):
             files=[
                 FileData(
                     mediaLink=MediaLink(
-                        name="logo.png",
-                        url="http://localhost:3000/640e5f0fb14b6075ead8.png",
+                        name="dragonscale-logo.svg",
+                        url="https://rustic-ai.github.io/rustic-ui-components/images/dragonscale-logo.svg",
                     )
                 )
             ],
@@ -185,7 +185,9 @@ class UiComponentAgent(Agent):
 
         # ImageFormat
         image_msg = ImageFormat(
-            src="http://localhost:3000/640e5f0fb14b6075ead8.png", alt="Dragonscale logo", title="Dragonscale logo"
+            src="https://rustic-ai.github.io/rustic-ui-components/images/dragonscale-logo.svg",
+            alt="Dragonscale logo",
+            title="Dragonscale logo",
         )
         ctx.send(payload=image_msg)
 
